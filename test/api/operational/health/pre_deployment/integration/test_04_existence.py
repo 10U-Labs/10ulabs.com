@@ -1,26 +1,31 @@
-"""Tests to validate api_backend infrastructure exists before health endpoint deployment.
+"""Layer 4: Existence tests for health endpoint pre-deployment.
 
-Five-layer testing model:
-- Layer 3: Existence - Does the API Gateway exist?
+Tests that prerequisite resources exist. Assumes authorization passed.
+These tests verify that resources from OTHER workflows that THIS workflow
+depends on exist before deployment.
 
-These tests verify that api_backend resources this endpoint depends on exist.
+Six-layer testing model:
+- Layer 4: Existence - Prerequisite resources exist
 """
 
-from botocore.exceptions import ClientError
 import pytest
+from botocore.exceptions import ClientError
 
 
-class TestAPIBackendInfrastructure:
-    """Layer 3: Verify api_backend terraform outputs and API Gateway exist."""
+pytestmark = pytest.mark.layer(4)
+
+
+class TestAPIBackendPrerequisites:
+    """Layer 4: Verify api_backend prerequisites exist."""
 
     def test_api_gateway_rest_api_id_output_exists(self, api_backend_outputs):
-        """Verify api_gateway_rest_api_id output is available."""
+        """Verify api_gateway_rest_api_id output is available from api_backend."""
         assert api_backend_outputs.get("api_gateway_rest_api_id"), (
             "api_gateway_rest_api_id output not found in api_backend. "
             "Run terraform apply in src/api/backend/"
         )
 
-    def test_api_gateway_exists(self, apigateway_client, api_backend_outputs):
+    def test_api_gateway_exists_in_aws(self, apigateway_client, api_backend_outputs):
         """Verify the API Gateway exists in AWS."""
         api_id = api_backend_outputs.get("api_gateway_rest_api_id")
         if not api_id:
