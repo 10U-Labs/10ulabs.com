@@ -14,6 +14,23 @@ from ...helpers import ENDPOINT_SRC, POST_DIR, get_aws_region, get_github_repo
 
 
 LIB_PATH = str(REPO_ROOT / "lib")
+
+
+def _get_handler_env_vars() -> dict[str, str]:
+    """Return environment variables for handler module tests."""
+    return {
+        'AWS_REGION': get_aws_region(),
+        'EC2_AMI_PURPOSE_TAG': 'Purpose',
+        'EC2_AMI_PURPOSE_VALUE': 'GitHub self-hosted EC2 runner',
+        'EC2_AMI_STABLE_TAG': 'Stable',
+        'GITHUB_REPO': get_github_repo(),
+        'GITHUB_TOKEN_SECRET_NAME': '/test/github-pat',
+        'SSM_EC2_RUNNER_AMI_LATEST': '/ami/ec2-runner/latest',
+        'SUBNETS': 'subnet-test1,subnet-test2',
+        'VPC_ID': 'vpc-test',
+    }
+
+
 if LIB_PATH not in sys.path:
     sys.path.insert(0, LIB_PATH)
 
@@ -32,18 +49,7 @@ def load_handler_module() -> ModuleType:
 @pytest.fixture(name="handler_module")
 def _handler_module_fixture() -> Generator[ModuleType, None, None]:
     """Provide a fresh handler module with mocked environment."""
-    env_vars = {
-        'AWS_REGION': get_aws_region(),
-        'EC2_AMI_PURPOSE_TAG': 'Purpose',
-        'EC2_AMI_PURPOSE_VALUE': 'GitHub self-hosted EC2 runner',
-        'EC2_AMI_STABLE_TAG': 'Stable',
-        'GITHUB_REPO': get_github_repo(),
-        'GITHUB_TOKEN_SECRET_NAME': '/test/github-pat',
-        'SSM_EC2_RUNNER_AMI_LATEST': '/ami/ec2-runner/latest',
-        'SUBNETS': 'subnet-test1,subnet-test2',
-        'VPC_ID': 'vpc-test',
-    }
-    with patch.dict('os.environ', env_vars):
+    with patch.dict('os.environ', _get_handler_env_vars()):
         module = load_handler_module()
         if hasattr(module, '_clients'):
             setattr(module, '_clients', {})
@@ -73,19 +79,55 @@ def _mock_ssm_fixture(handler_module: ModuleType) -> Generator[MagicMock, None, 
 @pytest.fixture(name="mock_env_vars")
 def _mock_env_vars_fixture() -> Generator[None, None, None]:
     """Provide mocked environment variables."""
-    env_vars = {
-        'AWS_REGION': get_aws_region(),
-        'EC2_AMI_PURPOSE_TAG': 'Purpose',
-        'EC2_AMI_PURPOSE_VALUE': 'GitHub self-hosted EC2 runner',
-        'EC2_AMI_STABLE_TAG': 'Stable',
-        'GITHUB_REPO': get_github_repo(),
-        'GITHUB_TOKEN_SECRET_NAME': '/test/github-pat',
-        'SSM_EC2_RUNNER_AMI_LATEST': '/ami/ec2-runner/latest',
-        'SUBNETS': 'subnet-test1,subnet-test2',
-        'VPC_ID': 'vpc-test',
-    }
-    with patch.dict('os.environ', env_vars):
+    with patch.dict('os.environ', _get_handler_env_vars()):
         yield
+
+
+def _make_ami_image(
+    ami_id: str = 'ami-123',
+    name: str = 'github-runner-ami',
+    stable: bool = True
+) -> dict:
+    """Create a mock AMI image dict for EC2 describe_images responses."""
+    tags = [{'Key': 'Stable', 'Value': 'true'}] if stable else []
+    return {
+        'ImageId': ami_id,
+        'Name': name,
+        'CreationDate': '2024-01-01T00:00:00.000Z',
+        'State': 'available',
+        'Architecture': 'arm64',
+        'Tags': tags
+    }
+
+
+@pytest.fixture(name="single_ami_response")
+def _single_ami_response_fixture() -> dict:
+    """Return a standard single-AMI describe_images response."""
+    return {'Images': [_make_ami_image()]}
+
+
+@pytest.fixture(name="make_ami_image")
+def _make_ami_image_fixture():
+    """Return factory function for creating AMI image dicts."""
+    return _make_ami_image
+
+
+@pytest.fixture(name="ssm_parameter_not_found")
+def _ssm_parameter_not_found_fixture():
+    """Return a ParameterNotFound ClientError for SSM mocking."""
+    return ClientError(
+        {'Error': {'Code': 'ParameterNotFound'}}, 'get_parameter'
+    )
+
+
+@pytest.fixture(name="mock_ssm_not_found_with_ami")
+def _mock_ssm_not_found_with_ami_fixture(mock_ec2, mock_ssm, single_ami_response):
+    """Configure mocks for SSM parameter not found with single AMI available."""
+    mock_ssm.get_parameter.side_effect = ClientError(
+        {'Error': {'Code': 'ParameterNotFound'}}, 'get_parameter'
+    )
+    mock_ec2.describe_images.return_value = single_ami_response
+    return mock_ec2, mock_ssm
 
 
 @pytest.fixture

@@ -4,52 +4,31 @@
 class TestListAmis:
     """Tests for list_amis when retrieving AMI information."""
 
-    def test_returns_list_with_success(self, handler_module, mock_ec2):
+    def test_returns_list_with_success(
+        self, handler_module, mock_ec2, single_ami_response
+    ):
         """Test that AMI list is returned with success status."""
-        mock_ec2.describe_images.return_value = {
-            'Images': [{
-                'ImageId': 'ami-123',
-                'Name': 'github-runner-ami',
-                'CreationDate': '2024-01-01T00:00:00.000Z',
-                'State': 'available',
-                'Architecture': 'arm64',
-                'Tags': [{'Key': 'Stable', 'Value': 'true'}]
-            }]
-        }
+        mock_ec2.describe_images.return_value = single_ami_response
 
         result = handler_module.list_amis()
 
         assert result['success'] is True
 
-    def test_returns_correct_ami_count(self, handler_module, mock_ec2):
+    def test_returns_correct_ami_count(
+        self, handler_module, mock_ec2, single_ami_response
+    ):
         """Test that correct number of AMIs is returned."""
-        mock_ec2.describe_images.return_value = {
-            'Images': [{
-                'ImageId': 'ami-123',
-                'Name': 'github-runner-ami',
-                'CreationDate': '2024-01-01T00:00:00.000Z',
-                'State': 'available',
-                'Architecture': 'arm64',
-                'Tags': [{'Key': 'Stable', 'Value': 'true'}]
-            }]
-        }
+        mock_ec2.describe_images.return_value = single_ami_response
 
         result = handler_module.list_amis()
 
         assert len(result['amis']) == 1
 
-    def test_returns_correct_ami_id(self, handler_module, mock_ec2):
+    def test_returns_correct_ami_id(
+        self, handler_module, mock_ec2, single_ami_response
+    ):
         """Test that correct AMI ID is returned in the list."""
-        mock_ec2.describe_images.return_value = {
-            'Images': [{
-                'ImageId': 'ami-123',
-                'Name': 'github-runner-ami',
-                'CreationDate': '2024-01-01T00:00:00.000Z',
-                'State': 'available',
-                'Architecture': 'arm64',
-                'Tags': [{'Key': 'Stable', 'Value': 'true'}]
-            }]
-        }
+        mock_ec2.describe_images.return_value = single_ami_response
 
         result = handler_module.list_amis()
 
@@ -71,34 +50,24 @@ class TestListAmis:
 
         assert result['amis'] == []
 
-    def test_handles_missing_stable_tag_returns_success(self, handler_module, mock_ec2):
+    def test_handles_missing_stable_tag_returns_success(
+        self, handler_module, mock_ec2, make_ami_image
+    ):
         """Test that success is returned when stable tag is missing."""
         mock_ec2.describe_images.return_value = {
-            'Images': [{
-                'ImageId': 'ami-123',
-                'Name': 'github-runner-ami',
-                'CreationDate': '2024-01-01T00:00:00.000Z',
-                'State': 'available',
-                'Architecture': 'arm64',
-                'Tags': []
-            }]
+            'Images': [make_ami_image(stable=False)]
         }
 
         result = handler_module.list_amis()
 
         assert result['success'] is True
 
-    def test_handles_missing_stable_tag_defaults_to_false(self, handler_module, mock_ec2):
+    def test_handles_missing_stable_tag_defaults_to_false(
+        self, handler_module, mock_ec2, make_ami_image
+    ):
         """Test that stable tag defaults to false when missing."""
         mock_ec2.describe_images.return_value = {
-            'Images': [{
-                'ImageId': 'ami-123',
-                'Name': 'github-runner-ami',
-                'CreationDate': '2024-01-01T00:00:00.000Z',
-                'State': 'available',
-                'Architecture': 'arm64',
-                'Tags': []
-            }]
+            'Images': [make_ami_image(stable=False)]
         }
 
         result = handler_module.list_amis()

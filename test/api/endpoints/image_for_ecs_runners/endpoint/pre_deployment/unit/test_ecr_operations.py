@@ -9,43 +9,39 @@ import sys
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from botocore.exceptions import ClientError
-
 handler = sys.modules['handler']
 
 
 class TestListEcrImages:
     """Tests for list_ecr_images function."""
 
-    def test_returns_success_with_images(self, mock_ecr_client):
-        """Test that images are listed successfully."""
-        mock_ecr_client.describe_images.return_value = make_ecr_describe_response(
-            [make_ecr_image_detail(digest='sha256:abc123', tags=['latest', 'v1.0'])]
-        )
-        handler.set_client('ecr', mock_ecr_client)
+    def test_returns_success_true(self, single_image_list_result):
+        """Test that success is True when images are listed."""
+        assert single_image_list_result['success'] is True
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.list_ecr_images()
+    def test_returns_correct_count(self, single_image_list_result):
+        """Test that count matches number of images."""
+        assert single_image_list_result['count'] == 1
 
-        assert result['success'] is True
-        assert result['count'] == 1
-        assert result['repository'] == 'test-repo'
-        assert len(result['images']) == 1
+    def test_returns_repository_name(self, single_image_list_result):
+        """Test that repository name is returned."""
+        assert single_image_list_result['repository'] == 'test-repo'
 
-    def test_returns_image_details(self, mock_ecr_client):
-        """Test that image details are included."""
-        mock_ecr_client.describe_images.return_value = make_ecr_describe_response(
-            [make_ecr_image_detail(digest='sha256:abc123', tags=['latest'])]
-        )
-        handler.set_client('ecr', mock_ecr_client)
+    def test_returns_images_list(self, single_image_list_result):
+        """Test that images list is returned."""
+        assert len(single_image_list_result['images']) == 1
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.list_ecr_images()
+    def test_returns_image_digest(self, single_image_list_result):
+        """Test that image digest is included."""
+        assert single_image_list_result['images'][0]['digest'] == 'sha256:abc123'
 
-        image = result['images'][0]
-        assert image['digest'] == 'sha256:abc123'
-        assert image['tags'] == ['latest']
-        assert image['size_bytes'] == 1024
+    def test_returns_image_tags(self, single_image_list_result):
+        """Test that image tags are included."""
+        assert 'latest' in single_image_list_result['images'][0]['tags']
+
+    def test_returns_image_size(self, single_image_list_result):
+        """Test that image size is included."""
+        assert single_image_list_result['images'][0]['size_bytes'] == 1024
 
     def test_filters_tagged_images_only(self, mock_ecr_client):
         """Test that only tagged images are requested."""
@@ -60,8 +56,8 @@ class TestListEcrImages:
             filter={'tagStatus': 'TAGGED'}
         )
 
-    def test_skips_images_without_tags(self, mock_ecr_client):
-        """Test that images without tags are skipped."""
+    def test_skips_images_without_tags_count_zero(self, mock_ecr_client):
+        """Test that count is zero when images have no tags."""
         mock_ecr_client.describe_images.return_value = make_ecr_describe_response(
             [make_ecr_image_detail(tags=[])]
         )
@@ -71,73 +67,74 @@ class TestListEcrImages:
             result = handler.list_ecr_images()
 
         assert result['count'] == 0
-        assert len(result['images']) == 0
 
-    def test_sorts_images_by_pushed_at_descending(self, mock_ecr_client):
-        """Test that images are sorted by pushed_at descending."""
-        older_image = make_ecr_image_detail(
-            digest='sha256:older', tags=['v1.0'],
-            pushed_at=datetime(2024, 1, 1, tzinfo=timezone.utc)
-        )
-        newer_image = make_ecr_image_detail(
-            digest='sha256:newer', tags=['v2.0'],
-            pushed_at=datetime(2024, 6, 1, tzinfo=timezone.utc)
-        )
+    def test_skips_images_without_tags_empty_list(self, mock_ecr_client):
+        """Test that images list is empty when images have no tags."""
         mock_ecr_client.describe_images.return_value = make_ecr_describe_response(
-            [older_image, newer_image]
+            [make_ecr_image_detail(tags=[])]
         )
         handler.set_client('ecr', mock_ecr_client)
 
         with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
             result = handler.list_ecr_images()
 
-        assert result['images'][0]['digest'] == 'sha256:newer'
-        assert result['images'][1]['digest'] == 'sha256:older'
+        assert len(result['images']) == 0
 
-    def test_returns_error_on_client_error(self, mock_ecr_client):
-        """Test that ClientError is handled."""
-        mock_ecr_client.describe_images.side_effect = ClientError(
-            {'Error': {'Code': 'AccessDenied', 'Message': 'Access denied'}},
-            'DescribeImages'
-        )
+    def test_sorts_images_by_pushed_at_descending_first(self, sorted_images_result):
+        """Test that newest image is first."""
+        assert sorted_images_result['images'][0]['digest'] == 'sha256:newer'
+
+    def test_sorts_images_by_pushed_at_descending_second(self, sorted_images_result):
+        """Test that older image is second."""
+        assert sorted_images_result['images'][1]['digest'] == 'sha256:older'
+
+    def test_returns_error_on_client_error_returns_false(
+        self, mock_ecr_client, access_denied_error
+    ):
+        """Test that ClientError returns success=False."""
+        mock_ecr_client.describe_images.side_effect = access_denied_error
         handler.set_client('ecr', mock_ecr_client)
 
         with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
             result = handler.list_ecr_images()
 
         assert result['success'] is False
+
+    def test_returns_error_on_client_error_includes_error(
+        self, mock_ecr_client, access_denied_error
+    ):
+        """Test that ClientError includes error in result."""
+        mock_ecr_client.describe_images.side_effect = access_denied_error
+        handler.set_client('ecr', mock_ecr_client)
+
+        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+            result = handler.list_ecr_images()
+
         assert 'error' in result
 
 
 class TestGetLatestEcrImage:
     """Tests for get_latest_ecr_image function."""
 
-    def test_returns_stable_image(self, mock_ecr_client):
-        """Test that stable image is returned."""
-        mock_ecr_client.describe_images.return_value = make_ecr_describe_response(
-            [make_stable_image(digest='sha256:stable123', additional_tags=['v1.0'])]
-        )
-        handler.set_client('ecr', mock_ecr_client)
+    def test_returns_stable_image_success(self, stable_image_result):
+        """Test that stable image returns success."""
+        assert stable_image_result['success'] is True
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.get_latest_ecr_image()
+    def test_returns_stable_image_digest(self, stable_image_result):
+        """Test that stable image returns correct digest."""
+        assert stable_image_result['digest'] == 'sha256:stable123'
 
-        assert result['success'] is True
-        assert result['digest'] == 'sha256:stable123'
-        assert 'stable' in result['tags']
+    def test_returns_stable_image_has_stable_tag(self, stable_image_result):
+        """Test that stable image has stable tag."""
+        assert 'stable' in stable_image_result['tags']
 
-    def test_ignores_non_stable_images(self, mock_ecr_client):
-        """Test that non-stable images are ignored."""
-        mock_ecr_client.describe_images.return_value = make_ecr_describe_response(
-            [make_ecr_image_detail(digest='sha256:latest123', tags=['latest'])]
-        )
-        handler.set_client('ecr', mock_ecr_client)
+    def test_ignores_non_stable_images_returns_false(self, no_stable_image_result):
+        """Test that non-stable images return success False."""
+        assert no_stable_image_result['success'] is False
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.get_latest_ecr_image()
-
-        assert result['success'] is False
-        assert result['error'] == 'No stable image found'
+    def test_ignores_non_stable_images_error_message(self, no_stable_image_result):
+        """Test that non-stable images return correct error."""
+        assert no_stable_image_result['error'] == 'No stable image found'
 
     def test_returns_most_recent_stable_image(self, mock_ecr_client):
         """Test that most recent stable image is returned."""
@@ -155,12 +152,9 @@ class TestGetLatestEcrImage:
 
         assert result['digest'] == 'sha256:newer'
 
-    def test_returns_error_on_client_error(self, mock_ecr_client):
+    def test_returns_error_on_client_error(self, mock_ecr_client, access_denied_error):
         """Test that ClientError is handled."""
-        mock_ecr_client.describe_images.side_effect = ClientError(
-            {'Error': {'Code': 'AccessDenied', 'Message': 'Access denied'}},
-            'DescribeImages'
-        )
+        mock_ecr_client.describe_images.side_effect = access_denied_error
         handler.set_client('ecr', mock_ecr_client)
 
         with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
@@ -172,18 +166,13 @@ class TestGetLatestEcrImage:
 class TestGetEcrImageByDigest:
     """Tests for get_ecr_image_by_digest function."""
 
-    def test_returns_image_by_digest(self, mock_ecr_client):
-        """Test that image is returned by digest."""
-        mock_ecr_client.describe_images.return_value = make_ecr_describe_response(
-            [make_ecr_image_detail(digest='sha256:abc123')]
-        )
-        handler.set_client('ecr', mock_ecr_client)
+    def test_returns_image_by_digest_success(self, image_by_digest_result):
+        """Test that image by digest returns success."""
+        assert image_by_digest_result['success'] is True
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.get_ecr_image_by_digest('sha256:abc123')
-
-        assert result['success'] is True
-        assert result['digest'] == 'sha256:abc123'
+    def test_returns_image_by_digest_correct_digest(self, image_by_digest_result):
+        """Test that image by digest returns correct digest."""
+        assert image_by_digest_result['digest'] == 'sha256:abc123'
 
     def test_passes_correct_digest_to_api(self, mock_ecr_client):
         """Test that correct digest is passed to API."""
@@ -200,37 +189,31 @@ class TestGetEcrImageByDigest:
             imageIds=[{'imageDigest': 'sha256:abc123'}]
         )
 
-    def test_returns_error_for_not_found(self, mock_ecr_client):
-        """Test that error is returned when image not found."""
-        mock_ecr_client.describe_images.return_value = make_ecr_describe_response()
-        handler.set_client('ecr', mock_ecr_client)
+    def test_returns_error_for_not_found_success_false(self, image_not_found_result):
+        """Test that not found returns success False."""
+        assert image_not_found_result['success'] is False
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.get_ecr_image_by_digest('sha256:notfound')
+    def test_returns_error_for_not_found_error_message(self, image_not_found_result):
+        """Test that not found returns error message."""
+        assert 'not found' in image_not_found_result['error']
 
-        assert result['success'] is False
-        assert 'not found' in result['error']
+    def test_returns_error_on_image_not_found_exception_success_false(
+        self, image_not_found_exception_result
+    ):
+        """Test that ImageNotFoundException returns success False."""
+        assert image_not_found_exception_result['success'] is False
 
-    def test_returns_error_on_image_not_found_exception(self, mock_ecr_client):
-        """Test that ImageNotFoundException is handled."""
-        mock_ecr_client.describe_images.side_effect = ClientError(
-            {'Error': {'Code': 'ImageNotFoundException', 'Message': 'Image not found'}},
-            'DescribeImages'
-        )
-        handler.set_client('ecr', mock_ecr_client)
+    def test_returns_error_on_image_not_found_exception_error_message(
+        self, image_not_found_exception_result
+    ):
+        """Test that ImageNotFoundException returns error message."""
+        assert 'not found' in image_not_found_exception_result['error']
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.get_ecr_image_by_digest('sha256:notfound')
-
-        assert result['success'] is False
-        assert 'not found' in result['error']
-
-    def test_returns_error_on_other_client_error(self, mock_ecr_client):
+    def test_returns_error_on_other_client_error(
+        self, mock_ecr_client, access_denied_error
+    ):
         """Test that other ClientErrors are handled."""
-        mock_ecr_client.describe_images.side_effect = ClientError(
-            {'Error': {'Code': 'AccessDenied', 'Message': 'Access denied'}},
-            'DescribeImages'
-        )
+        mock_ecr_client.describe_images.side_effect = access_denied_error
         handler.set_client('ecr', mock_ecr_client)
 
         with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
@@ -238,36 +221,29 @@ class TestGetEcrImageByDigest:
 
         assert result['success'] is False
 
-    def test_handles_image_without_tags(self, mock_ecr_client):
-        """Test that image without tags returns empty list."""
-        image_no_tags = make_ecr_image_detail(digest='sha256:abc123')
-        del image_no_tags['imageTags']
-        mock_ecr_client.describe_images.return_value = make_ecr_describe_response(
-            [image_no_tags]
-        )
-        handler.set_client('ecr', mock_ecr_client)
+    def test_handles_image_without_tags_returns_success(self, image_without_tags_result):
+        """Test that image without tags returns success."""
+        assert image_without_tags_result['success'] is True
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.get_ecr_image_by_digest('sha256:abc123')
-
-        assert result['success'] is True
-        assert result['tags'] == []
+    def test_handles_image_without_tags_returns_empty_list(self, image_without_tags_result):
+        """Test that image without tags returns empty list for tags."""
+        assert image_without_tags_result['tags'] == []
 
 
 class TestDeleteEcrImage:
     """Tests for delete_ecr_image function."""
 
-    def test_deletes_image_successfully(self, mock_ecr_client):
-        """Test that image is deleted successfully."""
-        mock_ecr_client.batch_delete_image.return_value = {}
-        handler.set_client('ecr', mock_ecr_client)
+    def test_deletes_image_returns_success(self, delete_image_result):
+        """Test that delete returns success=True."""
+        assert delete_image_result['success'] is True
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.delete_ecr_image('sha256:abc123')
+    def test_deletes_image_returns_digest(self, delete_image_result):
+        """Test that delete returns the deleted digest."""
+        assert delete_image_result['digest'] == 'sha256:abc123'
 
-        assert result['success'] is True
-        assert result['digest'] == 'sha256:abc123'
-        assert 'deleted' in result['message'].lower()
+    def test_deletes_image_returns_message(self, delete_image_result):
+        """Test that delete returns message containing deleted."""
+        assert 'deleted' in delete_image_result['message'].lower()
 
     def test_passes_correct_digest_to_api(self, mock_ecr_client):
         """Test that correct digest is passed to API."""
@@ -282,16 +258,10 @@ class TestDeleteEcrImage:
             imageIds=[{'imageDigest': 'sha256:abc123'}]
         )
 
-    def test_returns_error_on_client_error(self, mock_ecr_client):
-        """Test that ClientError is handled."""
-        mock_ecr_client.batch_delete_image.side_effect = ClientError(
-            {'Error': {'Code': 'AccessDenied', 'Message': 'Access denied'}},
-            'BatchDeleteImage'
-        )
-        handler.set_client('ecr', mock_ecr_client)
+    def test_delete_error_returns_false(self, delete_image_error_result):
+        """Test that ClientError returns success=False."""
+        assert delete_image_error_result['success'] is False
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.delete_ecr_image('sha256:abc123')
-
-        assert result['success'] is False
-        assert 'error' in result
+    def test_delete_error_includes_error(self, delete_image_error_result):
+        """Test that ClientError includes error in result."""
+        assert 'error' in delete_image_error_result

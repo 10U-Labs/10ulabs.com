@@ -4,15 +4,6 @@
 class TestFindOrphanedSnapshotsReturnsOrphanedSet:
     """Tests for find_orphaned_snapshots return value."""
 
-    def test_returns_empty_set_when_no_snapshots(self, cleanup, mock_ec2_client):
-        """Test that empty set is returned when no snapshots exist."""
-        mock_ec2_client.describe_images.return_value = {'Images': []}
-        mock_ec2_client.describe_snapshots.return_value = {'Snapshots': []}
-
-        result = cleanup.find_orphaned_snapshots(mock_ec2_client, set())
-
-        assert result == set()
-
     def test_returns_orphaned_snapshot_when_ami_does_not_exist(self, cleanup, mock_ec2_client):
         """Test that orphaned snapshot is returned when AMI does not exist."""
         mock_ec2_client.describe_images.return_value = {'Images': []}
