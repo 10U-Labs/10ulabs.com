@@ -125,8 +125,8 @@ class TestS3Capabilities:
 class TestECRCapabilities:
     """Layer 6: Verify we can perform ECR operations."""
 
-    def test_can_create_and_delete_ecr_repository(self, ecr_client):
-        """Verify we can create and delete ECR repositories."""
+    def test_can_create_ecr_repository(self, ecr_client):
+        """Verify we can create ECR repositories."""
         test_repo_name = f"pre-deployment-test-{uuid.uuid4().hex[:8]}"
         try:
             ecr_client.create_repository(repositoryName=test_repo_name)
@@ -135,6 +135,28 @@ class TestECRCapabilities:
                 pytest.fail(
                     "No permission to call ecr:CreateRepository. "
                     "Check IAM permissions for ecr:CreateRepository."
+                )
+            raise
+        finally:
+            try:
+                ecr_client.delete_repository(
+                    repositoryName=test_repo_name,
+                    force=True
+                )
+            except ClientError:
+                pass
+
+    def test_can_delete_ecr_repository(self, ecr_client):
+        """Verify we can delete ECR repositories."""
+        test_repo_name = f"pre-deployment-test-{uuid.uuid4().hex[:8]}"
+        try:
+            ecr_client.create_repository(repositoryName=test_repo_name)
+            ecr_client.delete_repository(repositoryName=test_repo_name, force=True)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "AccessDeniedException":
+                pytest.fail(
+                    "No permission to call ecr:DeleteRepository. "
+                    "Check IAM permissions for ecr:DeleteRepository."
                 )
             raise
         finally:

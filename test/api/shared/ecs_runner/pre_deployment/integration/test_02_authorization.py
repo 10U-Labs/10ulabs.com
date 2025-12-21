@@ -52,8 +52,8 @@ class TestIAMRoleInspectionAuthorization:
                 raise
 
 
-class TestS3BucketInspectionAuthorization:
-    """Layer 2: Verify permission to inspect S3 buckets."""
+class TestS3AndECRInspectionAuthorization:
+    """Layer 2: Verify permission to inspect S3 buckets and ECR repositories."""
 
     def test_can_call_s3_head_bucket_api(self, s3_client, state_bucket_name):
         """Verify we have permission to call s3:HeadBucket."""
@@ -69,10 +69,6 @@ class TestS3BucketInspectionAuthorization:
                 pass  # Bucket doesn't exist, but we have permission to check
             else:
                 raise
-
-
-class TestECRInspectionAuthorization:
-    """Layer 2: Verify permission to inspect ECR repositories."""
 
     def test_can_call_ecr_describe_repositories_api(self, ecr_client):
         """Verify we have permission to call ecr:DescribeRepositories."""

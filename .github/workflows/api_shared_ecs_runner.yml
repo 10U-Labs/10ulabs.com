@@ -102,6 +102,28 @@ jobs:
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pylint
+        run: python3 -m pip install pylint
+      - name: Run pylint on tests
+        run: |
+          PYTHONPATH=lib/python python3 -m pylint \
+            lib/python/ test/api/shared/ecs_runner/ \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install mypy
+        run: python3 -m pip install mypy boto3-stubs types-requests
+      - name: Run mypy on tests
+        run: |
+          MYPYPATH=lib/python python3 -m mypy \
+            lib/python/ test/api/shared/ecs_runner/
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
         run: npm install -g jscpd
       - name: Check for duplicate code in test Python files
@@ -115,6 +137,11 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pytest dependencies
         run: python3 -m pip install pytest boto3 boto3-stubs requests
+      - name: Run unit tests
+        run: |
+          python3 -m pytest \
+            test/api/shared/ecs_runner/pre_deployment/unit/ \
+            --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
