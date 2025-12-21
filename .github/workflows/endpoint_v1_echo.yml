@@ -79,7 +79,11 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/conftest.py test/api/conftest.py \
             test/api/endpoints/conftest.py test/api/endpoints/echo/
-      - name: Setup Terraform
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ steps.config.outputs.terraform_version }}
@@ -88,7 +92,11 @@ jobs:
         run: |
           cd src/api/endpoints/echo && \
             terraform fmt -diff -check -recursive
-      - name: Setup TFLint
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
