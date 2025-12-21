@@ -2,6 +2,7 @@
 import re
 from typing import Dict
 
+import boto3
 import pytest
 from repo_utils import REPO_ROOT
 
@@ -33,6 +34,18 @@ def _parse_website_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     return config
 
 
+def _get_hosted_zone_id(domain_name: str) -> str:
+    """Look up Route53 hosted zone ID for a domain."""
+    route53 = boto3.client("route53")
+    response = route53.list_hosted_zones_by_name(DNSName=domain_name, MaxItems="1")
+    zones = response.get("HostedZones", [])
+    for zone in zones:
+        zone_name = zone["Name"].rstrip(".")
+        if zone_name == domain_name:
+            return zone["Id"].replace("/hostedzone/", "")
+    return ""
+
+
 @pytest.fixture(name="config", scope="module")
 def config_fixture(shared_config) -> Dict[str, str]:
     """Provide website configuration for tests."""
@@ -47,6 +60,7 @@ def config_fixture(shared_config) -> Dict[str, str]:
     result['github_org'] = shared_config.get('github_org', '')
     result['github_repo'] = website_locals.get('github_repo_full', '')
     result['resource_prefix'] = website_locals.get('resource_prefix', '')
+    result['hosted_zone_id'] = _get_hosted_zone_id(shared_config.get('domain_name', ''))
     return result
 
 

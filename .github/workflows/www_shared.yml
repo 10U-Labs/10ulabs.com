@@ -98,11 +98,12 @@ jobs:
             .github/workflows/www_shared.yml
       - name: Run pylint
         run: |
-          PYTHONPATH=lib/python python3 -m pylint test/www/shared/ \
+          PYTHONPATH=lib/python python3 -m pylint \
+            lib/python/ test/www/shared/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: MYPYPATH=lib/python python3 -m mypy test/www/shared/
+        run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/www/shared/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -110,12 +111,26 @@ jobs:
             test/www/shared/ test/lib/terraform/modules/
       - name: Terraform Format Check
         run: cd src/www/shared && terraform fmt -diff -check -recursive
+      - name: Terraform Format Check on s3_bucket module
+        run: cd lib/terraform/modules/s3_bucket && terraform fmt -diff -check
+      - name: Terraform Format Check on cloudfront_waf module
+        run: |
+          cd lib/terraform/modules/cloudfront_waf && \
+            terraform fmt -diff -check
       - name: Terraform Init
         run: cd src/www/shared && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: cd src/www/shared && tflint --init && tflint
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint on s3_bucket module
+        run: cd lib/terraform/modules/s3_bucket && tflint --init && tflint
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint on cloudfront_waf module
+        run: cd lib/terraform/modules/cloudfront_waf && tflint --init && tflint
       - name: Run module unit tests
         run: |
           python3 -m pytest \
