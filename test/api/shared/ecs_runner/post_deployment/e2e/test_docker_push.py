@@ -8,6 +8,7 @@ Then: The image is stored and can be verified in the repository
 Critical Path: Docker login → Build image → Push to ECR → Verify exists
 Failure Impact: ECS runner images cannot be pushed, breaking runner deployments
 """
+import time
 
 
 def test_pushed_image_exists_in_ecr(ecr_client, pushed_test_image):
@@ -21,6 +22,19 @@ def test_pushed_image_exists_in_ecr(ecr_client, pushed_test_image):
 
 def test_ecr_scan_status_exists_after_push(ecr_client, pushed_scannable_image):
     """Verify scan status exists after pushing an image."""
+    max_wait_seconds = 30
+    poll_interval = 2
+
+    for _ in range(max_wait_seconds // poll_interval):
+        images = ecr_client.describe_images(
+            repositoryName=pushed_scannable_image["repository"],
+            imageIds=[{"imageTag": pushed_scannable_image["tag"]}]
+        )
+        image = images["imageDetails"][0]
+        if "imageScanStatus" in image:
+            return
+        time.sleep(poll_interval)
+
     images = ecr_client.describe_images(
         repositoryName=pushed_scannable_image["repository"],
         imageIds=[{"imageTag": pushed_scannable_image["tag"]}]

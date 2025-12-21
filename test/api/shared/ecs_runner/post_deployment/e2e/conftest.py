@@ -120,7 +120,7 @@ def pushed_test_image(request, ecr_client, expected_ecr_name):
         registry_url=registry_url,
         repo_name=expected_ecr_name,
         tag_prefix="e2e-test",
-        dockerfile_content=b"FROM scratch\nLABEL test=e2e\n",
+        dockerfile_content=b"FROM busybox:latest\nLABEL test=e2e\n",
         build_timeout=60
     )
     with build_push_cleanup_image(config) as image_info:
