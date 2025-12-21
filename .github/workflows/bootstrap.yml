@@ -96,17 +96,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: cd src/bootstrap && tflint --init && tflint
-      - name: Run pre-deployment integration tests
-        run: |
-          python3 -m pytest \
-            test/bootstrap/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
-      - name: Terraform Plan
-        run: |
-          cd src/bootstrap && \
-            terraform plan \
-            -var="github_pat=${{ secrets.GH_PAT }}" \
-            -var="github_app_private_key=${{ secrets.GH_APP_PRIVATE_KEY }}"
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -134,6 +123,17 @@ jobs:
           python3 -m pytest \
             test/bootstrap/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
+      - name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/bootstrap/pre_deployment/integration/ \
+            --verbose --pythonwarnings=error
+      - name: Terraform Plan
+        run: |
+          cd src/bootstrap && \
+            terraform plan \
+            -var="github_pat=${{ secrets.GH_PAT }}" \
+            -var="github_app_private_key=${{ secrets.GH_APP_PRIVATE_KEY }}"
       - name: Terraform Apply
         run: |
           cd src/bootstrap && \
