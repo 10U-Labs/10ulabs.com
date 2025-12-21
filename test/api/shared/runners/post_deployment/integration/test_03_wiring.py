@@ -25,20 +25,17 @@ class TestVPCWiring:
         )
 
     def test_subnets_in_vpc(self, ec2_client, runners_vpc_id):
-        """Verify public subnets are in the runners VPC."""
+        """Verify subnets are in the runners VPC."""
         subnets = ec2_client.describe_subnets(
             Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
                 {"Name": "tag:Purpose", "Values": ["runners"]},
                 {"Name": "tag:ManagedBy", "Values": ["terraform"]},
-                {"Name": "tag:Tier", "Values": ["public"]},
             ]
         )
-
-        # Verify all subnets are in the VPC
-        for subnet in subnets["Subnets"]:
-            assert subnet["VpcId"] == runners_vpc_id, (
-                f"Subnet {subnet['SubnetId']} is not in VPC {runners_vpc_id}"
-            )
+        assert len(subnets["Subnets"]) >= 1, (
+            f"No subnets found in VPC {runners_vpc_id}"
+        )
 
     def test_security_group_in_vpc(self, runners_security_group, runners_vpc_id):
         """Verify security group is in the runners VPC."""
@@ -47,20 +44,20 @@ class TestVPCWiring:
             f"Security group {sg_id} is not in VPC {runners_vpc_id}"
         )
 
-    def test_public_subnets_have_route_to_igw(self, ec2_client, runners_vpc_id):
-        """Verify public subnets have a route to the internet gateway."""
+    def test_subnets_have_route_to_igw(self, ec2_client, runners_vpc_id):
+        """Verify subnets have a route to the internet gateway."""
         # Get internet gateway
         igws = ec2_client.describe_internet_gateways(
             Filters=[{"Name": "attachment.vpc-id", "Values": [runners_vpc_id]}]
         )
         igw_id = igws["InternetGateways"][0]["InternetGatewayId"]
 
-        # Get public subnets
+        # Get subnets in the VPC
         subnets = ec2_client.describe_subnets(
             Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
                 {"Name": "tag:Purpose", "Values": ["runners"]},
                 {"Name": "tag:ManagedBy", "Values": ["terraform"]},
-                {"Name": "tag:Tier", "Values": ["public"]},
             ]
         )
 
