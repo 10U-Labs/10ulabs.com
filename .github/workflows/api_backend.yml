@@ -73,24 +73,11 @@ jobs:
         with:
           aws-region: ${{ steps.config.outputs.aws_region }}
           role-to-assume: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
-      - if: |
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: |
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            pylint mypy yamllint pytest pytest-dependency boto3 boto3-stubs \
-            botocore PyYAML types-PyYAML requests types-requests
-      - if: |
+      - name: Terraform Format Check
+        run: cd src/api/backend && terraform fmt -diff -check -recursive
+      - name: Terraform Init
+        run: cd src/api/backend && terraform init
+      - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
@@ -98,6 +85,24 @@ jobs:
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
+        run: cd src/api/backend && tflint --init && tflint
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install yamllint
+        run: python3 -m pip install yamllint
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -109,6 +114,12 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_backend.yml
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pylint
+        run: python3 -m pip install pylint
       - name: Run pylint on source code
         run: |
           for file in src/api/backend/lambdas/*.py; do
@@ -121,6 +132,12 @@ jobs:
           PYTHONPATH=lib/python python3 -m pylint test/api/backend/ \
             --fail-on=C,R,W \
             --fail-under=10.0
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install mypy
+        run: python3 -m pip install mypy boto3-stubs types-requests types-PyYAML
       - name: Run mypy on source code
         run: |
           for file in src/api/backend/lambdas/*.py; do
@@ -128,6 +145,12 @@ jobs:
           done
       - name: Run mypy on test code
         run: MYPYPATH=lib/python python3 -m mypy test/api/backend/
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install jscpd
+        run: npm install -g jscpd
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -137,14 +160,14 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/conftest.py test/api/conftest.py \
             test/api/backend/
-      - name: Terraform Format Check
-        run: cd src/api/backend && terraform fmt -diff -check -recursive
-      - name: Terraform Init
-        run: cd src/api/backend && terraform init
-      - env:
-          GITHUB_TOKEN: ${{ github.token }}
-        name: Run tflint
-        run: cd src/api/backend && tflint --init && tflint
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pytest dependencies
+        run: >-
+          python3 -m pip install pytest pytest-dependency boto3 botocore
+          PyYAML requests
       - env:
           SSM_PARAMETER_NAME_FOR_GITHUB_PAT: >-
             ${{ steps.bootstrap.outputs.github_pat_parameter_name }}

@@ -1,10 +1,8 @@
 """Pytest fixtures for pre-deployment integration tests."""
-import subprocess
-from pathlib import Path
-
 import boto3
 import pytest
 from repo_utils import REPO_ROOT
+from test_fixtures.terraform import terraform_init, terraform_output
 
 pytest_plugins = ['pytest_layers']
 
@@ -13,46 +11,21 @@ BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 AWS_REGION_VALUE = "us-east-2"
 
 
-def _terraform_init(directory: Path) -> bool:
-    """Initialize terraform in the given directory."""
-    result = subprocess.run(
-        ["terraform", "init", "-backend=true", "-input=false"],
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.returncode == 0
-
-
-def _terraform_output(directory: Path, name: str) -> str:
-    """Get a terraform output value."""
-    cmd = ["terraform", "output", "-raw", name]
-    result = subprocess.run(
-        cmd,
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.stdout.strip() if result.returncode == 0 else ""
-
-
 def _get_bootstrap_outputs() -> dict:
     """Get all bootstrap terraform outputs."""
-    if not _terraform_init(BOOTSTRAP_DIR):
+    if not terraform_init(BOOTSTRAP_DIR):
         return {}
     return {
-        "state_bucket_arn": _terraform_output(
+        "state_bucket_arn": terraform_output(
             BOOTSTRAP_DIR, "arn_for_state_bucket"
         ),
-        "github_actions_role_arn": _terraform_output(
+        "github_actions_role_arn": terraform_output(
             BOOTSTRAP_DIR, "arn_for_github_actions_role"
         ),
-        "github_actions_role_name": _terraform_output(
+        "github_actions_role_name": terraform_output(
             BOOTSTRAP_DIR, "name_for_github_actions_role"
         ),
-        "hosted_zone_id": _terraform_output(
+        "hosted_zone_id": terraform_output(
             BOOTSTRAP_DIR, "hosted_zone_id"
         ),
     }

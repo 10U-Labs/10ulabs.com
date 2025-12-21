@@ -6,12 +6,13 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     name: Deploy home page
-    runs-on:
-      - ecs
-      - fargate
-      - arm
-      - spot
-      - runner-${{ github.run_id }}
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "arm", "spot", "runner-{0}"]',
+            github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,6 +42,20 @@ jobs:
         with:
           aws-region: ${{ steps.config.outputs.aws_region }}
           role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install yamllint
+        run: python3 -m pip install yamllint
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -52,6 +67,12 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/www_index.yml
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install jsonlint
+        run: npm install -g jsonlint
       - name: Linting JSON files
         run: |
           # Note: tsconfig files use JSONC (JSON with Comments) format
@@ -64,12 +85,30 @@ jobs:
             echo "Validating $file"
             jsonlint -q "$file"
           done
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pylint
+        run: python3 -m pip install pylint
       - name: Run pylint
         run: |
           PYTHONPATH=lib/python python3 -m pylint lib/python/ test/www/paths/ \
             --fail-on=C,R,W --fail-under=10.0
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install mypy
+        run: python3 -m pip install mypy boto3-stubs
       - name: Run mypy
         run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/www/paths/
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install jscpd
+        run: npm install -g jscpd
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -78,6 +117,12 @@ jobs:
         run: npm ci --prefix src/www/paths/index
       - name: Run unit tests
         run: npm test --prefix src/www/paths/index
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pytest dependencies
+        run: python3 -m pip install pytest boto3 requests
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
@@ -174,6 +219,10 @@ name: Ensuring www index (home page) exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
       invalidate_cloudfront:
         default: false
         description: Force CloudFront cache invalidation
