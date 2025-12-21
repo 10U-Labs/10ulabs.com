@@ -18,7 +18,7 @@ pytestmark = pytest.mark.layer(3)
 
 
 API_SHARED_RUNNERS_SRC = (
-    Path(__file__).parents[5] / "src" / "api" / "shared" / "runners"
+    Path(__file__).parents[6] / "src" / "api" / "shared" / "runners"
 )
 
 TestOrphanedResources = create_orphaned_resource_tests(
