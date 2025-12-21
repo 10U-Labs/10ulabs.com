@@ -323,6 +323,15 @@ class TestBuildToolsInstalled:
 
         assert output["Status"] == "Success"
 
+    def test_tflint_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify tflint is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, "which tflint")
+
+        assert output["Status"] == "Success"
+
 
 class TestPipPackagesInstalled:
     """Tests for pip packages installation."""

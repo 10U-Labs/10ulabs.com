@@ -275,6 +275,32 @@ class TestInstallTerraform:
             assert any("rm /tmp/terraform.zip" in c for c in calls)
 
 
+class TestInstallTflint:
+    """Tests for the install_tflint function."""
+
+    def _run_install(self, setup_module):
+        """Run install_tflint and return the mock run calls as strings."""
+        with patch.object(setup_module, "run") as mock_run:
+            setup_module.install_tflint("arm64")
+            return [str(c) for c in mock_run.call_args_list]
+
+    def test_downloads_tflint(self, setup_module):
+        """Downloads tflint binary."""
+        calls = self._run_install(setup_module)
+        download_call = [c for c in calls if "curl" in c][0]
+        assert "tflint_linux_arm64.zip" in download_call
+
+    def test_extracts_to_usr_local_bin(self, setup_module):
+        """Extracts tflint to usr local bin."""
+        calls = self._run_install(setup_module)
+        assert any("unzip" in c and "/usr/local/bin" in c for c in calls)
+
+    def test_cleans_up_zip_file(self, setup_module):
+        """Cleans up tflint zip file."""
+        calls = self._run_install(setup_module)
+        assert any("rm /tmp/tflint.zip" in c for c in calls)
+
+
 class TestInstallYq:
     """Tests for the install_yq function."""
 
@@ -440,6 +466,7 @@ class TestMain:
              patch.object(setup_module, "install_jscpd"), \
              patch.object(setup_module, "install_hadolint"), \
              patch.object(setup_module, "install_terraform"), \
+             patch.object(setup_module, "install_tflint"), \
              patch.object(setup_module, "create_runner_user"), \
              patch.object(setup_module, "install_github_actions_runner"), \
              patch.object(setup_module, "install_ssm_agent"), \
@@ -471,6 +498,7 @@ class TestMain:
              patch.object(setup_module, "install_jscpd") as mocks["jscpd"], \
              patch.object(setup_module, "install_hadolint") as mocks["hadolint"], \
              patch.object(setup_module, "install_terraform") as mocks["terraform"], \
+             patch.object(setup_module, "install_tflint") as mocks["tflint"], \
              patch.object(setup_module, "create_runner_user") as mocks["user"], \
              patch.object(setup_module, "install_github_actions_runner") as mocks["runner"], \
              patch.object(setup_module, "install_ssm_agent") as mocks["ssm"], \
@@ -492,6 +520,7 @@ class TestMain:
         mocks["jscpd"].assert_called_once()
         mocks["hadolint"].assert_called_once_with("arm64")
         mocks["terraform"].assert_called_once_with("arm64", config["terraform_version"])
+        mocks["tflint"].assert_called_once_with("arm64")
         mocks["user"].assert_called_once_with(config["runner_user"])
         mocks["runner"].assert_called_once_with(
             "arm64", config["runner_user"], config["runner_version"]

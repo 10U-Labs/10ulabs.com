@@ -160,6 +160,15 @@ def install_terraform(arch: str, version: str) -> None:
     run("rm /tmp/terraform.zip")
 
 
+def install_tflint(arch: str) -> None:
+    """Install tflint for Terraform linting."""
+    url = (f"https://github.com/terraform-linters/tflint/releases/latest/download/"
+           f"tflint_linux_{arch}.zip")
+    run(f"curl -sSL -o /tmp/tflint.zip {url}")
+    run("unzip -oq /tmp/tflint.zip -d /usr/local/bin")
+    run("rm /tmp/tflint.zip")
+
+
 def create_runner_user(username: str) -> None:
     """Create the GitHub runner user."""
     run(f"useradd -m -s /bin/bash {username}")
@@ -228,6 +237,7 @@ def main() -> None:
     install_jsonlint()
     install_hadolint(arch)
     install_terraform(arch, args.terraform_version)
+    install_tflint(arch)
     create_runner_user(args.runner_user)
     install_github_actions_runner(arch, args.runner_user, args.runner_version)
     install_ssm_agent(arch)

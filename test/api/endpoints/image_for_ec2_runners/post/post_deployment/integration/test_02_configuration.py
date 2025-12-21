@@ -215,6 +215,17 @@ class TestBuildToolVersions:
 
         assert output["Status"] == "Success"
 
+    def test_tflint_version_succeeds(
+        self, ssm_client, test_instance, run_ssm_command
+    ):
+        """Verify tflint version check succeeds."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, "tflint --version")
+
+        assert output["Status"] == "Success"
+
 
 class TestCloudwatchAgentConfiguration:
     """Tests for CloudWatch agent configuration."""

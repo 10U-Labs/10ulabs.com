@@ -1,7 +1,8 @@
 """Pytest fixtures for pre-deployment integration tests.
 
-Common fixtures (terraform_init, terraform_output, terraform_output_json) are
-inherited from test/api/conftest.py.
+Common fixtures (terraform_init, terraform_output) are inherited from
+test/api/conftest.py. terraform_output_json is imported directly from
+test_fixtures.terraform.
 """
 import json
 
@@ -9,8 +10,8 @@ from test.api.conftest import (
     API_BACKEND_DIR,
     terraform_init,
     terraform_output,
-    terraform_output_json,
 )
+from test_fixtures.terraform import terraform_output_json
 
 import boto3
 import pytest
