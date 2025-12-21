@@ -118,6 +118,8 @@ jobs:
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/conftest.py test/bootstrap/
+      - name: Ensure pytest-dependency is installed
+        run: python3 -m pip install pytest-dependency
       - name: Run unit tests
         run: |
           python3 -m pytest \

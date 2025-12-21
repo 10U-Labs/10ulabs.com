@@ -116,6 +116,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: cd src/www/shared && tflint --init && tflint
+      - name: Ensure pytest-dependency is installed
+        run: python3 -m pip install pytest-dependency
       - name: Run module unit tests
         run: |
           python3 -m pytest \
