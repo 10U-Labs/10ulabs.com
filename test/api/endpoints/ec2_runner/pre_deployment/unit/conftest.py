@@ -159,3 +159,22 @@ def mock_boto_client():
 def lambda_context():
     """Provide a mock Lambda context object."""
     return Mock()
+
+
+def create_mock_ec2_with_ami():
+    """Create a mock EC2 client with describe_images returning a valid AMI."""
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
+    }
+    return mock_ec2
+
+
+def get_minimal_env_vars():
+    """Get minimal environment variables needed for launch tests."""
+    return {
+        'SUBNETS': 'subnet-1',
+        'SECURITY_GROUPS': 'sg-1',
+        'EC2_INSTANCE_TYPES': 't3.small',
+        'EC2_IAM_INSTANCE_PROFILE': 'profile'
+    }

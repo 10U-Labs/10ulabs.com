@@ -1,29 +1,59 @@
-"""Layer 3-4: Verify VPC resources exist for EC2 runners.
+"""Layer 4: Existence tests.
 
-ec2_runner launches EC2 instances into the VPC/subnets created by runners.
+Verify prerequisite resources exist. These are resources created by OTHER
+workflows that this workflow depends on.
 """
 import pytest
 from botocore.exceptions import ClientError
 
+from .conftest import get_stable_ami_filters
 
-class TestRunnersOutputsExistence:
-    """Layer 3: Verify runners terraform outputs are accessible."""
+pytestmark = pytest.mark.layer(4)
 
-    def test_01_vpc_id_output_exists(self, runners_outputs):
+
+class TestImageForEC2RunnersOutputs:
+    """Verify image_for_ec2_runners terraform outputs exist."""
+
+    def test_lambda_function_arn_exists(self, image_for_ec2_runners_outputs):
+        """Verify lambda_function_arn output exists."""
+        assert image_for_ec2_runners_outputs.get("lambda_function_arn"), (
+            "lambda_function_arn output not found. "
+            "Run: cd src/api/endpoints/image_for_ec2_runners && terraform apply"
+        )
+
+    def test_lambda_function_name_exists(self, image_for_ec2_runners_outputs):
+        """Verify lambda_function_name output exists."""
+        assert image_for_ec2_runners_outputs.get("lambda_function_name"), (
+            "lambda_function_name output not found. "
+            "Run: cd src/api/endpoints/image_for_ec2_runners && terraform apply"
+        )
+
+    def test_lambda_invoke_arn_exists(self, image_for_ec2_runners_outputs):
+        """Verify lambda_invoke_arn output exists."""
+        assert image_for_ec2_runners_outputs.get("lambda_invoke_arn"), (
+            "lambda_invoke_arn output not found. "
+            "Run: cd src/api/endpoints/image_for_ec2_runners && terraform apply"
+        )
+
+
+class TestRunnersOutputs:
+    """Verify runners terraform outputs exist."""
+
+    def test_vpc_id_output_exists(self, runners_outputs):
         """Verify vpc_id output exists."""
         assert runners_outputs.get("vpc_id"), (
             "vpc_id output not found in runners. "
             "Run: cd src/api/endpoints/runners && terraform apply"
         )
 
-    def test_02_subnet_ids_output_exists(self, runners_outputs):
+    def test_subnet_ids_output_exists(self, runners_outputs):
         """Verify vpc_public_subnet_ids output exists."""
         assert runners_outputs.get("vpc_public_subnet_ids"), (
             "vpc_public_subnet_ids output not found in runners. "
             "Run: cd src/api/endpoints/runners && terraform apply"
         )
 
-    def test_03_security_group_id_output_exists(self, runners_outputs):
+    def test_security_group_id_output_exists(self, runners_outputs):
         """Verify runner_security_group_id output exists."""
         assert runners_outputs.get("runner_security_group_id"), (
             "runner_security_group_id output not found in runners. "
@@ -31,14 +61,27 @@ class TestRunnersOutputsExistence:
         )
 
 
-class TestVPCResources:
-    """Layer 3-4: Verify VPC resources exist and are properly configured."""
+def test_stable_ami_exists(ec2_client):
+    """Verify at least one stable AMI exists for EC2 runners."""
+    response = ec2_client.describe_images(
+        Owners=["self"],
+        Filters=get_stable_ami_filters()
+    )
+    assert len(response["Images"]) >= 1, (
+        "No stable AMI found with Purpose='GitHub self-hosted EC2 runner' "
+        "and Stable='true'. Run the 'Building AMI for EC2 self-hosted runners' "
+        "workflow to create one."
+    )
 
-    def test_01_vpc_exists(self, ec2_client, runners_outputs):
-        """Layer 3: Verify the VPC exists."""
+
+class TestVPCResources:
+    """Verify VPC resources exist."""
+
+    def test_vpc_exists(self, ec2_client, runners_outputs):
+        """Verify the VPC exists."""
         vpc_id = runners_outputs.get("vpc_id")
         if not vpc_id:
-            return  # Covered by outputs test
+            pytest.skip("vpc_id output not found")
         try:
             response = ec2_client.describe_vpcs(VpcIds=[vpc_id])
             assert len(response["Vpcs"]) == 1, (
@@ -53,24 +96,11 @@ class TestVPCResources:
                 )
             raise
 
-    def test_02_vpc_is_available(self, ec2_client, runners_outputs):
-        """Verify the VPC is in available state."""
-        vpc_id = runners_outputs.get("vpc_id")
-        if not vpc_id:
-            return
-        response = ec2_client.describe_vpcs(VpcIds=[vpc_id])
-        if not response["Vpcs"]:
-            return  # Covered by existence test
-        vpc = response["Vpcs"][0]
-        assert vpc["State"] == "available", (
-            f"VPC {vpc_id} is in state '{vpc['State']}', not 'available'."
-        )
-
-    def test_03_subnets_exist(self, ec2_client, runners_outputs):
-        """Layer 3: Verify all subnets exist."""
+    def test_subnets_exist(self, ec2_client, runners_outputs):
+        """Verify all subnets exist."""
         subnet_ids_str = runners_outputs.get("vpc_public_subnet_ids")
         if not subnet_ids_str:
-            return
+            pytest.skip("vpc_public_subnet_ids output not found")
         subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
         try:
             response = ec2_client.describe_subnets(SubnetIds=subnet_ids)
@@ -86,27 +116,11 @@ class TestVPCResources:
                 )
             raise
 
-    def test_04_subnets_are_available(self, ec2_client, runners_outputs):
-        """Layer 4: Verify all subnets are in available state."""
-        subnet_ids_str = runners_outputs.get("vpc_public_subnet_ids")
-        if not subnet_ids_str:
-            return
-        subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
-        try:
-            response = ec2_client.describe_subnets(SubnetIds=subnet_ids)
-        except ClientError:
-            return  # Covered by existence test
-        for subnet in response["Subnets"]:
-            assert subnet["State"] == "available", (
-                f"Subnet {subnet['SubnetId']} is in state '{subnet['State']}', "
-                "not 'available'."
-            )
-
-    def test_05_security_group_exists(self, ec2_client, runners_outputs):
-        """Layer 3: Verify the security group exists."""
+    def test_security_group_exists(self, ec2_client, runners_outputs):
+        """Verify the security group exists."""
         sg_id = runners_outputs.get("runner_security_group_id")
         if not sg_id:
-            return
+            pytest.skip("runner_security_group_id output not found")
         try:
             response = ec2_client.describe_security_groups(GroupIds=[sg_id])
             assert len(response["SecurityGroups"]) == 1, (

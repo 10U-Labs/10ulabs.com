@@ -10,7 +10,9 @@ from terraform_config import TEST_AWS_REGION
 from .conftest import (
     assert_json_content_type,
     assert_response_status,
+    create_mock_ec2_with_ami,
     create_multi_client_mock,
+    get_minimal_env_vars,
     parse_response_body,
 )
 
@@ -255,17 +257,8 @@ def test_launch_ec2_runner_insufficient_capacity_all_azs(mock_boto_client, ec2_r
 @patch('boto3.client')
 def test_launch_ec2_runner_no_github_token(mock_boto_client, ec2_runner_handler):
     """Test that launch fails when GitHub token is not available."""
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
-    }
-    mock_boto_client.return_value = mock_ec2
-    with patch.dict('os.environ', {
-        'SUBNETS': 'subnet-1',
-        'SECURITY_GROUPS': 'sg-1',
-        'EC2_INSTANCE_TYPES': 't3.small',
-        'EC2_IAM_INSTANCE_PROFILE': 'profile'
-    }):
+    mock_boto_client.return_value = create_mock_ec2_with_ami()
+    with patch.dict('os.environ', get_minimal_env_vars()):
         with patch.object(ec2_runner_handler, 'get_github_token', return_value=''):
             result = ec2_runner_handler.launch_ec2_runner(123, ['test'], 'test/repo')
             is_failure = not result['success']
@@ -275,17 +268,8 @@ def test_launch_ec2_runner_no_github_token(mock_boto_client, ec2_runner_handler)
 @patch('boto3.client')
 def test_launch_ec2_runner_failed_registration(mock_boto_client, ec2_runner_handler):
     """Test that launch fails when runner registration fails."""
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
-    }
-    mock_boto_client.return_value = mock_ec2
-    with patch.dict('os.environ', {
-        'SUBNETS': 'subnet-1',
-        'SECURITY_GROUPS': 'sg-1',
-        'EC2_INSTANCE_TYPES': 't3.small',
-        'EC2_IAM_INSTANCE_PROFILE': 'profile'
-    }):
+    mock_boto_client.return_value = create_mock_ec2_with_ami()
+    with patch.dict('os.environ', get_minimal_env_vars()):
         with patch.object(ec2_runner_handler, 'get_github_token', return_value='token'):
             with patch.object(
                 ec2_runner_handler, 'get_runner_registration_token', return_value=''

@@ -13,6 +13,7 @@ from test.api.conftest import (
 import boto3
 import pytest
 
+pytest_plugins = ['pytest_layers']
 
 IMAGE_FOR_EC2_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
 RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
@@ -60,3 +61,11 @@ def runners_outputs(request):
     if not request.getfixturevalue("runners_terraform_initialized"):
         pytest.skip("Terraform init failed for runners")
     return get_runners_outputs(RUNNERS_DIR)
+
+
+def get_stable_ami_filters():
+    """Return the filters for finding stable EC2 runner AMIs."""
+    return [
+        {"Name": "tag:Purpose", "Values": ["GitHub self-hosted EC2 runner"]},
+        {"Name": "tag:Stable", "Values": ["true"]},
+    ]

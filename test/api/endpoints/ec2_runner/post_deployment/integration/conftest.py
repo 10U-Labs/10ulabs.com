@@ -3,11 +3,15 @@ import boto3
 from botocore.exceptions import ClientError
 import pytest
 
-from ...conftest import EC2_RUNNER_SRC, terraform_output
+from test_fixtures.terraform import terraform_output
+
+from ...conftest import EC2_RUNNER_SRC
 from ..conftest import (
     api_key_fixture,
     api_url_fixture,
 )
+
+pytest_plugins = ['pytest_layers']
 
 api_url = api_url_fixture
 api_key = api_key_fixture
