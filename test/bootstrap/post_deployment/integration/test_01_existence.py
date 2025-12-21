@@ -7,6 +7,8 @@ import boto3
 from botocore.exceptions import ClientError
 import pytest
 
+pytestmark = pytest.mark.layer(1)
+
 
 # =============================================================================
 # S3 Buckets

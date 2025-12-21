@@ -5,7 +5,7 @@ Verify permission to inspect the state bucket (not existence, not capability).
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.dependency(name="layer2", depends=["layer1"])
+pytestmark = pytest.mark.layer(2)
 
 
 def test_can_call_s3_head_bucket(s3_client, state_bucket_name):
