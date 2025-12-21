@@ -156,6 +156,11 @@ jobs:
           TEST=test/api/shared/ecs_runner/post_deployment/integration
           python3 -m pytest \
             $TEST/ --verbose --pythonwarnings=error
+      - name: Run E2E tests
+        run: |
+          python3 -m pytest \
+            test/api/shared/ecs_runner/post_deployment/e2e/ \
+            --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
