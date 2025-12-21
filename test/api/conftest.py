@@ -1,5 +1,4 @@
 """Shared pytest fixtures and utilities for API tests."""
-import subprocess
 from pathlib import Path
 from typing import Dict, List
 from unittest.mock import Mock
@@ -18,71 +17,13 @@ from runner_labels import (
     DEFAULT_PRICING,
     DEFAULT_RUNNER_ID,
 )
+from test_fixtures.terraform import terraform_init, terraform_output
 
 pytest_plugins = ['test_fixtures.aws']
 
 # Common directory constants
 API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
 ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
-
-
-def terraform_init(directory: Path) -> bool:
-    """Initialize terraform in the given directory.
-
-    Args:
-        directory: Path to the terraform directory.
-
-    Returns:
-        True if initialization succeeded, False otherwise.
-    """
-    result = subprocess.run(
-        ["terraform", "init", "-backend=true", "-input=false"],
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.returncode == 0
-
-
-def terraform_output(directory: Path, name: str) -> str:
-    """Get a terraform output value.
-
-    Args:
-        directory: Path to the terraform directory.
-        name: Name of the output variable.
-
-    Returns:
-        The output value as a string, or empty string if not found.
-    """
-    result = subprocess.run(
-        ["terraform", "output", "-raw", name],
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.stdout.strip() if result.returncode == 0 else ""
-
-
-def terraform_output_json(directory: Path, name: str) -> str:
-    """Get a terraform output value as JSON string.
-
-    Args:
-        directory: Path to the terraform directory.
-        name: Name of the output variable.
-
-    Returns:
-        The output value as a JSON string, or empty string if not found.
-    """
-    result = subprocess.run(
-        ["terraform", "output", "-json", name],
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.stdout.strip() if result.returncode == 0 else ""
 
 
 def get_runners_outputs(directory: Path) -> Dict[str, str]:
