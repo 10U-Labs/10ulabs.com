@@ -10,7 +10,7 @@ from repo_utils import REPO_ROOT
 from terraform_config import TEST_AWS_REGION
 from terraform_drift import check_resource_exists, get_planned_creates
 
-pytestmark = pytest.mark.dependency(name="layer3", depends=["layer2"])
+pytestmark = pytest.mark.dependency(name="layer3", depends=["layer1", "layer2"])
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 
