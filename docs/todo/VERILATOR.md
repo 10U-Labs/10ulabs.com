@@ -10,7 +10,7 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 | # | Issue | Status | PR | Impact | Remarks |
 |---|-------|--------|-----|--------|---------|
-| 1 | [Function Inlining](#1-function-inlining) | ⏳ Submitted | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces call overhead | |
+| 1 | [Function Inlining](#1-function-inlining) | ✅ Merged | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces call overhead | |
 | 2 | [Thread Pool Lock Contention](#2-thread-pool-lock-contention) | ⏳ Submitted | [#6761](https://github.com/verilator/verilator/pull/6761) | Faster verilate step (V3ThreadPool) | |
 | 3 | [Threading Self-Diagnostic System](#3-threading-self-diagnostic-system) | ⏳ Submitted | [#6762](https://github.com/verilator/verilator/pull/6762) | Runtime threading advice (VlThreadPool) | |
 | 4 | [Removing Race Conditions on AST Constructors](#4-removing-race-conditions-on-ast-constructors) | 📝 Todo | - | Prerequisite for parallelization | |
@@ -26,7 +26,7 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 **Files:** `src/V3InlineCFuncs.cpp` (new file)
 
-**Status:** ⏳ Submitted - [PR #6815](https://github.com/verilator/verilator/pull/6815) (supersedes closed [#6765](https://github.com/verilator/verilator/pull/6765))
+**Status:** ✅ Merged - [PR #6815](https://github.com/verilator/verilator/pull/6815) (supersedes closed [#6765](https://github.com/verilator/verilator/pull/6765))
 
 **Resolves:** [Issue #2367](https://github.com/verilator/verilator/issues/2367)
 
@@ -316,10 +316,12 @@ public:
 
 ## Our Contributions
 
+**Merged PRs:**
+- [PR #6815: Inline small CFuncs to reduce function call overhead](https://github.com/verilator/verilator/pull/6815)
+
 **Open PRs:**
 - [PR #6761: Optimize V3ThreadPool::wait() to use condition variable](https://github.com/verilator/verilator/pull/6761)
 - [PR #6762: Add runtime threading advisor for configuration warnings](https://github.com/verilator/verilator/pull/6762)
-- [PR #6815: Inline small CFuncs to reduce function call overhead](https://github.com/verilator/verilator/pull/6815)
 
 **Closed PRs (not merged):**
 - [PR #6763: Parallelize V3FuncOpt using V3ThreadScope](https://github.com/verilator/verilator/pull/6763)
