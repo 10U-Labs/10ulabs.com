@@ -108,6 +108,7 @@ def install_python_packages() -> None:
         "paramiko",
         "pylint",
         "pytest",
+        "pytest-dependency",
         "python-hcl2",
         "pyyaml",
         "requests",

@@ -80,8 +80,8 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
-            pylint mypy yamllint pytest 'boto3>=1.35.76' boto3-stubs \
-            types-requests requests botocore
+            'boto3>=1.35.76' boto3-stubs botocore mypy pylint pytest \
+            pytest-dependency requests types-requests yamllint
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:

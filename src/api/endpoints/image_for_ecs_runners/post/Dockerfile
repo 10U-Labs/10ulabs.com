@@ -60,7 +60,7 @@ RUN apt-get update && \
     ln -s /usr/local/lib/node_modules /home/runner/node_modules && \
     python3 -m pip install --no-cache-dir --no-compile --break-system-packages \
         'boto3>=1.35.0' boto3-stubs 'botocore>=1.35.0' dockerfile-parse dnspython \
-        mypy paramiko pylint PyJWT pytest python-hcl2 PyYAML requests types-dockerfile-parse \
+        mypy paramiko pylint PyJWT pytest pytest-dependency python-hcl2 PyYAML requests types-dockerfile-parse \
         types-paramiko types-PyYAML types-requests yamllint && \
     apt-get autoremove -y && apt-get clean && \
     useradd -m -s /bin/bash runner && echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \

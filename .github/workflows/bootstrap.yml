@@ -70,7 +70,8 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
-            pylint mypy yamllint pytest boto3 boto3-stubs dnspython python-hcl2
+            boto3 boto3-stubs dnspython mypy pylint pytest pytest-dependency \
+            python-hcl2 yamllint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||

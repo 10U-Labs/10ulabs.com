@@ -1,7 +1,10 @@
-"""Layer 4: Configuration tests for www_shared pre-deployment validation.
+"""Layer 5: Configuration tests for www_shared pre-deployment validation.
 
 Verify prerequisite resources are configured correctly. Assumes existence tests passed.
 """
+import pytest
+
+pytestmark = pytest.mark.dependency(name="layer5", depends=["layer4"])
 
 
 def test_trust_policy_has_github_oidc_principal(
