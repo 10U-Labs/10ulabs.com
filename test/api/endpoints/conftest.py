@@ -1,11 +1,14 @@
 """Shared pytest fixtures and utilities for API endpoint tests."""
 import io
 import re
+import urllib.request
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, List
 
 import boto3
+
+from repo_utils import extract_brace_block
 
 
 def parse_terraform_archive_file_sources(tf_content: str) -> Dict[str, List[str]]:
@@ -27,19 +30,7 @@ def parse_terraform_archive_file_sources(tf_content: str) -> Dict[str, List[str]
         archive_name = match.group(1)
         start_pos = match.end() - 1  # Position of opening brace
 
-        # Find matching closing brace by counting braces
-        brace_count = 0
-        end_pos = start_pos
-        for i, char in enumerate(tf_content[start_pos:]):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = start_pos + i + 1
-                    break
-
-        archive_body = tf_content[start_pos:end_pos]
+        archive_body = extract_brace_block(tf_content, start_pos)
 
         # Find source blocks and extract filenames using non-greedy matching
         source_filename_pattern = r'source\s*\{[\s\S]*?filename\s*=\s*"([^"]+)"[\s\S]*?\}'
@@ -97,7 +88,6 @@ def get_lambda_package_files(
     code_location = response["Code"]["Location"]
 
     # Download the deployment package
-    import urllib.request
     with urllib.request.urlopen(code_location) as resp:
         zip_bytes = resp.read()
 
