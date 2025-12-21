@@ -143,8 +143,6 @@ jobs:
             lib/python/ test/conftest.py test/api/conftest.py \
             test/api/endpoints/conftest.py \
             test/api/endpoints/image_for_ec2_runners/endpoint/
-      - name: Terraform Plan
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform plan
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
