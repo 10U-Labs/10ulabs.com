@@ -71,12 +71,13 @@ def get_stable_ami_filters():
     ]
 
 
-def get_stable_ami_id(client):
-    """Get the stable AMI ID, or None if not found."""
+def get_stable_ami_info(client):
+    """Get the stable AMI ID and architecture, or None if not found."""
     response = client.describe_images(
         Owners=["self"],
         Filters=get_stable_ami_filters()
     )
     if not response["Images"]:
         return None
-    return response["Images"][0]["ImageId"]
+    image = response["Images"][0]
+    return {"id": image["ImageId"], "arch": image.get("Architecture", "x86_64")}

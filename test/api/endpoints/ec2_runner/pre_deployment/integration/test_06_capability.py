@@ -5,7 +5,7 @@ Verify we can perform required operations on prerequisite resources.
 import pytest
 from botocore.exceptions import ClientError
 
-from .conftest import get_stable_ami_id
+from .conftest import get_stable_ami_info
 
 pytestmark = pytest.mark.layer(6)
 
@@ -20,14 +20,16 @@ def test_can_run_instances_in_subnets(ec2_client, runners_outputs):
     if not sg_id:
         pytest.skip("runner_security_group_id output not found")
 
-    ami_id = get_stable_ami_id(ec2_client)
-    if not ami_id:
+    ami_info = get_stable_ami_info(ec2_client)
+    if not ami_info:
         pytest.skip("No stable AMI found")
+    ami_id = ami_info["id"]
+    instance_type = "t4g.micro" if ami_info["arch"] == "arm64" else "t3.micro"
 
     try:
         ec2_client.run_instances(
             ImageId=ami_id,
-            InstanceType="t3.micro",
+            InstanceType=instance_type,
             MinCount=1,
             MaxCount=1,
             SubnetId=subnet_ids[0],
