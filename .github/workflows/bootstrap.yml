@@ -128,12 +128,6 @@ jobs:
           python3 -m pytest \
             test/bootstrap/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
-      - name: Terraform Plan
-        run: |
-          cd src/bootstrap && \
-            terraform plan \
-            -var="github_pat=${{ secrets.GH_PAT }}" \
-            -var="github_app_private_key=${{ secrets.GH_APP_PRIVATE_KEY }}"
       - name: Terraform Apply
         run: |
           cd src/bootstrap && \
