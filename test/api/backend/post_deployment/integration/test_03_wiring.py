@@ -189,26 +189,15 @@ def test_cloudwatch_logs_firehose_role_has_firehose_access_policy(iam_client, co
 # =============================================================================
 
 
-def test_waf_logging_configuration_exists():
+def test_waf_logging_configuration_exists(waf_logging_config):
     """Verify WAF logging configuration exists."""
-    waf_client = boto3.client('wafv2', region_name='us-east-1')
-    response = waf_client.list_web_acls(Scope='CLOUDFRONT')
-    if response['WebACLs']:
-        acl = response['WebACLs'][0]
-        acl_arn = acl['ARN']
-        logging_config = waf_client.get_logging_configuration(ResourceArn=acl_arn)
-        assert 'LoggingConfiguration' in logging_config
+    assert waf_logging_config is not None
 
 
-def test_waf_logging_destinations_cloudwatch_logs():
+def test_waf_logging_destinations_cloudwatch_logs(waf_logging_config):
     """Verify WAF logs to CloudWatch Logs."""
-    waf_client = boto3.client('wafv2', region_name='us-east-1')
-    response = waf_client.list_web_acls(Scope='CLOUDFRONT')
-    if response['WebACLs']:
-        acl = response['WebACLs'][0]
-        acl_arn = acl['ARN']
-        logging_config = waf_client.get_logging_configuration(ResourceArn=acl_arn)
-        destinations = logging_config['LoggingConfiguration']['LogDestinationConfigs']
+    if waf_logging_config is not None:
+        destinations = waf_logging_config['LogDestinationConfigs']
         assert 'aws-waf-logs-api' in destinations[0]
 
 

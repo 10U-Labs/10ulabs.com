@@ -9,27 +9,9 @@ import boto3
 import pytest
 
 
-def parse_bootstrap_tfvar(var_name: str) -> str:
-    """Parse a variable from bootstrap terraform.tfvars file."""
-    base = Path(__file__).parent.parent.parent.parent
-    tfvars_path = base / "src" / "bootstrap" / "terraform.tfvars"
-    with open(tfvars_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-                if match:
-                    key, value = match.groups()
-                    if key == var_name:
-                        return value.strip('"')
-    return ""
-
-
-def parse_health_tfvars() -> Dict[str, str]:
-    """Parse health endpoint terraform.tfvars configuration."""
-    base = Path(__file__).parent.parent.parent.parent
-    tfvars_path = base / "src" / "api" / "operational" / "health" / "terraform.tfvars"
-    config = {}
+def _parse_tfvars_file(tfvars_path: Path) -> Dict[str, str]:
+    """Parse a terraform.tfvars file and return key-value pairs."""
+    config: Dict[str, str] = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -39,6 +21,21 @@ def parse_health_tfvars() -> Dict[str, str]:
                     key, value = match.groups()
                     config[key] = value.strip('"')
     return config
+
+
+def parse_bootstrap_tfvar(var_name: str) -> str:
+    """Parse a variable from bootstrap terraform.tfvars file."""
+    base = Path(__file__).parent.parent.parent.parent
+    tfvars_path = base / "src" / "bootstrap" / "terraform.tfvars"
+    config = _parse_tfvars_file(tfvars_path)
+    return config.get(var_name, "")
+
+
+def parse_health_tfvars() -> Dict[str, str]:
+    """Parse health endpoint terraform.tfvars configuration."""
+    base = Path(__file__).parent.parent.parent.parent
+    tfvars_path = base / "src" / "api" / "operational" / "health" / "terraform.tfvars"
+    return _parse_tfvars_file(tfvars_path)
 
 
 def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
@@ -87,19 +84,11 @@ def _add_derived_config(result: Dict[str, str]) -> None:
 
 
 @pytest.fixture(name="config", scope="module")
-def config_fixture(shared_config) -> Dict[str, str]:
+def config_fixture(shared_config) -> Dict[str, Any]:
     """Provide merged configuration from terraform files."""
     base = Path(__file__).parent.parent.parent.parent
     tfvars_path = base / "src" / "api" / "backend" / "terraform.tfvars"
-    result = {}
-    with open(tfvars_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-                if match:
-                    key, value = match.groups()
-                    result[key] = value.strip('"')
+    result: Dict[str, Any] = dict(_parse_tfvars_file(tfvars_path))
     api_locals = _parse_api_locals(shared_config)
     result['aws_region'] = api_locals.get('aws_region', '')
     result['aws_account_id'] = api_locals.get('aws_account_id', '')

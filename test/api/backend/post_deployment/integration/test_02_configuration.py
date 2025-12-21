@@ -73,62 +73,44 @@ def test_s3_bucket_encryption_has_rules(s3_client, config):
 # =============================================================================
 
 
-def test_cloudfront_distribution_has_default_cache_behavior(cloudfront_client):
+def test_cloudfront_distribution_has_default_cache_behavior(first_cloudfront_dist_config):
     """Verify CloudFront distribution has default cache behavior."""
-    distributions = cloudfront_client.list_distributions()
-    if distributions['DistributionList']['Quantity'] > 0:
-        dist_id = distributions['DistributionList']['Items'][0]['Id']
-        dist_config = cloudfront_client.get_distribution_config(Id=dist_id)
-        assert 'DefaultCacheBehavior' in dist_config['DistributionConfig']
+    if first_cloudfront_dist_config is not None:
+        assert 'DefaultCacheBehavior' in first_cloudfront_dist_config
 
 
-def test_cloudfront_distribution_allows_get_head_methods(cloudfront_client):
+def test_cloudfront_distribution_allows_get_head_methods(first_cloudfront_dist_config):
     """Verify CloudFront allows GET and HEAD methods."""
-    distributions = cloudfront_client.list_distributions()
-    if distributions['DistributionList']['Quantity'] > 0:
-        dist_id = distributions['DistributionList']['Items'][0]['Id']
-        dist_config = cloudfront_client.get_distribution_config(Id=dist_id)
-        cache_behavior = dist_config['DistributionConfig']['DefaultCacheBehavior']
+    if first_cloudfront_dist_config is not None:
+        cache_behavior = first_cloudfront_dist_config['DefaultCacheBehavior']
         allowed_methods = cache_behavior['AllowedMethods']['Items']
         assert 'GET' in allowed_methods
 
 
-def test_cloudfront_distribution_has_viewer_protocol_policy(cloudfront_client):
+def test_cloudfront_distribution_has_viewer_protocol_policy(first_cloudfront_dist_config):
     """Verify CloudFront has viewer protocol policy configured."""
-    distributions = cloudfront_client.list_distributions()
-    if distributions['DistributionList']['Quantity'] > 0:
-        dist_id = distributions['DistributionList']['Items'][0]['Id']
-        dist_config = cloudfront_client.get_distribution_config(Id=dist_id)
-        cache_behavior = dist_config['DistributionConfig']['DefaultCacheBehavior']
+    if first_cloudfront_dist_config is not None:
+        cache_behavior = first_cloudfront_dist_config['DefaultCacheBehavior']
         assert 'ViewerProtocolPolicy' in cache_behavior
 
 
-def test_cloudfront_distribution_compression_enabled(cloudfront_client):
+def test_cloudfront_distribution_compression_enabled(first_cloudfront_dist_config):
     """Verify CloudFront compression is enabled."""
-    distributions = cloudfront_client.list_distributions()
-    if distributions['DistributionList']['Quantity'] > 0:
-        dist_id = distributions['DistributionList']['Items'][0]['Id']
-        dist_config = cloudfront_client.get_distribution_config(Id=dist_id)
-        assert 'Compress' in dist_config['DistributionConfig']['DefaultCacheBehavior']
+    if first_cloudfront_dist_config is not None:
+        assert 'Compress' in first_cloudfront_dist_config['DefaultCacheBehavior']
 
 
-def test_cloudfront_distribution_logging_enabled(cloudfront_client):
+def test_cloudfront_distribution_logging_enabled(first_cloudfront_dist_config):
     """Verify CloudFront has logging enabled."""
-    distributions = cloudfront_client.list_distributions()
-    if distributions['DistributionList']['Quantity'] > 0:
-        dist_id = distributions['DistributionList']['Items'][0]['Id']
-        dist_config = cloudfront_client.get_distribution_config(Id=dist_id)
-        logging_config = dist_config['DistributionConfig'].get('Logging', {})
+    if first_cloudfront_dist_config is not None:
+        logging_config = first_cloudfront_dist_config.get('Logging', {})
         assert logging_config.get('Enabled', False)
 
 
-def test_cloudfront_logging_excludes_cookies(cloudfront_client):
+def test_cloudfront_logging_excludes_cookies(first_cloudfront_dist_config):
     """Verify CloudFront logging excludes cookies."""
-    distributions = cloudfront_client.list_distributions()
-    if distributions['DistributionList']['Quantity'] > 0:
-        dist_id = distributions['DistributionList']['Items'][0]['Id']
-        dist_config = cloudfront_client.get_distribution_config(Id=dist_id)
-        logging_config = dist_config['DistributionConfig'].get('Logging', {})
+    if first_cloudfront_dist_config is not None:
+        logging_config = first_cloudfront_dist_config.get('Logging', {})
         assert logging_config.get('IncludeCookies', True) is False
 
 
