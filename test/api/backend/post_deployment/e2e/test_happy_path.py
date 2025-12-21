@@ -8,7 +8,6 @@ import time
 
 import requests
 
-from test_fixtures.aws import get_shared_config
 from ..conftest import skip_if_endpoint_not_deployed
 
 
@@ -20,7 +19,7 @@ TEST_HEADERS = {"x-test-mode": "true"}
 # =============================================================================
 
 
-def test_root_endpoint_responds():
+def test_root_endpoint_responds(api_url):
     """
     User Journey: User accesses the API root endpoint.
 
@@ -30,8 +29,6 @@ def test_root_endpoint_responds():
     Critical Path: CloudFront → S3 (or API Gateway)
     Failure Impact: API appears down, users cannot access documentation
     """
-    config = get_shared_config()
-    api_url = f"https://{config['api_fqdn']}"
     response = requests.get(api_url, headers=TEST_HEADERS, timeout=10)
     # 200 for direct response, 301/302 for redirect to docs
     assert response.status_code in [200, 301, 302]
