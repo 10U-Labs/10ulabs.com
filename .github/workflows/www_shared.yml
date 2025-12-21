@@ -116,6 +116,11 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: cd src/www/shared && tflint --init && tflint
+      - name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/www/shared/pre_deployment/integration/ \
+            --capture=no --verbose --pythonwarnings=error
       - name: Terraform Plan
         run: cd src/www/shared && terraform plan
       - name: Run module unit tests
@@ -129,11 +134,6 @@ jobs:
           python3 -m pytest \
             test/www/shared/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
-      - name: Run pre-deployment integration tests
-        run: |
-          python3 -m pytest \
-            test/www/shared/pre_deployment/integration/ \
-            --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/www/shared && terraform apply -auto-approve
       - id: check_files
