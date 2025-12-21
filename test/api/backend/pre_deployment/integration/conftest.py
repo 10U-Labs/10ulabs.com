@@ -25,8 +25,9 @@ def pytest_configure(config):
 
 
 @pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item, _call):
+def pytest_runtest_makereport(item, call):
     """Track pass/fail results for each layer."""
+    del call  # Required by hook signature but unused
     outcome = yield
     result = outcome.get_result()
 
