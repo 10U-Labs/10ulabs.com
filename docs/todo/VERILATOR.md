@@ -8,51 +8,17 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 ## Table of Contents
 
-| # | Issue | Status | PR | Impact | Remarks |
-|---|-------|--------|-----|--------|---------|
-| ~~1~~ | ~~[Function Inlining](#1-function-inlining)~~ | ✅ Merged | ~~[#6815](https://github.com/verilator/verilator/pull/6815)~~ | ~~Reduces call overhead~~ | |
-| 2 | [Thread Pool Lock Contention](#2-thread-pool-lock-contention) | ⏳ Submitted | [#6761](https://github.com/verilator/verilator/pull/6761) | Faster verilate step (V3ThreadPool) | |
-| 3 | [Threading Self-Diagnostic System](#3-threading-self-diagnostic-system) | ⏳ Submitted | [#6762](https://github.com/verilator/verilator/pull/6762) | Runtime threading advice (VlThreadPool) | |
-| 4 | [Removing Race Conditions on AST Constructors](#4-removing-race-conditions-on-ast-constructors) | 📝 Todo | - | Prerequisite for parallelization | |
-| 5 | [Module-Level Parallel Verilation](#5-module-level-parallel-verilation) | ⏸️ Paused | - | 2-4x faster compilation | Rethinking approach after #6 rejection |
-| 6 | [Parallelize V3FuncOpt](#6-parallelize-v3funcopt) | ❌ Rejected | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallelization | Maintainers preferred different strategy |
-| 7 | [Parallelize V3Const](#7-parallelize-v3const) | 📝 Todo | - | Per-module constant propagation | Blocked on approach decision |
-| 8 | [Parallelize V3Dead](#8-parallelize-v3dead) | 📝 Todo | - | Per-module dead code elimination | Blocked on approach decision |
-| 9 | [AST Object Pooling](#9-ast-object-pooling) | 📝 Todo | - | 10-20% memory reduction | |
-
----
-
-## ~~1. Function Inlining~~
-
-~~**Files:** `src/V3InlineCFuncs.cpp` (new file)~~
-
-**Status:** ✅ Merged - [PR #6815](https://github.com/verilator/verilator/pull/6815) (supersedes closed [#6765](https://github.com/verilator/verilator/pull/6765))
-
-~~**Resolves:** [Issue #2367](https://github.com/verilator/verilator/issues/2367)~~
-
-~~**Problem:** When `--output-split-cfuncs` places functions in separate compilation units, the C++ compiler cannot inline them, resulting in function call overhead for small functions.~~
-
-~~**Solution:** Add `--inline-cfuncs` and `--inline-cfuncs-product` options to inline small CFunc calls directly into their callers at the Verilator level.~~
-
-~~**Two thresholds:**~~
-- ~~`--inline-cfuncs <n>` (default 20): Always inline if function has ≤ n AST nodes~~
-- ~~`--inline-cfuncs-product <n>` (default 200): Also inline if size × call_count ≤ n~~
-
-~~**Functions are inlined when they:**~~
-- ~~Meet size thresholds above~~
-- ~~Have no `$c()` statements~~
-- ~~Have void return type~~
-- ~~Are in the same scope as caller~~
-
-~~**Implementation details:**~~
-- ~~Separate V3InlineCFuncs pass running after V3Reloop~~
-- ~~Local variables cloned with unique names (`__Vinline_<func>_<var>`)~~
-- ~~V3Stats tracking: `"Optimizations, Inlined CFuncs"`~~
-- ~~Automatically disabled when `--prof-cfuncs` or `--trace` is used~~
-
-~~**Impact:** Reduces function call overhead from --output-split-cfuncs~~
-~~**Difficulty:** Medium - required multiple iterations based on maintainer feedback~~
-~~**Risk:** Low - opt-in feature with sensible defaults~~
+| # | Issue | Status | PR | Impact |
+|---|-------|--------|-----|--------|
+| ~~1~~ | ~~Inline small CFuncs to reduce function call overhead~~ | ✅ Merged | ~~[#6815](https://github.com/verilator/verilator/pull/6815)~~ | ~~Reduces call overhead~~ |
+| 2 | [Thread Pool Lock Contention](#2-thread-pool-lock-contention) | ⏳ Submitted | [#6761](https://github.com/verilator/verilator/pull/6761) | Faster verilate step (V3ThreadPool) |
+| 3 | [Threading Self-Diagnostic System](#3-threading-self-diagnostic-system) | ⏳ Submitted | [#6762](https://github.com/verilator/verilator/pull/6762) | Runtime threading advice (VlThreadPool) |
+| 4 | [Removing Race Conditions on AST Constructors](#4-removing-race-conditions-on-ast-constructors) | 📝 Todo | - | Prerequisite for parallelization |
+| 5 | [Module-Level Parallel Verilation](#5-module-level-parallel-verilation) | ⏸️ Paused | - | 2-4x faster compilation |
+| 6 | [Parallelize V3FuncOpt](#6-parallelize-v3funcopt) | ❌ Rejected | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallelization |
+| 7 | [Parallelize V3Const](#7-parallelize-v3const) | 📝 Todo | - | Per-module constant propagation |
+| 8 | [Parallelize V3Dead](#8-parallelize-v3dead) | 📝 Todo | - | Per-module dead code elimination |
+| 9 | [AST Object Pooling](#9-ast-object-pooling) | 📝 Todo | - | 10-20% memory reduction |
 
 ---
 
