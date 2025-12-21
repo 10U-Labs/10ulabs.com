@@ -5,7 +5,7 @@
 # needs to run based on changed files, and dispatches it (fire-and-forget).
 # Descendant workflows are triggered via dispatch_descendants.py script.
 concurrency:
-  cancel-in-progress: true
+  cancel-in-progress: false
   group: workflowctl-${{ github.ref }}
 jobs:
   orchestrate:
