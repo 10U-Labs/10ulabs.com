@@ -5,9 +5,7 @@ Verify prerequisite resources exist (assumes authorization passed).
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.dependency(
-    name="layer4", depends=["layer1", "layer2", "layer3"]
-)
+pytestmark = pytest.mark.layer(4)
 
 
 def test_iam_role_exists(iam_client, current_role_name):

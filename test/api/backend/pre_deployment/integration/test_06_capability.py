@@ -7,9 +7,7 @@ import uuid
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.dependency(
-    name="layer6", depends=["layer1", "layer2", "layer3", "layer4", "layer5"]
-)
+pytestmark = pytest.mark.layer(6)
 
 
 def test_can_call_s3_list_buckets(s3_client):

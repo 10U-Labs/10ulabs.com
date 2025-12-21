@@ -5,7 +5,7 @@ Verify AWS credentials are valid before testing authorization or state.
 import pytest
 from botocore.exceptions import NoCredentialsError
 
-pytestmark = pytest.mark.dependency(name="layer1")
+pytestmark = pytest.mark.layer(1)
 
 
 def test_aws_credentials_available(sts_client):

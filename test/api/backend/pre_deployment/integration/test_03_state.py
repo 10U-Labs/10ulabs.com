@@ -8,7 +8,7 @@ import pytest
 
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
-pytestmark = pytest.mark.dependency(name="layer3", depends=["layer1", "layer2"])
+pytestmark = pytest.mark.layer(3)
 
 API_BACKEND_SRC = (
     Path(__file__).parents[5] / "src" / "api" / "backend"
