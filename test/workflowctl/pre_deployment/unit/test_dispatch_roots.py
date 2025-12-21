@@ -17,42 +17,57 @@ class TestShouldTriggerDescendants:
 
     def test_returns_true_when_input_is_true(self) -> None:
         """Test returns True when trigger_input is 'true'."""
-        assert should_trigger_descendants("true", "", []) is True
+        assert should_trigger_descendants("true", "", [], [], None) is True
 
     def test_returns_true_when_input_is_true_uppercase(self) -> None:
         """Test returns True when trigger_input is 'TRUE'."""
-        assert should_trigger_descendants("TRUE", "", []) is True
+        assert should_trigger_descendants("TRUE", "", [], [], None) is True
 
     def test_returns_true_when_commit_has_tag(self) -> None:
         """Test returns True when commit message has [trigger descendants]."""
         assert should_trigger_descendants(
-            "false",
-            "feat: add feature [trigger descendants]",
-            []
+            "false", "feat: add feature [trigger descendants]", [], [], None
         ) is True
 
     def test_returns_true_when_commit_has_tag_case_insensitive(self) -> None:
         """Test [Trigger Descendants] tag is case insensitive."""
         assert should_trigger_descendants(
-            "false",
-            "feat: add feature [Trigger Descendants]",
-            []
+            "false", "feat: add feature [Trigger Descendants]", [], [], None
         ) is True
 
     def test_returns_true_when_dependencies_changed(self) -> None:
         """Test returns True when workflow-dependencies.json changed."""
         assert should_trigger_descendants(
-            "false",
-            "feat: update deps",
-            ["etc/workflow-dependencies.json"]
+            "false", "feat: update deps", ["etc/workflow-dependencies.json"], [], None
         ) is True
 
     def test_returns_false_when_no_conditions_met(self) -> None:
         """Test returns False when no conditions are met."""
         assert should_trigger_descendants(
-            "false",
-            "feat: normal commit",
-            ["src/file.py"]
+            "false", "feat: normal commit", ["src/file.py"], [], None
+        ) is False
+
+    def test_returns_true_when_descendant_has_changes(self) -> None:
+        """Test returns True when a descendant workflow has changed files."""
+        graph = {
+            "bootstrap": {"paths": ["src/bootstrap/**"], "depends_on": []},
+            "www_shared": {"paths": ["src/www/shared/**"], "depends_on": ["bootstrap"]},
+        }
+        assert should_trigger_descendants(
+            "false", "feat: update both",
+            ["src/bootstrap/main.tf", "src/www/shared/main.tf"],
+            ["bootstrap"], graph
+        ) is True
+
+    def test_returns_false_when_only_root_has_changes(self) -> None:
+        """Test returns False when only the root workflow has changed files."""
+        graph = {
+            "bootstrap": {"paths": ["src/bootstrap/**"], "depends_on": []},
+            "www_shared": {"paths": ["src/www/shared/**"], "depends_on": ["bootstrap"]},
+        }
+        assert should_trigger_descendants(
+            "false", "feat: update bootstrap only",
+            ["src/bootstrap/main.tf"], ["bootstrap"], graph
         ) is False
 
 

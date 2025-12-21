@@ -41,7 +41,7 @@
       ".github/workflows/bootstrap.yml",
       "etc/workflow-dependencies.json",
       "lib/python/terraform_config/**",
-      "lib/terraform/**",
+      "lib/terraform/modules/shared/**",
       "src/bootstrap/**",
       "test/bootstrap/**"
     ]
@@ -202,7 +202,11 @@
     "name": "Ensuring www shared infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/www_shared.yml",
+      "lib/terraform/modules/cloudfront_waf/**",
+      "lib/terraform/modules/s3_bucket/**",
       "src/www/shared/**",
+      "test/lib/terraform/modules/cloudfront_waf/**",
+      "test/lib/terraform/modules/s3_bucket/**",
       "test/www/shared/**"
     ]
   }

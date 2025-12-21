@@ -17,7 +17,12 @@ import os
 import re
 import sys
 
-from utils import dispatch_gh_workflow
+from utils import (
+    dispatch_gh_workflow,
+    file_matches_pattern,
+    get_all_descendants,
+    load_graph_with_error,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -51,6 +56,11 @@ def parse_args() -> argparse.Namespace:
         help="Input value for trigger_descendants (true/false)"
     )
     parser.add_argument(
+        "--graph",
+        default="etc/workflow-dependencies.json",
+        help="Path to workflow dependency graph JSON file"
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print what would be dispatched without actually dispatching"
@@ -58,17 +68,53 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _get_affected_workflows(
+    changed_files: list[str],
+    graph: dict
+) -> set[str]:
+    """Get workflows affected by changed files."""
+    affected: set[str] = set()
+    for workflow_key, workflow_config in graph.items():
+        patterns = workflow_config.get("paths", [])
+        for filepath in changed_files:
+            if any(file_matches_pattern(filepath, p) for p in patterns):
+                affected.add(workflow_key)
+                break
+    return affected
+
+
+def _descendants_have_changes(
+    roots: list[str],
+    changed_files: list[str],
+    graph: dict
+) -> bool:
+    """Check if any descendant of the roots has changed files."""
+    affected = _get_affected_workflows(changed_files, graph)
+
+    # Get all descendants of all roots
+    all_descendants: set[str] = set()
+    cache: dict[str, set[str]] = {}
+    for root in roots:
+        all_descendants.update(get_all_descendants(root, graph, cache))
+
+    # Check if any affected workflow is a descendant
+    return bool(affected & all_descendants)
+
+
 def should_trigger_descendants(
     trigger_input: str,
     commit_message: str,
-    changed_files: list[str]
+    changed_files: list[str],
+    roots: list[str],
+    graph: dict | None
 ) -> bool:
     """Determine if descendants should be triggered.
 
     Returns True if:
     1. trigger_descendants input is "true", OR
     2. Commit message contains [trigger descendants], OR
-    3. etc/workflow-dependencies.json was changed
+    3. etc/workflow-dependencies.json was changed, OR
+    4. Any descendant workflow also has changed files
     """
     # Check input
     if trigger_input.lower() == "true":
@@ -80,6 +126,10 @@ def should_trigger_descendants(
 
     # Check if workflow-dependencies.json changed
     if "etc/workflow-dependencies.json" in changed_files:
+        return True
+
+    # Check if any descendants also have changed files
+    if graph and _descendants_have_changes(roots, changed_files, graph):
         return True
 
     return False
@@ -144,11 +194,18 @@ def main() -> int:
     # Parse changed files
     changed_files = [f.strip() for f in args.changed.split("\n") if f.strip()]
 
+    # Load graph for descendant checking
+    graph, error = load_graph_with_error(args.graph)
+    if error:
+        print(f"Warning: {error} - descendant detection disabled", file=sys.stderr)
+
     # Determine if we should trigger descendants
     trigger = should_trigger_descendants(
         args.trigger_descendants,
         args.commit_message,
-        changed_files
+        changed_files,
+        roots,
+        graph
     )
 
     if trigger:
