@@ -53,16 +53,13 @@ def docker_logged_in(ecr_client, shared_config):
     decoded = base64.b64decode(token).decode("utf-8")
     password = decoded.split(":")[1]
 
-    try:
-        result = subprocess.run(
-            login_cmd,
-            input=password.encode(),
-            capture_output=True,
-            timeout=30,
-            check=False
-        )
-    except FileNotFoundError:
-        pytest.skip("Docker not installed on this runner")
+    result = subprocess.run(
+        login_cmd,
+        input=password.encode(),
+        capture_output=True,
+        timeout=30,
+        check=False
+    )
 
     if result.returncode != 0:
         pytest.skip(f"Docker login failed: {result.stderr.decode()}")

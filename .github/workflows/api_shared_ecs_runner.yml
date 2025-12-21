@@ -9,12 +9,15 @@ jobs:
       github.event.inputs.dry_run != 'true'
     name: Deploy API Shared ECS Runner Infrastructure
     runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "arm", "spot", "runner-{0}"]',
-            github.run_id)) }}
+      ${{
+        (vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]'))
+        && 'ubuntu-latest'
+        || fromJSON(format(
+          '["ec2", "general-purpose", "arm", "spot", "runner-{0}"]',
+          github.run_id))
+      }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
