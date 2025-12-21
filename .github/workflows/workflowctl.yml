@@ -211,7 +211,9 @@ jobs:
             --repo ${{ github.repository }} \
             --merge-roots "$ROOTS_JSON" \
             --graph etc/workflow-dependencies.json
-      - if: >-
+      - env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        if: >-
           steps.plan.outputs.root_workflows != '' &&
           inputs.dry_run != true &&
           !contains(github.event.head_commit.message, '[dry run]')
@@ -221,7 +223,6 @@ jobs:
             --repo "${{ github.repository }}" \
             --roots "${{ steps.plan.outputs.root_workflows }}" \
             --changed "${{ steps.files.outputs.changed }}" \
-            --commit-message "${{ github.event.head_commit.message }}" \
             --trigger-descendants "${{ inputs.trigger_descendants }}"
 name: Workflow Controller
 on:

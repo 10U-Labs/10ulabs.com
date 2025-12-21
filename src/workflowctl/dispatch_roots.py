@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--commit-message",
-        default="",
+        default=os.environ.get("COMMIT_MESSAGE", ""),
         help="The commit message to check for [trigger descendants]"
     )
     parser.add_argument(
