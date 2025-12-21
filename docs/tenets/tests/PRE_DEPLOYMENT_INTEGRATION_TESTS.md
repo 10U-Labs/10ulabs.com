@@ -18,45 +18,48 @@ Resources created by the workflow don't exist yet when pre-deployment tests run.
 Pre-deployment tests answer: "Can I deploy?"
 Post-deployment tests answer: "Did deployment succeed?"
 
-## 2. Five-Layer Testing Model
+## 2. Six-Layer Testing Model
 
-Every resource dependency must be tested through five layers, in order:
+Every resource dependency must be tested through six layers, in order:
 
 | Layer | Purpose | Example |
 |-------|---------|---------|
 | 1. Authentication | Valid credentials exist | Can call sts:GetCallerIdentity |
 | 2. Authorization | Permission to inspect resources | Can call s3:HeadBucket |
-| 3. Existence | Resource actually exists | Bucket exists |
-| 4. Configuration | Resource configured correctly | IAM role has required policy |
-| 5. Capability | Can perform required operations | Can call s3:PutObject |
+| 3. State | Terraform state matches AWS reality | Resources to create don't already exist |
+| 4. Existence | Resource actually exists | Bucket exists |
+| 5. Configuration | Resource configured correctly | IAM role has required policy |
+| 6. Capability | Can perform required operations | Can call s3:PutObject |
 
 Each layer catches different failure modes:
 - Layer 1 fails → credentials invalid or expired
 - Layer 2 fails → credentials valid but lack permission to inspect
-- Layer 3 fails → have permission to check, but resource doesn't exist
-- Layer 4 fails → resource exists but misconfigured
-- Layer 5 fails → resource exists and configured, but can't perform operations
+- Layer 3 fails → state drift - resources exist but not in Terraform state
+- Layer 4 fails → have permission to check, but resource doesn't exist
+- Layer 5 fails → resource exists but misconfigured
+- Layer 6 fails → resource exists and configured, but can't perform operations
 
 ## 3. Fail Fast with Granular Diagnostics
 
 Cryptic errors like "AccessDenied: Access Denied" are unacceptable.
 
 - Each test must be atomic: one assertion per test
-- Tests must run in layer order (authentication before authorization before existence)
+- Tests must run in layer order (authentication before authorization before state before existence)
 - When a test fails, the developer must know exactly where the chain broke
 - Failure messages must include resource names and expected values
 
 ## 4. Test File Organization
 
-Tests MUST be organized into exactly five files by layer:
+Tests MUST be organized into exactly six files by layer:
 
 ```
-test/api/endpoints/{endpoint}/pre_deployment/integration/
+test/{module}/pre_deployment/integration/
 ├── test_01_authentication.py  # Layer 1: Can authenticate to AWS
 ├── test_02_authorization.py   # Layer 2: Have permission to inspect prerequisites
-├── test_03_existence.py       # Layer 3: Prerequisite resources exist
-├── test_04_configuration.py   # Layer 4: Prerequisites configured correctly
-└── test_05_capability.py      # Layer 5: Can perform required operations
+├── test_03_state.py           # Layer 3: Terraform state matches AWS reality
+├── test_04_existence.py       # Layer 4: Prerequisite resources exist
+├── test_05_configuration.py   # Layer 5: Prerequisites configured correctly
+└── test_06_capability.py      # Layer 6: Can perform required operations
 ```
 
 Do NOT organize by resource (test_s3.py, test_iam.py, test_dynamodb.py).
@@ -122,10 +125,47 @@ def test_can_describe_s3_bucket(s3_client, config):
 def test_can_access_state_bucket(s3_client, config):
     """Verify can access state bucket."""
     response = s3_client.head_bucket(Bucket=config["state_bucket_name"])
-    assert response is not None  # This fails if bucket doesn't exist - that's Layer 3
+    assert response is not None  # This fails if bucket doesn't exist - that's Layer 4
 ```
 
-### Layer 3: Existence Tests (test_03_existence.py)
+### Layer 3: State Tests (test_03_state.py)
+
+Test that Terraform state matches AWS reality. Resources Terraform plans to create should not already exist. Uses `terraform_drift` from `lib/python/`.
+
+```python
+# CORRECT - state validation
+from terraform_config import TEST_AWS_REGION
+from terraform_drift import check_resource_exists, get_planned_creates
+
+def test_no_orphaned_resources():
+    """Verify resources to be created don't already exist in AWS."""
+    creates = get_planned_creates(TERRAFORM_DIR)
+
+    orphaned = []
+    for resource in creates:
+        if check_resource_exists(resource["type"], resource["name"], TEST_AWS_REGION):
+            orphaned.append(resource)
+
+    if orphaned:
+        msg = "\nOrphaned resources detected:\n"
+        for r in orphaned:
+            msg += f"  - {r['type']}: {r['name']}\n"
+            msg += f"    Fix: terraform import {r['address']} {r['name']}\n"
+        pytest.fail(msg)
+```
+
+**Cold state exception:** For bootstrap workflows, skip state tests if no prior state exists:
+
+```python
+@pytest.mark.skipif(
+    not _has_existing_state(),
+    reason="Cold state - no prior Terraform state to validate against"
+)
+def test_no_orphaned_resources():
+    ...
+```
+
+### Layer 4: Existence Tests (test_04_existence.py)
 
 Test that prerequisite resources exist. Assumes authorization passed.
 
@@ -156,7 +196,7 @@ def test_github_actions_role_exists_with_correct_policy(iam_client, config):
     assert len(policies["AttachedPolicies"]) > 0  # This is configuration, not existence
 ```
 
-### Layer 4: Configuration Tests (test_04_configuration.py)
+### Layer 5: Configuration Tests (test_05_configuration.py)
 
 Test that prerequisite resources are configured correctly. Assumes existence passed.
 
@@ -193,7 +233,7 @@ def test_state_bucket_versioning(s3_client, config):
 
 Use fixtures from existence tests. Don't re-verify existence.
 
-### Layer 5: Capability Tests (test_05_capability.py)
+### Layer 6: Capability Tests (test_06_capability.py)
 
 Test that you can perform required operations. Assumes configuration passed.
 
@@ -286,15 +326,17 @@ def config():
 | Can call sts:GetCallerIdentity | 1. Authentication | test_01_authentication.py |
 | Can describe IAM role | 2. Authorization | test_02_authorization.py |
 | Can head S3 bucket | 2. Authorization | test_02_authorization.py |
-| IAM role exists | 3. Existence | test_03_existence.py |
-| S3 bucket exists | 3. Existence | test_03_existence.py |
-| API Gateway exists | 3. Existence | test_03_existence.py |
-| Role has policy attached | 4. Configuration | test_04_configuration.py |
-| Bucket has versioning | 4. Configuration | test_04_configuration.py |
-| API has required resource | 4. Configuration | test_04_configuration.py |
-| Can write to S3 | 5. Capability | test_05_capability.py |
-| Can assume role | 5. Capability | test_05_capability.py |
-| Can invoke Lambda | 5. Capability | test_05_capability.py |
+| Terraform state matches reality | 3. State | test_03_state.py |
+| No orphaned resources | 3. State | test_03_state.py |
+| IAM role exists | 4. Existence | test_04_existence.py |
+| S3 bucket exists | 4. Existence | test_04_existence.py |
+| API Gateway exists | 4. Existence | test_04_existence.py |
+| Role has policy attached | 5. Configuration | test_05_configuration.py |
+| Bucket has versioning | 5. Configuration | test_05_configuration.py |
+| API has required resource | 5. Configuration | test_05_configuration.py |
+| Can write to S3 | 6. Capability | test_06_capability.py |
+| Can assume role | 6. Capability | test_06_capability.py |
+| Can invoke Lambda | 6. Capability | test_06_capability.py |
 
 ## Workflow Reference
 

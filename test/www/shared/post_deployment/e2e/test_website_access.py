@@ -1,4 +1,7 @@
-"""Integration tests for website infrastructure behavior (redirects, HSTS, routing)."""
+"""E2E tests for website access (HTTP requests to live endpoints).
+
+Per tenets: If the test sends an HTTP request, it's an e2e test.
+"""
 import requests
 
 

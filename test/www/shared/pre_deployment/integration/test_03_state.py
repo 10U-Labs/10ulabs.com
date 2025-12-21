@@ -7,6 +7,7 @@ of Terraform or the state was lost, and needs to be imported.
 
 from pathlib import Path
 
+from terraform_config import TEST_AWS_REGION
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
 WWW_SHARED_SRC = (
@@ -15,5 +16,5 @@ WWW_SHARED_SRC = (
 
 TestOrphanedResources = create_orphaned_resource_tests(
     terraform_dir=WWW_SHARED_SRC,
-    region="us-east-2",
+    region=TEST_AWS_REGION,
 )
