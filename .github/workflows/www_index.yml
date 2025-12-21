@@ -66,13 +66,10 @@ jobs:
           done
       - name: Run pylint
         run: |
-          PYTHONPATH=lib/python python3 -m pylint \
-            test/www/index/ test/www/paths/ \
+          PYTHONPATH=lib/python python3 -m pylint test/www/paths/ \
             --fail-on=C,R,W --fail-under=10.0
       - name: Run mypy
-        run: |
-          MYPYPATH=lib/python python3 -m mypy \
-            test/www/index/ test/www/paths/
+        run: MYPYPATH=lib/python python3 -m mypy test/www/paths/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -84,7 +81,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
-            test/www/index/pre_deployment/integration/ \
+            test/www/paths/index/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
       - name: Get bucket name from shared Terraform
         run: |
