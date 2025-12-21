@@ -1,7 +1,8 @@
 """Unit tests for health endpoint dependency validation."""
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
+import pytest
 from botocore.exceptions import ClientError
 
 
@@ -42,27 +43,21 @@ class TestValidateSecurityGroupsReturnsValid:
 class TestValidateSecurityGroupsReturnsInvalid:
     """Tests for validate_security_groups returning invalid."""
 
-    def test_returns_invalid_when_security_group_not_found(self, health_handler):
+    def test_returns_invalid_when_security_group_not_found(
+        self, health_handler, mock_ec2_sg_not_found
+    ):
         """Verify invalid when security group not found."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.side_effect = ClientError(
-            {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
-            'DescribeSecurityGroups'
-        )
-        health_handler.set_client('ec2', mock_ec2)
+        health_handler.set_client('ec2', mock_ec2_sg_not_found)
 
         result = health_handler.validate_security_groups(['sg-missing'])
 
         assert result['valid'] is False
 
-    def test_returns_missing_list_when_security_group_not_found(self, health_handler):
+    def test_returns_missing_list_when_security_group_not_found(
+        self, health_handler, mock_ec2_sg_not_found
+    ):
         """Verify missing list contains ID when not found."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.side_effect = ClientError(
-            {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
-            'DescribeSecurityGroups'
-        )
-        health_handler.set_client('ec2', mock_ec2)
+        health_handler.set_client('ec2', mock_ec2_sg_not_found)
 
         result = health_handler.validate_security_groups(['sg-missing'])
 
@@ -119,27 +114,21 @@ class TestValidateSubnetsReturnsValid:
 class TestValidateSubnetsReturnsInvalid:
     """Tests for validate_subnets returning invalid."""
 
-    def test_returns_invalid_when_subnet_not_found(self, health_handler):
+    def test_returns_invalid_when_subnet_not_found(
+        self, health_handler, mock_ec2_subnet_not_found
+    ):
         """Verify invalid when subnet not found."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_subnets.side_effect = ClientError(
-            {'Error': {'Code': 'InvalidSubnetID.NotFound', 'Message': 'Not found'}},
-            'DescribeSubnets'
-        )
-        health_handler.set_client('ec2', mock_ec2)
+        health_handler.set_client('ec2', mock_ec2_subnet_not_found)
 
         result = health_handler.validate_subnets(['subnet-missing'])
 
         assert result['valid'] is False
 
-    def test_returns_missing_list_when_subnet_not_found(self, health_handler):
+    def test_returns_missing_list_when_subnet_not_found(
+        self, health_handler, mock_ec2_subnet_not_found
+    ):
         """Verify missing list contains ID when not found."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_subnets.side_effect = ClientError(
-            {'Error': {'Code': 'InvalidSubnetID.NotFound', 'Message': 'Not found'}},
-            'DescribeSubnets'
-        )
-        health_handler.set_client('ec2', mock_ec2)
+        health_handler.set_client('ec2', mock_ec2_subnet_not_found)
 
         result = health_handler.validate_subnets(['subnet-missing'])
 
@@ -210,261 +199,134 @@ class TestValidateVpcReturnsInvalid:
         assert result['valid'] is False
 
 
+@pytest.mark.usefixtures('patched_dependency_env')
 class TestValidateAllDependencies:
     """Tests for validate_all_dependencies."""
 
-    def test_returns_valid_when_all_dependencies_exist(self, health_handler):
+    def test_returns_valid_when_all_dependencies_exist(
+        self, health_handler, mock_ec2_valid_deps
+    ):
         """Verify valid when all dependencies exist."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.return_value = {
-            'SecurityGroups': [{'GroupId': 'sg-test'}]
-        }
-        mock_ec2.describe_subnets.return_value = {
-            'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-        }
-        mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        health_handler.set_client('ec2', mock_ec2)
-        env_vars = {
-            'SECURITY_GROUPS': 'sg-test',
-            'SUBNETS': 'subnet-test1,subnet-test2',
-            'VPC_ID': 'vpc-test'
-        }
+        health_handler.set_client('ec2', mock_ec2_valid_deps)
 
-        with patch.dict('os.environ', env_vars):
-            result = health_handler.validate_all_dependencies()
+        result = health_handler.validate_all_dependencies()
 
         assert result['valid'] is True
 
-    def test_returns_empty_errors_when_all_dependencies_exist(self, health_handler):
+    def test_returns_empty_errors_when_all_dependencies_exist(
+        self, health_handler, mock_ec2_valid_deps
+    ):
         """Verify empty errors when all dependencies exist."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.return_value = {
-            'SecurityGroups': [{'GroupId': 'sg-test'}]
-        }
-        mock_ec2.describe_subnets.return_value = {
-            'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-        }
-        mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        health_handler.set_client('ec2', mock_ec2)
-        env_vars = {
-            'SECURITY_GROUPS': 'sg-test',
-            'SUBNETS': 'subnet-test1,subnet-test2',
-            'VPC_ID': 'vpc-test'
-        }
+        health_handler.set_client('ec2', mock_ec2_valid_deps)
 
-        with patch.dict('os.environ', env_vars):
-            result = health_handler.validate_all_dependencies()
+        result = health_handler.validate_all_dependencies()
 
         assert result['errors'] == []
 
-    def test_returns_invalid_when_security_group_missing(self, health_handler):
+    def test_returns_invalid_when_security_group_missing(
+        self, health_handler, mock_ec2_missing_sg
+    ):
         """Verify invalid when security group missing."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.side_effect = ClientError(
-            {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
-            'DescribeSecurityGroups'
-        )
-        mock_ec2.describe_subnets.return_value = {
-            'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-        }
-        mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        health_handler.set_client('ec2', mock_ec2)
-        env_vars = {
-            'SECURITY_GROUPS': 'sg-test',
-            'SUBNETS': 'subnet-test1,subnet-test2',
-            'VPC_ID': 'vpc-test'
-        }
+        health_handler.set_client('ec2', mock_ec2_missing_sg)
 
-        with patch.dict('os.environ', env_vars):
-            result = health_handler.validate_all_dependencies()
+        result = health_handler.validate_all_dependencies()
 
         assert result['valid'] is False
 
-    def test_returns_error_details_when_security_group_missing(self, health_handler):
+    def test_returns_error_details_when_security_group_missing(
+        self, health_handler, mock_ec2_missing_sg
+    ):
         """Verify error details when security group missing."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.side_effect = ClientError(
-            {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
-            'DescribeSecurityGroups'
-        )
-        mock_ec2.describe_subnets.return_value = {
-            'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-        }
-        mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        health_handler.set_client('ec2', mock_ec2)
-        env_vars = {
-            'SECURITY_GROUPS': 'sg-test',
-            'SUBNETS': 'subnet-test1,subnet-test2',
-            'VPC_ID': 'vpc-test'
-        }
+        health_handler.set_client('ec2', mock_ec2_missing_sg)
 
-        with patch.dict('os.environ', env_vars):
-            result = health_handler.validate_all_dependencies()
+        result = health_handler.validate_all_dependencies()
 
         assert result['errors'][0]['type'] == 'security_group'
 
-    def test_returns_checked_resources(self, health_handler):
+    def test_returns_checked_resources(
+        self, health_handler, mock_ec2_valid_deps
+    ):
         """Verify checked_resources returned."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.return_value = {
-            'SecurityGroups': [{'GroupId': 'sg-test'}]
-        }
-        mock_ec2.describe_subnets.return_value = {
-            'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-        }
-        mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        health_handler.set_client('ec2', mock_ec2)
-        env_vars = {
-            'SECURITY_GROUPS': 'sg-test',
-            'SUBNETS': 'subnet-test1,subnet-test2',
-            'VPC_ID': 'vpc-test'
-        }
+        health_handler.set_client('ec2', mock_ec2_valid_deps)
 
-        with patch.dict('os.environ', env_vars):
-            result = health_handler.validate_all_dependencies()
+        result = health_handler.validate_all_dependencies()
 
         assert 'checked_resources' in result
 
 
+@pytest.mark.usefixtures('patched_dependency_env')
 class TestHandleDependenciesHealthReturnsHealthy:
     """Tests for handle_dependencies_health returning healthy."""
 
     def test_returns_200_when_dependencies_valid(
-        self, health_handler, lambda_context, health_dependencies_get_event
+        self, health_handler, lambda_context, health_dependencies_get_event,
+        mock_ec2_valid_deps
     ):
         """Verify HTTP 200 when dependencies valid."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.return_value = {
-            'SecurityGroups': [{'GroupId': 'sg-test'}]
-        }
-        mock_ec2.describe_subnets.return_value = {
-            'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-        }
-        mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        health_handler.set_client('ec2', mock_ec2)
-        env_vars = {
-            'SECURITY_GROUPS': 'sg-test',
-            'SUBNETS': 'subnet-test1,subnet-test2',
-            'VPC_ID': 'vpc-test'
-        }
+        health_handler.set_client('ec2', mock_ec2_valid_deps)
 
-        with patch.dict('os.environ', env_vars):
-            response = health_handler.handler(
-                health_dependencies_get_event, lambda_context
-            )
+        response = health_handler.handler(
+            health_dependencies_get_event, lambda_context
+        )
 
         assert response['statusCode'] == 200
 
     def test_returns_healthy_status_when_dependencies_valid(
-        self, health_handler, lambda_context, health_dependencies_get_event
+        self, health_handler, lambda_context, health_dependencies_get_event,
+        mock_ec2_valid_deps
     ):
         """Verify healthy status when dependencies valid."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.return_value = {
-            'SecurityGroups': [{'GroupId': 'sg-test'}]
-        }
-        mock_ec2.describe_subnets.return_value = {
-            'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-        }
-        mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        health_handler.set_client('ec2', mock_ec2)
-        env_vars = {
-            'SECURITY_GROUPS': 'sg-test',
-            'SUBNETS': 'subnet-test1,subnet-test2',
-            'VPC_ID': 'vpc-test'
-        }
+        health_handler.set_client('ec2', mock_ec2_valid_deps)
 
-        with patch.dict('os.environ', env_vars):
-            response = health_handler.handler(
-                health_dependencies_get_event, lambda_context
-            )
+        response = health_handler.handler(
+            health_dependencies_get_event, lambda_context
+        )
         body = json.loads(response['body'])
 
         assert body['status'] == 'healthy'
 
 
+@pytest.mark.usefixtures('patched_dependency_env')
 class TestHandleDependenciesHealthReturnsUnhealthy:
     """Tests for handle_dependencies_health returning unhealthy."""
 
     def test_returns_503_when_security_group_missing(
-        self, health_handler, lambda_context, health_dependencies_get_event
+        self, health_handler, lambda_context, health_dependencies_get_event,
+        mock_ec2_missing_sg
     ):
         """Verify HTTP 503 when security group missing."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.side_effect = ClientError(
-            {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
-            'DescribeSecurityGroups'
-        )
-        mock_ec2.describe_subnets.return_value = {
-            'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-        }
-        mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        health_handler.set_client('ec2', mock_ec2)
-        env_vars = {
-            'SECURITY_GROUPS': 'sg-test',
-            'SUBNETS': 'subnet-test1,subnet-test2',
-            'VPC_ID': 'vpc-test'
-        }
+        health_handler.set_client('ec2', mock_ec2_missing_sg)
 
-        with patch.dict('os.environ', env_vars):
-            response = health_handler.handler(
-                health_dependencies_get_event, lambda_context
-            )
+        response = health_handler.handler(
+            health_dependencies_get_event, lambda_context
+        )
 
         assert response['statusCode'] == 503
 
     def test_returns_unhealthy_status_when_security_group_missing(
-        self, health_handler, lambda_context, health_dependencies_get_event
+        self, health_handler, lambda_context, health_dependencies_get_event,
+        mock_ec2_missing_sg
     ):
         """Verify unhealthy status when security group missing."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.side_effect = ClientError(
-            {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
-            'DescribeSecurityGroups'
-        )
-        mock_ec2.describe_subnets.return_value = {
-            'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-        }
-        mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        health_handler.set_client('ec2', mock_ec2)
-        env_vars = {
-            'SECURITY_GROUPS': 'sg-test',
-            'SUBNETS': 'subnet-test1,subnet-test2',
-            'VPC_ID': 'vpc-test'
-        }
+        health_handler.set_client('ec2', mock_ec2_missing_sg)
 
-        with patch.dict('os.environ', env_vars):
-            response = health_handler.handler(
-                health_dependencies_get_event, lambda_context
-            )
+        response = health_handler.handler(
+            health_dependencies_get_event, lambda_context
+        )
         body = json.loads(response['body'])
 
         assert body['status'] == 'unhealthy'
 
     def test_returns_errors_when_security_group_missing(
-        self, health_handler, lambda_context, health_dependencies_get_event
+        self, health_handler, lambda_context, health_dependencies_get_event,
+        mock_ec2_missing_sg
     ):
         """Verify errors list when security group missing."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_security_groups.side_effect = ClientError(
-            {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
-            'DescribeSecurityGroups'
-        )
-        mock_ec2.describe_subnets.return_value = {
-            'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-        }
-        mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        health_handler.set_client('ec2', mock_ec2)
-        env_vars = {
-            'SECURITY_GROUPS': 'sg-test',
-            'SUBNETS': 'subnet-test1,subnet-test2',
-            'VPC_ID': 'vpc-test'
-        }
+        health_handler.set_client('ec2', mock_ec2_missing_sg)
 
-        with patch.dict('os.environ', env_vars):
-            response = health_handler.handler(
-                health_dependencies_get_event, lambda_context
-            )
+        response = health_handler.handler(
+            health_dependencies_get_event, lambda_context
+        )
         body = json.loads(response['body'])
 
         assert len(body['errors']) > 0
