@@ -68,6 +68,24 @@ jobs:
         with:
           aws-region: ${{ steps.config.outputs.aws_region }}
           role-to-assume: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
+      - name: Terraform Format Check
+        run: |
+          cd src/api/operational/health
+          terraform fmt -diff -check -recursive
+      - name: Terraform Init
+        run: cd src/api/operational/health && terraform init
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: latest
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
+        run: cd src/api/operational/health && tflint --init && tflint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -80,19 +98,8 @@ jobs:
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            pylint mypy yamllint pytest requests PyYAML boto3 boto3-stubs \
-            types-requests botocore
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v6
-        with:
-          tflint_version: latest
+        name: Install yamllint
+        run: python3 -m pip install yamllint
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -104,6 +111,12 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/operational_health.yml
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pylint
+        run: python3 -m pip install pylint
       - name: Run pylint on source
         run: |
           python3 -m pylint \
@@ -116,6 +129,12 @@ jobs:
             lib/python/ test/api/operational/health/ \
             --fail-on=C,R,W \
             --fail-under=10.0
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install mypy
+        run: python3 -m pip install mypy boto3-stubs types-requests
       - name: Run mypy on source
         run: |
           python3 -m mypy \
@@ -124,6 +143,12 @@ jobs:
         run: |
           MYPYPATH=lib/python python3 -m mypy \
             lib/python/ test/api/operational/health/
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install jscpd
+        run: npm install -g jscpd
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -133,18 +158,12 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/conftest.py test/api/conftest.py \
             test/api/operational/health/
-      - name: Terraform Format Check
-        run: |
-          cd src/api/operational/health
-          terraform fmt -diff -check -recursive
-      - name: Terraform Init
-        run: cd src/api/operational/health && terraform init
-      - env:
-          GITHUB_TOKEN: ${{ github.token }}
-        name: Run tflint
-        run: cd src/api/operational/health && tflint --init && tflint
-      - name: Terraform Plan
-        run: cd src/api/operational/health && terraform plan
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pytest dependencies
+        run: python3 -m pip install pytest requests PyYAML boto3 botocore
       - name: Run unit tests
         run: |
           python3 -m pytest \
