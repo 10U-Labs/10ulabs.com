@@ -28,14 +28,14 @@ class TestVPCWiring:
         """Verify subnets are in the runners VPC."""
         subnets = ec2_client.describe_subnets(
             Filters=[
-                {"Name": "vpc-id", "Values": [runners_vpc_id]},
                 {"Name": "tag:Purpose", "Values": ["runners"]},
                 {"Name": "tag:ManagedBy", "Values": ["terraform"]},
             ]
         )
-        assert len(subnets["Subnets"]) >= 1, (
-            f"No subnets found in VPC {runners_vpc_id}"
-        )
+        for subnet in subnets["Subnets"]:
+            assert subnet["VpcId"] == runners_vpc_id, (
+                f"Subnet {subnet['SubnetId']} is not in VPC {runners_vpc_id}"
+            )
 
     def test_security_group_in_vpc(self, runners_security_group, runners_vpc_id):
         """Verify security group is in the runners VPC."""
@@ -52,10 +52,9 @@ class TestVPCWiring:
         )
         igw_id = igws["InternetGateways"][0]["InternetGatewayId"]
 
-        # Get subnets in the VPC
+        # Get subnets by tag
         subnets = ec2_client.describe_subnets(
             Filters=[
-                {"Name": "vpc-id", "Values": [runners_vpc_id]},
                 {"Name": "tag:Purpose", "Values": ["runners"]},
                 {"Name": "tag:ManagedBy", "Values": ["terraform"]},
             ]

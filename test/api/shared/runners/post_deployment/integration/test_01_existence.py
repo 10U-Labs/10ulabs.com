@@ -22,17 +22,16 @@ class TestVPCResourcesExist:
             "Runners VPC not found. Run terraform apply in src/api/shared/runners/"
         )
 
-    def test_runners_public_subnets_exist(self, ec2_client, runners_vpc_id):
-        """Verify the runners public subnets exist."""
+    def test_runners_subnets_exist(self, ec2_client):
+        """Verify the runners subnets exist."""
         response = ec2_client.describe_subnets(
             Filters=[
-                {"Name": "vpc-id", "Values": [runners_vpc_id]},
                 {"Name": "tag:Purpose", "Values": ["runners"]},
                 {"Name": "tag:ManagedBy", "Values": ["terraform"]},
             ]
         )
         assert len(response["Subnets"]) >= 1, (
-            "Runners public subnets not found. "
+            "Runners subnets not found. "
             "Run terraform apply in src/api/shared/runners/"
         )
 
