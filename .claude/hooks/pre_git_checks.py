@@ -412,60 +412,27 @@ def run_javascript_lint(changed_files):
     return True
 
 
-def is_jscpd_available():
-    """Check if jscpd is installed and available."""
-    result = subprocess.run(
-        ['which', 'jscpd'], capture_output=True, text=True, check=False
-    )
-    return result.returncode == 0
+def is_duplicate_check_step(step_name):
+    """Determine if a workflow step is a duplicate code check."""
+    step_lower = step_name.lower()
+    return 'duplicate' in step_lower or 'jscpd' in step_lower
 
 
-def run_python_duplicate_check(changed_files):
-    """Run jscpd duplicate code check on Python files. Returns True if passed."""
-    python_files = [f for f in changed_files if f.endswith('.py') and os.path.isfile(f)]
-    if not python_files:
-        return True
+def extract_duplicate_check_commands(workflow):
+    """Extract duplicate code check commands from a workflow."""
+    return extract_commands_from_jobs(
+        workflow, lambda name, cmd: is_duplicate_check_step(name) or 'jscpd' in cmd)
 
-    if not is_jscpd_available():
-        return True
 
-    capture_print("\n" + "="*60)
-    capture_print("PHASE: PYTHON DUPLICATE CODE CHECK")
-    capture_print("="*60)
-
-    check_src = any(f.startswith('src/') for f in python_files)
-    check_test = any(f.startswith('test/') for f in python_files)
-    failed = False
-
-    for directory, should_check in [('src', check_src), ('test', check_test)]:
-        if should_check and os.path.isdir(directory):
-            capture_print(f"\nChecking {directory}/ for duplicate Python code...")
-            result = subprocess.run(
-                ['jscpd', f'{directory}/', '--format', 'python',
-                 '--min-lines', '5', '--min-tokens', '50', '--reporters', 'console'],
-                capture_output=True, text=True, check=False
-            )
-            # jscpd outputs "Found X clones" - check for non-zero clones
-            if 'clones found' in result.stdout.lower():
-                if 'Found 0 clones' not in result.stdout:
-                    capture_print(f"  DUPLICATES FOUND in {directory}/:")
-                    for line in result.stdout.strip().split('\n'):
-                        capture_print(f"    {line}")
-                    failed = True
-                else:
-                    capture_print(f"  No duplicates found in {directory}/")
-            else:
-                capture_print(f"  No duplicates found in {directory}/")
-
-    if failed:
-        capture_print("\n" + "="*60)
-        capture_print("PYTHON DUPLICATE CODE CHECK FAILED")
-        capture_print("Refactor duplicate code before committing.")
-        capture_print("="*60)
-        return False
-
-    capture_print("No duplicate Python code found.")
-    return True
+def transform_jscpd_command(cmd):
+    """Transform jscpd command to use npx and ensure threshold 0."""
+    # Replace bare 'jscpd' with 'npx jscpd'
+    if cmd.strip().startswith('jscpd '):
+        cmd = 'npx ' + cmd
+    # Ensure --threshold 0 is used (replace any existing threshold)
+    if '--threshold' not in cmd:
+        cmd = cmd.replace('jscpd ', 'jscpd --threshold 0 ', 1)
+    return cmd
 
 
 def run_blocked_lint_config_check(changed_files):
@@ -772,7 +739,7 @@ def build_step_env(step_env):
     return run_env
 
 
-def run_command(cmd_info, workflow_name):
+def run_command(cmd_info, workflow_name, transform_fn=None):
     """Run a single command and return True if it passes."""
     if cmd_info.get('conditional'):
         log_debug(f"Skipping conditional command: {cmd_info.get('name')}")
@@ -781,6 +748,10 @@ def run_command(cmd_info, workflow_name):
 
     name = cmd_info['name']
     script = clean_script(cmd_info['run'])
+
+    # Apply optional transform function (e.g., for jscpd -> npx jscpd)
+    if transform_fn:
+        script = transform_fn(script)
 
     if not script.strip():
         log_debug(f"Skipping empty script: {name}")
@@ -826,11 +797,11 @@ def run_command(cmd_info, workflow_name):
     return True
 
 
-def run_commands(commands, workflow_name):
+def run_commands(commands, workflow_name, transform_fn=None):
     """Run all commands and return True if all pass."""
     all_passed = True
     for cmd_info in commands:
-        if not run_command(cmd_info, workflow_name):
+        if not run_command(cmd_info, workflow_name, transform_fn):
             all_passed = False
     return all_passed
 
@@ -852,7 +823,7 @@ def parse_command_from_stdin():
         return ''
 
 
-def run_phase(matching_workflows, phase_name, extract_fn):
+def run_phase(matching_workflows, phase_name, extract_fn, transform_fn=None):
     """Run a phase of checks (static analysis or tests) on matching workflows."""
     capture_print("\n" + "="*60)
     capture_print(f"PHASE: {phase_name}")
@@ -862,7 +833,7 @@ def run_phase(matching_workflows, phase_name, extract_fn):
         commands = extract_fn(wf['workflow'])
         if commands:
             capture_print(f"\n[{wf['name']}]")
-            if not run_commands(commands, wf['name']):
+            if not run_commands(commands, wf['name'], transform_fn):
                 passed = False
     return passed
 
@@ -876,7 +847,6 @@ def run_file_level_checks(changed_files):
         (run_workflow_yaml_lint, "WORKFLOW YAML LINT FAILED - Fix YAML lint errors"),
         (run_json_lint, "JSON LINT FAILED - Fix JSON syntax errors"),
         (run_javascript_lint, "JAVASCRIPT LINT FAILED - Fix ESLint errors"),
-        (run_python_duplicate_check, "PYTHON DUPLICATE CODE CHECK FAILED - Refactor duplicates"),
     ]
     for check_fn, failure_msg in checks:
         if not check_fn(changed_files):
@@ -927,6 +897,16 @@ def main():
         capture_print("STATIC ANALYSIS FAILED - Fix issues before committing")
         capture_print("="*60)
         deny_tool_use("STATIC ANALYSIS FAILED - Fix lint/type errors")
+
+    duplicate_ok = run_phase(
+        matching_workflows, "DUPLICATE CODE CHECK",
+        extract_duplicate_check_commands, transform_jscpd_command)
+    if not duplicate_ok:
+        log_debug("DUPLICATE CODE CHECK FAILED - denying tool use")
+        capture_print("\n" + "="*60)
+        capture_print("DUPLICATE CODE CHECK FAILED - Refactor duplicates")
+        capture_print("="*60)
+        deny_tool_use("DUPLICATE CODE CHECK FAILED - Refactor duplicate code")
 
     log_debug("ALL CHECKS PASSED - exiting with code 0")
     capture_print("\n" + "="*60)
