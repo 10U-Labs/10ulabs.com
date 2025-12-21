@@ -84,8 +84,8 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
-            pylint mypy yamllint pytest boto3 boto3-stubs botocore \
-            PyYAML types-PyYAML requests types-requests
+            pylint mypy yamllint pytest pytest-dependency boto3 boto3-stubs \
+            botocore PyYAML types-PyYAML requests types-requests
       - if: |
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -105,22 +105,25 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_backend.yml
-      - name: Run pylint
+      - name: Run pylint on source code
         run: |
           for file in src/api/backend/lambdas/*.py; do
             python3 -m pylint "$file" \
               --fail-on=C,R,W \
               --fail-under=10.0
           done
+      - name: Run pylint on test code
+        run: |
           PYTHONPATH=lib/python python3 -m pylint test/api/backend/ \
             --fail-on=C,R,W \
             --fail-under=10.0
-      - name: Run mypy
+      - name: Run mypy on source code
         run: |
           for file in src/api/backend/lambdas/*.py; do
             python3 -m mypy "$file"
           done
-          MYPYPATH=lib/python python3 -m mypy test/api/backend/
+      - name: Run mypy on test code
+        run: MYPYPATH=lib/python python3 -m mypy test/api/backend/
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -138,10 +141,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: cd src/api/backend && tflint --init && tflint
-      - env:
-          TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
-        name: Terraform Plan
-        run: cd src/api/backend && terraform plan
       - env:
           SSM_PARAMETER_NAME_FOR_GITHUB_PAT: >-
             ${{ steps.bootstrap.outputs.github_pat_parameter_name }}

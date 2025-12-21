@@ -1,13 +1,14 @@
-"""Tests to detect Terraform state drift for api/backend infrastructure.
+"""Layer 3: State validation tests for api_backend pre-deployment.
 
-These tests verify that resources Terraform plans to create don't already
-exist in AWS. If they do, it indicates the resource was created outside
-of Terraform or the state was lost, and needs to be imported.
+Verifies Terraform state matches AWS reality. Skips in cold state (no prior state).
 """
-
 from pathlib import Path
 
+import pytest
+
 from terraform_drift.test_helpers import create_orphaned_resource_tests
+
+pytestmark = pytest.mark.dependency(name="layer3", depends=["layer1", "layer2"])
 
 API_BACKEND_SRC = (
     Path(__file__).parents[5] / "src" / "api" / "backend"
