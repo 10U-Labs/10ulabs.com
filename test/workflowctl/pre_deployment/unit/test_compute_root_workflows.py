@@ -980,11 +980,11 @@ class TestComputeMergeRoots:
         assert result == ["api"]
 
     def test_no_new_roots(self) -> None:
-        """Test with no new roots returns running workflows as roots."""
+        """Test with no new roots returns empty (let running workflows finish)."""
         new_roots: list[str] = []
         running = ["api"]
         result = compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
-        assert result == ["api"]
+        assert result == []
 
     def test_both_empty(self) -> None:
         """Test with both empty returns empty."""

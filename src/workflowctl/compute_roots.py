@@ -273,8 +273,9 @@ def compute_merge_roots(
     workflows and the new changes.
 
     Algorithm:
-    1. Combine running workflows with new roots into "affected" set
-    2. Find workflows with no affected ancestors (these are the merge roots)
+    1. If no new roots, return empty (let running workflows finish)
+    2. Combine running workflows with new roots into "affected" set
+    3. Find workflows with no affected ancestors (these are the merge roots)
 
     Examples:
     - Running: [api_backend], New: [operational_health]
@@ -288,7 +289,15 @@ def compute_merge_roots(
     - Running: [api_backend], New: [bootstrap]
       Different branches of dependency tree
       Merge roots: [bootstrap, ...] (depends on api_backend's original root)
+
+    - Running: [www_shared], New: []
+      No new changes, let running workflow finish
+      Merge roots: [] (nothing to dispatch)
     """
+    # If no new roots, nothing to merge - let running workflows finish
+    if not new_roots:
+        return []
+
     # Combine all workflows that need to be covered
     affected = set(running_workflows) | set(new_roots)
 
