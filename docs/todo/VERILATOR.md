@@ -1,11 +1,5 @@
 # Verilator Optimization Opportunities
 
-## Executive Summary
-
-Remaining optimization opportunities for Verilator (v5.x).
-
----
-
 ## Table of Contents
 
 | # | Issue | Status | PR | Impact |
@@ -19,8 +13,6 @@ Remaining optimization opportunities for Verilator (v5.x).
 | 7 | [Parallelize V3Const](#7-parallelize-v3const) | 📝 Todo | - | Per-module constant propagation |
 | 8 | [Parallelize V3Dead](#8-parallelize-v3dead) | 📝 Todo | - | Per-module dead code elimination |
 | 9 | [AST Object Pooling](#9-ast-object-pooling) | 📝 Todo | - | 10-20% memory reduction |
-
----
 
 ## 2. Thread Pool Lock Contention
 
@@ -76,8 +68,6 @@ void V3ThreadPool::workerJobLoop() {
 **Difficulty:** Easy - isolated change, well-understood pattern
 **Risk:** Low - follows same pattern already used for worker threads
 
----
-
 ## 3. Threading Self-Diagnostic System
 
 **Files:** `include/verilated_threading_advisor.h`, `include/verilated.cpp`
@@ -131,8 +121,6 @@ class VlThreadingAdvisor {
 **Difficulty:** Medium - needs integration with existing profiling
 **Risk:** Low - advisory only, doesn't change simulation behavior
 
----
-
 ## 4. Removing Race Conditions on AST Constructors
 
 **Files:** `src/V3Ast.cpp`, `src/V3AstNodes.cpp`
@@ -144,8 +132,6 @@ class VlThreadingAdvisor {
 **Impact:** Prerequisite for parallelization
 **Difficulty:** Medium - requires careful analysis of shared state
 **Risk:** Low - fixes existing thread-safety issues
-
----
 
 ## 5. Module-Level Parallel Verilation
 
@@ -175,8 +161,6 @@ for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp;
 **Difficulty:** Medium - need to verify each pass is thread-safe
 **Risk:** Medium - requires identifying which passes have global state
 
----
-
 ## 6. Parallelize V3FuncOpt
 
 **File:** `src/V3FuncOpt.cpp`
@@ -191,8 +175,6 @@ for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp;
 - Add `VL_MT_SAFE` annotation to `FuncOptVisitor::apply()`
 
 **Note:** This approach was not accepted by maintainers. Future parallelization efforts may require different strategies.
-
----
 
 ## 7. Parallelize V3Const
 
@@ -215,8 +197,6 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 }
 ```
 
----
-
 ## 8. Parallelize V3Dead
 
 **File:** `src/V3Dead.cpp`
@@ -224,8 +204,6 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 **Status:** 📝 Todo
 
 **Challenge:** Currently uses `V3PchAstNoMT.h` (MT-disabled). Dead code elimination may have cross-module reference counting dependencies that need careful analysis.
-
----
 
 ## 9. AST Object Pooling
 
@@ -272,23 +250,8 @@ public:
 **Difficulty:** Medium - requires modifying node allocation patterns
 **Risk:** Medium - memory management changes need careful validation
 
----
-
 ## References
 
 - [Verilator GitHub Repository](https://github.com/verilator/verilator)
 - [Antmicro: Improving Verilator's Hierarchical Mode (2025)](https://antmicro.com/blog/2025/05/improving-verilator-hierarchical-mode/)
 - [Antmicro: Accelerating Model Generation (2023)](https://antmicro.com/blog/2023/09/accelerating-model-generation-in-verilator/)
-
-## Our Contributions
-
-**Merged PRs:**
-- ~~[PR #6815: Inline small CFuncs to reduce function call overhead](https://github.com/verilator/verilator/pull/6815)~~
-
-**Open PRs:**
-- [PR #6761: Optimize V3ThreadPool::wait() to use condition variable](https://github.com/verilator/verilator/pull/6761)
-- [PR #6762: Add runtime threading advisor for configuration warnings](https://github.com/verilator/verilator/pull/6762)
-
-**Closed PRs (not merged):**
-- [PR #6763: Parallelize V3FuncOpt using V3ThreadScope](https://github.com/verilator/verilator/pull/6763)
-- [PR #6765: Inline small CFuncs (superseded by #6815)](https://github.com/verilator/verilator/pull/6765)
