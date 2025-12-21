@@ -115,10 +115,10 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pytest dependencies
         run: python3 -m pip install pytest boto3 boto3-stubs requests
-      - name: Run pre-deployment tests
+      - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
-            test/api/shared/ecs_runner/pre_deployment/ \
+            test/api/shared/ecs_runner/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/shared/ecs_runner && terraform apply -auto-approve
