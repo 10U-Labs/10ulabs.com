@@ -4,9 +4,7 @@ Verify prerequisite resources are configured correctly. Assumes existence tests 
 """
 import pytest
 
-pytestmark = pytest.mark.dependency(
-    name="layer5", depends=["layer1", "layer2", "layer3", "layer4"]
-)
+pytestmark = pytest.mark.layer(5)
 
 
 def test_trust_policy_has_github_oidc_principal(

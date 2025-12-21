@@ -8,3 +8,6 @@ Examples of wiring tests for other modules:
 - Lambda has SQS trigger configured
 - IAM role allows cross-service access
 """
+import pytest
+
+pytestmark = pytest.mark.layer(3)

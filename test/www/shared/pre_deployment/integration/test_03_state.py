@@ -11,7 +11,7 @@ import pytest
 from terraform_config import TEST_AWS_REGION
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
-pytestmark = pytest.mark.dependency(name="layer3", depends=["layer1", "layer2"])
+pytestmark = pytest.mark.layer(3)
 
 WWW_SHARED_SRC = (
     Path(__file__).parents[5] / "src" / "www" / "shared"

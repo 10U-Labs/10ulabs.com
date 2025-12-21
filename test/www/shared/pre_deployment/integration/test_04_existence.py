@@ -5,9 +5,7 @@ Verify prerequisite resources exist. Assumes state tests passed.
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.dependency(
-    name="layer4", depends=["layer1", "layer2", "layer3"]
-)
+pytestmark = pytest.mark.layer(4)
 
 
 def test_github_actions_role_exists(iam_client, github_actions_role_name):

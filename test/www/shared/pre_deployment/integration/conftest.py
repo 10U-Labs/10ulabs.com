@@ -6,6 +6,8 @@ import boto3
 import pytest
 from repo_utils import REPO_ROOT
 
+pytest_plugins = ['pytest_layers']
+
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 AWS_REGION_VALUE = "us-east-2"

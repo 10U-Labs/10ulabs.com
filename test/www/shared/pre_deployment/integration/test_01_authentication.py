@@ -4,7 +4,7 @@ Verify AWS credentials are valid before testing authorization, existence, or cap
 """
 import pytest
 
-pytestmark = pytest.mark.dependency(name="layer1")
+pytestmark = pytest.mark.layer(1)
 
 
 def test_aws_credentials_valid(sts_client):

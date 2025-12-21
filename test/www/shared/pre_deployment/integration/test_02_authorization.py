@@ -5,7 +5,7 @@ Verify permission to inspect prerequisite resources (not existence, not capabili
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.dependency(name="layer2", depends=["layer1"])
+pytestmark = pytest.mark.layer(2)
 
 
 def test_can_call_iam_get_role(iam_client, github_actions_role_name):

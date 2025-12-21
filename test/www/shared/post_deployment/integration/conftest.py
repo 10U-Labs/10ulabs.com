@@ -1,6 +1,8 @@
 """Pytest fixtures for www_shared post-deployment integration tests."""
 import pytest
 
+pytest_plugins = ['pytest_layers']
+
 
 @pytest.fixture(name="distribution_config", scope="module")
 def distribution_config_fixture(cloudfront_client, config):
