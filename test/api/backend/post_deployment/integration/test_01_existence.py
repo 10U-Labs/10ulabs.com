@@ -7,6 +7,8 @@ import pytest
 
 import boto3
 
+pytestmark = pytest.mark.layer(1)
+
 
 # =============================================================================
 # Lambda Functions

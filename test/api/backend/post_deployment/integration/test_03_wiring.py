@@ -12,6 +12,8 @@ from botocore.exceptions import ClientError
 import boto3
 import requests
 
+pytestmark = pytest.mark.layer(3)
+
 
 TEST_HEADERS = {"x-test-mode": "true"}
 

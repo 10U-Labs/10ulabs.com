@@ -1,54 +1,13 @@
 """Pytest fixtures for api_backend pre-deployment integration tests."""
 
 import re
-from typing import Dict
 
 from test.api.conftest import REPO_ROOT, terraform_init, terraform_output
 
 import pytest
 
-# Import AWS fixtures from shared test fixtures
-pytest_plugins = ['test_fixtures.aws']
-
-
-# Layer-based test dependency tracking
-# Layer N tests are skipped if any test in layers 1 through N-1 failed
-_layer_results: Dict[int, Dict[str, int]] = {}
-
-
-def pytest_configure(config):
-    """Register the layer marker."""
-    config.addinivalue_line(
-        "markers",
-        "layer(num): mark test as belonging to layer N (skips if earlier layers failed)"
-    )
-
-
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    """Track pass/fail results for each layer."""
-    del call  # Required by hook signature but unused
-    outcome = yield
-    result = outcome.get_result()
-
-    if result.when == "call":
-        for marker in item.iter_markers("layer"):
-            layer_num = marker.args[0]
-            if layer_num not in _layer_results:
-                _layer_results[layer_num] = {"passed": 0, "failed": 0}
-            if result.passed:
-                _layer_results[layer_num]["passed"] += 1
-            elif result.failed:
-                _layer_results[layer_num]["failed"] += 1
-
-
-def pytest_runtest_setup(item):
-    """Skip tests if any earlier layer failed."""
-    for marker in item.iter_markers("layer"):
-        layer_num = marker.args[0]
-        for prev_layer in range(1, layer_num):
-            if prev_layer in _layer_results and _layer_results[prev_layer]["failed"] > 0:
-                pytest.skip(f"Skipped: layer {prev_layer} had failures")
+# Import AWS fixtures and layer-based test dependency tracking
+pytest_plugins = ['test_fixtures.aws', 'pytest_layers']
 
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"

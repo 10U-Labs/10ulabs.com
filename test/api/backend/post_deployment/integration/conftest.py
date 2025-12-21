@@ -1,7 +1,11 @@
 """Pytest configuration and fixtures for post-deployment integration tests."""
 import os
+
 import boto3
 import pytest
+
+# Import layer-based test dependency tracking
+pytest_plugins = ['pytest_layers']
 
 
 @pytest.fixture(name="s3_client", scope="module")

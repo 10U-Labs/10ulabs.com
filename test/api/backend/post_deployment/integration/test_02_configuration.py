@@ -3,9 +3,13 @@
 These tests verify that resources are configured correctly.
 Tests assume Layer 1 existence tests have passed.
 """
+import pytest
+
 import boto3
 
 from naming_conventions import validate_name
+
+pytestmark = pytest.mark.layer(2)
 
 
 # =============================================================================

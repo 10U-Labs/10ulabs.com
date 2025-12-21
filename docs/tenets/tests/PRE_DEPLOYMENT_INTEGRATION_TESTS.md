@@ -346,3 +346,109 @@ def config():
 | `api_backend` | S3 buckets from bootstrap, Route53 zone | API Gateway, Lambda functions |
 | `endpoint_v1_health` | API Gateway from api_backend | Lambda function |
 | `image_for_ecs_runners` | ECR repository from bootstrap | Docker image |
+
+## 8. Layer Marker Implementation
+
+Tests use `pytest.mark.layer(N)` to enforce execution order. Layer N tests automatically skip if any test in layers 1 through N-1 failed.
+
+### Usage
+
+Apply the marker at the module level:
+
+```python
+# test_01_authentication.py
+pytestmark = pytest.mark.layer(1)
+
+# test_02_authorization.py
+pytestmark = pytest.mark.layer(2)
+
+# ... and so on for each layer
+```
+
+### How It Works
+
+The layer system is implemented in `conftest.py` using three pytest hooks:
+
+1. **`pytest_configure`** - Registers the `layer` marker
+2. **`pytest_runtest_makereport`** - Tracks pass/fail counts per layer
+3. **`pytest_runtest_setup`** - Skips tests if earlier layers failed
+
+```python
+# conftest.py implementation pattern
+_layer_results: Dict[int, Dict[str, int]] = {}
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "layer(num): mark test as belonging to layer N"
+    )
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    del call  # Required by hook signature but unused
+    outcome = yield
+    result = outcome.get_result()
+    if result.when == "call":
+        for marker in item.iter_markers("layer"):
+            layer_num = marker.args[0]
+            # Track pass/fail for this layer
+            ...
+
+def pytest_runtest_setup(item):
+    for marker in item.iter_markers("layer"):
+        layer_num = marker.args[0]
+        for prev_layer in range(1, layer_num):
+            if _layer_results.get(prev_layer, {}).get("failed", 0) > 0:
+                pytest.skip(f"Skipped: layer {prev_layer} had failures")
+```
+
+## 9. Why Terraform Plan is Not a Workflow Step
+
+Layer 3 (State) tests replace the need for a separate `terraform plan` step in workflows.
+
+### What Layer 3 Does
+
+- Uses `terraform_drift` library from `lib/python/`
+- Runs `terraform plan` internally to detect planned creates
+- Checks if those resources already exist in AWS
+- Fails if orphaned resources detected (state drift)
+
+### Why This is Better Than a Separate Plan Step
+
+1. **Diagnostics**: Layer 3 tells you exactly which resources have drift
+2. **Actionable**: Failure messages include `terraform import` commands
+3. **Integrated**: Part of the test pyramid, not a separate manual step
+4. **Granular**: Runs after authentication/authorization, so you know credentials work
+
+If layer 3 passes, `terraform apply` will succeed (no unexpected resource conflicts).
+
+## 10. Workflow Step Ordering
+
+Pre-deployment integration tests require a specific position in the workflow:
+
+```
+1. Lint (pylint, mypy, yamllint, tflint)
+2. Unit tests
+3. Pre-deployment integration tests (layers 1-6)
+4. Terraform apply
+5. Post-deployment integration tests
+6. E2E tests
+```
+
+### Why This Order
+
+| Step | Depends On | Reason |
+|------|------------|--------|
+| Lint | Nothing | Fast feedback first |
+| Unit tests | Lint | No point running tests if code has errors |
+| Pre-deployment integration | Terraform init | Layer 3 needs state access |
+| Terraform apply | Pre-deployment passing | Layer 3 validates no drift |
+| Post-deployment integration | Resources exist | Can't test what doesn't exist |
+| E2E tests | All above | Full system must be deployed |
+
+### Key Points
+
+- Pre-deployment tests run BEFORE `terraform apply`
+- Layer 3 requires `terraform init` but NOT `terraform apply`
+- If pre-deployment fails, skip apply (fail fast)
+- Post-deployment and E2E tests run AFTER successful apply
