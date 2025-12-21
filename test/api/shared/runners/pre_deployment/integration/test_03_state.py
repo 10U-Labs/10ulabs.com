@@ -7,19 +7,15 @@ Six-layer testing model:
 - Layer 3: State - Terraform state matches AWS reality
 """
 
-from pathlib import Path
-
 import pytest
-
+from repo_utils import REPO_ROOT
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
 
 pytestmark = pytest.mark.layer(3)
 
 
-API_SHARED_RUNNERS_SRC = (
-    Path(__file__).parents[6] / "src" / "api" / "shared" / "runners"
-)
+API_SHARED_RUNNERS_SRC = REPO_ROOT / "src" / "api" / "shared" / "runners"
 
 TestOrphanedResources = create_orphaned_resource_tests(
     terraform_dir=API_SHARED_RUNNERS_SRC,
