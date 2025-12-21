@@ -62,12 +62,20 @@ jobs:
         run: |
           python3 -m pip install \
             pylint mypy yamllint pytest boto3 boto3-stubs requests
-      - name: Setup Terraform
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ steps.config.outputs.terraform_version }}
           terraform_wrapper: false
-      - name: Setup TFLint
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
