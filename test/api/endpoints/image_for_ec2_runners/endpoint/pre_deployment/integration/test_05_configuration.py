@@ -1,8 +1,11 @@
-"""Layer 4: Configuration - Verify terraform outputs are properly configured."""
+"""Layer 5: Configuration - Verify prerequisite resources are configured correctly."""
+import pytest
+
+pytestmark = pytest.mark.layer(5)
 
 
 class TestTerraformOutputsConfiguration:
-    """Layer 4: Verify terraform outputs are accessible and valid."""
+    """Layer 5: Verify terraform outputs are accessible and valid."""
 
     def test_01_ami_purpose_output_exists(self, api_backend_outputs):
         """Verify ec2_runner_ami_purpose_value output is accessible."""

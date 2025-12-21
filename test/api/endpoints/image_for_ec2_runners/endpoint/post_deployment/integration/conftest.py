@@ -1,14 +1,36 @@
-"""Pytest fixtures for image_for_ec2_runners integration tests."""
+"""Pytest fixtures for post-deployment integration tests.
+
+These tests verify resources created by terraform apply exist and are
+configured correctly.
+"""
 import pytest
 
-
-@pytest.fixture(name="amis_endpoint", scope="module")
-def amis_endpoint_fixture(api_url) -> str:
-    """Return the endpoint URL for listing AMIs."""
-    return f"{api_url}/v1/image-for-ec2-runners"
+# Enable layer marker plugin for test ordering
+pytest_plugins = ['pytest_layers']
 
 
-@pytest.fixture(name="latest_ami_endpoint", scope="module")
-def latest_ami_endpoint_fixture(api_url) -> str:
-    """Return the endpoint URL for getting the latest AMI."""
-    return f"{api_url}/v1/image-for-ec2-runners/latest"
+@pytest.fixture(name="handler_function_name", scope="module")
+def handler_function_name_fixture(config):
+    """Get the Lambda function name from config."""
+    return config.get(
+        'image_for_ec2_runners_handler_function_name',
+        'TenULabsImageForEC2RunnersHandler'
+    )
+
+
+@pytest.fixture(name="handler_role_name", scope="module")
+def handler_role_name_fixture(handler_function_name):
+    """Get the IAM role name from function name."""
+    return f"{handler_function_name}ServiceRole"
+
+
+@pytest.fixture(name="fetched_lambda_function", scope="module")
+def fetched_lambda_function_fixture(lambda_client, handler_function_name):
+    """Fetch the Lambda function details."""
+    return lambda_client.get_function(FunctionName=handler_function_name)
+
+
+@pytest.fixture(name="fetched_iam_role", scope="module")
+def fetched_iam_role_fixture(iam_client, handler_role_name):
+    """Fetch the IAM role details."""
+    return iam_client.get_role(RoleName=handler_role_name)

@@ -175,6 +175,12 @@ jobs:
           python3 -m pytest \
             $TEST_DIR/post_deployment/integration/ \
             --verbose --pythonwarnings=error
+      - name: Run e2e tests
+        run: |
+          TEST_DIR=test/api/endpoints/image_for_ec2_runners/endpoint
+          python3 -m pytest \
+            $TEST_DIR/post_deployment/e2e/ \
+            --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-

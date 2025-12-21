@@ -1,8 +1,11 @@
-"""Layer 3: Existence - Verify stable AMI exists."""
+"""Layer 4: Existence - Verify prerequisite resources exist."""
+import pytest
+
+pytestmark = pytest.mark.layer(4)
 
 
 class TestStableAMIExistence:
-    """Layer 3: Verify at least one stable AMI exists."""
+    """Layer 4: Verify at least one stable AMI exists."""
 
     def test_01_at_least_one_stable_ami_exists(
         self, ec2_client, ami_purpose_value, ami_stable_tag

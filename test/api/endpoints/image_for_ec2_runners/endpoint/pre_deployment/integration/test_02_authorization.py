@@ -1,6 +1,8 @@
-"""Layer 2: Authorization - Verify we can call EC2 APIs."""
+"""Layer 2: Authorization - Verify we have permission to call EC2 APIs."""
 import pytest
 from botocore.exceptions import ClientError
+
+pytestmark = pytest.mark.layer(2)
 
 
 class TestEC2Authorization:
