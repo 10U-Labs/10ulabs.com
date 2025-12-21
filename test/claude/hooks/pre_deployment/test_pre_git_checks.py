@@ -552,19 +552,37 @@ def test_run_blocked_lint_config_check_allows_deleted_pylintrc(pre_git_checks):
     assert result is True
 
 
-def test_run_python_duplicate_check_returns_true_for_no_python_files(pre_git_checks):
-    """Test run_python_duplicate_check returns True when no Python files."""
-    result = pre_git_checks.run_python_duplicate_check(['README.md', 'package.json'])
+def test_is_duplicate_check_step_detects_duplicate_in_name(pre_git_checks):
+    """Test is_duplicate_check_step returns True for duplicate in name."""
+    result = pre_git_checks.is_duplicate_check_step('Check for duplicate code')
     assert result is True
 
 
-def test_run_python_duplicate_check_returns_true_for_empty_list(pre_git_checks):
-    """Test run_python_duplicate_check returns True for empty file list."""
-    result = pre_git_checks.run_python_duplicate_check([])
+def test_is_duplicate_check_step_detects_jscpd_in_name(pre_git_checks):
+    """Test is_duplicate_check_step returns True for jscpd in name."""
+    result = pre_git_checks.is_duplicate_check_step('Run jscpd')
     assert result is True
 
 
-def test_is_jscpd_available_returns_boolean(pre_git_checks):
-    """Test is_jscpd_available returns a boolean value."""
-    result = pre_git_checks.is_jscpd_available()
-    assert isinstance(result, bool)
+def test_is_duplicate_check_step_returns_false_for_other_steps(pre_git_checks):
+    """Test is_duplicate_check_step returns False for unrelated steps."""
+    result = pre_git_checks.is_duplicate_check_step('Run pylint')
+    assert result is False
+
+
+def test_transform_jscpd_command_adds_npx(pre_git_checks):
+    """Test transform_jscpd_command adds npx prefix."""
+    result = pre_git_checks.transform_jscpd_command('jscpd src/')
+    assert result.startswith('npx jscpd')
+
+
+def test_transform_jscpd_command_adds_threshold_zero(pre_git_checks):
+    """Test transform_jscpd_command adds --threshold 0."""
+    result = pre_git_checks.transform_jscpd_command('jscpd src/')
+    assert '--threshold 0' in result
+
+
+def test_transform_jscpd_command_preserves_existing_threshold(pre_git_checks):
+    """Test transform_jscpd_command does not duplicate threshold."""
+    result = pre_git_checks.transform_jscpd_command('jscpd --threshold 5 src/')
+    assert result.count('--threshold') == 1
