@@ -1,18 +1,54 @@
 """Layer 6: Capability tests.
 
 Verify we can perform required operations on prerequisite resources.
-
-Note: ec2_runner does not have explicit capability tests because:
-1. The deployment itself tests capability to create resources
-2. VPC/subnet/security group usage is tested implicitly during EC2 launch
-
-Add capability tests here if specific pre-deployment operations need verification.
 """
 import pytest
+from botocore.exceptions import ClientError
+
+from .conftest import get_stable_ami_id
 
 pytestmark = pytest.mark.layer(6)
 
 
-# No capability tests needed for ec2_runner prerequisites.
-# The resources are validated through existence and configuration tests,
-# and actual capability is verified during terraform apply.
+def test_can_run_instances_in_subnets(ec2_client, runners_outputs):
+    """Verify we can launch EC2 instances in the prerequisite subnets (dry-run)."""
+    subnet_ids_str = runners_outputs.get("vpc_public_subnet_ids")
+    if not subnet_ids_str:
+        pytest.skip("vpc_public_subnet_ids output not found")
+    subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
+    sg_id = runners_outputs.get("runner_security_group_id")
+    if not sg_id:
+        pytest.skip("runner_security_group_id output not found")
+
+    ami_id = get_stable_ami_id(ec2_client)
+    if not ami_id:
+        pytest.skip("No stable AMI found")
+
+    try:
+        ec2_client.run_instances(
+            ImageId=ami_id,
+            InstanceType="t3.micro",
+            MinCount=1,
+            MaxCount=1,
+            SubnetId=subnet_ids[0],
+            SecurityGroupIds=[sg_id],
+            DryRun=True
+        )
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        assert error_code == "DryRunOperation", (
+            f"No permission to launch EC2 instances in subnet {subnet_ids[0]}. "
+            f"Error: {error_code}. Check IAM policy has ec2:RunInstances."
+        )
+
+
+def test_can_create_tags_on_instances(ec2_client):
+    """Verify we have permission to describe tags (proxy for tag permissions)."""
+    try:
+        ec2_client.describe_tags(MaxResults=5)
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        assert error_code != "AccessDenied", (
+            "No permission to describe EC2 tags. "
+            "Check IAM policy has ec2:DescribeTags and ec2:CreateTags."
+        )

@@ -69,3 +69,14 @@ def get_stable_ami_filters():
         {"Name": "tag:Purpose", "Values": ["GitHub self-hosted EC2 runner"]},
         {"Name": "tag:Stable", "Values": ["true"]},
     ]
+
+
+def get_stable_ami_id(client):
+    """Get the stable AMI ID, or None if not found."""
+    response = client.describe_images(
+        Owners=["self"],
+        Filters=get_stable_ami_filters()
+    )
+    if not response["Images"]:
+        return None
+    return response["Images"][0]["ImageId"]

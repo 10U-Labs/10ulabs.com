@@ -13,14 +13,11 @@ def test_stable_ami_is_available(ec2_client):
     """Verify the stable AMI is in available state."""
     response = ec2_client.describe_images(
         Owners=["self"],
-        Filters=get_stable_ami_filters()
+        Filters=get_stable_ami_filters() + [{"Name": "state", "Values": ["available"]}]
     )
-    if not response["Images"]:
-        pytest.skip("No stable AMI found")
-    ami = response["Images"][0]
-    assert ami["State"] == "available", (
-        f"Stable AMI {ami['ImageId']} is in state '{ami['State']}', "
-        f"not 'available'. Wait for AMI creation to complete."
+    has_available_ami = len(response["Images"]) >= 1
+    assert has_available_ami, (
+        "No stable AMI in 'available' state. Wait for AMI creation to complete."
     )
 
 
