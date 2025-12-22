@@ -145,8 +145,6 @@ jobs:
             lib/python/ test/conftest.py test/api/conftest.py \
             test/api/endpoints/conftest.py \
             test/api/endpoints/image_for_ecs_runners/endpoint/
-      - name: Terraform Plan
-        run: cd src/api/endpoints/image_for_ecs_runners && terraform plan
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -175,6 +173,12 @@ jobs:
           python3 -m pytest \
             $ENDPOINT/post_deployment/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
+      - name: Run E2E tests
+        run: |
+          ENDPOINT="test/api/endpoints/image_for_ecs_runners/endpoint"
+          python3 -m pytest \
+            $ENDPOINT/post_deployment/e2e/ --confcutdir=test \
+            --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
