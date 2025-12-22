@@ -7,8 +7,9 @@ resource "aws_ecr_repository" "runners" {
   name                 = local.ecr_repository_name
   image_tag_mutability = "MUTABLE"
 
+  # ARM64 images are not supported by ECR Basic scanning
   image_scanning_configuration {
-    scan_on_push = true
+    scan_on_push = false
   }
 
   encryption_configuration {

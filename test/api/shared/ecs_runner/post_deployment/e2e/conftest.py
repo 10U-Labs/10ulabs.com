@@ -125,21 +125,3 @@ def pushed_test_image(request, ecr_client, expected_ecr_name):
     )
     with build_push_cleanup_image(config) as image_info:
         yield image_info
-
-
-@pytest.fixture(scope="module")
-def pushed_scannable_image(request, ecr_client, expected_ecr_name):
-    """Build and push an image that can be scanned, clean up after tests."""
-    request.getfixturevalue("docker_logged_in")
-    registry_url = request.getfixturevalue("ecr_registry_url")
-
-    config = ImageBuildConfig(
-        ecr_client=ecr_client,
-        registry_url=registry_url,
-        repo_name=expected_ecr_name,
-        tag_prefix="e2e-scan-test",
-        dockerfile_content=b"FROM debian:stable-slim\nLABEL test=e2e-scan\n",
-        build_timeout=120
-    )
-    with build_push_cleanup_image(config) as image_info:
-        yield image_info
