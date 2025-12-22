@@ -11,6 +11,10 @@ data "archive_file" "runners_handler" {
     filename = "common/__init__.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/aws_clients.py")
+    filename = "common/aws_clients.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
     filename = "common/cloudwatch.py"
   }
@@ -122,6 +126,10 @@ data "archive_file" "runner_starter" {
     filename = "common/__init__.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/aws_clients.py")
+    filename = "common/aws_clients.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
     filename = "common/cloudwatch.py"
   }
@@ -219,6 +227,10 @@ data "archive_file" "runner_terminator" {
     filename = "common/__init__.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/aws_clients.py")
+    filename = "common/aws_clients.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
     filename = "common/cloudwatch.py"
   }
@@ -299,6 +311,10 @@ data "archive_file" "ignored_events_archiver" {
   source {
     content  = file("${path.module}/lambdas/common/__init__.py")
     filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/aws_clients.py")
+    filename = "common/aws_clients.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
@@ -615,6 +631,10 @@ data "archive_file" "drift_recovery" {
     filename = "common/__init__.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/aws_clients.py")
+    filename = "common/aws_clients.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/github_api.py")
     filename = "common/github_api.py"
   }
@@ -687,6 +707,10 @@ data "archive_file" "spot_interruption_handler" {
   source {
     content  = file("${path.module}/lambdas/common/__init__.py")
     filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/aws_clients.py")
+    filename = "common/aws_clients.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/github_api.py")
@@ -765,6 +789,10 @@ data "archive_file" "stale_runner_cleanup" {
   source {
     content  = file("${path.module}/lambdas/common/__init__.py")
     filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/aws_clients.py")
+    filename = "common/aws_clients.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/github_api.py")
