@@ -17,14 +17,14 @@ pytestmark = pytest.mark.layer(2)
 class TestECRSecurityConfiguration:
     """Layer 2: Verify ECR security configuration."""
 
-    def test_runners_ecr_repository_has_scan_on_push_enabled(
+    def test_runners_ecr_repository_has_scan_on_push_disabled(
         self, ecr_client, expected_ecr_name
     ):
-        """Verify scan on push is enabled for the runners repository."""
+        """Verify scan on push is disabled (ARM64 images not supported)."""
         response = ecr_client.describe_repositories(repositoryNames=[expected_ecr_name])
         repo = response["repositories"][0]
-        assert repo["imageScanningConfiguration"]["scanOnPush"] is True, (
-            f"ECR repository '{expected_ecr_name}' does not have scan_on_push enabled"
+        assert repo["imageScanningConfiguration"]["scanOnPush"] is False, (
+            f"ECR repository '{expected_ecr_name}' should have scan_on_push disabled"
         )
 
     def test_runners_ecr_repository_has_encryption_enabled(
