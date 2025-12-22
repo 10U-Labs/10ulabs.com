@@ -1,11 +1,12 @@
 """Pytest fixtures for pre-deployment integration tests.
 
-These tests follow the 5-layer testing model from PRE_DEPLOYMENT_INTEGRATION_TESTS.md:
+These tests follow the 6-layer testing model from PRE_DEPLOYMENT_INTEGRATION_TESTS.md:
 - Layer 1: Authentication - Are AWS credentials configured and valid?
 - Layer 2: Authorization - Do we have permission to call required APIs?
-- Layer 3: Existence - Do the required resources exist?
-- Layer 4: Configuration - Are resources configured correctly?
-- Layer 5: Capability - Can we perform required operations?
+- Layer 3: State - Does Terraform state match AWS reality?
+- Layer 4: Existence - Do the required resources exist?
+- Layer 5: Configuration - Are resources configured correctly?
+- Layer 6: Capability - Can we perform required operations?
 
 Inherited fixtures from parent conftest files:
 - test/conftest.py: shared_config, aws_region, sts_client, iam_client,
@@ -19,6 +20,9 @@ from terraform_config import get_runners_resource_names
 
 import boto3
 import pytest
+
+# Enable layer marker plugin for test ordering
+pytest_plugins = ['pytest_layers']
 
 
 API_SHARED_ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"

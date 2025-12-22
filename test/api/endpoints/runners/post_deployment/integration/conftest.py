@@ -2,6 +2,9 @@
 import boto3
 import pytest
 
+# Enable layer marker plugin for test ordering
+pytest_plugins = ['pytest_layers']
+
 
 @pytest.fixture(name="sqs_client", scope="session")
 def sqs_client_fixture(aws_region):
