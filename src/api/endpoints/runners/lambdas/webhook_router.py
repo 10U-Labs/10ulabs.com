@@ -12,16 +12,11 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import unquote
 
-import boto3
 from botocore.exceptions import ClientError
 
+from common.aws_clients import get_dynamodb_client, get_sqs_client, get_ssm_client
 from common.cloudwatch import publish_metric as _common_publish_metric
-from common.runner_labels import (
-    parse_labels,
-    validate_labels,
-    LabelParseError,
-    LabelValidationError,
-)
+from common.runner_labels import get_runner_type_from_labels
 from common.webhook_ingress import IngressHandler
 
 logger = logging.getLogger(__name__)
@@ -30,33 +25,9 @@ logger.setLevel(logging.INFO)
 METRICS_NAMESPACE = "WebhookRouter"
 
 _cache: dict[str, Any] = {
-    "ssm_client": None,
-    "dynamodb_client": None,
-    "sqs_client": None,
     "webhook_secret": None,
     "test_mode": False,
 }
-
-
-def _get_ssm_client() -> Any:
-    """Get or create SSM client (singleton)."""
-    if _cache["ssm_client"] is None:
-        _cache["ssm_client"] = boto3.client("ssm")
-    return _cache["ssm_client"]
-
-
-def _get_dynamodb_client() -> Any:
-    """Get or create DynamoDB client (singleton)."""
-    if _cache["dynamodb_client"] is None:
-        _cache["dynamodb_client"] = boto3.client("dynamodb")
-    return _cache["dynamodb_client"]
-
-
-def _get_sqs_client() -> Any:
-    """Get or create SQS client (singleton)."""
-    if _cache["sqs_client"] is None:
-        _cache["sqs_client"] = boto3.client("sqs")
-    return _cache["sqs_client"]
 
 
 def _set_test_mode(enabled: bool) -> None:
@@ -84,7 +55,7 @@ async def _check_and_record_idempotency(request_id: str) -> bool:
 
     try:
         ttl = int(time.time()) + 86400
-        _get_dynamodb_client().put_item(
+        get_dynamodb_client().put_item(
             TableName=table_name,
             Item={
                 "request_id": {"S": request_id},
@@ -115,12 +86,12 @@ async def _enqueue_job(job_data: dict[str, Any]) -> dict[str, Any]:
         return {"success": False, "error": "Job queue not configured"}
 
     try:
-        response = _get_sqs_client().send_message(
+        response = get_sqs_client().send_message(
             QueueUrl=queue_url, MessageBody=json.dumps(job_data)
         )
         logger.info("Enqueued job to SQS: %s", response.get("MessageId"))
 
-        attrs = _get_sqs_client().get_queue_attributes(
+        attrs = get_sqs_client().get_queue_attributes(
             QueueUrl=queue_url, AttributeNames=["ApproximateNumberOfMessages"]
         )
         queue_depth = int(
@@ -153,7 +124,7 @@ def _enqueue_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str,
             "reason": reason,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-        response = _get_sqs_client().send_message(
+        response = get_sqs_client().send_message(
             QueueUrl=queue_url, MessageBody=json.dumps(message_body)
         )
         logger.info(
@@ -179,7 +150,7 @@ async def _enqueue_cancellation(cancellation_data: dict[str, Any]) -> dict[str, 
         return {"success": False, "error": "Cancellation queue not configured"}
 
     try:
-        response = _get_sqs_client().send_message(
+        response = get_sqs_client().send_message(
             QueueUrl=queue_url, MessageBody=json.dumps(cancellation_data)
         )
         logger.info(
@@ -239,7 +210,7 @@ async def _get_webhook_secret(force_refresh: bool = False) -> str:
 
     parameter_name = os.environ.get("WEBHOOK_SECRET_NAME")
     try:
-        response = _get_ssm_client().get_parameter(
+        response = get_ssm_client().get_parameter(
             Name=parameter_name, WithDecryption=True
         )
         secret = response.get("Parameter", {}).get("Value", "")
@@ -276,34 +247,6 @@ def _verify_signature(payload_body: str, signature_header: str, secret: str) -> 
     return hmac.compare_digest(computed_signature, github_signature)
 
 
-def _get_runner_type_from_labels(
-    job_labels: list[str],
-) -> tuple[str | None, str | None]:
-    """Determine runner type and endpoint suffix from job labels.
-
-    Returns:
-        Tuple of (runner_type, endpoint_suffix)
-    """
-    runner_type: str | None = None
-    endpoint_suffix: str | None = None
-
-    try:
-        parsed = parse_labels(job_labels)
-        validate_labels(parsed)
-        is_e2e = "e2e" in job_labels
-
-        if parsed["platform"] == "ec2":
-            runner_type = "ec2-e2e" if is_e2e else "ec2"
-            endpoint_suffix = "ec2-runner"
-        elif parsed["platform"] == "ecs":
-            runner_type = "fargate-e2e" if is_e2e else "fargate"
-            endpoint_suffix = "ecs-runner"
-    except (LabelParseError, LabelValidationError):
-        pass
-
-    return runner_type, endpoint_suffix
-
-
 async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
     """Handle a workflow_job event."""
     action = event_data.get("action")
@@ -331,7 +274,7 @@ async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
             "body": json.dumps({"message": f"Ignored action: {action}"}),
         }
 
-    runner_type, _ = _get_runner_type_from_labels(job_labels)
+    runner_type, _ = get_runner_type_from_labels(job_labels)
     if not runner_type:
         logger.info(
             "Job labels %s don't contain EC2 or Fargate runner type labels",
@@ -577,7 +520,7 @@ def _get_ingress_handler() -> IngressHandler:
 
         def get_runner_type(self, labels: list[str]) -> tuple[str | None, str | None]:
             """Get runner type from labels."""
-            return _get_runner_type_from_labels(labels)
+            return get_runner_type_from_labels(labels)
 
         async def enqueue_job(self, job_data: dict[str, Any]) -> dict[str, bool]:
             """Enqueue job to SQS."""

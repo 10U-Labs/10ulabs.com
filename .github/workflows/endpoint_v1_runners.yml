@@ -71,14 +71,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Terraform Format Check
+        run: |
+          cd src/api/endpoints/runners
+          terraform fmt -diff -check -recursive
+      - name: Terraform Init
+        run: cd src/api/endpoints/runners && terraform init
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
+        run: cd src/api/endpoints/runners && tflint --init && tflint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
-        run: |
-          python3 -m pip install pylint mypy yamllint pytest boto3 \
-            boto3-stubs PyYAML types-PyYAML requests types-requests
+        name: Install yamllint
+        run: python3 -m pip install yamllint
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -90,52 +98,66 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/endpoint_v1_runners.yml
-      - name: Linting Python files
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pylint
+        run: python3 -m pip install pylint
+      - name: Run pylint on source
         run: |
+          python3 -m pylint lib/python/ --fail-on=C,R,W --fail-under=10.0
           for file in src/api/endpoints/runners/lambdas/*.py; do
-            PYTHONPATH=lib/python python3 -m pylint "$file" \
-              --fail-on=C,R,W \
-              --fail-under=10.0
+            python3 -m pylint "$file" --fail-on=C,R,W --fail-under=10.0
           done
-          PYTHONPATH=lib/python python3 -m pylint test/api/endpoints/runners/ \
-            --fail-on=C,R,W \
-            --fail-under=10.0
-      - name: Static type checking Python files with mypy
+      - name: Run pylint on tests
         run: |
+          PYTHONPATH=lib/python python3 -m pylint \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py test/api/endpoints/runners/ \
+            --fail-on=C,R,W --fail-under=10.0
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install mypy
+        run: python3 -m pip install mypy boto3-stubs types-requests types-PyYAML
+      - name: Run mypy on source
+        run: |
+          python3 -m mypy lib/python/
           for file in src/api/endpoints/runners/lambdas/*.py; do
-            MYPYPATH=lib/python python3 -m mypy "$file"
+            python3 -m mypy "$file"
           done
-          MYPYPATH=lib/python python3 -m mypy test/api/endpoints/runners/
+      - name: Run mypy on tests
+        run: |
+          MYPYPATH=lib/python python3 -m mypy \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py test/api/endpoints/runners/
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install jscpd
+        run: npm install -g jscpd
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ src/api/endpoints/runners/lambdas/
-      - name: Check for duplicate code in test Python files
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pytest dependencies
+        run: python3 -m pip install pytest boto3 PyYAML requests
+      - name: Run unit tests
         run: |
-          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py test/api/endpoints/runners/
-      - name: Terraform Format Check
-        run: |
-          cd src/api/endpoints/runners
-          terraform fmt -diff -check -recursive
-      - name: Terraform Init
-        run: cd src/api/endpoints/runners && terraform init
-      - env:
-          GITHUB_TOKEN: ${{ github.token }}
-        name: Run tflint
-        run: cd src/api/endpoints/runners && tflint --init && tflint
-      - name: Terraform Plan
-        run: cd src/api/endpoints/runners && terraform plan
-      - name: Run Python unit tests
-        run: |
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             test/api/endpoints/runners/pre_deployment/unit/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/pre_deployment/integration
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             $TEST/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Apply
@@ -143,8 +165,13 @@ jobs:
       - name: Run post-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/post_deployment/integration
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             $TEST/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+      - name: Run E2E tests
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/api/endpoints/runners/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GH_PAT }}

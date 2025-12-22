@@ -3,15 +3,19 @@
 These tests MUST run first because all other tests depend on having valid AWS
 credentials. If authentication fails, skip all subsequent layers.
 
-Five-layer testing model:
+Six-layer testing model:
 - Layer 1: Authentication - Are credentials configured and valid? (THIS FILE)
 - Layer 2: Authorization - Do we have permission to call required APIs?
-- Layer 3: Existence - Do the required resources exist?
-- Layer 4: Configuration - Are resources configured correctly?
-- Layer 5: Capability - Can we perform required operations?
+- Layer 3: State - Does Terraform state match AWS reality?
+- Layer 4: Existence - Do the required resources exist?
+- Layer 5: Configuration - Are resources configured correctly?
+- Layer 6: Capability - Can we perform required operations?
 """
 from botocore.exceptions import ClientError, NoCredentialsError
 import pytest
+
+
+pytestmark = pytest.mark.layer(1)
 
 
 class TestAWSCredentialsAuthentication:

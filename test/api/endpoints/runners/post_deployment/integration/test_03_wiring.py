@@ -2,8 +2,19 @@
 
 Layer 3: Verify all components are connected properly.
 These tests run after existence and configuration tests pass.
+
+This includes:
+- EventBridge rule targets
+- SQS event source mappings
+- SQS DLQ wiring
+- IAM role attachments and cross-service permissions
 """
 import json
+
+import pytest
+
+
+pytestmark = pytest.mark.layer(3)
 
 
 # === EventBridge Rule Targets ===
@@ -102,3 +113,86 @@ def test_webhook_ingress_queue_redrive_targets_dlq(sqs_client, config):
     dlq_arn = dlq_attributes["Attributes"]["QueueArn"]
 
     assert redrive_policy["deadLetterTargetArn"] == dlq_arn
+
+
+# === Lambda Role Attachment ===
+
+
+def test_webhook_handler_uses_correct_role(lambda_client, config):
+    """Verify webhook handler Lambda has the correct execution role attached."""
+    function_name = config["webhook_handler_function_name"]
+    role_name = config["webhook_handler_service_role_name"]
+    account_id = config["aws_account_id"]
+
+    response = lambda_client.get_function(FunctionName=function_name)
+    actual_role_arn = response["Configuration"]["Role"]
+    expected_role_arn = f"arn:aws:iam::{account_id}:role/{role_name}"
+
+    assert actual_role_arn == expected_role_arn
+
+
+# === Role Policy Permissions (Cross-Service Wiring) ===
+
+
+def _role_has_permission(iam_client, role_name, permission):
+    """Check if a role has a specific permission in its inline policies."""
+    policies = iam_client.list_role_policies(RoleName=role_name)
+
+    for policy_name in policies["PolicyNames"]:
+        policy = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
+        document = policy["PolicyDocument"]
+
+        for statement in document.get("Statement", []):
+            actions = statement.get("Action", [])
+            if isinstance(actions, str):
+                actions = [actions]
+
+            if permission in actions:
+                return True
+
+    return False
+
+
+def test_webhook_handler_role_has_sqs_get_queue_attributes(iam_client, config):
+    """Verify webhook handler role has GetQueueAttributes permission on job queue.
+
+    The webhook_router.py code calls get_queue_attributes on the job queue
+    to publish queue depth metrics after enqueuing jobs.
+    """
+    role_name = config["webhook_handler_service_role_name"]
+    assert _role_has_permission(iam_client, role_name, "sqs:GetQueueAttributes"), (
+        f"Role {role_name} missing sqs:GetQueueAttributes permission - "
+        "webhook_router.py needs this to publish queue depth metrics"
+    )
+
+
+def test_webhook_handler_role_has_sqs_send_message(iam_client, config):
+    """Verify webhook handler role has SendMessage permission."""
+    role_name = config["webhook_handler_service_role_name"]
+    assert _role_has_permission(iam_client, role_name, "sqs:SendMessage"), (
+        f"Role {role_name} missing sqs:SendMessage permission"
+    )
+
+
+def test_webhook_handler_role_has_dynamodb_access(iam_client, config):
+    """Verify webhook handler role has DynamoDB access for idempotency."""
+    role_name = config["webhook_handler_service_role_name"]
+    assert _role_has_permission(iam_client, role_name, "dynamodb:PutItem"), (
+        f"Role {role_name} missing dynamodb:PutItem permission"
+    )
+
+
+def test_webhook_handler_role_has_ssm_access(iam_client, config):
+    """Verify webhook handler role has SSM access for secrets."""
+    role_name = config["webhook_handler_service_role_name"]
+    assert _role_has_permission(iam_client, role_name, "ssm:GetParameter"), (
+        f"Role {role_name} missing ssm:GetParameter permission"
+    )
+
+
+def test_webhook_handler_role_has_cloudwatch_metrics(iam_client, config):
+    """Verify webhook handler role has CloudWatch metrics permission."""
+    role_name = config["webhook_handler_service_role_name"]
+    assert _role_has_permission(iam_client, role_name, "cloudwatch:PutMetricData"), (
+        f"Role {role_name} missing cloudwatch:PutMetricData permission"
+    )

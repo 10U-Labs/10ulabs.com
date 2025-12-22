@@ -6,32 +6,25 @@ import os
 import time
 from typing import Any
 
-import boto3
 from botocore.exceptions import ClientError
 
+from common.aws_clients import get_ec2_client
 from common.cloudwatch import publish_metric
+from common.ec2_utils import terminate_ec2_instance
+from common.ecs_utils import (
+    list_running_task_arns,
+    describe_tasks_with_tags,
+    extract_task_tags,
+    stop_ecs_task,
+    get_cluster_from_env,
+)
+from common.lambda_utils import get_sqs_records, empty_records_response, count_results
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 METRICS_NAMESPACE = "RunnerTerminator"
 WORKFLOW_RUNNER_TYPE_TAG = "workflow-runner"
-
-_cache: dict[str, Any] = {"ecs_client": None, "ec2_client": None}
-
-
-def _get_ecs_client() -> Any:
-    """Get or create ECS client (singleton)."""
-    if _cache["ecs_client"] is None:
-        _cache["ecs_client"] = boto3.client("ecs")
-    return _cache["ecs_client"]
-
-
-def _get_ec2_client() -> Any:
-    """Get or create EC2 client (singleton)."""
-    if _cache["ec2_client"] is None:
-        _cache["ec2_client"] = boto3.client("ec2")
-    return _cache["ec2_client"]
 
 
 def _find_ecs_task_by_run_id(run_id: int | str) -> dict[str, Any] | None:
@@ -43,36 +36,23 @@ def _find_ecs_task_by_run_id(run_id: int | str) -> dict[str, Any] | None:
     Returns:
         Dictionary with taskArn, runnerName, tags or None if not found
     """
-    cluster = os.environ.get("ECS_CLUSTER")
+    cluster = get_cluster_from_env()
     if not cluster or not run_id:
         return None
 
     try:
-        ecs = _get_ecs_client()
-        task_arns: list[str] = []
-
-        # List all running/pending tasks
-        for status in ["RUNNING", "PENDING"]:
-            paginator = ecs.get_paginator("list_tasks")
-            for page in paginator.paginate(cluster=cluster, desiredStatus=status):
-                task_arns.extend(page.get("taskArns", []))
-
+        task_arns = list_running_task_arns(cluster)
         if not task_arns:
             return None
 
-        # Describe tasks in batches of 100 to find the one with matching RunId
-        for i in range(0, len(task_arns), 100):
-            batch = task_arns[i : i + 100]
-            response = ecs.describe_tasks(cluster=cluster, tasks=batch, include=["TAGS"])
-
-            for task in response.get("tasks", []):
-                tags = {t["key"]: t["value"] for t in task.get("tags", [])}
-                if tags.get("RunId") == str(run_id):
-                    return {
-                        "taskArn": task["taskArn"],
-                        "runnerName": tags.get("Name"),
-                        "tags": tags,
-                    }
+        for task in describe_tasks_with_tags(cluster, task_arns):
+            tags = extract_task_tags(task)
+            if tags.get("RunId") == str(run_id):
+                return {
+                    "taskArn": task["taskArn"],
+                    "runnerName": tags.get("Name"),
+                    "tags": tags,
+                }
     except ClientError as err:
         logger.error("Failed to find ECS task by RunId %s: %s", run_id, str(err))
 
@@ -93,7 +73,7 @@ def _find_ec2_instance_by_run_id(run_id: int | str) -> dict[str, Any] | None:
         return None
 
     try:
-        response = _get_ec2_client().describe_instances(
+        response = get_ec2_client().describe_instances(
             Filters=[
                 {"Name": "tag:RunId", "Values": [str(run_id)]},
                 {"Name": "tag:Type", "Values": [WORKFLOW_RUNNER_TYPE_TAG]},
@@ -116,8 +96,8 @@ def _find_ec2_instance_by_run_id(run_id: int | str) -> dict[str, Any] | None:
     return None
 
 
-def _stop_ecs_task(task_arn: str, reason: str) -> bool:
-    """Stop an ECS task.
+def _stop_ecs_task_with_metrics(task_arn: str, reason: str) -> bool:
+    """Stop an ECS task and publish metrics.
 
     Args:
         task_arn: ARN of the task to stop
@@ -126,28 +106,21 @@ def _stop_ecs_task(task_arn: str, reason: str) -> bool:
     Returns:
         True if successful or task already stopped
     """
-    cluster = os.environ.get("ECS_CLUSTER")
+    cluster = get_cluster_from_env()
     if not cluster:
         logger.error("ECS_CLUSTER not configured")
         return False
 
-    try:
-        _get_ecs_client().stop_task(cluster=cluster, task=task_arn, reason=reason)
-        logger.info("Stopped ECS task: %s (reason: %s)", task_arn, reason)
+    result = stop_ecs_task(cluster, task_arn, reason)
+    if result:
         publish_metric(METRICS_NAMESPACE, "EcsTasksStopped", 1, "Count")
-        return True
-    except ClientError as err:
-        error_code = err.response.get("Error", {}).get("Code", "")
-        if error_code == "InvalidParameterException" or "TaskNotFound" in str(err):
-            logger.info("Task already stopped or not found: %s", task_arn)
-            return True
-        logger.error("Failed to stop ECS task: %s", str(err))
+    else:
         publish_metric(METRICS_NAMESPACE, "EcsStopErrors", 1, "Count")
-        return False
+    return result
 
 
-def _terminate_ec2_instance(instance_id: str, reason: str) -> bool:
-    """Terminate an EC2 instance.
+def _terminate_ec2_instance_with_metrics(instance_id: str, reason: str) -> bool:
+    """Terminate an EC2 instance and publish metrics.
 
     Args:
         instance_id: ID of the instance to terminate
@@ -156,19 +129,13 @@ def _terminate_ec2_instance(instance_id: str, reason: str) -> bool:
     Returns:
         True if successful or instance already terminated
     """
-    try:
-        _get_ec2_client().terminate_instances(InstanceIds=[instance_id])
-        logger.info("Terminated EC2 instance: %s (reason: %s)", instance_id, reason)
+    logger.info("Terminating EC2 instance: %s (reason: %s)", instance_id, reason)
+    result = terminate_ec2_instance(instance_id)
+    if result:
         publish_metric(METRICS_NAMESPACE, "Ec2InstancesTerminated", 1, "Count")
-        return True
-    except ClientError as err:
-        error_code = err.response.get("Error", {}).get("Code", "")
-        if error_code in ("InvalidInstanceID.NotFound", "InvalidInstanceID.Malformed"):
-            logger.info("Instance already terminated or not found: %s", instance_id)
-            return True
-        logger.error("Failed to terminate EC2 instance: %s", str(err))
+    else:
         publish_metric(METRICS_NAMESPACE, "Ec2TerminateErrors", 1, "Count")
-        return False
+    return result
 
 
 def _terminate_runner_by_run_id(
@@ -190,7 +157,7 @@ def _terminate_runner_by_run_id(
     ecs_task = _find_ecs_task_by_run_id(run_id)
     if ecs_task:
         logger.info("Found ECS task for RunId %s: %s", run_id, ecs_task["taskArn"])
-        success = _stop_ecs_task(ecs_task["taskArn"], reason)
+        success = _stop_ecs_task_with_metrics(ecs_task["taskArn"], reason)
         return {
             "success": success,
             "type": "ecs",
@@ -204,7 +171,7 @@ def _terminate_runner_by_run_id(
         logger.info(
             "Found EC2 instance for RunId %s: %s", run_id, ec2_instance["instanceId"]
         )
-        success = _terminate_ec2_instance(ec2_instance["instanceId"], reason)
+        success = _terminate_ec2_instance_with_metrics(ec2_instance["instanceId"], reason)
         return {
             "success": success,
             "type": "ec2",
@@ -277,15 +244,9 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         RuntimeError: If any cancellations fail
     """
     start_time = time.time()
-    logger.info("Received event: %s", json.dumps(event))
-
-    records = event.get("Records", [])
-    if not records:
-        logger.warning("No records in event")
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"message": "No records to process"}),
-        }
+    records = get_sqs_records(event)
+    if records is None:
+        return empty_records_response()
 
     logger.info("Processing %d cancellation(s) from SQS", len(records))
 
@@ -294,8 +255,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     elapsed_ms = (time.time() - start_time) * 1000
     publish_metric(METRICS_NAMESPACE, "ProcessingTime", elapsed_ms, "Milliseconds")
 
-    success_count = sum(1 for r in results if r.get("success"))
-    fail_count = sum(1 for r in results if not r.get("success"))
+    success_count, fail_count = count_results(results)
 
     logger.info(
         "Processed %d cancellations successfully, %d failed", success_count, fail_count

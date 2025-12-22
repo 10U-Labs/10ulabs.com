@@ -8,33 +8,25 @@ import urllib.request
 import urllib.error
 from typing import Any
 
-import boto3
 from botocore.exceptions import ClientError
 
+from common.aws_clients import get_ec2_client
+from common.ec2_utils import terminate_ec2_instance
+from common.ecs_utils import (
+    list_running_task_arns,
+    describe_tasks_with_tags,
+    extract_task_tags,
+    stop_ecs_task,
+    get_cluster_from_env,
+)
 from common.github_api import get_github_token
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-_cache: dict[str, Any] = {"ecs_client": None, "ec2_client": None}
-
 ORPHAN_THRESHOLD_SECONDS = 300
 ECS_MANAGED_BY_TAG = "ecs-runner-api"
 WORKFLOW_RUNNER_TYPE_TAG = "workflow-runner"
-
-
-def _get_ecs_client() -> Any:
-    """Get or create ECS client (singleton)."""
-    if _cache["ecs_client"] is None:
-        _cache["ecs_client"] = boto3.client("ecs")
-    return _cache["ecs_client"]
-
-
-def _get_ec2_client() -> Any:
-    """Get or create EC2 client (singleton)."""
-    if _cache["ec2_client"] is None:
-        _cache["ec2_client"] = boto3.client("ec2")
-    return _cache["ec2_client"]
 
 
 def _github_api_request(method: str, endpoint: str, token: str) -> dict[str, Any]:
@@ -146,41 +138,10 @@ def _terminate_ecs_task(task_arn: str) -> bool:
     Returns:
         True if successfully stopped
     """
-    cluster = os.environ.get("ECS_CLUSTER", "")
+    cluster = get_cluster_from_env()
     if not cluster:
         return False
-    try:
-        _get_ecs_client().stop_task(
-            cluster=cluster, task=task_arn, reason="Stale runner cleanup"
-        )
-        logger.info("Stopped ECS task: %s", task_arn)
-        return True
-    except ClientError as err:
-        error_code = err.response.get("Error", {}).get("Code", "")
-        if error_code == "InvalidParameterException" or "TaskNotFound" in str(err):
-            logger.info("Task already stopped or not found: %s", task_arn)
-            return True
-        logger.error("Failed to stop ECS task: %s", str(err))
-        return False
-
-
-def _terminate_ec2_instance(instance_id: str) -> bool:
-    """Terminate an EC2 instance.
-
-    Returns:
-        True if successfully terminated
-    """
-    try:
-        _get_ec2_client().terminate_instances(InstanceIds=[instance_id])
-        logger.info("Terminated EC2 instance: %s", instance_id)
-        return True
-    except ClientError as err:
-        error_code = err.response.get("Error", {}).get("Code", "")
-        if error_code in ("InvalidInstanceID.NotFound", "InvalidInstanceID.Malformed"):
-            logger.info("Instance already terminated or not found: %s", instance_id)
-            return True
-        logger.error("Failed to terminate EC2 instance: %s", str(err))
-        return False
+    return stop_ecs_task(cluster, task_arn, "Stale runner cleanup")
 
 
 def _is_orphaned_ecs_task(
@@ -223,37 +184,25 @@ def _get_orphaned_ecs_tasks() -> list[dict[str, Any]]:
     Returns:
         List of orphaned task info dicts
     """
-    tasks: list[dict[str, Any]] = []
-    cluster = os.environ.get("ECS_CLUSTER", "")
+    orphaned_tasks: list[dict[str, Any]] = []
+    cluster = get_cluster_from_env()
     if not cluster:
-        return tasks
+        return orphaned_tasks
 
     try:
-        ecs = _get_ecs_client()
-        task_arns: list[str] = []
-
-        # List all running tasks with pagination
-        paginator = ecs.get_paginator("list_tasks")
-        for page in paginator.paginate(cluster=cluster, desiredStatus="RUNNING"):
-            task_arns.extend(page.get("taskArns", []))
-
+        task_arns = list_running_task_arns(cluster)
         if not task_arns:
-            return tasks
+            return orphaned_tasks
 
         current_time = time.time()
-
-        # Describe tasks in batches of 100
-        for i in range(0, len(task_arns), 100):
-            batch = task_arns[i : i + 100]
-            response = ecs.describe_tasks(cluster=cluster, tasks=batch, include=["TAGS"])
-            for task in response.get("tasks", []):
-                orphaned = _is_orphaned_ecs_task(task, current_time)
-                if orphaned:
-                    tasks.append(orphaned)
+        for task in describe_tasks_with_tags(cluster, task_arns):
+            orphaned = _is_orphaned_ecs_task(task, current_time)
+            if orphaned:
+                orphaned_tasks.append(orphaned)
     except ClientError as err:
         logger.error("Failed to get orphaned ECS tasks: %s", str(err))
 
-    return tasks
+    return orphaned_tasks
 
 
 def _get_orphaned_ec2_instances() -> list[dict[str, Any]]:
@@ -268,7 +217,7 @@ def _get_orphaned_ec2_instances() -> list[dict[str, Any]]:
         return instances
 
     try:
-        response = _get_ec2_client().describe_instances(
+        response = get_ec2_client().describe_instances(
             Filters=[
                 {"Name": "tag:Type", "Values": [WORKFLOW_RUNNER_TYPE_TAG]},
                 {"Name": "tag:ManagedBy", "Values": [ec2_managed_by_tag]},
@@ -311,7 +260,7 @@ def _has_running_ec2_by_name(runner_name: str) -> bool:
         return False
 
     try:
-        response = _get_ec2_client().describe_instances(
+        response = get_ec2_client().describe_instances(
             Filters=[
                 {"Name": "tag:Name", "Values": [runner_name]},
                 {"Name": "tag:ManagedBy", "Values": [ec2_managed_by_tag]},
@@ -338,29 +287,17 @@ def _extract_run_id_from_runner_name(runner_name: str) -> str:
 
 def _has_running_ecs_task_by_name(runner_name: str) -> bool:
     """Check if there's a running ECS task for the given runner name."""
-    cluster = os.environ.get("ECS_CLUSTER", "")
+    cluster = get_cluster_from_env()
     run_id = _extract_run_id_from_runner_name(runner_name)
     if not cluster or not run_id:
         return False
 
     try:
-        ecs = _get_ecs_client()
-        task_arns: list[str] = []
-
-        # List all running/pending tasks
-        for status in ["RUNNING", "PENDING"]:
-            paginator = ecs.get_paginator("list_tasks")
-            for page in paginator.paginate(cluster=cluster, desiredStatus=status):
-                task_arns.extend(page.get("taskArns", []))
-
-        # Check tasks for matching RunId
-        for i in range(0, len(task_arns), 100):
-            batch = task_arns[i : i + 100]
-            response = ecs.describe_tasks(cluster=cluster, tasks=batch, include=["TAGS"])
-            for task in response.get("tasks", []):
-                tags = {t["key"]: t["value"] for t in task.get("tags", [])}
-                if tags.get("RunId") == run_id:
-                    return True
+        task_arns = list_running_task_arns(cluster)
+        for task in describe_tasks_with_tags(cluster, task_arns):
+            tags = extract_task_tags(task)
+            if tags.get("RunId") == run_id:
+                return True
     except ClientError as err:
         logger.error("Failed to check ECS task by name %s: %s", runner_name, str(err))
 
@@ -456,7 +393,7 @@ def _cleanup_orphaned_resources(github_token: str) -> dict[str, int]:
             instance["instance_id"],
             instance["age_seconds"],
         )
-        if _terminate_ec2_instance(instance["instance_id"]):
+        if terminate_ec2_instance(instance["instance_id"]):
             counts["ec2_cleaned"] += 1
             runner_name = instance.get("runner_name", "")
             instance_repo = instance.get("github_repo") or github_repo

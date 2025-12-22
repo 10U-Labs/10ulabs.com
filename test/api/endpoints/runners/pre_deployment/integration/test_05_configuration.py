@@ -1,14 +1,15 @@
-"""Layer 4: Configuration - Are resources configured correctly?
+"""Layer 5: Configuration - Are resources configured correctly?
 
 These tests verify that resources are properly configured after confirming
 they exist. Configuration checks include state, settings, and naming conventions.
 
-Five-layer testing model:
+Six-layer testing model:
 - Layer 1: Authentication - Are credentials configured and valid?
 - Layer 2: Authorization - Do we have permission to call required APIs?
-- Layer 3: Existence - Do the required resources exist?
-- Layer 4: Configuration - Are resources configured correctly? (THIS FILE)
-- Layer 5: Capability - Can we perform required operations?
+- Layer 3: State - Does Terraform state match AWS reality?
+- Layer 4: Existence - Do the required resources exist?
+- Layer 5: Configuration - Are resources configured correctly? (THIS FILE)
+- Layer 6: Capability - Can we perform required operations?
 """
 from pathlib import Path
 
@@ -16,6 +17,9 @@ from botocore.exceptions import ClientError
 import pytest
 
 from terraform_config import get_runners_resource_names
+
+
+pytestmark = pytest.mark.layer(5)
 
 
 RUNNERS_SRC = Path(__file__).parents[6] / "src" / "api" / "endpoints" / "runners"
@@ -28,7 +32,7 @@ SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"
 
 
 class TestVPCConfiguration:
-    """Layer 4: Verify VPC resources are properly configured."""
+    """Layer 5: Verify VPC resources are properly configured."""
 
     def test_01_vpc_is_available(self, vpc_info, api_shared_runners_outputs):
         """Verify the VPC is in available state."""
@@ -79,7 +83,7 @@ def test_ecr_repository_has_image_scanning(
 
 
 class TestLambdaConfiguration:
-    """Layer 4: Verify Lambda functions are properly configured."""
+    """Layer 5: Verify Lambda functions are properly configured."""
 
     def test_01_ec2_runner_lambda_is_active(self, lambda_client, ec2_runner_outputs):
         """Verify the EC2 runner Lambda function is active."""
@@ -128,7 +132,7 @@ def test_github_pat_parameter_is_secure_string(ssm_client, ssm_github_pat_name):
 
 
 class TestSQSNamingConventions:
-    """Layer 4: Verify SQS queue names follow expected conventions."""
+    """Layer 5: Verify SQS queue names follow expected conventions."""
 
     def test_01_queue_names_use_handler_prefix(self):
         """Verify queue names use the webhook handler name as prefix."""

@@ -8,29 +8,13 @@ import urllib.request
 import urllib.error
 from typing import Any
 
-import boto3
 from botocore.exceptions import ClientError
 
+from common.aws_clients import get_ecs_client, get_ec2_client
 from common.github_api import get_github_token
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-_cache: dict[str, Any] = {"ecs_client": None, "ec2_client": None}
-
-
-def _get_ecs_client() -> Any:
-    """Get or create ECS client (singleton)."""
-    if _cache["ecs_client"] is None:
-        _cache["ecs_client"] = boto3.client("ecs")
-    return _cache["ecs_client"]
-
-
-def _get_ec2_client() -> Any:
-    """Get or create EC2 client (singleton)."""
-    if _cache["ec2_client"] is None:
-        _cache["ec2_client"] = boto3.client("ec2")
-    return _cache["ec2_client"]
 
 
 def _github_api_request(
@@ -232,6 +216,29 @@ def _is_spot_interruption(stop_code: str, stopped_reason: str) -> bool:
     return "SpotInterruption" in stop_code or "capacity" in stopped_reason.lower()
 
 
+def _prepare_workflow_recovery(
+    github_token: str, github_repo: str, run_id: int
+) -> tuple[str, str, dict[str, Any] | None]:
+    """Prepare for workflow recovery by getting info and cancelling.
+
+    Returns:
+        Tuple of (workflow_id, head_sha, error_response or None)
+    """
+    workflow_info = _get_workflow_info_from_run(github_token, github_repo, run_id)
+    workflow_id = workflow_info.get("workflowId", "")
+    head_sha = workflow_info.get("headSha", "")
+
+    if not workflow_id:
+        logger.error("Failed to get workflow info for run %s", run_id)
+        return "", "", {"statusCode": 500, "body": "Failed to get workflow info"}
+
+    if not _cancel_workflow_run(github_token, github_repo, run_id):
+        logger.error("Failed to cancel workflow run %s", run_id)
+        return "", "", {"statusCode": 500, "body": "Failed to cancel workflow"}
+
+    return workflow_id, head_sha, None
+
+
 def _recover_from_spot_interruption(
     github_token: str, github_repo: str, run_id: int, instance_id: str
 ) -> dict[str, Any]:
@@ -246,17 +253,11 @@ def _recover_from_spot_interruption(
     Returns:
         Response dictionary
     """
-    workflow_info = _get_workflow_info_from_run(github_token, github_repo, run_id)
-    workflow_id = workflow_info.get("workflowId", "")
-    head_sha = workflow_info.get("headSha", "")
-
-    if not workflow_id:
-        logger.error("Failed to get workflow info for run %s", run_id)
-        return {"statusCode": 500, "body": "Failed to get workflow info"}
-
-    if not _cancel_workflow_run(github_token, github_repo, run_id):
-        logger.error("Failed to cancel workflow run %s", run_id)
-        return {"statusCode": 500, "body": "Failed to cancel workflow"}
+    workflow_id, head_sha, error = _prepare_workflow_recovery(
+        github_token, github_repo, run_id
+    )
+    if error:
+        return error
 
     reason = (
         f"EC2 Spot Instance {instance_id} received interruption warning. "
@@ -292,17 +293,11 @@ def _recover_from_ecs_spot_interruption(
     Returns:
         Response dictionary
     """
-    workflow_info = _get_workflow_info_from_run(github_token, github_repo, run_id)
-    workflow_id = workflow_info.get("workflowId", "")
-    head_sha = workflow_info.get("headSha", "")
-
-    if not workflow_id:
-        logger.error("Failed to get workflow info for run %s", run_id)
-        return {"statusCode": 500, "body": "Failed to get workflow info"}
-
-    if not _cancel_workflow_run(github_token, github_repo, run_id):
-        logger.error("Failed to cancel workflow run %s", run_id)
-        return {"statusCode": 500, "body": "Failed to cancel workflow"}
+    workflow_id, head_sha, error = _prepare_workflow_recovery(
+        github_token, github_repo, run_id
+    )
+    if error:
+        return error
 
     task_id = task_arn.split("/")[-1] if "/" in task_arn else task_arn
     reason = (
@@ -368,7 +363,7 @@ def _get_ecs_task_tags(task_arn: str) -> dict[str, str]:
     tag_dict: dict[str, str] = {}
     try:
         cluster = os.environ.get("ECS_CLUSTER", "")
-        response = _get_ecs_client().describe_tasks(
+        response = get_ecs_client().describe_tasks(
             cluster=cluster, tasks=[task_arn], include=["TAGS"]
         )
         tasks = response.get("tasks", [])
@@ -428,7 +423,7 @@ def _get_ec2_instance_tags(instance_id: str) -> dict[str, str]:
     """
     tag_dict: dict[str, str] = {}
     try:
-        response = _get_ec2_client().describe_instances(InstanceIds=[instance_id])
+        response = get_ec2_client().describe_instances(InstanceIds=[instance_id])
         reservations = response.get("Reservations", [])
         if reservations:
             instances = reservations[0].get("Instances", [])

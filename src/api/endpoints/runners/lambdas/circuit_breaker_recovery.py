@@ -7,6 +7,11 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
+from common.circuit_breaker_utils import (
+    enable_event_source_mappings,
+    update_circuit_breaker_state as shared_update_circuit_breaker_state,
+)
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -49,29 +54,7 @@ def update_circuit_breaker_state(
     table_name: str, state: str, recovery_attempts: int
 ) -> dict:
     """Update circuit breaker state in DynamoDB."""
-    dynamodb = boto3.client('dynamodb')
-    current_time = int(time.time())
-    result: dict[str, Any] = {'success': False}
-
-    try:
-        dynamodb.put_item(
-            TableName=table_name,
-            Item={
-                'state_id': {'S': 'current'},
-                'state': {'S': state},
-                'recovery_attempts': {'N': str(recovery_attempts)},
-                'last_recovery_attempt': {'N': str(current_time)},
-                'last_failure_time': {'N': str(current_time)},
-                'ttl': {'N': str(current_time + 2592000)}
-            }
-        )
-        logger.info("Updated circuit breaker state to: %s", state)
-        result = {'success': True}
-    except ClientError as e:
-        logger.error("Failed to update circuit breaker state: %s", e)
-        result = {'success': False, 'error': str(e)}
-
-    return result
+    return shared_update_circuit_breaker_state(table_name, state, recovery_attempts)
 
 
 def calculate_backoff_seconds(recovery_attempts: int) -> int:
@@ -109,32 +92,6 @@ def check_health(function_name: str) -> dict:
     except (ClientError, json.JSONDecodeError) as e:
         logger.error("Health check failed: %s", e)
         result = {'healthy': False, 'reason': str(e)}
-    return result
-
-
-def enable_event_source_mappings(function_name: str) -> dict:
-    """Enable disabled SQS event source mappings for the function."""
-    lambda_client = boto3.client('lambda')
-    result: dict = {'success': False, 'error': 'Unknown error'}
-    try:
-        response = lambda_client.list_event_source_mappings(FunctionName=function_name)
-        enabled_count = 0
-        for mapping in response.get('EventSourceMappings', []):
-            if mapping['State'] == 'Disabled':
-                lambda_client.update_event_source_mapping(
-                    UUID=mapping['UUID'],
-                    Enabled=True
-                )
-                logger.info("Enabled event source mapping: %s", mapping['UUID'])
-                enabled_count += 1
-        result = {
-            'success': True,
-            'enabled_count': enabled_count,
-            'message': f'Enabled {enabled_count} event source mappings'
-        }
-    except ClientError as e:
-        logger.error("Failed to enable event source mappings: %s", e)
-        result = {'success': False, 'error': str(e)}
     return result
 
 

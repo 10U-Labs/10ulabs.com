@@ -8,36 +8,25 @@ import urllib.request
 import urllib.error
 from typing import Any
 
-import boto3
 from botocore.exceptions import ClientError
 
+from common.aws_clients import get_ssm_client
 from common.cloudwatch import publish_metric
-from common.runner_labels import (
-    parse_labels,
-    validate_labels,
-    LabelParseError,
-    LabelValidationError,
-)
+from common.lambda_utils import get_sqs_records, empty_records_response
+from common.runner_labels import get_runner_type_from_labels
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 METRICS_NAMESPACE = "RunnerStarter"
 
-_cache: dict[str, Any] = {"ssm_client": None, "api_key": None}
+_cache: dict[str, Any] = {"api_key": None}
 
 _circuit_breaker_state: dict[str, Any] = {
     "failures": 0,
     "last_failure_time": 0.0,
     "state": "closed",
 }
-
-
-def _get_ssm_client() -> Any:
-    """Get or create SSM client (singleton)."""
-    if _cache["ssm_client"] is None:
-        _cache["ssm_client"] = boto3.client("ssm")
-    return _cache["ssm_client"]
 
 
 def _check_circuit_breaker() -> bool:
@@ -121,7 +110,7 @@ def _get_api_key(force_refresh: bool = False) -> str:
         raise RuntimeError("API_KEY_PARAMETER_NAME environment variable not set")
 
     try:
-        response = _get_ssm_client().get_parameter(
+        response = get_ssm_client().get_parameter(
             Name=parameter_name, WithDecryption=True
         )
         api_key = response.get("Parameter", {}).get("Value", "")
@@ -196,37 +185,6 @@ def _make_http_request_with_retry(
     return False, None, "Max retries exceeded", last_status_code
 
 
-def _get_runner_type_from_labels(
-    job_labels: list[str],
-) -> tuple[str | None, str | None]:
-    """Determine runner type and endpoint suffix from job labels.
-
-    Args:
-        job_labels: List of job labels
-
-    Returns:
-        Tuple of (runner_type, endpoint_suffix)
-    """
-    runner_type: str | None = None
-    endpoint_suffix: str | None = None
-
-    try:
-        parsed = parse_labels(job_labels)
-        validate_labels(parsed)
-        is_e2e = "e2e" in job_labels
-
-        if parsed["platform"] == "ec2":
-            runner_type = "ec2-e2e" if is_e2e else "ec2"
-            endpoint_suffix = "ec2-runner"
-        elif parsed["platform"] == "ecs":
-            runner_type = "fargate-e2e" if is_e2e else "fargate"
-            endpoint_suffix = "ecs-runner"
-    except (LabelParseError, LabelValidationError):
-        pass
-
-    return runner_type, endpoint_suffix
-
-
 def _build_runner_endpoint(endpoint_suffix: str) -> str:
     """Build full runner endpoint URL."""
     base_url = os.environ.get("API_BASE_URL", "")
@@ -282,7 +240,7 @@ def _route_runner_request(
             "error": "Service temporarily unavailable (circuit breaker open)",
         }
 
-    runner_type, endpoint_suffix = _get_runner_type_from_labels(job_labels)
+    runner_type, endpoint_suffix = get_runner_type_from_labels(job_labels)
     if not runner_type or not endpoint_suffix:
         logger.error("No matching runner type for labels: %s", job_labels)
         return {
@@ -377,15 +335,9 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         RuntimeError: If any job messages fail
     """
     start_time = time.time()
-    logger.info("Received event: %s", json.dumps(event))
-
-    records = event.get("Records", [])
-    if not records:
-        logger.warning("No records in event")
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"message": "No records to process"}),
-        }
+    records = get_sqs_records(event)
+    if records is None:
+        return empty_records_response()
 
     logger.info("Processing %d job(s) from SQS", len(records))
 

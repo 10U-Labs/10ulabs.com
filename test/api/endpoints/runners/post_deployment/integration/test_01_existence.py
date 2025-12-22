@@ -5,6 +5,10 @@ These tests run first to catch deployment failures before checking configuration
 """
 from test.api.endpoints.runners.conftest import find_sns_topic_arns
 
+import pytest
+
+pytestmark = pytest.mark.layer(1)
+
 # === Lambda Functions ===
 
 

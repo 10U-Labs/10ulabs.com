@@ -7,34 +7,12 @@ import urllib.request
 import urllib.error
 from typing import Any
 
-import boto3
 from botocore.exceptions import ClientError
+
+from common.aws_clients import get_ec2_client, get_sns_client, get_ssm_client
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-_cache: dict[str, Any] = {"ssm_client": None, "ec2_client": None, "sns_client": None}
-
-
-def _get_ssm_client() -> Any:
-    """Get or create SSM client (singleton)."""
-    if _cache["ssm_client"] is None:
-        _cache["ssm_client"] = boto3.client("ssm")
-    return _cache["ssm_client"]
-
-
-def _get_ec2_client() -> Any:
-    """Get or create EC2 client (singleton)."""
-    if _cache["ec2_client"] is None:
-        _cache["ec2_client"] = boto3.client("ec2")
-    return _cache["ec2_client"]
-
-
-def _get_sns_client() -> Any:
-    """Get or create SNS client (singleton)."""
-    if _cache["sns_client"] is None:
-        _cache["sns_client"] = boto3.client("sns")
-    return _cache["sns_client"]
 
 
 def _is_resource_in_managed_vpc(resource_id: str, resource_type: str) -> bool:
@@ -51,7 +29,7 @@ def _is_resource_in_managed_vpc(resource_id: str, resource_type: str) -> bool:
     if not managed_vpc_id:
         return True
 
-    ec2 = _get_ec2_client()
+    ec2 = get_ec2_client()
     result = True
 
     try:
@@ -90,7 +68,7 @@ def _get_github_token() -> str:
         return ""
 
     try:
-        response = _get_ssm_client().get_parameter(
+        response = get_ssm_client().get_parameter(
             Name=parameter_name, WithDecryption=True
         )
         return response.get("Parameter", {}).get("Value", "")
@@ -155,7 +133,7 @@ def _send_notification(subject: str, message: str) -> None:
         return
 
     try:
-        _get_sns_client().publish(
+        get_sns_client().publish(
             TopicArn=sns_topic_arn, Subject=subject, Message=message
         )
         logger.info("Notification sent: %s", subject)

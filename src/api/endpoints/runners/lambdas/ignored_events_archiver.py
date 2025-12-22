@@ -7,24 +7,16 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-import boto3
 from botocore.exceptions import ClientError
 
+from common.aws_clients import get_s3_client
 from common.cloudwatch import publish_metric
+from common.lambda_utils import get_sqs_records, empty_records_response, count_results
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 METRICS_NAMESPACE = "IgnoredEventsArchiver"
-
-_cache: dict[str, Any] = {"s3_client": None}
-
-
-def _get_s3_client() -> Any:
-    """Get or create S3 client (singleton)."""
-    if _cache["s3_client"] is None:
-        _cache["s3_client"] = boto3.client("s3")
-    return _cache["s3_client"]
 
 
 def _build_s3_key(timestamp: str, message_id: str) -> str:
@@ -80,7 +72,7 @@ def _archive_event(record: dict[str, Any]) -> dict[str, Any]:
 
         s3_key = _build_s3_key(timestamp, message_id)
 
-        _get_s3_client().put_object(
+        get_s3_client().put_object(
             Bucket=bucket_name,
             Key=s3_key,
             Body=json.dumps(archived_event, indent=2),
@@ -108,15 +100,9 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         RuntimeError: If any events fail to archive
     """
     start_time = time.time()
-    logger.info("Received event: %s", json.dumps(event))
-
-    records = event.get("Records", [])
-    if not records:
-        logger.warning("No records in event")
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"message": "No records to process"}),
-        }
+    records = get_sqs_records(event)
+    if records is None:
+        return empty_records_response()
 
     logger.info("Archiving %d ignored event(s) to S3", len(records))
 
@@ -125,8 +111,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     elapsed_ms = (time.time() - start_time) * 1000
     publish_metric(METRICS_NAMESPACE, "ProcessingTime", elapsed_ms, "Milliseconds")
 
-    success_count = sum(1 for r in results if r.get("success"))
-    fail_count = sum(1 for r in results if not r.get("success"))
+    success_count, fail_count = count_results(results)
 
     publish_metric(METRICS_NAMESPACE, "EventsArchived", float(success_count), "Count")
 

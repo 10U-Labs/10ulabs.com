@@ -1,14 +1,15 @@
-"""Layer 3: Existence - Do the required resources exist?
+"""Layer 4: Existence - Do the required resources exist?
 
 These tests verify that all required infrastructure resources exist before
 checking their configuration. Organized by resource type for clarity.
 
-Five-layer testing model:
+Six-layer testing model:
 - Layer 1: Authentication - Are credentials configured and valid?
 - Layer 2: Authorization - Do we have permission to call required APIs?
-- Layer 3: Existence - Do the required resources exist? (THIS FILE)
-- Layer 4: Configuration - Are resources configured correctly?
-- Layer 5: Capability - Can we perform required operations?
+- Layer 3: State - Does Terraform state match AWS reality?
+- Layer 4: Existence - Do the required resources exist? (THIS FILE)
+- Layer 5: Configuration - Are resources configured correctly?
+- Layer 6: Capability - Can we perform required operations?
 """
 from pathlib import Path
 
@@ -16,6 +17,9 @@ from botocore.exceptions import ClientError
 import pytest
 
 from terraform_config import extract_sqs_queue_names
+
+
+pytestmark = pytest.mark.layer(4)
 
 
 RUNNERS_SRC = Path(__file__).parents[6] / "src" / "api" / "endpoints" / "runners"
@@ -28,7 +32,7 @@ SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"
 
 
 class TestApiSharedRunnersOutputs:
-    """Layer 3: Verify api_shared_runners terraform outputs are accessible."""
+    """Layer 4: Verify api_shared_runners terraform outputs are accessible."""
 
     def test_01_vpc_id_output_exists(self, api_shared_runners_outputs):
         """Verify vpc_id output exists."""
@@ -53,7 +57,7 @@ class TestApiSharedRunnersOutputs:
 
 
 class TestApiSharedEcsRunnerOutputs:
-    """Layer 3: Verify api_shared_ecs_runner terraform outputs are accessible."""
+    """Layer 4: Verify api_shared_ecs_runner terraform outputs are accessible."""
 
     def test_01_ecr_repository_arn_output_exists(self, api_shared_ecs_runner_outputs):
         """Verify ecr_repository_arn output exists."""
@@ -78,7 +82,7 @@ class TestApiSharedEcsRunnerOutputs:
 
 
 class TestEC2RunnerOutputs:
-    """Layer 3: Verify ec2_runner terraform outputs are accessible."""
+    """Layer 4: Verify ec2_runner terraform outputs are accessible."""
 
     def test_01_lambda_function_arn_output_exists(self, ec2_runner_outputs):
         """Verify ec2_runner has lambda_function_arn output."""
@@ -97,7 +101,7 @@ class TestEC2RunnerOutputs:
 
 
 class TestECSRunnerOutputs:
-    """Layer 3: Verify ecs_runner terraform outputs are accessible."""
+    """Layer 4: Verify ecs_runner terraform outputs are accessible."""
 
     def test_01_lambda_function_arn_output_exists(self, ecs_runner_outputs):
         """Verify ecs_runner has lambda_function_arn output."""
@@ -126,7 +130,7 @@ class TestECSRunnerOutputs:
 
 
 class TestVPCResourceExistence:
-    """Layer 3: Verify VPC resources exist in AWS."""
+    """Layer 4: Verify VPC resources exist in AWS."""
 
     def test_01_vpc_exists(self, vpc_info, api_shared_runners_outputs):
         """Verify the VPC exists."""
@@ -180,7 +184,7 @@ def test_ecr_repository_exists(ecr_repository_info, api_shared_ecs_runner_output
 
 
 class TestLambdaResourceExistence:
-    """Layer 3: Verify Lambda functions exist in AWS."""
+    """Layer 4: Verify Lambda functions exist in AWS."""
 
     def test_01_ec2_runner_lambda_exists(self, lambda_client, ec2_runner_outputs):
         """Verify the EC2 runner Lambda function exists."""
@@ -200,7 +204,7 @@ class TestLambdaResourceExistence:
 
 
 class TestSSMResourceExistence:
-    """Layer 3: Verify SSM parameters exist in AWS."""
+    """Layer 4: Verify SSM parameters exist in AWS."""
 
     def test_01_github_pat_parameter_exists(self, ssm_client, ssm_github_pat_name):
         """Verify the GitHub PAT SSM parameter exists."""
@@ -246,7 +250,7 @@ class TestSSMResourceExistence:
 
 
 class TestSQSTerraformConfigExistence:
-    """Layer 3: Verify SQS queue definitions exist in Terraform config."""
+    """Layer 4: Verify SQS queue definitions exist in Terraform config."""
 
     def test_01_sqs_tf_file_exists(self):
         """Verify sqs.tf file exists in runners endpoint."""

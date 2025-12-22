@@ -3,15 +3,19 @@
 These tests verify IAM permissions before checking resource existence.
 If authorization fails, we know it's a permissions issue, not a missing resource.
 
-Five-layer testing model:
+Six-layer testing model:
 - Layer 1: Authentication - Are credentials configured and valid?
 - Layer 2: Authorization - Do we have permission to call required APIs? (THIS FILE)
-- Layer 3: Existence - Do the required resources exist?
-- Layer 4: Configuration - Are resources configured correctly?
-- Layer 5: Capability - Can we perform required operations?
+- Layer 3: State - Does Terraform state match AWS reality?
+- Layer 4: Existence - Do the required resources exist?
+- Layer 5: Configuration - Are resources configured correctly?
+- Layer 6: Capability - Can we perform required operations?
 """
 from botocore.exceptions import ClientError
 import pytest
+
+
+pytestmark = pytest.mark.layer(2)
 
 
 def test_01_can_call_iam_get_role_api(iam_client, current_role_name):

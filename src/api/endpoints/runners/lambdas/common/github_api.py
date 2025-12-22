@@ -7,19 +7,13 @@ import urllib.request
 import urllib.error
 from typing import Any
 
-import boto3
 from botocore.exceptions import ClientError
+
+from common.aws_clients import get_ssm_client
 
 logger = logging.getLogger(__name__)
 
-_cache: dict[str, Any] = {"token": None, "ssm_client": None}
-
-
-def _get_ssm_client() -> Any:
-    """Get or create SSM client (singleton)."""
-    if _cache["ssm_client"] is None:
-        _cache["ssm_client"] = boto3.client("ssm")
-    return _cache["ssm_client"]
+_cache: dict[str, Any] = {"token": None}
 
 
 def get_github_token() -> str:
@@ -32,7 +26,7 @@ def get_github_token() -> str:
         return ""
 
     try:
-        response = _get_ssm_client().get_parameter(
+        response = get_ssm_client().get_parameter(
             Name=parameter_name, WithDecryption=True
         )
         token = response.get("Parameter", {}).get("Value", "")

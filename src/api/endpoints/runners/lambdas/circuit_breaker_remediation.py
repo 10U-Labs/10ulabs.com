@@ -6,37 +6,14 @@ import time
 import boto3
 from botocore.exceptions import ClientError
 
+from common.circuit_breaker_utils import (
+    enable_event_source_mappings,
+    disable_event_source_mappings,
+    update_circuit_breaker_state as shared_update_circuit_breaker_state,
+)
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-
-def disable_sqs_event_source(lambda_function_name: str) -> dict:
-    """Disable SQS event source mappings for a Lambda function."""
-    lambda_client = boto3.client('lambda')
-
-    try:
-        response = lambda_client.list_event_source_mappings(
-            FunctionName=lambda_function_name
-        )
-
-        disabled_count = 0
-        for mapping in response.get('EventSourceMappings', []):
-            if mapping['State'] == 'Enabled':
-                lambda_client.update_event_source_mapping(
-                    UUID=mapping['UUID'],
-                    Enabled=False
-                )
-                logger.info("Disabled event source mapping: %s", mapping['UUID'])
-                disabled_count += 1
-
-        return {
-            'success': True,
-            'disabled_count': disabled_count,
-            'message': f'Disabled {disabled_count} event source mappings'
-        }
-    except ClientError as e:
-        logger.error("Failed to disable event source mappings: %s", e)
-        return {'success': False, 'error': str(e)}
 
 
 def set_lambda_reserved_concurrency(function_name: str, concurrency: int) -> dict:
@@ -55,35 +32,6 @@ def set_lambda_reserved_concurrency(function_name: str, concurrency: int) -> dic
         }
     except ClientError as e:
         logger.error("Failed to set reserved concurrency: %s", e)
-        return {'success': False, 'error': str(e)}
-
-
-def enable_sqs_event_source(lambda_function_name: str) -> dict:
-    """Enable SQS event source mappings for a Lambda function."""
-    lambda_client = boto3.client('lambda')
-
-    try:
-        response = lambda_client.list_event_source_mappings(
-            FunctionName=lambda_function_name
-        )
-
-        enabled_count = 0
-        for mapping in response.get('EventSourceMappings', []):
-            if mapping['State'] == 'Disabled':
-                lambda_client.update_event_source_mapping(
-                    UUID=mapping['UUID'],
-                    Enabled=True
-                )
-                logger.info("Enabled event source mapping: %s", mapping['UUID'])
-                enabled_count += 1
-
-        return {
-            'success': True,
-            'enabled_count': enabled_count,
-            'message': f'Enabled {enabled_count} event source mappings'
-        }
-    except ClientError as e:
-        logger.error("Failed to enable event source mappings: %s", e)
         return {'success': False, 'error': str(e)}
 
 
@@ -145,25 +93,7 @@ def record_incident(table_name: str, alarm_name: str, alarm_reason: str) -> dict
 
 def update_circuit_breaker_state(table_name: str, state: str) -> dict:
     """Update the circuit breaker state in DynamoDB."""
-    dynamodb = boto3.client('dynamodb')
-
-    try:
-        dynamodb.put_item(
-            TableName=table_name,
-            Item={
-                'state_id': {'S': 'current'},
-                'state': {'S': state},
-                'recovery_attempts': {'N': '0'},
-                'last_recovery_attempt': {'N': '0'},
-                'last_failure_time': {'N': str(int(time.time()))},
-                'ttl': {'N': str(int(time.time()) + 2592000)}
-            }
-        )
-        logger.info("Updated circuit breaker state to: %s", state)
-        return {'success': True}
-    except ClientError as e:
-        logger.error("Failed to update circuit breaker state: %s", e)
-        return {'success': False, 'error': str(e)}
+    return shared_update_circuit_breaker_state(table_name, state, recovery_attempts=0)
 
 
 def handle_alarm_ok_state(
@@ -176,7 +106,7 @@ def handle_alarm_ok_state(
     """Handle CloudWatch alarm returning to OK state."""
     logger.info("Alarm returned to OK state, resetting circuit breaker")
 
-    enable_result = enable_sqs_event_source(webhook_function_name)
+    enable_result = enable_event_source_mappings(webhook_function_name)
     if enable_result['success']:
         count = enable_result['enabled_count']
         result['actions_taken'].append(f"Enabled SQS event sources: {count}")
@@ -252,7 +182,7 @@ def _execute_remediation_actions(
     alarm_reason = detail.get('state', {}).get('reason', 'No reason provided')
     new_state_value = detail.get('state', {}).get('value', 'UNKNOWN')
 
-    disable_result = disable_sqs_event_source(webhook_function_name)
+    disable_result = disable_event_source_mappings(webhook_function_name)
     if disable_result['success']:
         count = disable_result['disabled_count']
         result['actions_taken'].append(f"Disabled SQS event sources: {count}")
