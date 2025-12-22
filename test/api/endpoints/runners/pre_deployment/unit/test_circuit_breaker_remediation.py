@@ -1,6 +1,9 @@
 """Unit tests for test circuit breaker remediation."""
+import importlib.util
 import os
 from contextlib import contextmanager
+from pathlib import Path
+from types import ModuleType
 from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
@@ -13,8 +16,24 @@ from .conftest import (
     create_mock_sns_publish_error,
     create_mock_lambda_with_mappings,
     create_mock_lambda_with_disabled_mappings,
-    create_mock_lambda_delete_concurrency_error
+    create_mock_lambda_delete_concurrency_error,
 )
+
+
+def _load_circuit_breaker_utils() -> ModuleType:
+    """Dynamically load circuit_breaker_utils module to avoid import path issues."""
+    lambdas_dir = Path(__file__).parent.parent.parent.parent.parent.parent.parent / \
+        "src" / "api" / "endpoints" / "runners" / "lambdas"
+    utils_path = lambdas_dir / "common" / "circuit_breaker_utils.py"
+    spec = importlib.util.spec_from_file_location("circuit_breaker_utils", utils_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load circuit_breaker_utils from {utils_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+circuit_breaker_utils = _load_circuit_breaker_utils()
 
 
 def _create_alarm_event(state='ALARM', reason='Threshold exceeded'):
@@ -58,33 +77,33 @@ def _create_mock_lambda_empty_mappings():
     return mock_lambda
 
 
-def test_disable_sqs_event_source_lists_mappings(circuit_breaker_remediation):
-    """Test disable sqs event source lists mappings."""
-    with patch('boto3.client') as mock_boto_client:
+def test_disable_event_source_mappings_lists_mappings():
+    """Test disable event source mappings lists mappings."""
+    with patch.object(circuit_breaker_utils, 'get_lambda_client') as mock_get_client:
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.return_value = {'EventSourceMappings': []}
-        mock_boto_client.return_value = mock_lambda
-        circuit_breaker_remediation.disable_sqs_event_source('test-function')
+        mock_get_client.return_value = mock_lambda
+        circuit_breaker_utils.disable_event_source_mappings('test-function')
     assert mock_lambda.list_event_source_mappings.called
 
 
-def test_disable_sqs_event_source_disables_enabled_mappings(circuit_breaker_remediation):
-    """Test disable sqs event source disables enabled mappings."""
-    with patch('boto3.client') as mock_boto_client:
+def test_disable_event_source_mappings_disables_enabled_mappings():
+    """Test disable event source mappings disables enabled mappings."""
+    with patch.object(circuit_breaker_utils, 'get_lambda_client') as mock_get_client:
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.return_value = {
             'EventSourceMappings': [
                 {'UUID': 'mapping-1', 'State': 'Enabled'}
             ]
         }
-        mock_boto_client.return_value = mock_lambda
-        circuit_breaker_remediation.disable_sqs_event_source('test-function')
+        mock_get_client.return_value = mock_lambda
+        circuit_breaker_utils.disable_event_source_mappings('test-function')
     assert mock_lambda.update_event_source_mapping.called
 
 
-def test_disable_sqs_event_source_counts_disabled(circuit_breaker_remediation):
-    """Test disable sqs event source counts disabled."""
-    with patch('boto3.client') as mock_boto_client:
+def test_disable_event_source_mappings_counts_disabled():
+    """Test disable event source mappings counts disabled."""
+    with patch.object(circuit_breaker_utils, 'get_lambda_client') as mock_get_client:
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.return_value = {
             'EventSourceMappings': [
@@ -92,26 +111,26 @@ def test_disable_sqs_event_source_counts_disabled(circuit_breaker_remediation):
                 {'UUID': 'mapping-2', 'State': 'Enabled'}
             ]
         }
-        mock_boto_client.return_value = mock_lambda
-        result = circuit_breaker_remediation.disable_sqs_event_source('test-function')
+        mock_get_client.return_value = mock_lambda
+        result = circuit_breaker_utils.disable_event_source_mappings('test-function')
     assert result['disabled_count'] == 2
 
 
-def test_disable_sqs_event_source_handles_no_mappings(circuit_breaker_remediation):
-    """Test disable sqs event source handles no mappings."""
-    with patch('boto3.client') as mock_boto_client:
+def test_disable_event_source_mappings_handles_no_mappings():
+    """Test disable event source mappings handles no mappings."""
+    with patch.object(circuit_breaker_utils, 'get_lambda_client') as mock_get_client:
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.return_value = {'EventSourceMappings': []}
-        mock_boto_client.return_value = mock_lambda
-        result = circuit_breaker_remediation.disable_sqs_event_source('test-function')
+        mock_get_client.return_value = mock_lambda
+        result = circuit_breaker_utils.disable_event_source_mappings('test-function')
     assert result['disabled_count'] == 0
 
 
-def test_disable_sqs_event_source_handles_api_error(circuit_breaker_remediation):
-    """Test disable sqs event source handles api error."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_boto_client.return_value = create_mock_lambda_list_mappings_error()
-        result = circuit_breaker_remediation.disable_sqs_event_source('test-function')
+def test_disable_event_source_mappings_handles_api_error():
+    """Test disable event source mappings handles api error."""
+    with patch.object(circuit_breaker_utils, 'get_lambda_client') as mock_get_client:
+        mock_get_client.return_value = create_mock_lambda_list_mappings_error()
+        result = circuit_breaker_utils.disable_event_source_mappings('test-function')
     assert result['success'] is False
 
 
@@ -358,27 +377,28 @@ def test_lambda_handler_returns_result_for_valid_events(
     assert 'alarm_name' in body
 
 
-def test_enable_sqs_event_source_lists_mappings(circuit_breaker_remediation):
-    """Test enable sqs event source lists mappings."""
-    with patch('boto3.client') as mock_boto_client:
+def test_enable_event_source_mappings_lists_mappings():
+    """Test enable event source mappings lists mappings."""
+    with patch.object(circuit_breaker_utils, 'get_lambda_client') as mock_get_client:
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.return_value = {'EventSourceMappings': []}
-        mock_boto_client.return_value = mock_lambda
-        circuit_breaker_remediation.enable_sqs_event_source('test-function')
+        mock_get_client.return_value = mock_lambda
+        circuit_breaker_utils.enable_event_source_mappings('test-function')
     assert mock_lambda.list_event_source_mappings.called
 
 
-def test_enable_sqs_event_source_enables_disabled_mappings(circuit_breaker_remediation):
-    """Test enable sqs event source enables disabled mappings."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_boto_client.return_value = create_mock_lambda_with_disabled_mappings()
-        circuit_breaker_remediation.enable_sqs_event_source('test-function')
-    assert mock_boto_client.return_value.update_event_source_mapping.called
+def test_enable_event_source_mappings_enables_disabled_mappings():
+    """Test enable event source mappings enables disabled mappings."""
+    with patch.object(circuit_breaker_utils, 'get_lambda_client') as mock_get_client:
+        mock_lambda = create_mock_lambda_with_disabled_mappings()
+        mock_get_client.return_value = mock_lambda
+        circuit_breaker_utils.enable_event_source_mappings('test-function')
+    assert mock_lambda.update_event_source_mapping.called
 
 
-def test_enable_sqs_event_source_counts_enabled(circuit_breaker_remediation):
-    """Test enable sqs event source counts enabled."""
-    with patch('boto3.client') as mock_boto_client:
+def test_enable_event_source_mappings_counts_enabled():
+    """Test enable event source mappings counts enabled."""
+    with patch.object(circuit_breaker_utils, 'get_lambda_client') as mock_get_client:
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.return_value = {
             'EventSourceMappings': [
@@ -386,28 +406,28 @@ def test_enable_sqs_event_source_counts_enabled(circuit_breaker_remediation):
                 {'UUID': 'mapping-2', 'State': 'Disabled'}
             ]
         }
-        mock_boto_client.return_value = mock_lambda
-        result = circuit_breaker_remediation.enable_sqs_event_source('test-function')
+        mock_get_client.return_value = mock_lambda
+        result = circuit_breaker_utils.enable_event_source_mappings('test-function')
     assert result['enabled_count'] == 2
 
 
-def test_enable_sqs_event_source_skips_already_enabled(circuit_breaker_remediation):
-    """Test enable sqs event source skips already enabled."""
-    with patch('boto3.client') as mock_boto_client:
+def test_enable_event_source_mappings_skips_already_enabled():
+    """Test enable event source mappings skips already enabled."""
+    with patch.object(circuit_breaker_utils, 'get_lambda_client') as mock_get_client:
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.return_value = {
             'EventSourceMappings': [{'UUID': 'mapping-1', 'State': 'Enabled'}]
         }
-        mock_boto_client.return_value = mock_lambda
-        result = circuit_breaker_remediation.enable_sqs_event_source('test-function')
+        mock_get_client.return_value = mock_lambda
+        result = circuit_breaker_utils.enable_event_source_mappings('test-function')
     assert result['enabled_count'] == 0
 
 
-def test_enable_sqs_event_source_handles_api_error(circuit_breaker_remediation):
-    """Test enable sqs event source handles api error."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_boto_client.return_value = create_mock_lambda_list_mappings_error()
-        result = circuit_breaker_remediation.enable_sqs_event_source('test-function')
+def test_enable_event_source_mappings_handles_api_error():
+    """Test enable event source mappings handles api error."""
+    with patch.object(circuit_breaker_utils, 'get_lambda_client') as mock_get_client:
+        mock_get_client.return_value = create_mock_lambda_list_mappings_error()
+        result = circuit_breaker_utils.enable_event_source_mappings('test-function')
     assert result['success'] is False
 
 

@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 from types import ModuleType
@@ -135,6 +136,10 @@ def load_handler_module(relative_path: str, module_name: str) -> ModuleType:
 def load_lambda_module(filename: str, module_name: str) -> ModuleType:
     """Load a lambda module dynamically for testing."""
     handler_path = get_lambda_path(filename)
+    lambdas_dir = str(handler_path.parent)
+    # Add lambdas dir to sys.path so 'from common.xxx import' works
+    if lambdas_dir not in sys.path:
+        sys.path.insert(0, lambdas_dir)
     spec = importlib.util.spec_from_file_location(module_name, handler_path)
     assert spec is not None
     assert spec.loader is not None
