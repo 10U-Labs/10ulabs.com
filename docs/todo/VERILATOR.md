@@ -252,7 +252,18 @@ bool VNUser4InUse::s_userBusy = false;    // Non-atomic
 
 ### Required Atomic PRs
 
-The following PRs must be submitted **in order** to fix the race conditions while maintaining backwards compatibility:
+The following PRs fix the race conditions while maintaining full backwards compatibility (`std::atomic<T>` is a drop-in replacement for `T`).
+
+**Dependency graph:**
+
+```
+4a ─────┬──────────────────────► 4e ──► 4f
+4b ─────┤ (independent)
+4c ─────┤
+4d ─────┘
+```
+
+PRs 4a-4d can be submitted **in parallel** as independent PRs. PR 4e depends on 4a because `AstTypeTable::findCreateSameDType()` calls `cloneTree()`, which invokes `uniqueNumInc()` — the mutex only protects the map access, not the DType constructor's static counter.
 
 | PR | Scope | Files | Risk | Depends On |
 |----|-------|-------|------|------------|
