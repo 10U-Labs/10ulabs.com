@@ -1,4 +1,6 @@
 """Pytest fixtures for runners e2e tests."""
+from test.api.conftest import endpoint_is_deployed
+
 import requests
 
 import pytest
@@ -48,6 +50,5 @@ def assert_circuit_breaker_state_in_response(response):
 
 def skip_if_endpoint_not_deployed(api_url, path, method="GET"):
     """Skip test if endpoint is not deployed."""
-    from test.api.conftest import endpoint_is_deployed
     if not endpoint_is_deployed(api_url, path, method):
         pytest.skip(f"Endpoint {path} not deployed")
