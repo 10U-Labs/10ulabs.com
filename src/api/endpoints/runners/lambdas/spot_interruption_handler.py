@@ -4,64 +4,16 @@ import json
 import logging
 import os
 import time
-import urllib.request
 import urllib.error
 from typing import Any
 
 from botocore.exceptions import ClientError
 
 from common.aws_clients import get_ecs_client, get_ec2_client
-from common.github_api import get_github_token
+from common.github_api import get_github_token, github_api_request
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
-def _github_api_request(
-    method: str,
-    endpoint: str,
-    token: str,
-    body: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Make a GitHub API request.
-
-    Args:
-        method: HTTP method
-        endpoint: API endpoint path
-        token: GitHub token
-        body: Optional request body
-
-    Returns:
-        Dictionary with status and data
-
-    Raises:
-        RuntimeError: If request fails
-    """
-    url = f"https://api.github.com{endpoint}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "SpotInterruptionHandler/1.0",
-    }
-
-    data = None
-    if body is not None:
-        headers["Content-Type"] = "application/json"
-        data = json.dumps(body).encode("utf-8")
-
-    request = urllib.request.Request(url, data=data, headers=headers, method=method)
-
-    try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            response_body = response.read().decode("utf-8")
-            return {
-                "status": response.status,
-                "data": json.loads(response_body) if response_body else {},
-            }
-    except urllib.error.HTTPError as err:
-        error_body = err.read().decode("utf-8") if err.fp else ""
-        raise RuntimeError(f"GitHub API error {err.code}: {error_body}") from err
 
 
 def _get_workflow_run_status(github_token: str, github_repo: str, run_id: int) -> str:
@@ -71,11 +23,11 @@ def _get_workflow_run_status(github_token: str, github_repo: str, run_id: int) -
         Status string or 'unknown' on error
     """
     try:
-        result = _github_api_request(
-            "GET", f"/repos/{github_repo}/actions/runs/{run_id}", github_token
+        data = github_api_request(
+            "GET", f"/repos/{github_repo}/actions/runs/{run_id}", token=github_token
         )
-        return result.get("data", {}).get("status", "unknown")
-    except RuntimeError as err:
+        return data.get("status", "unknown")
+    except urllib.error.HTTPError as err:
         logger.error("Failed to get workflow run status: %s", str(err))
         return "unknown"
 
@@ -87,17 +39,18 @@ def _cancel_workflow_run(github_token: str, github_repo: str, run_id: int) -> bo
         True if successfully cancelled
     """
     try:
-        result = _github_api_request(
+        github_api_request(
             "POST",
             f"/repos/{github_repo}/actions/runs/{run_id}/cancel",
-            github_token,
-            {},
+            data={},
+            token=github_token,
         )
-        if result.get("status") == 202:
+        logger.info("Successfully cancelled workflow run %s", run_id)
+        return True
+    except urllib.error.HTTPError as err:
+        if err.code == 202:
             logger.info("Successfully cancelled workflow run %s", run_id)
             return True
-        logger.warning("Unexpected response status %s for cancel", result.get("status"))
-    except RuntimeError as err:
         logger.error("Failed to cancel workflow %s: %s", run_id, str(err))
     return False
 
@@ -118,16 +71,15 @@ def _create_check_run_annotation(
         "output": {"title": title, "summary": summary},
     }
     try:
-        result = _github_api_request(
-            "POST", f"/repos/{github_repo}/check-runs", github_token, payload
+        github_api_request(
+            "POST", f"/repos/{github_repo}/check-runs", data=payload, token=github_token
         )
-        if result.get("status") == 201:
+        logger.info("Successfully created check run annotation")
+        return True
+    except urllib.error.HTTPError as err:
+        if err.code == 201:
             logger.info("Successfully created check run annotation")
             return True
-        logger.warning(
-            "Unexpected response status %s for check run", result.get("status")
-        )
-    except RuntimeError as err:
         logger.error("Failed to create check run: %s", str(err))
     return False
 
@@ -149,13 +101,13 @@ def _wait_for_workflow_completion(
     start_time = time.time()
     while (time.time() - start_time) < timeout_seconds:
         try:
-            result = _github_api_request(
-                "GET", f"/repos/{github_repo}/actions/runs/{run_id}", github_token
+            data = github_api_request(
+                "GET", f"/repos/{github_repo}/actions/runs/{run_id}", token=github_token
             )
-            if result.get("data", {}).get("status") == "completed":
+            if data.get("status") == "completed":
                 logger.info("Workflow %s completed", run_id)
                 return True
-        except RuntimeError as err:
+        except urllib.error.HTTPError as err:
             logger.warning("Error polling workflow status: %s", str(err))
         time.sleep(5)
     logger.warning("Timeout waiting for workflow %s to complete", run_id)
@@ -171,15 +123,14 @@ def _get_workflow_info_from_run(
         Dictionary with workflowId and headSha
     """
     try:
-        result = _github_api_request(
-            "GET", f"/repos/{github_repo}/actions/runs/{run_id}", github_token
+        data = github_api_request(
+            "GET", f"/repos/{github_repo}/actions/runs/{run_id}", token=github_token
         )
-        data = result.get("data", {})
         return {
             "workflowId": str(data.get("workflow_id", "")),
             "headSha": data.get("head_sha", ""),
         }
-    except RuntimeError as err:
+    except urllib.error.HTTPError as err:
         logger.error("Failed to get workflow info: %s", str(err))
         return {"workflowId": "", "headSha": ""}
 
@@ -194,19 +145,18 @@ def _dispatch_workflow(
     """
     payload = {"ref": ref, "inputs": {"spot_recovery_reason": reason}}
     try:
-        result = _github_api_request(
+        github_api_request(
             "POST",
             f"/repos/{github_repo}/actions/workflows/{workflow_id}/dispatches",
-            github_token,
-            payload,
+            data=payload,
+            token=github_token,
         )
-        if result.get("status") == 204:
+        logger.info("Successfully dispatched workflow %s", workflow_id)
+        return True
+    except urllib.error.HTTPError as err:
+        if err.code == 204:
             logger.info("Successfully dispatched workflow %s", workflow_id)
             return True
-        logger.warning(
-            "Unexpected response status %s for dispatch", result.get("status")
-        )
-    except RuntimeError as err:
         logger.error("Failed to dispatch workflow: %s", str(err))
     return False
 

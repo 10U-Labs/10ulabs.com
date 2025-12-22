@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import time
-import urllib.request
 import urllib.error
 from typing import Any
 
@@ -19,7 +18,7 @@ from common.ecs_utils import (
     stop_ecs_task,
     get_cluster_from_env,
 )
-from common.github_api import get_github_token
+from common.github_api import get_github_token, github_api_request
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -27,43 +26,6 @@ logger.setLevel(logging.INFO)
 ORPHAN_THRESHOLD_SECONDS = 300
 ECS_MANAGED_BY_TAG = "ecs-runner-api"
 WORKFLOW_RUNNER_TYPE_TAG = "workflow-runner"
-
-
-def _github_api_request(method: str, endpoint: str, token: str) -> dict[str, Any]:
-    """Make a GitHub API request.
-
-    Args:
-        method: HTTP method
-        endpoint: API endpoint path
-        token: GitHub token
-
-    Returns:
-        Parsed JSON response
-
-    Raises:
-        RuntimeError: If request fails
-    """
-    url = f"https://api.github.com{endpoint}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "StaleRunnerCleanup/1.0",
-    }
-
-    request = urllib.request.Request(url, headers=headers, method=method)
-
-    try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            if response.status == 204:
-                return {}
-            response_body = response.read().decode("utf-8")
-            return json.loads(response_body) if response_body else {}
-    except urllib.error.HTTPError as err:
-        if err.code == 204:
-            return {}
-        error_body = err.read().decode("utf-8") if err.fp else ""
-        raise RuntimeError(f"GitHub API error {err.code}: {error_body}") from err
 
 
 def _get_all_github_runners(
@@ -79,15 +41,15 @@ def _get_all_github_runners(
 
     try:
         while True:
-            endpoint = f"/repos/{github_repo}/actions/runners?per_page=100&page={page}"
-            data = _github_api_request("GET", endpoint, github_token)
+            path = f"/repos/{github_repo}/actions/runners?per_page=100&page={page}"
+            data = github_api_request("GET", path, token=github_token)
             page_runners = data.get("runners", [])
             runners.extend(page_runners)
             if len(page_runners) < 100:
                 break
             page += 1
         return runners
-    except RuntimeError as err:
+    except urllib.error.HTTPError as err:
         logger.error("Failed to list GitHub runners: %s", str(err))
         return None
 
@@ -101,13 +63,15 @@ def _delete_github_runner_by_id(
         True if successfully deleted
     """
     try:
-        _github_api_request(
-            "DELETE", f"/repos/{github_repo}/actions/runners/{runner_id}", github_token
+        github_api_request(
+            "DELETE", f"/repos/{github_repo}/actions/runners/{runner_id}",
+            token=github_token
         )
         logger.info("Deleted GitHub runner: %s", runner_name)
         return True
-    except RuntimeError as err:
-        if "204" in str(err):
+    except urllib.error.HTTPError as err:
+        if err.code == 204:
+            logger.info("Deleted GitHub runner: %s", runner_name)
             return True
         logger.error("Failed to delete GitHub runner %s: %s", runner_name, str(err))
         return False

@@ -86,12 +86,61 @@ def disable_event_source_mappings(function_name: str) -> dict[str, Any]:
     return update_event_source_mappings(function_name, enable=False)
 
 
+def write_circuit_breaker_state(
+    table_name: str,
+    state: str,
+    recovery_attempts: int = 0,
+    *,
+    last_failure_time: int | None = None,
+    last_recovery_attempt: int | None = None,
+    ttl: int | None = None,
+) -> dict[str, Any]:
+    """Write circuit breaker state to DynamoDB.
+
+    Args:
+        table_name: DynamoDB table name
+        state: Circuit breaker state (open, half-open, closed)
+        recovery_attempts: Number of recovery attempts
+        last_failure_time: Timestamp of last failure (None = use current time)
+        last_recovery_attempt: Timestamp of last recovery attempt (None = use current)
+        ttl: Time-to-live in seconds (None = 30 days from now, 0 = no TTL)
+
+    Returns:
+        Result dictionary with success status
+    """
+    dynamodb = get_dynamodb_client()
+    current_time = int(time.time())
+
+    failure_ts = last_failure_time if last_failure_time is not None else current_time
+    recovery_ts = last_recovery_attempt if last_recovery_attempt is not None else current_time
+
+    item: dict[str, dict[str, str]] = {
+        "state_id": {"S": "current"},
+        "state": {"S": state},
+        "recovery_attempts": {"N": str(recovery_attempts)},
+        "last_failure_time": {"N": str(failure_ts)},
+        "last_recovery_attempt": {"N": str(recovery_ts)},
+    }
+
+    # Add TTL unless explicitly set to 0
+    if ttl != 0:
+        item["ttl"] = {"N": str(ttl if ttl is not None else current_time + 2592000)}
+
+    try:
+        dynamodb.put_item(TableName=table_name, Item=item)
+        logger.info("Wrote circuit breaker state: %s", state)
+        return {"success": True}
+    except ClientError as err:
+        logger.error("Failed to write circuit breaker state: %s", err)
+        return {"success": False, "error": str(err)}
+
+
 def update_circuit_breaker_state(
     table_name: str,
     state: str,
     recovery_attempts: int = 0,
 ) -> dict[str, Any]:
-    """Update circuit breaker state in DynamoDB.
+    """Update circuit breaker state in DynamoDB with current timestamps.
 
     Args:
         table_name: DynamoDB table name
@@ -101,23 +150,28 @@ def update_circuit_breaker_state(
     Returns:
         Result dictionary with success status
     """
-    dynamodb = get_dynamodb_client()
-    current_time = int(time.time())
+    return write_circuit_breaker_state(table_name, state, recovery_attempts)
 
-    try:
-        dynamodb.put_item(
-            TableName=table_name,
-            Item={
-                "state_id": {"S": "current"},
-                "state": {"S": state},
-                "recovery_attempts": {"N": str(recovery_attempts)},
-                "last_recovery_attempt": {"N": str(current_time)},
-                "last_failure_time": {"N": str(current_time)},
-                "ttl": {"N": str(current_time + 2592000)},
-            },
-        )
-        logger.info("Updated circuit breaker state to: %s", state)
-        return {"success": True}
-    except ClientError as err:
-        logger.error("Failed to update circuit breaker state: %s", err)
-        return {"success": False, "error": str(err)}
+
+def reset_circuit_breaker_state(table_name: str) -> dict[str, Any]:
+    """Reset circuit breaker state to closed in DynamoDB.
+
+    Clears all history by setting timestamps to 0 and omitting TTL.
+
+    Args:
+        table_name: DynamoDB table name
+
+    Returns:
+        Result dictionary with success status
+    """
+    result = write_circuit_breaker_state(
+        table_name,
+        state="closed",
+        recovery_attempts=0,
+        last_failure_time=0,
+        last_recovery_attempt=0,
+        ttl=0,
+    )
+    if result.get("success"):
+        result["message"] = "Circuit breaker state reset to closed"
+    return result

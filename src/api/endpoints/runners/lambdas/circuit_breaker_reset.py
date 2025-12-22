@@ -3,9 +3,16 @@
 import json
 import logging
 import os
+from typing import Any
 
-import boto3
 from botocore.exceptions import ClientError
+
+from common.circuit_breaker_utils import (
+    enable_event_source_mappings,
+    get_dynamodb_client,
+    get_lambda_client,
+    reset_circuit_breaker_state,
+)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -13,10 +20,10 @@ logger.setLevel(logging.INFO)
 
 def get_circuit_breaker_status(
     webhook_function_name: str, state_table_name: str
-) -> dict:
+) -> dict[str, Any]:
     """Get current circuit breaker status."""
-    dynamodb = boto3.client("dynamodb")
-    lambda_client = boto3.client("lambda")
+    dynamodb = get_dynamodb_client()
+    lambda_client = get_lambda_client()
 
     # Get DynamoDB state
     try:
@@ -73,37 +80,9 @@ def get_circuit_breaker_status(
     }
 
 
-def enable_sqs_event_source(lambda_function_name: str) -> dict:
-    """Enable SQS event source mappings for a Lambda function."""
-    lambda_client = boto3.client("lambda")
-
-    try:
-        response = lambda_client.list_event_source_mappings(
-            FunctionName=lambda_function_name
-        )
-
-        enabled_count = 0
-        for mapping in response.get("EventSourceMappings", []):
-            if mapping["State"] in ("Disabled", "Disabling"):
-                lambda_client.update_event_source_mapping(
-                    UUID=mapping["UUID"], Enabled=True
-                )
-                logger.info("Enabled event source mapping: %s", mapping["UUID"])
-                enabled_count += 1
-
-        return {
-            "success": True,
-            "enabled_count": enabled_count,
-            "message": f"Enabled {enabled_count} event source mappings",
-        }
-    except ClientError as e:
-        logger.error("Failed to enable event source mappings: %s", e)
-        return {"success": False, "error": str(e)}
-
-
-def remove_lambda_reserved_concurrency(function_name: str) -> dict:
+def remove_lambda_reserved_concurrency(function_name: str) -> dict[str, Any]:
     """Remove reserved concurrency limit from a Lambda function."""
-    lambda_client = boto3.client("lambda")
+    lambda_client = get_lambda_client()
 
     try:
         lambda_client.delete_function_concurrency(FunctionName=function_name)
@@ -117,29 +96,7 @@ def remove_lambda_reserved_concurrency(function_name: str) -> dict:
         return {"success": False, "error": str(e)}
 
 
-def reset_circuit_breaker_state(table_name: str) -> dict:
-    """Reset circuit breaker state to closed in DynamoDB."""
-    dynamodb = boto3.client("dynamodb")
-
-    try:
-        dynamodb.put_item(
-            TableName=table_name,
-            Item={
-                "state_id": {"S": "current"},
-                "state": {"S": "closed"},
-                "recovery_attempts": {"N": "0"},
-                "last_failure_time": {"N": "0"},
-                "last_recovery_attempt": {"N": "0"},
-            },
-        )
-        logger.info("Reset circuit breaker state to closed in %s", table_name)
-        return {"success": True, "message": "Circuit breaker state reset to closed"}
-    except ClientError as e:
-        logger.error("Failed to reset circuit breaker state: %s", e)
-        return {"success": False, "error": str(e)}
-
-
-def lambda_handler(event: dict, _context) -> dict:
+def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """Handle circuit breaker API requests.
 
     GET  /v1/runners/circuit-breaker - Get status
@@ -171,7 +128,7 @@ def lambda_handler(event: dict, _context) -> dict:
             "concurrency_removed": remove_lambda_reserved_concurrency(
                 webhook_function_name
             ),
-            "sqs_enabled": enable_sqs_event_source(webhook_function_name),
+            "sqs_enabled": enable_event_source_mappings(webhook_function_name),
         }
 
         all_success = all(r.get("success", False) for r in results.values())
