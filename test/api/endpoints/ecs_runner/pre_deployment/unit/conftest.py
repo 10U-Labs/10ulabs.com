@@ -92,3 +92,52 @@ def mock_urllib_response_factory():
 def lambda_context():
     """Provide a mock Lambda context object."""
     return Mock()
+
+
+def create_mock_client_factory(ecs_mock=None, ssm_mock=None, ecr_mock=None):
+    """Create a mock boto3 client factory function."""
+    def mock_client(service_name):
+        if service_name == 'ecs' and ecs_mock is not None:
+            return ecs_mock
+        if service_name == 'ssm' and ssm_mock is not None:
+            return ssm_mock
+        if service_name == 'ecr' and ecr_mock is not None:
+            return ecr_mock
+        return Mock()
+    return mock_client
+
+
+def create_fargate_runner_env(use_spot=None):
+    """Create standard environment dict for fargate runner tests."""
+    env = {
+        'ECS_CLUSTER': 'test-cluster',
+        'TASK_DEFINITION': 'test-task',
+        'SUBNETS': 'subnet-1',
+        'SECURITY_GROUPS': 'sg-1',
+        'CONTAINER_NAME': 'test-container',
+        'GITHUB_TOKEN_SECRET_NAME': '/test/token'
+    }
+    if use_spot is not None:
+        env['USE_SPOT'] = 'true' if use_spot else 'false'
+    return env
+
+
+def create_mock_ssm_with_token(token_value='test-token'):
+    """Create a mock SSM client that returns the given token."""
+    mock_ssm = Mock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': token_value}}
+    return mock_ssm
+
+
+def create_mock_ecs_with_run_task(task_arn='test-arn'):
+    """Create a mock ECS client that returns success from run_task."""
+    mock_ecs = Mock()
+    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': task_arn}]}
+    return mock_ecs
+
+
+def create_mock_ecs_for_status(task_arns=None):
+    """Create a mock ECS client for status checks."""
+    mock_ecs = Mock()
+    mock_ecs.list_tasks.return_value = {'taskArns': task_arns or []}
+    return mock_ecs

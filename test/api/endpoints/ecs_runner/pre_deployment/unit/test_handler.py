@@ -6,7 +6,16 @@ from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
 
-from .conftest import parse_response_body, assert_response_status, assert_json_content_type
+from .conftest import (
+    parse_response_body,
+    assert_response_status,
+    assert_json_content_type,
+    create_mock_client_factory,
+    create_fargate_runner_env,
+    create_mock_ssm_with_token,
+    create_mock_ecs_with_run_task,
+    create_mock_ecs_for_status,
+)
 
 
 def test_lambda_handler_ecs_runner_post_with_missing_job_id_returns_400(
@@ -33,31 +42,53 @@ def test_lambda_handler_ecs_runner_post_with_missing_repo_returns_400(
     assert_response_status(response, 400)
 
 
+def _create_ecr_mock_with_stable_image():
+    """Create mock ECR client with stable image response."""
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{
+            'imageTags': ['stable'],
+            'imagePushedAt': datetime(2024, 1, 1),
+            'imageDigest': 'sha256:test',
+            'imageSizeInBytes': 1000
+        }]
+    }
+    return mock_ecr
+
+
+def _setup_post_handler_mocks(mock_boto_client):
+    """Set up mocks for POST handler tests with ECR, ECS, SSM."""
+    mock_ecr = _create_ecr_mock_with_stable_image()
+    mock_ecs = create_mock_ecs_with_run_task('test-task')
+    mock_ssm = create_mock_ssm_with_token()
+    mock_boto_client.side_effect = create_mock_client_factory(
+        ecs_mock=mock_ecs, ssm_mock=mock_ssm, ecr_mock=mock_ecr
+    )
+    return mock_ecs
+
+
 @patch('boto3.client')
 def test_lambda_handler_ecs_runner_post_returns_json_content_type(
     mock_boto_client, ecs_runner_handler, ecs_runner_post_event_factory, lambda_context
 ):
     """Test lambda handler ecs runner post returns json content type."""
-    mock_ecr = MagicMock()
-    mock_ecr.describe_images.return_value = {
-        'imageDetails': [{'imageTags': ['stable'], 'imagePushedAt': '2024-01-01'}]
-    }
-    mock_ecs = MagicMock()
-    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-task'}]}
-    mock_ssm = MagicMock()
-    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
-    def mock_client(service_name):
-        if service_name == 'ecr':
-            return mock_ecr
-        if service_name == 'ecs':
-            return mock_ecs
-        if service_name == 'ssm':
-            return mock_ssm
-        return MagicMock()
-    mock_boto_client.side_effect = mock_client
+    _setup_post_handler_mocks(mock_boto_client)
     event = ecs_runner_post_event_factory(job_id=12345, github_repo='test-org/test-repo')
     response = ecs_runner_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
+
+
+def _invoke_post_handler_and_get_run_task_kwargs(
+    mock_boto_client, ecs_runner_handler, ecs_runner_post_event_factory, lambda_context
+):
+    """Set up mocks, invoke POST handler, and return run_task call kwargs."""
+    mock_ecs = _setup_post_handler_mocks(mock_boto_client)
+    with patch.object(
+        ecs_runner_handler, 'get_runner_registration_token', return_value='test-token'
+    ):
+        event = ecs_runner_post_event_factory(job_id=12346, github_repo='test-org/test-repo')
+        ecs_runner_handler.lambda_handler(event, lambda_context)
+    return mock_ecs.run_task.call_args[1]
 
 
 @patch('boto3.client')
@@ -65,33 +96,9 @@ def test_lambda_handler_ecs_runner_does_not_specify_launch_type_and_capacity_pro
     mock_boto_client, ecs_runner_handler, ecs_runner_post_event_factory, lambda_context
 ):
     """Test handler does not specify launch type and capacity provider together."""
-    mock_ecr = MagicMock()
-    image_detail = {
-        'imageTags': ['stable'],
-        'imagePushedAt': datetime(2024, 1, 1),
-        'imageDigest': 'sha256:test',
-        'imageSizeInBytes': 1000
-    }
-    mock_ecr.describe_images.return_value = {'imageDetails': [image_detail]}
-    mock_ecs = MagicMock()
-    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-task'}]}
-    mock_ssm = MagicMock()
-    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
-    def mock_client(service_name):
-        if service_name == 'ecr':
-            return mock_ecr
-        if service_name == 'ecs':
-            return mock_ecs
-        if service_name == 'ssm':
-            return mock_ssm
-        return MagicMock()
-    mock_boto_client.side_effect = mock_client
-    with patch.object(
-        ecs_runner_handler, 'get_runner_registration_token', return_value='test-token'
-    ):
-        event = ecs_runner_post_event_factory(job_id=12346, github_repo='test-org/test-repo')
-        ecs_runner_handler.lambda_handler(event, lambda_context)
-    call_kwargs = mock_ecs.run_task.call_args[1]
+    call_kwargs = _invoke_post_handler_and_get_run_task_kwargs(
+        mock_boto_client, ecs_runner_handler, ecs_runner_post_event_factory, lambda_context
+    )
     has_launch_type = 'launchType' in call_kwargs
     has_capacity_provider = 'capacityProviderStrategy' in call_kwargs
     assert not (has_launch_type and has_capacity_provider)
@@ -102,34 +109,9 @@ def test_launch_fargate_runner_tags_use_lowercase_key_for_type(
     mock_boto_client, ecs_runner_handler, ecs_runner_post_event_factory, lambda_context
 ):
     """Test launch fargate runner tags use lowercase key for type."""
-    mock_ecr = MagicMock()
-    mock_ecr.describe_images.return_value = {
-        'imageDetails': [{
-            'imageTags': ['stable'],
-            'imagePushedAt': datetime(2024, 1, 1),
-            'imageDigest': 'sha256:test',
-            'imageSizeInBytes': 1000
-        }]
-    }
-    mock_ecs = MagicMock()
-    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-task'}]}
-    mock_ssm = MagicMock()
-    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
-    def mock_client(service_name):
-        if service_name == 'ecr':
-            return mock_ecr
-        if service_name == 'ecs':
-            return mock_ecs
-        if service_name == 'ssm':
-            return mock_ssm
-        return MagicMock()
-    mock_boto_client.side_effect = mock_client
-    with patch.object(
-        ecs_runner_handler, 'get_runner_registration_token', return_value='test-token'
-    ):
-        event = ecs_runner_post_event_factory(job_id=12346, github_repo='test-org/test-repo')
-        ecs_runner_handler.lambda_handler(event, lambda_context)
-    call_kwargs = mock_ecs.run_task.call_args[1]
+    call_kwargs = _invoke_post_handler_and_get_run_task_kwargs(
+        mock_boto_client, ecs_runner_handler, ecs_runner_post_event_factory, lambda_context
+    )
     tags = call_kwargs.get('tags', [])
     type_tag = next((t for t in tags if t.get('key') == 'Type'), None)
     assert type_tag is not None
@@ -161,13 +143,16 @@ def test_lambda_handler_ecs_runner_unsupported_method_returns_404(
     assert_response_status(response, 404)
 
 
+def _setup_ecs_status_mocks(handler):
+    """Set up common mocks for ECS status tests."""
+    mock_ecs = create_mock_ecs_for_status()
+    return patch.object(handler, 'get_ecs_client', return_value=mock_ecs)
+
+
 def test_get_ecs_runner_status_returns_success_with_no_tasks(ecs_runner_handler):
     """Test get ecs runner status returns success with no tasks."""
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        with patch.object(ecs_runner_handler, 'get_ecs_client') as mock_get_client:
-            mock_ecs = MagicMock()
-            mock_ecs.list_tasks.return_value = {'taskArns': []}
-            mock_get_client.return_value = mock_ecs
+        with _setup_ecs_status_mocks(ecs_runner_handler):
             result = ecs_runner_handler.get_ecs_runner_status()
             assert result['success'] is True
 
@@ -175,10 +160,7 @@ def test_get_ecs_runner_status_returns_success_with_no_tasks(ecs_runner_handler)
 def test_get_ecs_runner_status_returns_zero_running_tasks_when_empty(ecs_runner_handler):
     """Test get ecs runner status returns zero running tasks when empty."""
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        with patch.object(ecs_runner_handler, 'get_ecs_client') as mock_get_client:
-            mock_ecs = MagicMock()
-            mock_ecs.list_tasks.return_value = {'taskArns': []}
-            mock_get_client.return_value = mock_ecs
+        with _setup_ecs_status_mocks(ecs_runner_handler):
             result = ecs_runner_handler.get_ecs_runner_status()
             assert result['running_tasks'] == 0
 
@@ -186,10 +168,7 @@ def test_get_ecs_runner_status_returns_zero_running_tasks_when_empty(ecs_runner_
 def test_get_ecs_runner_status_returns_empty_task_list_when_no_tasks(ecs_runner_handler):
     """Test get ecs runner status returns empty task list when no tasks."""
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        with patch.object(ecs_runner_handler, 'get_ecs_client') as mock_get_client:
-            mock_ecs = MagicMock()
-            mock_ecs.list_tasks.return_value = {'taskArns': []}
-            mock_get_client.return_value = mock_ecs
+        with _setup_ecs_status_mocks(ecs_runner_handler):
             result = ecs_runner_handler.get_ecs_runner_status()
             assert result['tasks'] == []
 
@@ -197,10 +176,7 @@ def test_get_ecs_runner_status_returns_empty_task_list_when_no_tasks(ecs_runner_
 def test_get_ecs_runner_status_returns_cluster_name(ecs_runner_handler):
     """Test get ecs runner status returns cluster name."""
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        with patch.object(ecs_runner_handler, 'get_ecs_client') as mock_get_client:
-            mock_ecs = MagicMock()
-            mock_ecs.list_tasks.return_value = {'taskArns': []}
-            mock_get_client.return_value = mock_ecs
+        with _setup_ecs_status_mocks(ecs_runner_handler):
             result = ecs_runner_handler.get_ecs_runner_status()
             assert result['cluster'] == 'test-cluster'
 
@@ -334,102 +310,55 @@ def test_get_runner_registration_token_http_error(ecs_runner_handler):
         assert result == ''
 
 
+def _setup_fargate_runner_mocks(mock_boto_client, use_spot=None):
+    """Set up common mocks for fargate runner tests."""
+    mock_ecs = create_mock_ecs_with_run_task()
+    mock_ssm = create_mock_ssm_with_token()
+    mock_boto_client.side_effect = create_mock_client_factory(
+        ecs_mock=mock_ecs, ssm_mock=mock_ssm
+    )
+    return mock_ecs, create_fargate_runner_env(use_spot=use_spot)
+
+
 @patch('boto3.client')
 def test_launch_fargate_runner_ecs_run_task_success(mock_boto_client, ecs_runner_handler):
     """Test launch fargate runner ecs run task success."""
-    env = {
-        'ECS_CLUSTER': 'test-cluster',
-        'TASK_DEFINITION': 'test-task',
-        'SUBNETS': 'subnet-1',
-        'SECURITY_GROUPS': 'sg-1',
-        'CONTAINER_NAME': 'test-container',
-        'GITHUB_TOKEN_SECRET_NAME': '/test/token'
-    }
+    _, env = _setup_fargate_runner_mocks(mock_boto_client)
     with patch.dict('os.environ', env):
-        mock_ecs = MagicMock()
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
-        task_arn = 'arn:aws:ecs:us-east-1:123456789012:task/test'
-        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': task_arn}]}
-        def mock_client(service):
-            if service == 'ecs':
-                return mock_ecs
-            if service == 'ssm':
-                return mock_ssm
-            return MagicMock()
-        mock_boto_client.side_effect = mock_client
-        reg_token_patch = patch.object(
+        with patch.object(
             ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
-        )
-        with reg_token_patch:
+        ):
             result = ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
             assert result['success'] is True
+
+
+def _get_capacity_provider_from_run_task(mock_boto_client, ecs_runner_handler, use_spot):
+    """Launch runner and return capacity provider from run_task call."""
+    mock_ecs, env = _setup_fargate_runner_mocks(mock_boto_client, use_spot=use_spot)
+    with patch.dict('os.environ', env, clear=False):
+        with patch.object(
+            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
+        ):
+            ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+    return mock_ecs.run_task.call_args[1]['capacityProviderStrategy'][0]['capacityProvider']
 
 
 @patch('boto3.client')
 def test_launch_fargate_runner_uses_spot_when_configured(mock_boto_client, ecs_runner_handler):
     """Test launch fargate runner uses FARGATE_SPOT when USE_SPOT=true."""
-    env = {
-        'ECS_CLUSTER': 'test-cluster',
-        'TASK_DEFINITION': 'test-task',
-        'SUBNETS': 'subnet-1',
-        'SECURITY_GROUPS': 'sg-1',
-        'CONTAINER_NAME': 'test-container',
-        'GITHUB_TOKEN_SECRET_NAME': '/test/token',
-        'USE_SPOT': 'true'
-    }
-    with patch.dict('os.environ', env, clear=False):
-        mock_ecs = MagicMock()
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
-        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
-        def mock_client(service):
-            if service == 'ecs':
-                return mock_ecs
-            if service == 'ssm':
-                return mock_ssm
-            return MagicMock()
-        mock_boto_client.side_effect = mock_client
-        reg_token_patch = patch.object(
-            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
-        )
-        with reg_token_patch:
-            ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
-            call_args = mock_ecs.run_task.call_args
-            assert call_args[1]['capacityProviderStrategy'][0]['capacityProvider'] == 'FARGATE_SPOT'
+    capacity_provider = _get_capacity_provider_from_run_task(
+        mock_boto_client, ecs_runner_handler, use_spot=True
+    )
+    assert capacity_provider == 'FARGATE_SPOT'
 
 
 @patch('boto3.client')
 def test_launch_fargate_runner_uses_on_demand_when_configured(mock_boto_client, ecs_runner_handler):
     """Test launch fargate runner uses FARGATE when USE_SPOT=false."""
-    env = {
-        'ECS_CLUSTER': 'test-cluster',
-        'TASK_DEFINITION': 'test-task',
-        'SUBNETS': 'subnet-1',
-        'SECURITY_GROUPS': 'sg-1',
-        'CONTAINER_NAME': 'test-container',
-        'GITHUB_TOKEN_SECRET_NAME': '/test/token',
-        'USE_SPOT': 'false'
-    }
-    with patch.dict('os.environ', env, clear=False):
-        mock_ecs = MagicMock()
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
-        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
-        def mock_client(service):
-            if service == 'ecs':
-                return mock_ecs
-            if service == 'ssm':
-                return mock_ssm
-            return MagicMock()
-        mock_boto_client.side_effect = mock_client
-        reg_token_patch = patch.object(
-            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
-        )
-        with reg_token_patch:
-            ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
-            call_args = mock_ecs.run_task.call_args
-            assert call_args[1]['capacityProviderStrategy'][0]['capacityProvider'] == 'FARGATE'
+    capacity_provider = _get_capacity_provider_from_run_task(
+        mock_boto_client, ecs_runner_handler, use_spot=False
+    )
+    assert capacity_provider == 'FARGATE'
 
 
 def test_is_capacity_error_with_capacity_string(ecs_runner_handler):
@@ -592,18 +521,25 @@ def test_wait_for_fargate_task_provisioned_sets_spot_interrupted_flag(ecs_runner
         assert result['spot_interrupted'] is True
 
 
+def _create_test_workflow_runner(handler, run_id=123, state=None):
+    """Create a test WorkflowRunner instance."""
+    kwargs = {
+        'run_id': run_id, 'runner_type': 'fargate', 'resource_id': 'arn:task',
+        'runner_name': 'runner-123', 'github_repo': 'test/repo'
+    }
+    if state is not None:
+        kwargs['state'] = state
+    return handler.WorkflowRunner(**kwargs)
+
+
 def test_store_workflow_runner_stores_state_field(ecs_runner_handler):
     """Test store workflow runner stores state field."""
     mock_dynamodb = MagicMock()
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
-            runner = ecs_runner_handler.WorkflowRunner(
-                run_id=123, runner_type='fargate', resource_id='arn:task',
-                runner_name='runner-123', github_repo='test/repo', state='requested'
-            )
+            runner = _create_test_workflow_runner(ecs_runner_handler, state='requested')
             ecs_runner_handler.store_workflow_runner(runner)
-            call_args = mock_dynamodb.put_item.call_args[1]
-            item = call_args['Item']
+            item = mock_dynamodb.put_item.call_args[1]['Item']
             assert item['state']['S'] == 'requested'
 
 
@@ -612,23 +548,16 @@ def test_store_workflow_runner_defaults_state_to_requested(ecs_runner_handler):
     mock_dynamodb = MagicMock()
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
-            runner = ecs_runner_handler.WorkflowRunner(
-                run_id=123, runner_type='fargate', resource_id='arn:task',
-                runner_name='runner-123', github_repo='test/repo'
-            )
+            runner = _create_test_workflow_runner(ecs_runner_handler)
             ecs_runner_handler.store_workflow_runner(runner)
-            call_args = mock_dynamodb.put_item.call_args[1]
-            item = call_args['Item']
+            item = mock_dynamodb.put_item.call_args[1]['Item']
             assert item['state']['S'] == 'requested'
 
 
 def test_store_workflow_runner_returns_false_when_table_not_set(ecs_runner_handler):
     """Test store workflow runner returns false when table not set."""
     with patch.dict('os.environ', {}, clear=True):
-        runner = ecs_runner_handler.WorkflowRunner(
-            run_id=123, runner_type='fargate', resource_id='arn:task',
-            runner_name='runner-123', github_repo='test/repo'
-        )
+        runner = _create_test_workflow_runner(ecs_runner_handler)
         result = ecs_runner_handler.store_workflow_runner(runner)
         assert result is False
 
@@ -636,10 +565,7 @@ def test_store_workflow_runner_returns_false_when_table_not_set(ecs_runner_handl
 def test_store_workflow_runner_returns_false_when_run_id_not_provided(ecs_runner_handler):
     """Test store workflow runner returns false when run id not provided."""
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        runner = ecs_runner_handler.WorkflowRunner(
-            run_id=None, runner_type='fargate', resource_id='arn:task',
-            runner_name='runner-123', github_repo='test/repo'
-        )
+        runner = _create_test_workflow_runner(ecs_runner_handler, run_id=None)
         result = ecs_runner_handler.store_workflow_runner(runner)
         assert result is False
 
@@ -649,10 +575,7 @@ def test_store_workflow_runner_returns_true_on_success(ecs_runner_handler):
     mock_dynamodb = MagicMock()
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
-            runner = ecs_runner_handler.WorkflowRunner(
-                run_id=123, runner_type='fargate', resource_id='arn:task',
-                runner_name='runner-123', github_repo='test/repo'
-            )
+            runner = _create_test_workflow_runner(ecs_runner_handler)
             result = ecs_runner_handler.store_workflow_runner(runner)
             assert result is True
 
@@ -661,17 +584,37 @@ def test_store_workflow_runner_returns_false_on_client_error(ecs_runner_handler)
     """Test store workflow runner returns false on client error."""
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.side_effect = ClientError(
-        {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
-        'put_item'
+        {'Error': {'Code': 'TestError', 'Message': 'Test error'}}, 'put_item'
     )
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
-            runner = ecs_runner_handler.WorkflowRunner(
-                run_id=123, runner_type='fargate', resource_id='arn:task',
-                runner_name='runner-123', github_repo='test/repo'
-            )
+            runner = _create_test_workflow_runner(ecs_runner_handler)
             result = ecs_runner_handler.store_workflow_runner(runner)
             assert result is False
+
+
+def _get_github_token_from_run_task(mock_ecs):
+    """Extract GITHUB_TOKEN from run_task call args."""
+    call_args = mock_ecs.run_task.call_args
+    container_overrides = call_args[1]['overrides']['containerOverrides'][0]
+    environment = container_overrides.get('environment', [])
+    return next((e for e in environment if e['name'] == 'GITHUB_TOKEN'), None)
+
+
+def _launch_runner_and_get_github_token_env(mock_boto_client, ecs_runner_handler, token_value):
+    """Set up mocks, launch runner, and return GITHUB_TOKEN env var from run_task."""
+    mock_ecs = create_mock_ecs_with_run_task()
+    mock_ssm = create_mock_ssm_with_token(token_value)
+    mock_boto_client.side_effect = create_mock_client_factory(
+        ecs_mock=mock_ecs, ssm_mock=mock_ssm
+    )
+    env = create_fargate_runner_env()
+    with patch.dict('os.environ', env):
+        with patch.object(
+            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
+        ):
+            ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+    return _get_github_token_from_run_task(mock_ecs)
 
 
 @patch('boto3.client')
@@ -679,40 +622,10 @@ def test_launch_fargate_runner_includes_github_token_env_var(
     mock_boto_client, ecs_runner_handler
 ):
     """Test launch fargate runner includes GITHUB_TOKEN in container environment."""
-    env = {
-        'ECS_CLUSTER': 'test-cluster',
-        'TASK_DEFINITION': 'test-task',
-        'SUBNETS': 'subnet-1',
-        'SECURITY_GROUPS': 'sg-1',
-        'CONTAINER_NAME': 'test-container',
-        'GITHUB_TOKEN_SECRET_NAME': '/test/token'
-    }
-    with patch.dict('os.environ', env):
-        mock_ecs = MagicMock()
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'github-token-value'}}
-        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
-
-        def mock_client(service):
-            if service == 'ecs':
-                return mock_ecs
-            if service == 'ssm':
-                return mock_ssm
-            return MagicMock()
-
-        mock_boto_client.side_effect = mock_client
-        reg_token_patch = patch.object(
-            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
-        )
-        with reg_token_patch:
-            ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
-            call_args = mock_ecs.run_task.call_args
-            container_overrides = call_args[1]['overrides']['containerOverrides'][0]
-            environment = container_overrides.get('environment', [])
-            github_token_env = next(
-                (e for e in environment if e['name'] == 'GITHUB_TOKEN'), None
-            )
-            assert github_token_env is not None
+    github_token_env = _launch_runner_and_get_github_token_env(
+        mock_boto_client, ecs_runner_handler, 'github-token-value'
+    )
+    assert github_token_env is not None
 
 
 @patch('boto3.client')
@@ -720,40 +633,10 @@ def test_launch_fargate_runner_passes_correct_github_token_value(
     mock_boto_client, ecs_runner_handler
 ):
     """Test launch fargate runner passes correct GITHUB_TOKEN value to container."""
-    env = {
-        'ECS_CLUSTER': 'test-cluster',
-        'TASK_DEFINITION': 'test-task',
-        'SUBNETS': 'subnet-1',
-        'SECURITY_GROUPS': 'sg-1',
-        'CONTAINER_NAME': 'test-container',
-        'GITHUB_TOKEN_SECRET_NAME': '/test/token'
-    }
-    with patch.dict('os.environ', env):
-        mock_ecs = MagicMock()
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'github-token-value'}}
-        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
-
-        def mock_client(service):
-            if service == 'ecs':
-                return mock_ecs
-            if service == 'ssm':
-                return mock_ssm
-            return MagicMock()
-
-        mock_boto_client.side_effect = mock_client
-        reg_token_patch = patch.object(
-            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
-        )
-        with reg_token_patch:
-            ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
-            call_args = mock_ecs.run_task.call_args
-            container_overrides = call_args[1]['overrides']['containerOverrides'][0]
-            environment = container_overrides.get('environment', [])
-            github_token_env = next(
-                (e for e in environment if e['name'] == 'GITHUB_TOKEN'), None
-            )
-            assert github_token_env['value'] == 'github-token-value'
+    github_token_env = _launch_runner_and_get_github_token_env(
+        mock_boto_client, ecs_runner_handler, 'github-token-value'
+    )
+    assert github_token_env['value'] == 'github-token-value'
 
 
 @patch('boto3.client')
@@ -761,36 +644,15 @@ def test_launch_fargate_runner_does_not_pass_empty_github_token(
     mock_boto_client, ecs_runner_handler
 ):
     """Test launch fargate runner does not pass empty GITHUB_TOKEN to container."""
-    env = {
-        'ECS_CLUSTER': 'test-cluster',
-        'TASK_DEFINITION': 'test-task',
-        'SUBNETS': 'subnet-1',
-        'SECURITY_GROUPS': 'sg-1',
-        'CONTAINER_NAME': 'test-container',
-        'GITHUB_TOKEN_SECRET_NAME': '/test/token'
-    }
+    mock_ecs = create_mock_ecs_with_run_task()
+    mock_ssm = create_mock_ssm_with_token('')
+    mock_boto_client.side_effect = create_mock_client_factory(
+        ecs_mock=mock_ecs, ssm_mock=mock_ssm
+    )
+    env = create_fargate_runner_env()
     with patch.dict('os.environ', env):
-        mock_ecs = MagicMock()
-        mock_ssm = MagicMock()
-        # Return empty token
-        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': ''}}
-        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
-
-        def mock_client(service):
-            if service == 'ecs':
-                return mock_ecs
-            if service == 'ssm':
-                return mock_ssm
-            return MagicMock()
-
-        mock_boto_client.side_effect = mock_client
-        reg_token_patch = patch.object(
+        with patch.object(
             ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
-        )
-        # Note: launch_fargate_runner will fail early if github_token is empty
-        # because it checks for github_token before getting registration token
-        # So we test that run_task is not called when token is empty
-        with reg_token_patch:
+        ):
             result = ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
-            # Empty github token causes early failure
             assert result['success'] is False
