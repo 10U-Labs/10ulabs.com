@@ -345,3 +345,151 @@ def test_runner_starter_archive_includes_runners_config(runners_src_path):
     """Test runner_starter archive includes etc/runners.json config."""
     lambda_file = runners_src_path / "lambda.tf"
     assert_archive_includes_file(lambda_file, "runner_starter", "etc/runners.json")
+
+
+# =============================================================================
+# Circuit Breaker Lambda Archive File Existence Tests
+# =============================================================================
+
+
+def test_circuit_breaker_reset_archive_file_exists(runners_src_path):
+    """Test circuit_breaker_reset archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "circuit_breaker_reset"' in content
+
+
+def test_circuit_breaker_remediation_archive_file_exists(runners_src_path):
+    """Test circuit_breaker_remediation archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "circuit_breaker_remediation"' in content
+
+
+def test_circuit_breaker_recovery_archive_file_exists(runners_src_path):
+    """Test circuit_breaker_recovery archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "circuit_breaker_recovery"' in content
+
+
+# =============================================================================
+# Circuit Breaker Lambda Package Contents Tests
+#
+# These tests ensure circuit breaker Lambda packages include all required
+# common modules. These Lambdas import from common.circuit_breaker_utils,
+# which triggers common/__init__.py to import all modules.
+# =============================================================================
+
+
+def test_circuit_breaker_reset_archive_includes_all_common_modules(runners_src_path):
+    """Test circuit_breaker_reset archive includes all common modules.
+
+    Regression test: circuit_breaker_reset.py imports from
+    common.circuit_breaker_utils, but common/__init__.py requires all modules.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    for module in COMMON_MODULES:
+        assert_archive_includes_file(lambda_file, "circuit_breaker_reset", module)
+
+
+def test_circuit_breaker_remediation_archive_includes_all_common_modules(runners_src_path):
+    """Test circuit_breaker_remediation archive includes all common modules.
+
+    Regression test: circuit_breaker_remediation.py imports from
+    common.circuit_breaker_utils, but common/__init__.py requires all modules.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    for module in COMMON_MODULES:
+        assert_archive_includes_file(lambda_file, "circuit_breaker_remediation", module)
+
+
+def test_circuit_breaker_recovery_archive_includes_all_common_modules(runners_src_path):
+    """Test circuit_breaker_recovery archive includes all common modules.
+
+    Regression test: circuit_breaker_recovery.py imports from
+    common.circuit_breaker_utils, but common/__init__.py requires all modules.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    for module in COMMON_MODULES:
+        assert_archive_includes_file(lambda_file, "circuit_breaker_recovery", module)
+
+
+# =============================================================================
+# Circuit Breaker Lambda runner_labels.py Inclusion Tests
+# =============================================================================
+
+
+def test_circuit_breaker_reset_archive_includes_runner_labels(runners_src_path):
+    """Test circuit_breaker_reset archive includes runner_labels.py.
+
+    Required because common/__init__.py imports from runner_labels.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(lambda_file, "circuit_breaker_reset", "runner_labels.py")
+
+
+def test_circuit_breaker_remediation_archive_includes_runner_labels(runners_src_path):
+    """Test circuit_breaker_remediation archive includes runner_labels.py.
+
+    Required because common/__init__.py imports from runner_labels.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(
+        lambda_file, "circuit_breaker_remediation", "runner_labels.py"
+    )
+
+
+def test_circuit_breaker_recovery_archive_includes_runner_labels(runners_src_path):
+    """Test circuit_breaker_recovery archive includes runner_labels.py.
+
+    Required because common/__init__.py imports from runner_labels.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(
+        lambda_file, "circuit_breaker_recovery", "runner_labels.py"
+    )
+
+
+# =============================================================================
+# Circuit Breaker Lambda runners.json Config Inclusion Tests
+#
+# runner_labels.py loads etc/runners.json at module load time, so all Lambdas
+# that import from common need this config file.
+# =============================================================================
+
+
+def test_circuit_breaker_reset_archive_includes_runners_config(runners_src_path):
+    """Test circuit_breaker_reset archive includes etc/runners.json.
+
+    Required because runner_labels.py loads this config at import time.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(
+        lambda_file, "circuit_breaker_reset", "etc/runners.json"
+    )
+
+
+def test_circuit_breaker_remediation_archive_includes_runners_config(runners_src_path):
+    """Test circuit_breaker_remediation archive includes etc/runners.json.
+
+    Required because runner_labels.py loads this config at import time.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(
+        lambda_file, "circuit_breaker_remediation", "etc/runners.json"
+    )
+
+
+def test_circuit_breaker_recovery_archive_includes_runners_config(runners_src_path):
+    """Test circuit_breaker_recovery archive includes etc/runners.json.
+
+    Required because runner_labels.py loads this config at import time.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(
+        lambda_file, "circuit_breaker_recovery", "etc/runners.json"
+    )

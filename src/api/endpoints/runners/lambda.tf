@@ -481,8 +481,56 @@ resource "aws_lambda_event_source_mapping" "ignored_events_archiver_sqs" {
 
 data "archive_file" "circuit_breaker_reset" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/circuit_breaker_reset.py"
   output_path = "${path.module}/.terraform/lambda_packages/circuit_breaker_reset.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/circuit_breaker_reset.py")
+    filename = "circuit_breaker_reset.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/aws_clients.py")
+    filename = "common/aws_clients.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
+    filename = "common/circuit_breaker_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/cloudwatch.py")
+    filename = "common/cloudwatch.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ec2_utils.py")
+    filename = "common/ec2_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ecs_utils.py")
+    filename = "common/ecs_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/github_api.py")
+    filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/lambda_utils.py")
+    filename = "common/lambda_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
+    filename = "common/webhook_ingress.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
+    content  = file("${local.etc_dir}/runners.json")
+    filename = "etc/runners.json"
+  }
 }
 
 resource "aws_lambda_function" "circuit_breaker_reset" {
@@ -544,8 +592,56 @@ resource "aws_lambda_permission" "circuit_breaker_reset_api_gateway" {
 
 data "archive_file" "circuit_breaker_remediation" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/circuit_breaker_remediation.py"
   output_path = "${path.module}/.terraform/lambda_packages/circuit_breaker_remediation.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/circuit_breaker_remediation.py")
+    filename = "circuit_breaker_remediation.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/aws_clients.py")
+    filename = "common/aws_clients.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
+    filename = "common/circuit_breaker_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/cloudwatch.py")
+    filename = "common/cloudwatch.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ec2_utils.py")
+    filename = "common/ec2_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ecs_utils.py")
+    filename = "common/ecs_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/github_api.py")
+    filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/lambda_utils.py")
+    filename = "common/lambda_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
+    filename = "common/webhook_ingress.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
+    content  = file("${local.etc_dir}/runners.json")
+    filename = "etc/runners.json"
+  }
 }
 
 resource "aws_lambda_function" "circuit_breaker_remediation" {
@@ -659,8 +755,56 @@ resource "aws_cloudwatch_log_group" "dlq_reprocessor" {
 
 data "archive_file" "circuit_breaker_recovery" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/circuit_breaker_recovery.py"
   output_path = "${path.module}/.terraform/lambda_packages/circuit_breaker_recovery.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/circuit_breaker_recovery.py")
+    filename = "circuit_breaker_recovery.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/aws_clients.py")
+    filename = "common/aws_clients.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
+    filename = "common/circuit_breaker_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/cloudwatch.py")
+    filename = "common/cloudwatch.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ec2_utils.py")
+    filename = "common/ec2_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ecs_utils.py")
+    filename = "common/ecs_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/github_api.py")
+    filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/lambda_utils.py")
+    filename = "common/lambda_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
+    filename = "common/webhook_ingress.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
+    content  = file("${local.etc_dir}/runners.json")
+    filename = "etc/runners.json"
+  }
 }
 
 resource "aws_lambda_function" "circuit_breaker_recovery" {
