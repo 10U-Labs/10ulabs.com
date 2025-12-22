@@ -1,4 +1,26 @@
-"""Unit tests for test lambda terraform."""
+"""Unit tests for runners Lambda terraform configuration.
+
+This module tests the Lambda infrastructure configuration including:
+- Lambda function resource definitions
+- archive_file data source definitions
+- Lambda package contents (regression tests for ImportModuleError)
+- Environment variable configuration
+"""
+from test.api.endpoints.conftest import assert_archive_includes_file
+
+# List of all common modules that must be included in Lambda packages
+# that import from common/__init__.py (which imports everything)
+COMMON_MODULES = [
+    "common/__init__.py",
+    "common/aws_clients.py",
+    "common/circuit_breaker_utils.py",
+    "common/cloudwatch.py",
+    "common/ec2_utils.py",
+    "common/ecs_utils.py",
+    "common/github_api.py",
+    "common/lambda_utils.py",
+    "common/webhook_ingress.py",
+]
 
 
 def test_lambda_terraform_file_exists(runners_src_path):
@@ -117,3 +139,209 @@ def test_stale_runner_cleanup_ec2_tag_references_ec2_runner_output(runners_src_p
     stale_section = content[stale_start:stale_end]
     ec2_managed_by_tag = 'data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag'
     assert ec2_managed_by_tag in stale_section
+
+
+# =============================================================================
+# Archive File Existence Tests
+# =============================================================================
+
+
+def test_runners_handler_archive_file_exists(runners_src_path):
+    """Test runners_handler archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "runners_handler"' in content
+
+
+def test_runner_starter_archive_file_exists(runners_src_path):
+    """Test runner_starter archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "runner_starter"' in content
+
+
+def test_runner_terminator_archive_file_exists(runners_src_path):
+    """Test runner_terminator archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "runner_terminator"' in content
+
+
+def test_ignored_events_archiver_archive_file_exists(runners_src_path):
+    """Test ignored_events_archiver archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "ignored_events_archiver"' in content
+
+
+def test_drift_recovery_archive_file_exists(runners_src_path):
+    """Test drift_recovery archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "drift_recovery"' in content
+
+
+def test_spot_interruption_handler_archive_file_exists(runners_src_path):
+    """Test spot_interruption_handler archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "spot_interruption_handler"' in content
+
+
+def test_stale_runner_cleanup_archive_file_exists(runners_src_path):
+    """Test stale_runner_cleanup archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "stale_runner_cleanup"' in content
+
+
+# =============================================================================
+# Lambda Package Contents - Regression Tests for ImportModuleError
+#
+# These tests ensure that Lambda packages include all required common modules.
+# Without these modules, Lambdas fail at runtime with:
+#   Runtime.ImportModuleError: No module named 'common.xxx'
+#
+# The common/__init__.py imports all modules at the top level, so any Lambda
+# that imports from common needs ALL modules present, not just the ones it
+# directly uses.
+# =============================================================================
+
+
+def test_runners_handler_archive_includes_all_common_modules(runners_src_path):
+    """Test runners_handler archive includes all common modules.
+
+    Regression test: The webhook_router.py imports from common.aws_clients,
+    common.cloudwatch, and common.webhook_ingress. However, common/__init__.py
+    imports from ALL common modules, so all must be present or the Lambda
+    fails with ImportModuleError.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    for module in COMMON_MODULES:
+        assert_archive_includes_file(lambda_file, "runners_handler", module)
+
+
+def test_runner_starter_archive_includes_all_common_modules(runners_src_path):
+    """Test runner_starter archive includes all common modules.
+
+    Regression test: runner_starter.py imports from common.aws_clients,
+    common.cloudwatch, and common.lambda_utils, but common/__init__.py
+    requires all modules to be present.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    for module in COMMON_MODULES:
+        assert_archive_includes_file(lambda_file, "runner_starter", module)
+
+
+def test_runner_terminator_archive_includes_all_common_modules(runners_src_path):
+    """Test runner_terminator archive includes all common modules.
+
+    Regression test: runner_terminator.py imports from common.aws_clients,
+    common.cloudwatch, common.ec2_utils, common.ecs_utils, and
+    common.lambda_utils, but common/__init__.py requires all modules.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    for module in COMMON_MODULES:
+        assert_archive_includes_file(lambda_file, "runner_terminator", module)
+
+
+def test_ignored_events_archiver_archive_includes_all_common_modules(runners_src_path):
+    """Test ignored_events_archiver archive includes all common modules.
+
+    Regression test: ignored_events_archiver.py imports from common.aws_clients,
+    common.cloudwatch, and common.lambda_utils, but common/__init__.py
+    requires all modules to be present.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    for module in COMMON_MODULES:
+        assert_archive_includes_file(lambda_file, "ignored_events_archiver", module)
+
+
+def test_drift_recovery_archive_includes_all_common_modules(runners_src_path):
+    """Test drift_recovery archive includes all common modules.
+
+    Regression test: drift_recovery.py imports from common.aws_clients and
+    common.github_api, but common/__init__.py requires all modules.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    for module in COMMON_MODULES:
+        assert_archive_includes_file(lambda_file, "drift_recovery", module)
+
+
+def test_spot_interruption_handler_archive_includes_all_common_modules(runners_src_path):
+    """Test spot_interruption_handler archive includes all common modules.
+
+    Regression test: spot_interruption_handler.py imports from common.aws_clients
+    and common.github_api, but common/__init__.py requires all modules.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    for module in COMMON_MODULES:
+        assert_archive_includes_file(lambda_file, "spot_interruption_handler", module)
+
+
+def test_stale_runner_cleanup_archive_includes_all_common_modules(runners_src_path):
+    """Test stale_runner_cleanup archive includes all common modules.
+
+    Regression test: stale_runner_cleanup.py imports from common.aws_clients,
+    common.ec2_utils, common.ecs_utils, and common.github_api, but
+    common/__init__.py requires all modules.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    for module in COMMON_MODULES:
+        assert_archive_includes_file(lambda_file, "stale_runner_cleanup", module)
+
+
+# =============================================================================
+# runner_labels.py Inclusion Tests
+#
+# These tests ensure Lambda packages include the shared runner_labels module.
+# =============================================================================
+
+
+def test_runners_handler_archive_includes_runner_labels(runners_src_path):
+    """Test runners_handler archive includes runner_labels.py shared module.
+
+    Regression test: webhook_router.py imports get_runner_type_from_labels
+    from runner_labels. Without this module, the Lambda fails with
+    ImportModuleError when processing workflow_job events.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(lambda_file, "runners_handler", "runner_labels.py")
+
+
+def test_runner_starter_archive_includes_runner_labels(runners_src_path):
+    """Test runner_starter archive includes runner_labels.py shared module."""
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(lambda_file, "runner_starter", "runner_labels.py")
+
+
+def test_spot_interruption_handler_archive_includes_runner_labels(runners_src_path):
+    """Test spot_interruption_handler archive includes runner_labels.py."""
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(
+        lambda_file, "spot_interruption_handler", "runner_labels.py"
+    )
+
+
+# =============================================================================
+# runners.json Config File Inclusion Tests
+# =============================================================================
+
+
+def test_runners_handler_archive_includes_runners_config(runners_src_path):
+    """Test runners_handler archive includes etc/runners.json config."""
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(lambda_file, "runners_handler", "etc/runners.json")
+
+
+def test_runner_starter_archive_includes_runners_config(runners_src_path):
+    """Test runner_starter archive includes etc/runners.json config."""
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(lambda_file, "runner_starter", "etc/runners.json")
