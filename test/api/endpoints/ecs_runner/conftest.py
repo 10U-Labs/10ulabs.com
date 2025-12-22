@@ -1,9 +1,7 @@
 """Shared pytest fixtures and utilities for ECS runner tests."""
 import importlib
 import os
-import subprocess
 import sys
-from pathlib import Path
 from typing import Any, Dict
 
 from test.api.conftest import get_runner_labels
@@ -16,22 +14,19 @@ from repo_utils import REPO_ROOT
 ECS_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
 RUNNERS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 
-
-def terraform_output(directory: Path, name: str) -> str:
-    """Get a terraform output value from the specified directory."""
-    result = subprocess.run(
-        ["terraform", "output", "-raw", name],
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.stdout.strip() if result.returncode == 0 else ""
-
 # Add lib/python to path for unit tests that use --confcutdir
 LIB_DIR = REPO_ROOT / "lib" / "python"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+
+
+def _get_terraform_output():
+    """Import terraform_output after sys.path modification."""
+    terraform_module = importlib.import_module("test_fixtures.terraform")
+    return terraform_module.terraform_output
+
+
+terraform_output = _get_terraform_output()
 
 
 def _get_shared_config() -> Dict[str, str]:

@@ -13,6 +13,38 @@ from test.api.conftest import (
 import boto3
 import pytest
 
+# Enable layer marker plugin for test ordering
+pytest_plugins = ['pytest_layers']
+
+
+@pytest.fixture(scope="session")
+def shared_config():
+    """Provide shared configuration values."""
+    return {"aws_region": "us-east-2"}
+
+
+AWS_REGION = "us-east-2"
+
+
+def get_repository_name_or_skip(ecr_outputs):
+    """Get repository name from outputs or skip the test if not available."""
+    repository_name = ecr_outputs.get("repository_name")
+    if not repository_name:
+        pytest.skip("repository_name output not available")
+    return repository_name
+
+
+@pytest.fixture(scope="session")
+def sts_client():
+    """Create an STS client for authentication tests."""
+    return boto3.client("sts", region_name=AWS_REGION)
+
+
+@pytest.fixture(scope="session")
+def ecr_client():
+    """Create an ECR client."""
+    return boto3.client("ecr", region_name=AWS_REGION)
+
 
 IMAGE_FOR_ECS_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ecs_runners"
 API_SHARED_ECR_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
@@ -20,9 +52,9 @@ RUNNERS_DIR = REPO_ROOT / "src" / "api" / "shared" / "runners"
 
 
 @pytest.fixture(scope="session")
-def ec2_client(shared_config):
+def ec2_client():
     """Create an EC2 client."""
-    return boto3.client("ec2", region_name=shared_config["aws_region"])
+    return boto3.client("ec2", region_name=AWS_REGION)
 
 
 @pytest.fixture(scope="session")
