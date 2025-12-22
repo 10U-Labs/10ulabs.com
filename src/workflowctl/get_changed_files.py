@@ -4,17 +4,22 @@
 This module handles edge cases like force pushes, shallow clones, and
 initial commits to reliably determine which files changed.
 
+Supports per-commit [skip ci] filtering: files from commits with [skip ci]
+in the message are excluded from the output.
+
 Usage:
     python3 src/workflowctl/workflowctl.py get-changed-files \
-        --base <base_sha> --head <head_sha>
+        --base <base_sha> --head <head_sha> [--commits <json>]
 """
 import argparse
+import json
 import sys
 
 from utils import run_subprocess
 
 
 ZERO_SHA = "0000000000000000000000000000000000000000"
+SKIP_CI_MARKERS = ["[skip ci]", "[ci skip]", "[no ci]", "[skip actions]"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,6 +36,12 @@ def parse_args() -> argparse.Namespace:
         "--head",
         required=True,
         help="Head commit SHA (current)"
+    )
+    parser.add_argument(
+        "--commits",
+        required=False,
+        default="",
+        help="JSON array of commits from github.event.commits"
     )
     return parser.parse_args()
 
@@ -84,10 +95,54 @@ def get_changed_files(base: str, head: str) -> list[str]:
     return get_changed_files_show(head)
 
 
+def has_skip_ci(message: str) -> bool:
+    """Check if a commit message contains a skip CI marker."""
+    message_lower = message.lower()
+    return any(marker.lower() in message_lower for marker in SKIP_CI_MARKERS)
+
+
+def get_files_for_commit(sha: str) -> list[str]:
+    """Get files changed by a specific commit."""
+    result = run_subprocess(["git", "show", "--name-only", "--format=", sha])
+    if result.returncode != 0:
+        return []
+    return [f for f in result.stdout.strip().split("\n") if f]
+
+
+def filter_files_by_commits(commits_json: str) -> set[str]:
+    """Filter files based on per-commit [skip ci] markers.
+
+    Returns set of files that should be EXCLUDED (from [skip ci] commits).
+    """
+    if not commits_json:
+        return set()
+
+    try:
+        commits = json.loads(commits_json)
+    except json.JSONDecodeError:
+        return set()
+
+    excluded_files: set[str] = set()
+    for commit in commits:
+        message = commit.get("message", "")
+        if has_skip_ci(message):
+            commit_id = commit.get("id", "")
+            if commit_id:
+                files = get_files_for_commit(commit_id)
+                excluded_files.update(files)
+
+    return excluded_files
+
+
 def main() -> int:
     """Main entry point."""
     args = parse_args()
     files = get_changed_files(args.base, args.head)
+
+    # Filter out files from commits with [skip ci]
+    if args.commits:
+        excluded = filter_files_by_commits(args.commits)
+        files = [f for f in files if f not in excluded]
 
     # Output in GitHub Actions heredoc format for multi-line values
     print("changed<<EOF")

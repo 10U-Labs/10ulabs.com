@@ -11,9 +11,7 @@ jobs:
   orchestrate:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      !contains(github.event.head_commit.message, '[skip ci]')
+    if: github.ref == 'refs/heads/main'
     name: Orchestrating workflows
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
@@ -40,12 +38,15 @@ jobs:
             exit 1
           fi
           echo "All required files present"
-      - id: files
+      - env:
+          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+        id: files
         name: Get changed files
         run: |
           python3 src/workflowctl/workflowctl.py get-changed-files \
             --base "${{ github.event.before }}" \
-            --head "${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            --head "${{ github.sha }}" \
+            --commits "$COMMITS_JSON" >> "$GITHUB_OUTPUT"
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||

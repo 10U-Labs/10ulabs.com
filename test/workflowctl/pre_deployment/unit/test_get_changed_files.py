@@ -1,4 +1,5 @@
 """Unit tests for get_changed_files.py."""
+import json
 
 from unittest.mock import MagicMock, patch
 
@@ -7,9 +8,12 @@ import pytest
 from get_changed_files import (
     ZERO_SHA,
     commit_exists,
+    filter_files_by_commits,
     get_changed_files,
     get_changed_files_diff,
     get_changed_files_show,
+    get_files_for_commit,
+    has_skip_ci,
 )
 
 
@@ -153,3 +157,121 @@ class TestGetChangedFiles:
         mock_show.return_value = ["file.py"]
         get_changed_files("base123", "head123")
         mock_show.assert_called_once_with("head123")
+
+
+class TestHasSkipCi:
+    """Tests for has_skip_ci function."""
+
+    def test_detects_skip_ci_lowercase(self) -> None:
+        """Test detection of [skip ci] marker."""
+        assert has_skip_ci("Fix bug [skip ci]") is True
+
+    def test_detects_skip_ci_uppercase(self) -> None:
+        """Test detection of [SKIP CI] marker (case insensitive)."""
+        assert has_skip_ci("Fix bug [SKIP CI]") is True
+
+    def test_detects_ci_skip(self) -> None:
+        """Test detection of [ci skip] marker."""
+        assert has_skip_ci("Fix bug [ci skip]") is True
+
+    def test_detects_no_ci(self) -> None:
+        """Test detection of [no ci] marker."""
+        assert has_skip_ci("Update docs [no ci]") is True
+
+    def test_detects_skip_actions(self) -> None:
+        """Test detection of [skip actions] marker."""
+        assert has_skip_ci("Minor change [skip actions]") is True
+
+    def test_returns_false_for_normal_message(self) -> None:
+        """Test that normal messages return False."""
+        assert has_skip_ci("Fix critical bug in API") is False
+
+    def test_returns_false_for_empty_message(self) -> None:
+        """Test that empty messages return False."""
+        assert has_skip_ci("") is False
+
+
+class TestGetFilesForCommit:
+    """Tests for get_files_for_commit function."""
+
+    @patch("get_changed_files.run_subprocess")
+    def test_returns_files_on_success(self, mock_run: MagicMock) -> None:
+        """Test successful git show returns file list."""
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout="file1.py\nfile2.py\n"
+        )
+        result = get_files_for_commit("abc123")
+        assert result == ["file1.py", "file2.py"]
+
+    @patch("get_changed_files.run_subprocess")
+    def test_returns_empty_on_failure(self, mock_run: MagicMock) -> None:
+        """Test failed git show returns empty list."""
+        mock_run.return_value = MagicMock(returncode=1, stdout="")
+        result = get_files_for_commit("abc123")
+        assert result == []
+
+
+class TestFilterFilesByCommits:
+    """Tests for filter_files_by_commits function."""
+
+    def test_returns_empty_for_empty_json(self) -> None:
+        """Test that empty JSON returns empty set."""
+        assert filter_files_by_commits("") == set()
+
+    def test_returns_empty_for_invalid_json(self) -> None:
+        """Test that invalid JSON returns empty set."""
+        assert filter_files_by_commits("not valid json") == set()
+
+    @patch("get_changed_files.get_files_for_commit")
+    def test_excludes_files_from_skip_ci_commits(
+        self,
+        mock_get_files: MagicMock
+    ) -> None:
+        """Test that files from [skip ci] commits are excluded."""
+        mock_get_files.return_value = ["docs/readme.md"]
+        commits = [
+            {"id": "abc123", "message": "Update docs [skip ci]"}
+        ]
+        result = filter_files_by_commits(json.dumps(commits))
+        assert result == {"docs/readme.md"}
+
+    @patch("get_changed_files.get_files_for_commit")
+    def test_does_not_exclude_files_from_normal_commits(
+        self,
+        mock_get_files: MagicMock
+    ) -> None:
+        """Test that files from normal commits are not excluded."""
+        commits = [
+            {"id": "abc123", "message": "Fix important bug"}
+        ]
+        result = filter_files_by_commits(json.dumps(commits))
+        assert result == set()
+        mock_get_files.assert_not_called()
+
+    @patch("get_changed_files.get_files_for_commit")
+    def test_handles_mixed_commits(self, mock_get_files: MagicMock) -> None:
+        """Test handling of mixed [skip ci] and normal commits."""
+        def get_files_side_effect(sha: str) -> list[str]:
+            if sha == "skip1":
+                return ["docs/a.md"]
+            if sha == "skip2":
+                return ["docs/b.md"]
+            return []
+
+        mock_get_files.side_effect = get_files_side_effect
+        commits = [
+            {"id": "skip1", "message": "Update docs [skip ci]"},
+            {"id": "normal", "message": "Fix bug"},
+            {"id": "skip2", "message": "More docs [ci skip]"},
+        ]
+        result = filter_files_by_commits(json.dumps(commits))
+        assert result == {"docs/a.md", "docs/b.md"}
+
+    def test_handles_commits_without_id(self) -> None:
+        """Test that commits without id are handled gracefully."""
+        commits = [
+            {"message": "No id commit [skip ci]"}
+        ]
+        result = filter_files_by_commits(json.dumps(commits))
+        assert result == set()
