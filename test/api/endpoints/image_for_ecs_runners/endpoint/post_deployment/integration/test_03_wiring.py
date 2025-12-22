@@ -8,39 +8,27 @@ import pytest
 pytestmark = pytest.mark.layer(3)
 
 
-@pytest.fixture(name="lambda_function", scope="module")
-def lambda_function_fixture(lambda_client):
-    """Find and return the Lambda function matching ImageForEcsRunners."""
-    response = lambda_client.list_functions()
-    matching = [
-        f for f in response["Functions"]
-        if "ImageForEcsRunners" in f["FunctionName"]
-    ]
-    if not matching:
-        pytest.skip("Lambda function not found")
-    return matching[0]
-
-
-@pytest.fixture(name="lambda_config", scope="module")
-def lambda_config_fixture(lambda_client, lambda_function):
-    """Get the Lambda function configuration."""
-    return lambda_client.get_function_configuration(
-        FunctionName=lambda_function["FunctionName"]
-    )
-
-
-def test_lambda_has_execution_role(lambda_config):
-    """Verify Lambda function has an execution role configured."""
+def test_lambda_has_execution_role_key(lambda_config):
+    """Verify Lambda function has Role key in configuration."""
     assert "Role" in lambda_config
-    assert lambda_config["Role"]
 
 
-def test_lambda_role_is_valid_arn(lambda_config):
-    """Verify Lambda execution role is a valid IAM role ARN."""
+def test_lambda_has_execution_role_value(lambda_config):
+    """Verify Lambda function execution role is not empty."""
+    assert lambda_config.get("Role")
+
+
+def test_lambda_role_starts_with_iam_arn(lambda_config):
+    """Verify Lambda execution role starts with IAM ARN prefix."""
     role_arn = lambda_config.get("Role", "")
     assert role_arn.startswith("arn:aws:iam::"), (
         f"Lambda role '{role_arn}' is not a valid IAM ARN"
     )
+
+
+def test_lambda_role_contains_role_path(lambda_config):
+    """Verify Lambda execution role ARN contains :role/ path."""
+    role_arn = lambda_config.get("Role", "")
     assert ":role/" in role_arn, (
         f"Lambda role '{role_arn}' does not appear to be a role ARN"
     )

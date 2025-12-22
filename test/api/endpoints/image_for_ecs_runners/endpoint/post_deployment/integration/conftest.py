@@ -20,3 +20,33 @@ def api_request(request):
         return make_api_request(config, params)
 
     return _make_request
+
+
+@pytest.fixture(name="lambda_function", scope="module")
+def lambda_function_fixture(lambda_client):
+    """Find and return the Lambda function matching ImageForEcsRunners."""
+    response = lambda_client.list_functions()
+    matching = [
+        f for f in response["Functions"]
+        if "ImageForEcsRunners" in f["FunctionName"]
+    ]
+    if not matching:
+        pytest.fail(
+            "No Lambda function found matching 'ImageForEcsRunners'. "
+            "Run terraform apply in src/api/endpoints/image_for_ecs_runners/"
+        )
+    return matching[0]
+
+
+@pytest.fixture(name="lambda_config", scope="module")
+def lambda_config_fixture(lambda_client, lambda_function):
+    """Get the Lambda function configuration."""
+    return lambda_client.get_function_configuration(
+        FunctionName=lambda_function["FunctionName"]
+    )
+
+
+@pytest.fixture(name="env_vars", scope="module")
+def env_vars_fixture(lambda_config):
+    """Get environment variables from Lambda config."""
+    return lambda_config.get("Environment", {}).get("Variables", {})
