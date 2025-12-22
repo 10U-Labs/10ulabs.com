@@ -42,7 +42,6 @@ jobs:
           retention-days: 7
 name: RTL Verilator
 on:
-  workflow_call:
   workflow_dispatch:
     inputs:
       github_hosted:
