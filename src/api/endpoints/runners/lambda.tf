@@ -19,16 +19,16 @@ data "archive_file" "runners_handler" {
     filename = "common/github_api.py"
   }
   source {
-    content  = file("${path.module}/lambdas/common/runner_labels.py")
-    filename = "common/runner_labels.py"
-  }
-  source {
     content  = file("${path.module}/lambdas/common/webhook_ingress.py")
     filename = "common/webhook_ingress.py"
   }
   source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
     content  = file("${local.etc_dir}/runners.json")
-    filename = "common/etc/runners.json"
+    filename = "etc/runners.json"
   }
 }
 
@@ -130,16 +130,16 @@ data "archive_file" "runner_starter" {
     filename = "common/github_api.py"
   }
   source {
-    content  = file("${path.module}/lambdas/common/runner_labels.py")
-    filename = "common/runner_labels.py"
-  }
-  source {
     content  = file("${path.module}/lambdas/common/webhook_ingress.py")
     filename = "common/webhook_ingress.py"
   }
   source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
     content  = file("${local.etc_dir}/runners.json")
-    filename = "common/etc/runners.json"
+    filename = "etc/runners.json"
   }
 }
 
@@ -693,12 +693,12 @@ data "archive_file" "spot_interruption_handler" {
     filename = "common/github_api.py"
   }
   source {
-    content  = file("${path.module}/lambdas/common/runner_labels.py")
-    filename = "common/runner_labels.py"
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
   }
   source {
     content  = file("${local.etc_dir}/runners.json")
-    filename = "common/etc/runners.json"
+    filename = "etc/runners.json"
   }
 }
 

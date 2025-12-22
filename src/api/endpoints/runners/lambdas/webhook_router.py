@@ -16,8 +16,8 @@ from botocore.exceptions import ClientError
 
 from common.aws_clients import get_dynamodb_client, get_sqs_client, get_ssm_client
 from common.cloudwatch import publish_metric as _common_publish_metric
-from common.runner_labels import get_runner_type_from_labels
 from common.webhook_ingress import IngressHandler
+from runner_labels import get_runner_type_from_labels
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

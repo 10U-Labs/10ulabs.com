@@ -368,3 +368,34 @@ def get_runner_id_number(parsed: ParsedLabels) -> int:
     if match:
         return int(match.group(1))
     raise LabelParseError(f"Invalid runner ID format: {parsed.runner_id}")
+
+
+def get_runner_type_from_labels(
+    job_labels: List[str],
+) -> tuple:
+    """Determine runner type and endpoint suffix from job labels.
+
+    Args:
+        job_labels: List of job labels
+
+    Returns:
+        Tuple of (runner_type, endpoint_suffix)
+    """
+    runner_type: Optional[str] = None
+    endpoint_suffix: Optional[str] = None
+
+    try:
+        parsed = parse_labels(job_labels)
+        validate_labels(parsed)
+        is_e2e = "e2e" in job_labels
+
+        if parsed.platform == "ec2":
+            runner_type = "ec2-e2e" if is_e2e else "ec2"
+            endpoint_suffix = "ec2-runner"
+        elif parsed.platform == "ecs":
+            runner_type = "fargate-e2e" if is_e2e else "fargate"
+            endpoint_suffix = "ecs-runner"
+    except (LabelParseError, LabelValidationError):
+        pass
+
+    return runner_type, endpoint_suffix

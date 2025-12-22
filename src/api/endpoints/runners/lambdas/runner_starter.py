@@ -13,7 +13,7 @@ from botocore.exceptions import ClientError
 from common.aws_clients import get_ssm_client
 from common.cloudwatch import publish_metric
 from common.lambda_utils import get_sqs_records, empty_records_response, parse_error_response
-from common.runner_labels import get_runner_type_from_labels
+from runner_labels import get_runner_type_from_labels
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
