@@ -15,12 +15,28 @@ data "archive_file" "runners_handler" {
     filename = "common/aws_clients.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
+    filename = "common/circuit_breaker_utils.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
     filename = "common/cloudwatch.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/ec2_utils.py")
+    filename = "common/ec2_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ecs_utils.py")
+    filename = "common/ecs_utils.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/github_api.py")
     filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/lambda_utils.py")
+    filename = "common/lambda_utils.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/webhook_ingress.py")
@@ -130,12 +146,28 @@ data "archive_file" "runner_starter" {
     filename = "common/aws_clients.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
+    filename = "common/circuit_breaker_utils.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
     filename = "common/cloudwatch.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/ec2_utils.py")
+    filename = "common/ec2_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ecs_utils.py")
+    filename = "common/ecs_utils.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/github_api.py")
     filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/lambda_utils.py")
+    filename = "common/lambda_utils.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/webhook_ingress.py")
@@ -231,8 +263,40 @@ data "archive_file" "runner_terminator" {
     filename = "common/aws_clients.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
+    filename = "common/circuit_breaker_utils.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
     filename = "common/cloudwatch.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ec2_utils.py")
+    filename = "common/ec2_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ecs_utils.py")
+    filename = "common/ecs_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/github_api.py")
+    filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/lambda_utils.py")
+    filename = "common/lambda_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
+    filename = "common/webhook_ingress.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
+    content  = file("${local.etc_dir}/runners.json")
+    filename = "etc/runners.json"
   }
 }
 
@@ -317,8 +381,40 @@ data "archive_file" "ignored_events_archiver" {
     filename = "common/aws_clients.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
+    filename = "common/circuit_breaker_utils.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
     filename = "common/cloudwatch.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ec2_utils.py")
+    filename = "common/ec2_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ecs_utils.py")
+    filename = "common/ecs_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/github_api.py")
+    filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/lambda_utils.py")
+    filename = "common/lambda_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
+    filename = "common/webhook_ingress.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
+    content  = file("${local.etc_dir}/runners.json")
+    filename = "etc/runners.json"
   }
 }
 
@@ -635,8 +731,40 @@ data "archive_file" "drift_recovery" {
     filename = "common/aws_clients.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
+    filename = "common/circuit_breaker_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/cloudwatch.py")
+    filename = "common/cloudwatch.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ec2_utils.py")
+    filename = "common/ec2_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ecs_utils.py")
+    filename = "common/ecs_utils.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/github_api.py")
     filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/lambda_utils.py")
+    filename = "common/lambda_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
+    filename = "common/webhook_ingress.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
+    content  = file("${local.etc_dir}/runners.json")
+    filename = "etc/runners.json"
   }
 }
 
@@ -713,8 +841,32 @@ data "archive_file" "spot_interruption_handler" {
     filename = "common/aws_clients.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
+    filename = "common/circuit_breaker_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/cloudwatch.py")
+    filename = "common/cloudwatch.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ec2_utils.py")
+    filename = "common/ec2_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ecs_utils.py")
+    filename = "common/ecs_utils.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/github_api.py")
     filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/lambda_utils.py")
+    filename = "common/lambda_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
+    filename = "common/webhook_ingress.py"
   }
   source {
     content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
@@ -795,8 +947,40 @@ data "archive_file" "stale_runner_cleanup" {
     filename = "common/aws_clients.py"
   }
   source {
+    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
+    filename = "common/circuit_breaker_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/cloudwatch.py")
+    filename = "common/cloudwatch.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ec2_utils.py")
+    filename = "common/ec2_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/ecs_utils.py")
+    filename = "common/ecs_utils.py"
+  }
+  source {
     content  = file("${path.module}/lambdas/common/github_api.py")
     filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/lambda_utils.py")
+    filename = "common/lambda_utils.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
+    filename = "common/webhook_ingress.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
+    content  = file("${local.etc_dir}/runners.json")
+    filename = "etc/runners.json"
   }
 }
 
