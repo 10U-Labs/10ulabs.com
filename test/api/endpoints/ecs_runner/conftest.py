@@ -55,7 +55,7 @@ def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     return config
 
 
-@pytest.fixture(name="config", scope="module")
+@pytest.fixture(name="config", scope="session")
 def config_fixture(shared_config) -> Dict[str, Any]:
     """Provide configuration dictionary from Terraform files."""
     api_tfvars_path = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
