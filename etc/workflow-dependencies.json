@@ -183,6 +183,14 @@
       "test/api/operational/health/**"
     ]
   },
+  "rtl_verilator": {
+    "depends_on": [],
+    "name": "Verifying RTL design with Verilator",
+    "paths": [
+      ".github/workflows/rtl_verilator.yml",
+      "src/rtl/**"
+    ]
+  },
   "www_index": {
     "depends_on": [
       "endpoint_v1_contact"

@@ -42,13 +42,7 @@ jobs:
           retention-days: 7
 name: RTL Verilator
 on:
-  pull_request:
-    paths:
-      - 'src/rtl/**'
-  push:
-    paths:
-      - 'src/rtl/**'
-      - '.github/workflows/rtl_verilator.yml'
+  workflow_call:
   workflow_dispatch:
     inputs:
       github_hosted:
