@@ -7,6 +7,9 @@ from test.api.endpoints.image_for_ecs_runners.endpoint.helpers import (
 
 import pytest
 
+# Enable layer marker plugin for test ordering
+pytest_plugins = ['pytest_layers']
+
 
 @pytest.fixture(scope="session")
 def api_request(request):
