@@ -13,7 +13,7 @@ jobs:
          contains(github.event.head_commit.message, '[github-hosted]'))
         && 'ubuntu-latest'
         || fromJSON(format(
-             '["ec2", "rtl-sim", "spot", "runner-{0}"]',
+             '["ecs", "fargate", "x86", "spot", "runner-{0}"]',
              github.run_id))
       }}
     steps:
@@ -41,7 +41,7 @@ jobs:
          contains(github.event.head_commit.message, '[github-hosted]'))
         && 'ubuntu-latest'
         || fromJSON(format(
-             '["ec2", "rtl-sim", "spot", "runner-{0}"]',
+             '["ecs", "fargate", "x86", "spot", "runner-{0}"]',
              github.run_id))
       }}
     steps:
@@ -63,7 +63,7 @@ jobs:
          contains(github.event.head_commit.message, '[github-hosted]'))
         && 'ubuntu-latest'
         || fromJSON(format(
-             '["ec2", "rtl-sim", "spot", "runner-{0}"]',
+             '["ecs", "fargate", "x86", "spot", "runner-{0}"]',
              github.run_id))
       }}
     steps:
