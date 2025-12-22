@@ -32,11 +32,11 @@ def test_ecr_repository_name_matches_shared_module(
     assert f'ecr_repository_name = "{expected_name}"' in content
 
 
-def test_ecr_repository_has_scan_on_push(api_shared_ecs_runner_dir):
-    """Test that ECR repository has scan_on_push enabled."""
+def test_ecr_repository_has_scan_on_push_disabled(api_shared_ecs_runner_dir):
+    """Test that ECR repository has scan_on_push disabled (ARM64 not supported)."""
     ecr_tf = api_shared_ecs_runner_dir / "ecr.tf"
     content = ecr_tf.read_text()
-    assert "scan_on_push = true" in content
+    assert "scan_on_push = false" in content
 
 
 def test_ecr_repository_has_aes256_encryption(api_shared_ecs_runner_dir):
