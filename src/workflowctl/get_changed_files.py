@@ -4,8 +4,8 @@
 This module handles edge cases like force pushes, shallow clones, and
 initial commits to reliably determine which files changed.
 
-Supports per-commit [skip ci] filtering: files from commits with [skip ci]
-in the message are excluded from the output.
+Supports per-commit skip-CI filtering: files from commits with skip markers
+(e.g., [skip ci], [ci skip]) in the message are excluded from the output.
 
 Usage:
     python3 src/workflowctl/workflowctl.py get-changed-files \
