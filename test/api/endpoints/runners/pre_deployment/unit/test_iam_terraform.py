@@ -1,4 +1,15 @@
 """Unit tests for IAM terraform configuration."""
+from pathlib import Path
+
+
+def _extract_sqs_policy_block(iam_file: Path) -> str:
+    """Extract the lambda_runners_handler_sqs policy block from iam.tf."""
+    content = iam_file.read_text()
+    start = content.find('resource "aws_iam_role_policy" "lambda_runners_handler_sqs"')
+    end = content.find('resource "aws_iam_role_policy"', start + 1)
+    if end == -1:
+        end = len(content)
+    return content[start:end]
 
 
 def test_iam_terraform_file_exists(runners_src_path):
@@ -17,15 +28,7 @@ def test_webhook_handler_sqs_policy_exists(runners_src_path):
 
 def test_webhook_handler_sqs_policy_covers_job_queue(runners_src_path):
     """Verify webhook handler IAM policy covers job queue ARN."""
-    iam_file = runners_src_path / "iam.tf"
-    content = iam_file.read_text()
-
-    start = content.find('resource "aws_iam_role_policy" "lambda_runners_handler_sqs"')
-    end = content.find('resource "aws_iam_role_policy"', start + 1)
-    if end == -1:
-        end = len(content)
-    policy_block = content[start:end]
-
+    policy_block = _extract_sqs_policy_block(runners_src_path / "iam.tf")
     assert "aws_sqs_queue.job_queue.arn" in policy_block
 
 
@@ -36,15 +39,7 @@ def test_webhook_handler_sqs_policy_grants_get_queue_attributes_on_job_queue(run
     to publish queue depth metrics. The IAM policy must grant this permission
     in the same statement that covers job_queue.
     """
-    iam_file = runners_src_path / "iam.tf"
-    content = iam_file.read_text()
-
-    start = content.find('resource "aws_iam_role_policy" "lambda_runners_handler_sqs"')
-    end = content.find('resource "aws_iam_role_policy"', start + 1)
-    if end == -1:
-        end = len(content)
-    policy_block = content[start:end]
-
+    policy_block = _extract_sqs_policy_block(runners_src_path / "iam.tf")
     job_queue_statement_start = policy_block.find("aws_sqs_queue.job_queue.arn")
     statement_start = policy_block.rfind("{", 0, job_queue_statement_start)
     statement_end = policy_block.find("}", job_queue_statement_start)

@@ -37,19 +37,33 @@ def aws_region_fixture(shared_config) -> str:
     return shared_config["aws_region"]
 
 
+def _parse_tfvars_line(line: str):
+    """Parse a single line from a terraform.tfvars file, returning (key, value) or None."""
+    line = line.strip()
+    if line and not line.startswith("#"):
+        match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
+        if match:
+            key, value = match.groups()
+            return key, value.strip('"')
+    return None
+
+
+def _parse_tfvars_to_dict(tfvars_path) -> Dict[str, str]:
+    """Parse a terraform.tfvars file into a dictionary."""
+    result: Dict[str, str] = {}
+    with open(tfvars_path, encoding="utf-8") as f:
+        for line in f:
+            parsed = _parse_tfvars_line(line)
+            if parsed:
+                result[parsed[0]] = parsed[1]
+    return result
+
+
 def parse_bootstrap_tfvar(var_name: str) -> str:
     """Parse a variable from bootstrap terraform.tfvars file."""
     tfvars_path = REPO_ROOT / "src" / "bootstrap" / "terraform.tfvars"
-    with open(tfvars_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-                if match:
-                    key, value = match.groups()
-                    if key == var_name:
-                        return value.strip('"')
-    return ""
+    tfvars = _parse_tfvars_to_dict(tfvars_path)
+    return tfvars.get(var_name, "")
 
 
 def _get_runners_locals(shared_config: Dict[str, Any]) -> Dict[str, str]:
@@ -72,14 +86,7 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     # Override with tfvars if it exists (for backward compatibility)
     tfvars_path = RUNNERS_SRC_PATH / "terraform.tfvars"
     if tfvars_path.exists():
-        with open(tfvars_path, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-                    if match:
-                        key, value = match.groups()
-                        result[key] = value.strip('"')
+        result.update(_parse_tfvars_to_dict(tfvars_path))
     # Add computed/derived values
     result['aws_region'] = runners_locals.get(
         'aws_region', shared_config.get('aws_region', '')
@@ -121,15 +128,9 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     result.update(get_runner_labels())
     result['api_version'] = 'v1'
     ecs_runner_tfvars = ECS_RUNNER_SRC_PATH / "terraform.tfvars"
-    with open(ecs_runner_tfvars, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-                if match:
-                    key, value = match.groups()
-                    if key == 'cluster_name':
-                        result['cluster_name'] = value.strip('"')
+    ecs_vars = _parse_tfvars_to_dict(ecs_runner_tfvars)
+    if 'cluster_name' in ecs_vars:
+        result['cluster_name'] = ecs_vars['cluster_name']
     return result
 
 

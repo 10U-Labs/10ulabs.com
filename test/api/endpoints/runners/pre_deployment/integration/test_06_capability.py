@@ -23,6 +23,23 @@ from botocore.exceptions import ClientError
 pytestmark = pytest.mark.layer(6)
 
 
+def _verify_lambda_configuration(lambda_client, outputs, output_key):
+    """Verify we can read a Lambda function configuration from outputs.
+
+    Returns None if skipped, raises on unexpected error.
+    """
+    function_name = outputs.get(output_key)
+    if not function_name:
+        pytest.skip(f"{output_key} output not available")
+    try:
+        response = lambda_client.get_function_configuration(FunctionName=function_name)
+        assert response.get("FunctionName") == function_name
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ResourceNotFoundException":
+            pytest.skip("Function not found - covered by existence test")
+        raise
+
+
 # === SSM Capability ===
 
 
@@ -45,32 +62,10 @@ class TestLambdaCapability:
         self, lambda_client, ec2_runner_outputs
     ):
         """Verify we can read the EC2 runner Lambda configuration."""
-        function_name = ec2_runner_outputs.get("lambda_function_name")
-        if not function_name:
-            pytest.skip("lambda_function_name output not available")
-        try:
-            response = lambda_client.get_function_configuration(
-                FunctionName=function_name
-            )
-            assert response.get("FunctionName") == function_name
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                pytest.skip("Function not found - covered by existence test")
-            raise
+        _verify_lambda_configuration(lambda_client, ec2_runner_outputs, "lambda_function_name")
 
     def test_02_can_get_ecs_runner_lambda_configuration(
         self, lambda_client, ecs_runner_outputs
     ):
         """Verify we can read the ECS runner Lambda configuration."""
-        function_name = ecs_runner_outputs.get("lambda_function_name")
-        if not function_name:
-            pytest.skip("lambda_function_name output not available")
-        try:
-            response = lambda_client.get_function_configuration(
-                FunctionName=function_name
-            )
-            assert response.get("FunctionName") == function_name
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                pytest.skip("Function not found - covered by existence test")
-            raise
+        _verify_lambda_configuration(lambda_client, ecs_runner_outputs, "lambda_function_name")

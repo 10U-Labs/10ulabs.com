@@ -3,6 +3,7 @@
 Five-layer model: Existence, Configuration, Capability.
 """
 import os
+from contextlib import contextmanager
 from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
@@ -13,6 +14,34 @@ from .conftest import (
     create_mock_lambda_list_mappings_error,
     create_mock_lambda_with_disabled_mappings,
 )
+
+
+CB_ENV = {'WEBHOOK_FUNCTION_NAME': 'test-function', 'STATE_TABLE_NAME': 'test-table'}
+
+
+@contextmanager
+def _patched_cb_handler(mock_dynamodb, mock_lambda):
+    """Context manager for patching circuit breaker handler dependencies."""
+    with patch.dict(os.environ, CB_ENV):
+        with patch('boto3.client') as mock_boto_client:
+            mock_boto_client.side_effect = lambda svc: (
+                mock_dynamodb if svc == 'dynamodb' else mock_lambda
+            )
+            yield
+
+
+def _invoke_handler(circuit_breaker_reset, event, context, mock_dynamodb, mock_lambda):
+    """Invoke handler with patched dependencies."""
+    with _patched_cb_handler(mock_dynamodb, mock_lambda):
+        return circuit_breaker_reset.lambda_handler(event, context)
+
+
+def _create_post_reset_mocks():
+    """Create mock clients for POST reset handler tests."""
+    mock_lambda = MagicMock()
+    mock_lambda.list_event_source_mappings.return_value = {'EventSourceMappings': []}
+    mock_dynamodb = MagicMock()
+    return mock_dynamodb, mock_lambda
 
 
 class TestGetCircuitBreakerStatus:
@@ -243,15 +272,9 @@ class TestLambdaHandlerGetStatus:
         """Test lambda handler returns 200 when circuit breaker is healthy."""
         event = {'httpMethod': 'GET', 'path': '/v1/runners/circuit-breaker'}
         mock_dynamodb, mock_lambda = cb_status_mock_factory(db_state='closed')
-        with patch.dict(os.environ, {
-            'WEBHOOK_FUNCTION_NAME': 'test-function',
-            'STATE_TABLE_NAME': 'test-table'
-        }):
-            with patch('boto3.client') as mock_boto_client:
-                mock_boto_client.side_effect = lambda svc: (
-                    mock_dynamodb if svc == 'dynamodb' else mock_lambda
-                )
-                response = circuit_breaker_reset.lambda_handler(event, lambda_context)
+        response = _invoke_handler(
+            circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
+        )
         assert_response_status(response, 200)
 
     def test_02_returns_503_when_unhealthy(
@@ -262,15 +285,9 @@ class TestLambdaHandlerGetStatus:
         mock_dynamodb, mock_lambda = cb_status_mock_factory(
             db_state='open', sqs_state='Disabled', concurrency=0
         )
-        with patch.dict(os.environ, {
-            'WEBHOOK_FUNCTION_NAME': 'test-function',
-            'STATE_TABLE_NAME': 'test-table'
-        }):
-            with patch('boto3.client') as mock_boto_client:
-                mock_boto_client.side_effect = lambda svc: (
-                    mock_dynamodb if svc == 'dynamodb' else mock_lambda
-                )
-                response = circuit_breaker_reset.lambda_handler(event, lambda_context)
+        response = _invoke_handler(
+            circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
+        )
         assert_response_status(response, 503)
 
     def test_03_includes_cors_headers(
@@ -279,15 +296,9 @@ class TestLambdaHandlerGetStatus:
         """Test lambda handler includes CORS headers."""
         event = {'httpMethod': 'GET', 'path': '/v1/runners/circuit-breaker'}
         mock_dynamodb, mock_lambda = cb_status_mock_factory(db_state='closed')
-        with patch.dict(os.environ, {
-            'WEBHOOK_FUNCTION_NAME': 'test-function',
-            'STATE_TABLE_NAME': 'test-table'
-        }):
-            with patch('boto3.client') as mock_boto_client:
-                mock_boto_client.side_effect = lambda svc: (
-                    mock_dynamodb if svc == 'dynamodb' else mock_lambda
-                )
-                response = circuit_breaker_reset.lambda_handler(event, lambda_context)
+        response = _invoke_handler(
+            circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
+        )
         assert response['headers']['Access-Control-Allow-Origin'] == '*'
 
 
@@ -299,60 +310,30 @@ class TestLambdaHandlerPostReset:
     ):
         """Test lambda handler returns 200 on successful reset."""
         event = {'httpMethod': 'POST', 'path': '/v1/runners/circuit-breaker/reset'}
-        with patch.dict(os.environ, {
-            'WEBHOOK_FUNCTION_NAME': 'test-function',
-            'STATE_TABLE_NAME': 'test-table'
-        }):
-            with patch('boto3.client') as mock_boto_client:
-                mock_lambda = MagicMock()
-                mock_lambda.list_event_source_mappings.return_value = {
-                    'EventSourceMappings': []
-                }
-                mock_dynamodb = MagicMock()
-                mock_boto_client.side_effect = lambda svc: (
-                    mock_dynamodb if svc == 'dynamodb' else mock_lambda
-                )
-                response = circuit_breaker_reset.lambda_handler(event, lambda_context)
+        mock_dynamodb, mock_lambda = _create_post_reset_mocks()
+        response = _invoke_handler(
+            circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
+        )
         assert_response_status(response, 200)
 
     def test_02_returns_success_true(self, circuit_breaker_reset, lambda_context):
         """Test lambda handler returns success true on reset."""
         event = {'httpMethod': 'POST', 'path': '/v1/runners/circuit-breaker/reset'}
-        with patch.dict(os.environ, {
-            'WEBHOOK_FUNCTION_NAME': 'test-function',
-            'STATE_TABLE_NAME': 'test-table'
-        }):
-            with patch('boto3.client') as mock_boto_client:
-                mock_lambda = MagicMock()
-                mock_lambda.list_event_source_mappings.return_value = {
-                    'EventSourceMappings': []
-                }
-                mock_dynamodb = MagicMock()
-                mock_boto_client.side_effect = lambda svc: (
-                    mock_dynamodb if svc == 'dynamodb' else mock_lambda
-                )
-                response = circuit_breaker_reset.lambda_handler(event, lambda_context)
-                body = parse_response_body(response)
+        mock_dynamodb, mock_lambda = _create_post_reset_mocks()
+        response = _invoke_handler(
+            circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
+        )
+        body = parse_response_body(response)
         assert body['success'] is True
 
     def test_03_includes_details(self, circuit_breaker_reset, lambda_context):
         """Test lambda handler includes details in reset response."""
         event = {'httpMethod': 'POST', 'path': '/v1/runners/circuit-breaker/reset'}
-        with patch.dict(os.environ, {
-            'WEBHOOK_FUNCTION_NAME': 'test-function',
-            'STATE_TABLE_NAME': 'test-table'
-        }):
-            with patch('boto3.client') as mock_boto_client:
-                mock_lambda = MagicMock()
-                mock_lambda.list_event_source_mappings.return_value = {
-                    'EventSourceMappings': []
-                }
-                mock_dynamodb = MagicMock()
-                mock_boto_client.side_effect = lambda svc: (
-                    mock_dynamodb if svc == 'dynamodb' else mock_lambda
-                )
-                response = circuit_breaker_reset.lambda_handler(event, lambda_context)
-                body = parse_response_body(response)
+        mock_dynamodb, mock_lambda = _create_post_reset_mocks()
+        response = _invoke_handler(
+            circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
+        )
+        body = parse_response_body(response)
         assert 'details' in body
 
     def test_04_returns_500_on_partial_failure(
@@ -360,20 +341,14 @@ class TestLambdaHandlerPostReset:
     ):
         """Test lambda handler returns 500 on partial failure."""
         event = {'httpMethod': 'POST', 'path': '/v1/runners/circuit-breaker/reset'}
-        with patch.dict(os.environ, {
-            'WEBHOOK_FUNCTION_NAME': 'test-function',
-            'STATE_TABLE_NAME': 'test-table'
-        }):
-            with patch('boto3.client') as mock_boto_client:
-                mock_lambda = MagicMock()
-                mock_lambda.list_event_source_mappings.side_effect = ClientError(
-                    {'Error': {'Code': 'ServiceUnavailable'}}, 'ListEventSourceMappings'
-                )
-                mock_dynamodb = MagicMock()
-                mock_boto_client.side_effect = lambda svc: (
-                    mock_dynamodb if svc == 'dynamodb' else mock_lambda
-                )
-                response = circuit_breaker_reset.lambda_handler(event, lambda_context)
+        mock_dynamodb = MagicMock()
+        mock_lambda = MagicMock()
+        mock_lambda.list_event_source_mappings.side_effect = ClientError(
+            {'Error': {'Code': 'ServiceUnavailable'}}, 'ListEventSourceMappings'
+        )
+        response = _invoke_handler(
+            circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
+        )
         assert_response_status(response, 500)
 
 

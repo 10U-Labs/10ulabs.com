@@ -11,6 +11,30 @@ from .conftest import (
 TEST_HEADERS = {"x-test-mode": "true"}
 
 
+def _create_workflow_job_payload(action="queued", job_id=123, labels=None, full_name="x/y"):
+    """Create a standard workflow job webhook payload."""
+    return {
+        "action": action,
+        "workflow_job": {"id": job_id, "labels": labels or [], "status": action},
+        "repository": {"full_name": full_name},
+    }
+
+
+def _create_workflow_job_headers(with_signature=False):
+    """Create headers for workflow job webhook request."""
+    headers = {"x-github-event": "workflow_job", "x-test-mode": "true"}
+    if with_signature:
+        headers["x-hub-signature-256"] = "sha256=invalid"
+    return headers
+
+
+def _post_webhook(api_url, payload, headers):
+    """Make a POST request to the webhook endpoint."""
+    return requests.post(
+        f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10
+    )
+
+
 def test_v1_runners_health_get_requires_auth(api_url):
     """Verify that health endpoint requires authentication."""
     skip_if_endpoint_not_deployed(api_url, "/v1/runners/health")
@@ -58,15 +82,9 @@ def test_v1_runners_post_rejects_missing_github_event_header(api_url):
 def test_v1_runners_post_ignores_missing_signature(api_url):
     """Verify that webhook ignores requests without signature."""
     skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
-    headers = {"x-github-event": "workflow_job", "x-test-mode": "true"}
-    payload = {
-        "action": "queued",
-        "workflow_job": {"id": 123, "labels": []},
-        "repository": {"full_name": "x/y"},
-    }
-    response = requests.post(
-        f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10
-    )
+    headers = _create_workflow_job_headers(with_signature=False)
+    payload = _create_workflow_job_payload()
+    response = _post_webhook(api_url, payload, headers)
     assert response.status_code == 200
 
 
@@ -78,19 +96,9 @@ def test_v1_runners_post_accepts_request_to_sqs(api_url):
     returns 200 to accept the request into the queue.
     """
     skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
-    headers = {
-        "x-github-event": "workflow_job",
-        "x-hub-signature-256": "sha256=invalid",
-        "x-test-mode": "true",
-    }
-    payload = {
-        "action": "queued",
-        "workflow_job": {"id": 123, "labels": []},
-        "repository": {"full_name": "x/y"},
-    }
-    response = requests.post(
-        f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10
-    )
+    headers = _create_workflow_job_headers(with_signature=True)
+    payload = _create_workflow_job_payload()
+    response = _post_webhook(api_url, payload, headers)
     # API Gateway → SQS returns 200 (accepted into queue)
     # Signature validation happens asynchronously in Lambda
     assert response.status_code == 200
@@ -99,44 +107,20 @@ def test_v1_runners_post_accepts_request_to_sqs(api_url):
 def test_workflow_job_completed_action_returns_200(api_url):
     """Verify that completed workflow job returns 200."""
     skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
-    headers = {
-        "x-github-event": "workflow_job",
-        "x-hub-signature-256": "sha256=invalid",
-        "x-test-mode": "true",
-    }
-    payload = {
-        "action": "completed",
-        "workflow_job": {
-            "id": 123,
-            "labels": ["ubuntu-latest"],
-            "status": "completed",
-        },
-        "repository": {"full_name": "test/repo"},
-    }
-    response = requests.post(
-        f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10
+    headers = _create_workflow_job_headers(with_signature=True)
+    payload = _create_workflow_job_payload(
+        action="completed", labels=["ubuntu-latest"], full_name="test/repo"
     )
+    response = _post_webhook(api_url, payload, headers)
     assert response.status_code in [200, 401]
 
 
 def test_workflow_job_without_self_hosted_labels_returns_200(api_url):
     """Verify that workflow job without self-hosted labels returns 200."""
     skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
-    headers = {
-        "x-github-event": "workflow_job",
-        "x-hub-signature-256": "sha256=invalid",
-        "x-test-mode": "true",
-    }
-    payload = {
-        "action": "queued",
-        "workflow_job": {
-            "id": 456,
-            "labels": ["ubuntu-latest"],
-            "status": "queued",
-        },
-        "repository": {"full_name": "test/repo"},
-    }
-    response = requests.post(
-        f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10
+    headers = _create_workflow_job_headers(with_signature=True)
+    payload = _create_workflow_job_payload(
+        job_id=456, labels=["ubuntu-latest"], full_name="test/repo"
     )
+    response = _post_webhook(api_url, payload, headers)
     assert response.status_code in [200, 401]
