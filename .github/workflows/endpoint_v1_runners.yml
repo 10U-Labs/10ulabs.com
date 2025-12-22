@@ -143,6 +143,11 @@ jobs:
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ src/api/endpoints/runners/lambdas/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py test/api/endpoints/runners/
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
