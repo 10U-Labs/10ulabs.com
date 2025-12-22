@@ -3,7 +3,7 @@ import importlib.util
 import json
 from types import ModuleType
 from typing import Any, Dict
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -103,7 +103,7 @@ def create_mock_client_factory(ecs_mock=None, ssm_mock=None, ecr_mock=None):
             return ssm_mock
         if service_name == 'ecr' and ecr_mock is not None:
             return ecr_mock
-        return Mock()
+        return MagicMock()
     return mock_client
 
 
@@ -124,20 +124,20 @@ def create_fargate_runner_env(use_spot=None):
 
 def create_mock_ssm_with_token(token_value='test-token'):
     """Create a mock SSM client that returns the given token."""
-    mock_ssm = Mock()
+    mock_ssm = MagicMock()
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': token_value}}
     return mock_ssm
 
 
 def create_mock_ecs_with_run_task(task_arn='test-arn'):
     """Create a mock ECS client that returns success from run_task."""
-    mock_ecs = Mock()
+    mock_ecs = MagicMock()
     mock_ecs.run_task.return_value = {'tasks': [{'taskArn': task_arn}]}
     return mock_ecs
 
 
 def create_mock_ecs_for_status(task_arns=None):
     """Create a mock ECS client for status checks."""
-    mock_ecs = Mock()
+    mock_ecs = MagicMock()
     mock_ecs.list_tasks.return_value = {'taskArns': task_arns or []}
     return mock_ecs
