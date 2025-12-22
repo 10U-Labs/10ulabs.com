@@ -13,6 +13,7 @@ from .conftest import (
     assert_response_status,
     create_mock_lambda_list_mappings_error,
     create_mock_lambda_with_disabled_mappings,
+    circuit_breaker_utils,
 )
 
 
@@ -133,46 +134,46 @@ def create_sqs_mappings_mock(mappings=None):
     return mock_lam
 
 
-class TestEnableSqsEventSource:
-    """Tests for enable_sqs_event_source function."""
+class TestEnableEventSourceMappings:
+    """Tests for enable_event_source_mappings (from common module, used by reset)."""
 
-    def test_01_lists_event_source_mappings(self, circuit_breaker_reset):
-        """Test enable SQS event source lists mappings."""
+    def test_01_lists_event_source_mappings(self):
+        """Test enable event source mappings lists mappings."""
         mock_lam = create_sqs_mappings_mock([])
-        with patch('boto3.client', return_value=mock_lam):
-            circuit_breaker_reset.enable_sqs_event_source('test-function')
+        with patch.object(circuit_breaker_utils, 'get_lambda_client', return_value=mock_lam):
+            circuit_breaker_utils.enable_event_source_mappings('test-function')
         assert mock_lam.list_event_source_mappings.called
 
-    def test_02_enables_disabled_mappings(self, circuit_breaker_reset):
-        """Test enable SQS event source enables disabled mappings."""
-        with patch('boto3.client') as mock_boto:
-            mock_boto.return_value = create_mock_lambda_with_disabled_mappings()
-            circuit_breaker_reset.enable_sqs_event_source('test-function')
-        assert mock_boto.return_value.update_event_source_mapping.called
+    def test_02_enables_disabled_mappings(self):
+        """Test enable event source mappings enables disabled mappings."""
+        mock_lam = create_mock_lambda_with_disabled_mappings()
+        with patch.object(circuit_breaker_utils, 'get_lambda_client', return_value=mock_lam):
+            circuit_breaker_utils.enable_event_source_mappings('test-function')
+        assert mock_lam.update_event_source_mapping.called
 
-    def test_03_counts_enabled_mappings(self, circuit_breaker_reset):
-        """Test enable SQS event source counts enabled mappings."""
+    def test_03_counts_enabled_mappings(self):
+        """Test enable event source mappings counts enabled mappings."""
         mappings = [
             {'UUID': 'map-1', 'State': 'Disabled'},
-            {'UUID': 'map-2', 'State': 'Disabling'}
+            {'UUID': 'map-2', 'State': 'Disabled'}
         ]
         mock_lam = create_sqs_mappings_mock(mappings)
-        with patch('boto3.client', return_value=mock_lam):
-            result = circuit_breaker_reset.enable_sqs_event_source('test-function')
+        with patch.object(circuit_breaker_utils, 'get_lambda_client', return_value=mock_lam):
+            result = circuit_breaker_utils.enable_event_source_mappings('test-function')
         assert result['enabled_count'] == 2
 
-    def test_04_handles_no_mappings(self, circuit_breaker_reset):
-        """Test enable SQS event source handles no mappings."""
+    def test_04_handles_no_mappings(self):
+        """Test enable event source mappings handles no mappings."""
         mock_lam = create_sqs_mappings_mock([])
-        with patch('boto3.client', return_value=mock_lam):
-            result = circuit_breaker_reset.enable_sqs_event_source('test-function')
+        with patch.object(circuit_breaker_utils, 'get_lambda_client', return_value=mock_lam):
+            result = circuit_breaker_utils.enable_event_source_mappings('test-function')
         assert result['enabled_count'] == 0
 
-    def test_05_handles_api_error(self, circuit_breaker_reset):
-        """Test enable SQS event source handles API error."""
-        with patch('boto3.client') as mock_boto:
-            mock_boto.return_value = create_mock_lambda_list_mappings_error()
-            result = circuit_breaker_reset.enable_sqs_event_source('test-function')
+    def test_05_handles_api_error(self):
+        """Test enable event source mappings handles API error."""
+        mock_lam = create_mock_lambda_list_mappings_error()
+        with patch.object(circuit_breaker_utils, 'get_lambda_client', return_value=mock_lam):
+            result = circuit_breaker_utils.enable_event_source_mappings('test-function')
         assert result['success'] is False
 
 
@@ -181,17 +182,15 @@ class TestRemoveLambdaReservedConcurrency:
 
     def test_01_deletes_concurrency(self, circuit_breaker_reset):
         """Test remove lambda reserved concurrency deletes concurrency."""
-        with patch('boto3.client') as mock_boto_client:
-            mock_lambda = MagicMock()
-            mock_boto_client.return_value = mock_lambda
+        mock_lambda = MagicMock()
+        with patch.object(circuit_breaker_reset, 'get_lambda_client', return_value=mock_lambda):
             circuit_breaker_reset.remove_lambda_reserved_concurrency('test-function')
         assert mock_lambda.delete_function_concurrency.called
 
     def test_02_returns_success(self, circuit_breaker_reset):
         """Test remove lambda reserved concurrency returns success."""
-        with patch('boto3.client') as mock_boto_client:
-            mock_lambda = MagicMock()
-            mock_boto_client.return_value = mock_lambda
+        mock_lambda = MagicMock()
+        with patch.object(circuit_breaker_reset, 'get_lambda_client', return_value=mock_lambda):
             result = circuit_breaker_reset.remove_lambda_reserved_concurrency(
                 'test-function'
             )
@@ -199,13 +198,12 @@ class TestRemoveLambdaReservedConcurrency:
 
     def test_03_handles_not_found(self, circuit_breaker_reset):
         """Test remove lambda reserved concurrency handles not found."""
-        with patch('boto3.client') as mock_boto_client:
-            mock_lambda = MagicMock()
-            mock_lambda.exceptions.ResourceNotFoundException = Exception
-            mock_lambda.delete_function_concurrency.side_effect = (
-                mock_lambda.exceptions.ResourceNotFoundException
-            )
-            mock_boto_client.return_value = mock_lambda
+        mock_lambda = MagicMock()
+        mock_lambda.exceptions.ResourceNotFoundException = Exception
+        mock_lambda.delete_function_concurrency.side_effect = (
+            mock_lambda.exceptions.ResourceNotFoundException
+        )
+        with patch.object(circuit_breaker_reset, 'get_lambda_client', return_value=mock_lambda):
             result = circuit_breaker_reset.remove_lambda_reserved_concurrency(
                 'test-function'
             )
@@ -213,15 +211,14 @@ class TestRemoveLambdaReservedConcurrency:
 
     def test_04_handles_api_error(self, circuit_breaker_reset):
         """Test remove lambda reserved concurrency handles API error."""
-        with patch('boto3.client') as mock_boto_client:
-            mock_lambda = MagicMock()
-            mock_lambda.exceptions.ResourceNotFoundException = type(
-                'ResourceNotFoundException', (Exception,), {}
-            )
-            mock_lambda.delete_function_concurrency.side_effect = ClientError(
-                {'Error': {'Code': 'ServiceUnavailable'}}, 'DeleteFunctionConcurrency'
-            )
-            mock_boto_client.return_value = mock_lambda
+        mock_lambda = MagicMock()
+        mock_lambda.exceptions.ResourceNotFoundException = type(
+            'ResourceNotFoundException', (Exception,), {}
+        )
+        mock_lambda.delete_function_concurrency.side_effect = ClientError(
+            {'Error': {'Code': 'ServiceUnavailable'}}, 'DeleteFunctionConcurrency'
+        )
+        with patch.object(circuit_breaker_reset, 'get_lambda_client', return_value=mock_lambda):
             result = circuit_breaker_reset.remove_lambda_reserved_concurrency(
                 'test-function'
             )

@@ -12,7 +12,7 @@ from botocore.exceptions import ClientError
 
 from common.aws_clients import get_ssm_client
 from common.cloudwatch import publish_metric
-from common.lambda_utils import get_sqs_records, empty_records_response
+from common.lambda_utils import get_sqs_records, empty_records_response, parse_error_response
 from common.runner_labels import get_runner_type_from_labels
 
 logger = logging.getLogger(__name__)
@@ -317,33 +317,24 @@ def _handle_sqs_message(message: dict[str, Any]) -> dict[str, Any]:
         )
         return {"success": False, "error": result.get("error")}
     except (json.JSONDecodeError, KeyError) as err:
-        logger.error("Failed to parse SQS message: %s", str(err))
-        return {"success": False, "error": f"Invalid message format: {err}"}
+        return parse_error_response(err)
 
 
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
-    """Lambda handler for runner starter.
+    """Process queued workflow jobs to start runners.
 
-    Args:
-        event: Lambda event with SQS records
-        _context: Lambda context (unused)
-
-    Returns:
-        Response dictionary with status
-
-    Raises:
-        RuntimeError: If any job messages fail
+    Receives SQS messages containing GitHub workflow job events and provisions
+    the appropriate runner infrastructure (ECS task or EC2 instance).
     """
-    start_time = time.time()
-    records = get_sqs_records(event)
-    if records is None:
+    handler_start = time.time()
+    sqs_records = get_sqs_records(event)
+    if not sqs_records:
         return empty_records_response()
 
-    logger.info("Processing %d job(s) from SQS", len(records))
+    logger.info("Processing %d job(s) from SQS", len(sqs_records))
+    results = [_handle_sqs_message(record) for record in sqs_records]
 
-    results = [_handle_sqs_message(record) for record in records]
-
-    elapsed_ms = (time.time() - start_time) * 1000
+    elapsed_ms = (time.time() - handler_start) * 1000
     publish_metric(METRICS_NAMESPACE, "ProcessingTime", elapsed_ms, "Milliseconds")
 
     if not all(r.get("success") for r in results):
@@ -351,5 +342,5 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
     return {
         "statusCode": 200,
-        "body": json.dumps({"message": "Processed", "count": len(records)}),
+        "body": json.dumps({"message": "Processed", "count": len(sqs_records)}),
     }

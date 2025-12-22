@@ -56,6 +56,7 @@ __all__ = [
     'create_mock_lambda_delete_concurrency_error',
     'reset_module_state',
     'create_mock_dynamodb_for_reset',
+    'circuit_breaker_utils',
 ]
 
 
@@ -146,6 +147,23 @@ def load_lambda_module(filename: str, module_name: str) -> ModuleType:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def load_common_module(filename: str, module_name: str) -> ModuleType:
+    """Load a common module from lambdas/common directory for testing."""
+    common_path = RUNNERS_SRC_PATH / "lambdas" / "common" / filename
+    spec = importlib.util.spec_from_file_location(module_name, common_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load {module_name} from {common_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+# Pre-loaded common modules for test imports
+circuit_breaker_utils = load_common_module(
+    "circuit_breaker_utils.py", "circuit_breaker_utils"
+)
 
 
 def parse_lambda_response_payload(response: Any) -> Any:

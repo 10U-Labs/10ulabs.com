@@ -30,37 +30,34 @@ from typing import Any, Dict, List, Optional
 import json
 
 
+_CONFIG_FILENAME = "runners.json"
+
+
 def _find_config_file() -> Path:
-    """Find the runners.json config file."""
-    # Try relative to this file (lib/python/runner_labels/__init__.py)
-    module_dir = Path(__file__).parent
-    config_path = module_dir.parent.parent.parent / "etc" / "runners.json"
-    if config_path.exists():
-        return config_path
+    """Locate runners.json configuration file for library usage."""
+    # Library path: relative to this module (lib/python/runner_labels -> etc/)
+    lib_config = Path(__file__).parent.parent.parent.parent / "etc" / _CONFIG_FILENAME
+    if lib_config.exists():
+        return lib_config
 
-    # Try from ETC_PATH environment variable (for Lambda deployment)
-    etc_path = os.environ.get("ETC_PATH")
-    if etc_path:
-        config_path = Path(etc_path) / "runners.json"
-        if config_path.exists():
-            return config_path
+    # Environment override for deployment scenarios
+    if etc_env := os.environ.get("ETC_PATH"):
+        env_config = Path(etc_env) / _CONFIG_FILENAME
+        if env_config.exists():
+            return env_config
 
-    # Try current working directory
-    config_path = Path.cwd() / "etc" / "runners.json"
-    if config_path.exists():
-        return config_path
+    # Working directory fallback
+    cwd_config = Path.cwd() / "etc" / _CONFIG_FILENAME
+    if cwd_config.exists():
+        return cwd_config
 
-    raise FileNotFoundError(
-        "Could not find etc/runners.json. "
-        "Set ETC_PATH environment variable or run from repo root."
-    )
+    raise FileNotFoundError(f"Cannot locate etc/{_CONFIG_FILENAME}")
 
 
 def _load_config() -> Dict[str, Any]:
-    """Load configuration from etc/runners.json."""
-    config_path = _find_config_file()
-    with open(config_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    """Parse runners.json configuration."""
+    with open(_find_config_file(), "r", encoding="utf-8") as config_file:
+        return json.load(config_file)
 
 
 # Load configuration from JSON (single source of truth)

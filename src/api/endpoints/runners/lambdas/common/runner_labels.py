@@ -15,30 +15,32 @@ class LabelValidationError(Exception):
     """Error validating runner labels."""
 
 
+def _get_config_search_paths() -> list[Path]:
+    """Get ordered list of paths to search for runners.json config."""
+    paths: list[Path] = []
+
+    # Lambda deployment: ETC_PATH environment variable
+    if env_etc := os.environ.get("ETC_PATH"):
+        paths.append(Path(env_etc) / "runners.json")
+
+    # Lambda deployment: bundled in common/etc/
+    paths.append(Path(__file__).parent / "etc" / "runners.json")
+
+    # Local development: repo root structure
+    repo_root = Path(__file__).parent.parent.parent.parent.parent.parent.parent
+    paths.append(repo_root / "etc" / "runners.json")
+
+    # Fallback: current working directory
+    paths.append(Path.cwd() / "etc" / "runners.json")
+
+    return paths
+
+
 def _find_config_file() -> Path:
     """Find the runners.json configuration file."""
-    # Try ETC_PATH environment variable
-    etc_path = os.environ.get("ETC_PATH")
-    if etc_path:
-        config_path = Path(etc_path) / "runners.json"
+    for config_path in _get_config_search_paths():
         if config_path.exists():
             return config_path
-
-    # Try relative to this file (Lambda deployment: bundled in common/etc/)
-    layer_path = Path(__file__).parent / "etc" / "runners.json"
-    if layer_path.exists():
-        return layer_path
-
-    # Try repo root structure (local development)
-    repo_path = Path(__file__).parent.parent.parent.parent.parent.parent.parent
-    repo_config = repo_path / "etc" / "runners.json"
-    if repo_config.exists():
-        return repo_config
-
-    # Try current working directory
-    cwd_path = Path.cwd() / "etc" / "runners.json"
-    if cwd_path.exists():
-        return cwd_path
 
     raise FileNotFoundError(
         "Could not find etc/runners.json. "

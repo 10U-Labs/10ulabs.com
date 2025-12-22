@@ -48,3 +48,16 @@ def count_results(results: list[dict[str, Any]]) -> tuple[int, int]:
     success_count = sum(1 for r in results if r.get("success"))
     fail_count = sum(1 for r in results if not r.get("success"))
     return success_count, fail_count
+
+
+def parse_error_response(err: Exception) -> dict[str, Any]:
+    """Create standardized error response for message parsing failures.
+
+    Args:
+        err: The exception that occurred during parsing
+
+    Returns:
+        Error response dictionary
+    """
+    logger.error("Failed to parse message: %s", str(err))
+    return {"success": False, "error": f"Parse error: {err}"}

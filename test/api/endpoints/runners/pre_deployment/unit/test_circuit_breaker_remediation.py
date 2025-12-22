@@ -1,9 +1,6 @@
 """Unit tests for test circuit breaker remediation."""
-import importlib.util
 import os
 from contextlib import contextmanager
-from pathlib import Path
-from types import ModuleType
 from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
@@ -17,23 +14,8 @@ from .conftest import (
     create_mock_lambda_with_mappings,
     create_mock_lambda_with_disabled_mappings,
     create_mock_lambda_delete_concurrency_error,
+    circuit_breaker_utils,
 )
-
-
-def _load_circuit_breaker_utils() -> ModuleType:
-    """Dynamically load circuit_breaker_utils module to avoid import path issues."""
-    lambdas_dir = Path(__file__).parent.parent.parent.parent.parent.parent.parent / \
-        "src" / "api" / "endpoints" / "runners" / "lambdas"
-    utils_path = lambdas_dir / "common" / "circuit_breaker_utils.py"
-    spec = importlib.util.spec_from_file_location("circuit_breaker_utils", utils_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load circuit_breaker_utils from {utils_path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-circuit_breaker_utils = _load_circuit_breaker_utils()
 
 
 def _create_alarm_event(state='ALARM', reason='Threshold exceeded'):

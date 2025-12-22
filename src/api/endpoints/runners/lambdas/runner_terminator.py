@@ -18,7 +18,12 @@ from common.ecs_utils import (
     stop_ecs_task,
     get_cluster_from_env,
 )
-from common.lambda_utils import get_sqs_records, empty_records_response, count_results
+from common.lambda_utils import (
+    get_sqs_records,
+    empty_records_response,
+    count_results,
+    parse_error_response,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -226,8 +231,7 @@ def _handle_cancellation_message(message: dict[str, Any]) -> dict[str, Any]:
         logger.error("Failed to process cancellation for job %s", job_id)
         return {"success": False, "error": "Failed to terminate runner"}
     except (json.JSONDecodeError, KeyError) as err:
-        logger.error("Failed to parse cancellation message: %s", str(err))
-        return {"success": False, "error": f"Invalid message format: {err}"}
+        return parse_error_response(err)
 
 
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:

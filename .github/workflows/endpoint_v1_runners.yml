@@ -107,13 +107,13 @@ jobs:
       - name: Run pylint on source
         run: |
           python3 -m pylint lib/python/ src/api/endpoints/runners/lambdas/ \
-            --fail-under=9.9
+            --fail-under=10.0
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
             lib/python/ test/conftest.py test/api/conftest.py \
             test/api/endpoints/conftest.py test/api/endpoints/runners/ \
-            --fail-under=9.9
+            --fail-under=10.0
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
