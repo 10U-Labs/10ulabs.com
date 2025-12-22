@@ -1,0 +1,114 @@
+---
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+jobs:
+  build:
+    name: Build Simulation
+    needs: lint
+    runs-on: >-
+      ${{
+        (vars.USE_GITHUB_HOSTED == 'true' ||
+         github.event.inputs.github_hosted == 'true' ||
+         contains(github.event.head_commit.message, '[github-hosted]'))
+        && 'ubuntu-latest'
+        || fromJSON(format(
+             '["ec2", "rtl-sim", "spot", "runner-{0}"]',
+             github.run_id))
+      }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Verilator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y verilator
+      - name: Build Verilator Simulation
+        run: make build
+        working-directory: src/rtl
+      - name: Upload Simulation Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: verilator-sim
+          path: src/rtl/tb/verilator/obj_dir/Vsoc_top
+          retention-days: 1
+  lint:
+    name: Lint RTL
+    runs-on: >-
+      ${{
+        (vars.USE_GITHUB_HOSTED == 'true' ||
+         github.event.inputs.github_hosted == 'true' ||
+         contains(github.event.head_commit.message, '[github-hosted]'))
+        && 'ubuntu-latest'
+        || fromJSON(format(
+             '["ec2", "rtl-sim", "spot", "runner-{0}"]',
+             github.run_id))
+      }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Verilator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y verilator
+      - name: Verify RTL Syntax
+        run: make -C src/rtl lint
+  test:
+    name: Run Tests
+    needs: build
+    runs-on: >-
+      ${{
+        (vars.USE_GITHUB_HOSTED == 'true' ||
+         github.event.inputs.github_hosted == 'true' ||
+         contains(github.event.head_commit.message, '[github-hosted]'))
+        && 'ubuntu-latest'
+        || fromJSON(format(
+             '["ec2", "rtl-sim", "spot", "runner-{0}"]',
+             github.run_id))
+      }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install RISC-V Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-riscv64-unknown-elf \
+            binutils-riscv64-unknown-elf
+      - name: Download Simulation Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: verilator-sim
+          path: src/rtl/tb/verilator/obj_dir
+      - name: Make Binary Executable
+        run: chmod +x src/rtl/tb/verilator/obj_dir/Vsoc_top
+      - name: Build Test Programs
+        run: make programs
+        working-directory: src/rtl
+      - name: Run Tests
+        run: make test
+        working-directory: src/rtl
+      - if: failure()
+        name: Upload Waveforms on Failure
+        uses: actions/upload-artifact@v4
+        with:
+          name: waveforms
+          path: src/rtl/tb/verilator/*.fst
+          retention-days: 7
+name: RTL Verilator
+on:
+  pull_request:
+    paths:
+      - 'src/rtl/**'
+  push:
+    paths:
+      - 'src/rtl/**'
+      - '.github/workflows/rtl_verilator.yml'
+  workflow_dispatch:
+    inputs:
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runners'
+        type: boolean
+permissions:
+  contents: read
