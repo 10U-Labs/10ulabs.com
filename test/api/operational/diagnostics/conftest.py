@@ -1,18 +1,28 @@
-"""Pytest fixtures for echo endpoint tests."""
+"""Pytest fixtures for diagnostics endpoint tests."""
 import re
 from typing import Dict
 
+import boto3
 import pytest
 from repo_utils import REPO_ROOT
 
-ECHO_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
+# Use shared layer marker plugin
+pytest_plugins = ['pytest_layers']
+
+DIAGNOSTICS_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
+
+
+@pytest.fixture(scope="module")
+def logs_client(aws_region):
+    """Create a CloudWatch Logs client."""
+    return boto3.client("logs", region_name=aws_region)
 
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture(shared_config) -> Dict[str, str]:
     """Load configuration from terraform.tfvars and shared outputs."""
-    tfvars_path = ECHO_SRC / "terraform.tfvars"
-    result = {}
+    tfvars_path = DIAGNOSTICS_SRC / "terraform.tfvars"
+    result: Dict[str, str] = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()

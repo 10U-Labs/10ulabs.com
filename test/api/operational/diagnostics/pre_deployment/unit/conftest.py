@@ -1,4 +1,4 @@
-"""Pytest fixtures for echo handler pre-deployment unit tests."""
+"""Pytest fixtures for diagnostics handler pre-deployment unit tests."""
 import importlib.util
 import json
 from types import ModuleType
@@ -21,13 +21,13 @@ __all__ = [
     'assert_cors_headers',
 ]
 
-ECHO_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
+DIAGNOSTICS_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
 
 
-def load_echo_handler_module() -> ModuleType:
-    """Load the echo handler module dynamically."""
-    handler_path = ECHO_SRC / "lambda" / "handler.py"
-    spec = importlib.util.spec_from_file_location("echo_handler", handler_path)
+def load_diagnostics_handler_module() -> ModuleType:
+    """Load the diagnostics handler module dynamically."""
+    handler_path = DIAGNOSTICS_SRC / "lambda" / "handler.py"
+    spec = importlib.util.spec_from_file_location("diagnostics_handler", handler_path)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -36,9 +36,15 @@ def load_echo_handler_module() -> ModuleType:
 
 
 @pytest.fixture
+def diagnostics_handler() -> ModuleType:
+    """Load and return the diagnostics handler module."""
+    return load_diagnostics_handler_module()
+
+
+@pytest.fixture
 def echo_handler() -> ModuleType:
-    """Load and return the echo handler module."""
-    return load_echo_handler_module()
+    """Load and return the diagnostics handler module (alias for compatibility)."""
+    return load_diagnostics_handler_module()
 
 
 @pytest.fixture
