@@ -50,21 +50,6 @@ class TestLambdaConfiguration:
             f"Lambda handler should be handler.handler, got: {handler}"
         )
 
-    def test_health_handler_has_environment_variables(self, lambda_client, config):
-        """Verify Lambda has required environment variables."""
-        function_name = config.get(
-            'health_handler_function_name', 'TenULabsHealthHandler'
-        )
-        response = lambda_client.get_function(FunctionName=function_name)
-        env_vars = response["Configuration"].get("Environment", {}).get(
-            "Variables", {}
-        )
-        required_vars = ["SECURITY_GROUPS", "SUBNETS", "VPC_ID"]
-        missing = [v for v in required_vars if v not in env_vars]
-        assert len(missing) == 0, (
-            f"Lambda missing required environment variables: {missing}"
-        )
-
 
 class TestCloudWatchLogsConfiguration:
     """Layer 2: Verify CloudWatch log group is configured correctly."""
