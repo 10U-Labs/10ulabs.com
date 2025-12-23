@@ -35,39 +35,21 @@ def create_contact_event(
     }
 
 
-def test_handle_contact_post_with_valid_data_returns_200(contact_handler, lambda_context):
+def test_handle_contact_post_with_valid_data_returns_200(successful_contact_response):
     """Test that valid contact form submission returns 200."""
-    with patch.object(contact_handler, "get_recaptcha_secret", return_value="secret"):
-        with patch.object(contact_handler, "verify_recaptcha", return_value=True):
-            with patch.object(contact_handler, "send_contact_email", return_value=True):
-                with patch.dict("os.environ", {"CONTACT_EMAIL": "contact@test.com"}):
-                    event = create_contact_event()
-                    response = contact_handler.handler(event, lambda_context)
-                    assert_response_status(response, 200)
+    assert_response_status(successful_contact_response, 200)
 
 
-def test_handle_contact_post_returns_json_content_type(contact_handler, lambda_context):
+def test_handle_contact_post_returns_json_content_type(successful_contact_response):
     """Test that contact POST response has JSON content type."""
-    with patch.object(contact_handler, "get_recaptcha_secret", return_value="secret"):
-        with patch.object(contact_handler, "verify_recaptcha", return_value=True):
-            with patch.object(contact_handler, "send_contact_email", return_value=True):
-                with patch.dict("os.environ", {"CONTACT_EMAIL": "contact@test.com"}):
-                    event = create_contact_event()
-                    response = contact_handler.handler(event, lambda_context)
-                    assert_json_content_type(response)
+    assert_json_content_type(successful_contact_response)
 
 
-def test_handle_contact_post_with_valid_data_returns_success_true(contact_handler, lambda_context):
+def test_handle_contact_post_with_valid_data_returns_success_true(successful_contact_response):
     """Test that valid contact form returns success true in body."""
-    with patch.object(contact_handler, "get_recaptcha_secret", return_value="secret"):
-        with patch.object(contact_handler, "verify_recaptcha", return_value=True):
-            with patch.object(contact_handler, "send_contact_email", return_value=True):
-                with patch.dict("os.environ", {"CONTACT_EMAIL": "contact@test.com"}):
-                    event = create_contact_event()
-                    response = contact_handler.handler(event, lambda_context)
-                    body = parse_response_body(response)
-                    success_is_true = body["success"] is True
-                    assert success_is_true
+    body = parse_response_body(successful_contact_response)
+    success_is_true = body["success"] is True
+    assert success_is_true
 
 
 def test_handle_contact_post_with_missing_recaptcha_token_returns_400(

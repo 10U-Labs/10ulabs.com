@@ -2,6 +2,7 @@
 import importlib.util
 import json
 from types import ModuleType
+from unittest.mock import patch
 
 import pytest
 
@@ -56,3 +57,16 @@ def contact_post_event():
         }),
         'requestContext': {'requestId': 'test-id'}
     }
+
+
+@pytest.fixture
+def successful_contact_response(request):
+    """Return response from a successful contact form submission."""
+    handler = request.getfixturevalue("contact_handler")
+    event = request.getfixturevalue("contact_post_event")
+    ctx = request.getfixturevalue("lambda_context")
+    with patch.object(handler, "get_recaptcha_secret", return_value="secret"):
+        with patch.object(handler, "verify_recaptcha", return_value=True):
+            with patch.object(handler, "send_contact_email", return_value=True):
+                with patch.dict("os.environ", {"CONTACT_EMAIL": "contact@test.com"}):
+                    return handler.handler(event, ctx)
