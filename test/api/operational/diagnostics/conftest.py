@@ -5,7 +5,7 @@ from typing import Dict
 import pytest
 from repo_utils import REPO_ROOT
 
-ECHO_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "echo"
+ECHO_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
 
 
 @pytest.fixture(name="config", scope="module")

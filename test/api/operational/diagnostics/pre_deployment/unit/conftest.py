@@ -21,7 +21,7 @@ __all__ = [
     'assert_cors_headers',
 ]
 
-ECHO_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "echo"
+ECHO_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
 
 
 def load_echo_handler_module() -> ModuleType:
