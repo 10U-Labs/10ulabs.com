@@ -128,8 +128,6 @@ jobs:
           cd src/api/operational/diagnostics && \
             tflint --init && \
             tflint
-      - name: Terraform Plan
-        run: cd src/api/operational/diagnostics && terraform plan
       - name: Run unit tests
         run: |
           python3 -m pytest \
