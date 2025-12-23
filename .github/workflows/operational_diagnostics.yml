@@ -64,6 +64,7 @@ jobs:
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
+            test/api/operational/conftest.py \
             test/api/operational/diagnostics/ \
             --fail-on=C,R,W --fail-under=10.0
       - name: Run mypy on source
@@ -71,6 +72,7 @@ jobs:
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy \
+            test/api/operational/conftest.py \
             test/api/operational/diagnostics/
       - name: Check for duplicate code in source Python files
         run: |
@@ -80,7 +82,7 @@ jobs:
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/operational/diagnostics/
+            test/api/operational/conftest.py test/api/operational/diagnostics/
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
