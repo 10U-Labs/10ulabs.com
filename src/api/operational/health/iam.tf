@@ -22,24 +22,6 @@ resource "aws_iam_role_policy_attachment" "lambda_health_handler_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy" "lambda_health_handler_ec2_describe" {
-  name = "EC2DescribePermissions"
-  role = aws_iam_role.lambda_health_handler.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "ec2:DescribeSecurityGroups",
-        "ec2:DescribeSubnets",
-        "ec2:DescribeVpcs"
-      ]
-      Resource = "*"
-    }]
-  })
-}
-
 resource "aws_iam_role_policy" "lambda_health_handler_kms" {
   name = "KMSDecryptPermissions"
   role = aws_iam_role.lambda_health_handler.id

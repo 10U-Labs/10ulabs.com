@@ -108,13 +108,13 @@
         }
       }
     },
-    "/v1/echo": {
+    "/diagnostics/echo": {
       "post": {
         "summary": "Echo Endpoint",
         "description": "Echoes back the request body",
-        "operationId": "echo",
+        "operationId": "diagnosticsEcho",
         "tags": [
-          "/v1/echo"
+          "/diagnostics"
         ],
         "requestBody": {
           "required": true,
@@ -204,11 +204,11 @@
         }
       },
       "options": {
-        "summary": "CORS preflight for echo endpoint",
+        "summary": "CORS preflight for diagnostics echo endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "echoOptions",
+        "operationId": "diagnosticsEchoOptions",
         "tags": [
-          "/v1/echo"
+          "/diagnostics"
         ],
         "responses": {
           "200": {
@@ -244,163 +244,6 @@
                 "method.response.header.Access-Control-Allow-Origin": "'*'",
                 "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
                 "method.response.header.Access-Control-Allow-Headers": "'Content-Type'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/health/dependencies": {
-      "get": {
-        "summary": "Infrastructure Dependencies Health Check",
-        "description": "Validates that all infrastructure dependencies (security groups, subnets, VPC) exist and are accessible",
-        "operationId": "dependenciesHealth",
-        "tags": [
-          "/health"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "All infrastructure dependencies are valid",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "status",
-                    "message",
-                    "checked_resources"
-                  ],
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "healthy"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "All infrastructure dependencies are valid"
-                    },
-                    "checked_resources": {
-                      "type": "object",
-                      "properties": {
-                        "security_groups": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "subnets": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "vpc": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "One or more infrastructure dependencies are invalid",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "status",
-                    "message",
-                    "errors",
-                    "checked_resources"
-                  ],
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "unhealthy"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "Infrastructure dependencies are invalid"
-                    },
-                    "errors": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "type": {
-                            "type": "string",
-                            "example": "security_group"
-                          },
-                          "details": {
-                            "type": "object"
-                          }
-                        }
-                      }
-                    },
-                    "checked_resources": {
-                      "type": "object"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${HealthHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for health dependencies endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "healthDependenciesOptions",
-        "tags": [
-          "/health"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
               }
             }
           }
@@ -902,260 +745,6 @@
         "operationId": "circuitBreakerResetOptions",
         "tags": [
           "/v1/runners"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/agents": {
-      "post": {
-        "summary": "GitHub Webhook for Agent Events",
-        "description": "Receives GitHub webhook events for agent troubleshooting (API Gateway → SQS direct integration, no Lambda in hot path)",
-        "operationId": "agentWebhook",
-        "tags": [
-          "/v1/agents"
-        ],
-        "x-amazon-apigateway-request-validator": "validate-headers",
-        "parameters": [
-          {
-            "name": "x-github-event",
-            "in": "header",
-            "required": true,
-            "description": "GitHub webhook event type (e.g., workflow_run, check_run)",
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Webhook accepted and queued for processing",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "accepted"
-                    },
-                    "messageId": {
-                      "type": "string",
-                      "description": "SQS message ID for tracking"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Missing required x-github-event header",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "Missing required request parameters: [x-github-event]"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "aws",
-          "httpMethod": "POST",
-          "uri": "${AgentWebhookIngressSqsUri}",
-          "credentials": "${ApiGatewaySqsRoleArn}",
-          "requestParameters": {
-            "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
-          },
-          "requestTemplates": {
-            "application/json": "Action=SendMessage&MessageGroupId=agents&MessageBody=$util.urlEncode($input.body)&MessageAttribute.1.Name=x-github-event&MessageAttribute.1.Value.DataType=String&MessageAttribute.1.Value.StringValue=$util.urlEncode($input.params().header.get('x-github-event'))&MessageAttribute.2.Name=x-hub-signature-256&MessageAttribute.2.Value.DataType=String&MessageAttribute.2.Value.StringValue=$util.urlEncode($input.params().header.get('x-hub-signature-256'))&MessageAttribute.3.Name=x-github-delivery&MessageAttribute.3.Value.DataType=String&MessageAttribute.3.Value.StringValue=$util.urlEncode($input.params().header.get('x-github-delivery'))"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseTemplates": {
-                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.json('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
-              }
-            }
-          }
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for agents endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "agentsOptions",
-        "tags": [
-          "/v1/agents"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/agents/invoke": {
-      "post": {
-        "summary": "Direct Agent Invocation",
-        "description": "Directly invoke an agent for troubleshooting (API Gateway → SQS direct integration)",
-        "operationId": "invokeAgent",
-        "tags": [
-          "/v1/agents"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "repository",
-                  "run_id"
-                ],
-                "properties": {
-                  "repository": {
-                    "type": "string",
-                    "description": "Full repository name (owner/repo)"
-                  },
-                  "run_id": {
-                    "type": "integer",
-                    "description": "GitHub workflow run ID to investigate"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Invocation request accepted and queued for processing",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "accepted"
-                    },
-                    "messageId": {
-                      "type": "string",
-                      "description": "SQS message ID for tracking"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "aws",
-          "httpMethod": "POST",
-          "uri": "${AgentInvokerIngressSqsUri}",
-          "credentials": "${ApiGatewaySqsRoleArn}",
-          "requestParameters": {
-            "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
-          },
-          "requestTemplates": {
-            "application/json": "Action=SendMessage&MessageBody=$util.urlEncode($input.body)"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseTemplates": {
-                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.json('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
-              }
-            }
-          }
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for agents invoke endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "agentsInvokeOptions",
-        "tags": [
-          "/v1/agents"
         ],
         "responses": {
           "200": {
@@ -2953,8 +2542,8 @@
       "description": "Health check endpoints"
     },
     {
-      "name": "/v1/agents",
-      "description": "Agent troubleshooting endpoints"
+      "name": "/diagnostics",
+      "description": "Diagnostics utility endpoints"
     },
     {
       "name": "/v1/contact",
@@ -2963,10 +2552,6 @@
     {
       "name": "/v1/ec2-runner",
       "description": "EC2 runner management endpoints"
-    },
-    {
-      "name": "/v1/echo",
-      "description": "Echo utility endpoint"
     },
     {
       "name": "/v1/ecs-runner",
@@ -2997,16 +2582,15 @@
     {
       "name": "/",
       "tags": [
-        "/health"
+        "/health",
+        "/diagnostics"
       ]
     },
     {
       "name": "/v1/",
       "tags": [
-        "/v1/agents",
         "/v1/contact",
         "/v1/ec2-runner",
-        "/v1/echo",
         "/v1/ecs-runner",
         "/v1/image-for-ec2-runners",
         "/v1/image-for-ecs-runners",

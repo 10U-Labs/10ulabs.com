@@ -25,7 +25,7 @@
   },
   "api_shared_runners": {
     "depends_on": [
-      "operational_health"
+      "operational_diagnostics"
     ],
     "name": "Deploying API Shared Runners Infrastructure",
     "paths": [
@@ -47,7 +47,7 @@
   },
   "endpoint_v1_contact": {
     "depends_on": [
-      "endpoint_v1_echo"
+      "endpoint_v1_runners"
     ],
     "name": "Ensuring /v1/contact API endpoint exists and is properly configured",
     "paths": [
@@ -68,15 +68,15 @@
       "test/api/endpoints/ec2_runner/**"
     ]
   },
-  "endpoint_v1_echo": {
+  "operational_diagnostics": {
     "depends_on": [
-      "endpoint_v1_runners"
+      "operational_health"
     ],
-    "name": "Ensuring /v1/echo API endpoint exists and is properly configured",
+    "name": "Ensuring /diagnostics/echo API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/endpoint_v1_echo.yml",
-      "src/api/endpoints/echo/**",
-      "test/api/endpoints/echo/**"
+      ".github/workflows/operational_diagnostics.yml",
+      "src/api/operational/diagnostics/**",
+      "test/api/operational/diagnostics/**"
     ]
   },
   "endpoint_v1_ecs_runner": {

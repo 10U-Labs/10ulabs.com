@@ -9,6 +9,8 @@ api_backend
     ↓
 operational_health
     ↓
+operational_diagnostics
+    ↓
 api_shared_runners
     ↓
 endpoint_v1_image_for_ec2_runners
@@ -22,8 +24,6 @@ endpoint_v1_image_for_ecs_runners
 endpoint_v1_ecs_runner
     ↓
 endpoint_v1_runners
-    ↓
-endpoint_v1_echo
     ↓
 endpoint_v1_contact
     ↓
