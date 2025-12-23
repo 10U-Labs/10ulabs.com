@@ -6,6 +6,9 @@ Layer marker system and AWS clients inherited from parent conftest.
 import pytest
 
 
+pytest_plugins = ['pytest_layers']
+
+
 @pytest.fixture(scope="module")
 def contact_handler_function_name(shared_config):
     """Get the contact handler Lambda function name."""

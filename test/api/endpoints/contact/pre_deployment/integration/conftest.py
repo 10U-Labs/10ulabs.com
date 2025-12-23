@@ -8,6 +8,9 @@ import pytest
 from botocore.exceptions import ClientError
 
 
+pytest_plugins = ['pytest_layers']
+
+
 @pytest.fixture(scope="module")
 def api_gateway_info(apigateway_client, api_backend_outputs):
     """Get API Gateway info, handling missing/not-found cases gracefully."""
