@@ -178,6 +178,14 @@ def test_ignored_events_archiver_archive_file_exists(runners_src_path):
     assert 'data "archive_file" "ignored_events_archiver"' in content
 
 
+def test_dlq_reprocessor_archive_file_exists(runners_src_path):
+    """Test dlq_reprocessor archive_file data source exists."""
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "dlq_reprocessor"' in content
+
+
 def test_drift_recovery_archive_file_exists(runners_src_path):
     """Test drift_recovery archive_file data source exists."""
     lambda_file = runners_src_path / "lambda.tf"
