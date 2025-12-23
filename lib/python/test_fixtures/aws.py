@@ -78,6 +78,13 @@ def ecr_client(request):
 
 
 @pytest.fixture(scope="session")
+def logs_client(request):
+    """Create a CloudWatch Logs client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("logs", region_name=region)
+
+
+@pytest.fixture(scope="session")
 def caller_identity(request):
     """Get the current caller identity."""
     client = request.getfixturevalue("sts_client")
