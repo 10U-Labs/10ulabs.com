@@ -67,13 +67,14 @@ resource "aws_lambda_function" "runners_handler" {
 
   environment {
     variables = {
-      CANCELLATION_QUEUE_URL   = aws_sqs_queue.cancellation.url
-      GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
-      IDEMPOTENCY_TABLE_NAME   = aws_dynamodb_table.idempotency.name
-      IGNORED_EVENTS_QUEUE_URL = aws_sqs_queue.ignored_events.url
-      JOB_QUEUE_URL            = aws_sqs_queue.job_queue.url
-      WEBHOOK_SECRET_NAME      = aws_ssm_parameter.webhook_secret.name
+      CANCELLATION_QUEUE_URL     = aws_sqs_queue.cancellation.url
+      CIRCUIT_BREAKER_TABLE_NAME = aws_dynamodb_table.circuit_breaker_state.name
+      GITHUB_REPO                = local.github_repo_full
+      GITHUB_TOKEN_SECRET_NAME   = module.shared.ssm_github_pat_name
+      IDEMPOTENCY_TABLE_NAME     = aws_dynamodb_table.idempotency.name
+      IGNORED_EVENTS_QUEUE_URL   = aws_sqs_queue.ignored_events.url
+      JOB_QUEUE_URL              = aws_sqs_queue.job_queue.url
+      WEBHOOK_SECRET_NAME        = aws_ssm_parameter.webhook_secret.name
     }
   }
 

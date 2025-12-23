@@ -59,25 +59,6 @@ class TestVPCConfiguration:
 
 
 # =============================================================================
-# ECR Configuration
-# =============================================================================
-
-
-def test_ecr_repository_has_image_scanning(
-    ecr_repository_info, api_shared_ecs_runner_outputs
-):
-    """Verify the ECR repository has image scanning configured."""
-    if not api_shared_ecs_runner_outputs.get("ecr_repository_name"):
-        pytest.skip("ecr_repository_name output not available")
-    if ecr_repository_info is None:
-        pytest.skip("Repository not found - covered by existence test")
-    # Image scanning is recommended but not strictly required
-    scan_config = ecr_repository_info.get("imageScanningConfiguration", {})
-    if not scan_config.get("scanOnPush"):
-        pytest.skip("Image scanning on push is not enabled (optional)")
-
-
-# =============================================================================
 # Lambda Configuration
 # =============================================================================
 
