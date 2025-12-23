@@ -58,7 +58,9 @@ jobs:
             .github/workflows/operational_diagnostics.yml
       - name: Run pylint on source
         run: |
-          python3 -m pylint src/api/operational/diagnostics/lambda/handler.py \
+          python3 -m pylint \
+            lib/python/ \
+            src/api/operational/diagnostics/lambda/handler.py \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run pylint on tests
@@ -71,7 +73,10 @@ jobs:
             test/api/operational/diagnostics/ \
             --fail-on=C,R,W --fail-under=10.0
       - name: Run mypy on source
-        run: python3 -m mypy src/api/operational/diagnostics/lambda/handler.py
+        run: |
+          python3 -m mypy \
+            lib/python/ \
+            src/api/operational/diagnostics/lambda/handler.py
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy \
