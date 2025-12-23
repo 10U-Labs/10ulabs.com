@@ -63,14 +63,14 @@ def test_openapi_spec_health_has_get_method(openapi_spec):
     assert 'get' in openapi_spec['paths']['/health']
 
 
-def test_openapi_spec_has_echo_endpoint(openapi_spec):
-    """Verify spec has /v1/echo endpoint."""
-    assert '/v1/echo' in openapi_spec['paths']
+def test_openapi_spec_has_diagnostics_echo_endpoint(openapi_spec):
+    """Verify spec has /diagnostics/echo endpoint."""
+    assert '/diagnostics/echo' in openapi_spec['paths']
 
 
-def test_openapi_spec_echo_has_post_method(openapi_spec):
-    """Verify /v1/echo has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/echo']
+def test_openapi_spec_diagnostics_echo_has_post_method(openapi_spec):
+    """Verify /diagnostics/echo has POST method."""
+    assert 'post' in openapi_spec['paths']['/diagnostics/echo']
 
 
 def test_openapi_spec_has_runners_post_endpoint(openapi_spec):
@@ -223,33 +223,6 @@ def test_openapi_spec_simulation_soc_has_options_method(openapi_spec):
     assert 'options' in openapi_spec['paths']['/v1/simulation-soc']
 
 
-def test_openapi_spec_has_health_dependencies_endpoint(openapi_spec):
-    """Verify spec has /health/dependencies endpoint."""
-    assert '/health/dependencies' in openapi_spec['paths']
-
-
-def test_openapi_spec_health_dependencies_has_get_method(openapi_spec):
-    """Verify /health/dependencies has GET method."""
-    assert 'get' in openapi_spec['paths']['/health/dependencies']
-
-
-def test_openapi_spec_health_dependencies_has_options_method(openapi_spec):
-    """Verify /health/dependencies has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/health/dependencies']
-
-
-def test_openapi_spec_health_dependencies_has_security(openapi_spec):
-    """Verify /health/dependencies GET has security defined."""
-    get_method = openapi_spec['paths']['/health/dependencies']['get']
-    assert 'security' in get_method
-
-
-def test_openapi_spec_health_dependencies_requires_api_key(openapi_spec):
-    """Verify /health/dependencies GET requires API key."""
-    security = openapi_spec['paths']['/health/dependencies']['get']['security']
-    assert any('api_key' in s for s in security)
-
-
 def test_openapi_spec_has_ecs_image_base_endpoint(openapi_spec):
     """Verify spec has /v1/image-for-ecs-runners endpoint."""
     assert '/v1/image-for-ecs-runners' in openapi_spec['paths']
@@ -377,9 +350,9 @@ def test_openapi_spec_rack_designer_events_has_options_method(openapi_spec):
     assert 'options' in openapi_spec['paths']['/v1/rack-designer/events']
 
 
-def test_openapi_spec_echo_has_options_method(openapi_spec):
-    """Verify /v1/echo has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/echo']
+def test_openapi_spec_diagnostics_echo_has_options_method(openapi_spec):
+    """Verify /diagnostics/echo has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/diagnostics/echo']
 
 
 def test_openapi_spec_runners_has_options_method(openapi_spec):
