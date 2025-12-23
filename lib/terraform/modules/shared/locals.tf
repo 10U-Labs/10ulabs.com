@@ -28,7 +28,7 @@ locals {
     contact               = "${local.resource_prefix}ContactHandler"
     ec2_runner            = "${local.resource_prefix}EC2RunnerHandler"
     ecs_runner            = "${local.resource_prefix}EcsRunnerHandler"
-    echo                  = "${local.resource_prefix}EchoHandler"
+    echo                  = "${local.resource_prefix}DiagnosticsHandler"
     health                = "${local.resource_prefix}HealthHandler"
     image_for_ec2_runners = "${local.resource_prefix}ImageForEC2RunnersHandler"
     image_for_ecs_runners = "${local.resource_prefix}ImageForEcsRunnersHandler"
