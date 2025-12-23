@@ -1,4 +1,8 @@
-"""Pytest fixtures for contact post-deployment tests."""
+"""Pytest fixtures for contact post-deployment tests.
+
+Provides api_url fixture for e2e tests.
+"""
+
 import pytest
 
 
