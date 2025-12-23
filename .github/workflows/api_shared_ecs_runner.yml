@@ -183,7 +183,7 @@ jobs:
             $TRIGGER_FLAG \
             --workflow api_shared_ecs_runner \
             --repo ${{ github.repository }}
-name: Ensuring API shared infrastructure exists and is properly configured
+name: Ensuring API Shared ECS infrastructure exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
