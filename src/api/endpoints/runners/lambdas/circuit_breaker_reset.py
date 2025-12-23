@@ -100,13 +100,12 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """Handle circuit breaker API requests.
 
     GET  /v1/runners/circuit-breaker - Get status
-    POST /v1/runners/circuit-breaker/reset - Reset circuit breaker
+    POST /v1/runners/circuit-breaker - Reset circuit breaker
     """
     webhook_function_name = os.environ["WEBHOOK_FUNCTION_NAME"]
     state_table_name = os.environ["STATE_TABLE_NAME"]
 
     http_method = event.get("httpMethod", "GET")
-    path = event.get("path", "")
 
     if http_method == "GET":
         logger.info("Getting circuit breaker status")
@@ -120,7 +119,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             "body": json.dumps(status),
         }
 
-    if http_method == "POST" and "reset" in path:
+    if http_method == "POST":
         logger.info("Resetting circuit breaker for %s", webhook_function_name)
 
         results = {

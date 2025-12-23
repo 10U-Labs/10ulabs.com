@@ -103,17 +103,20 @@ def test_api_gateway_propagation_wait_depends_on_stage():
     assert "aws_api_gateway_stage.prod" in content
 
 
-def test_api_gateway_propagation_wait_depends_only_on_stage():
-    """Verify propagation wait depends only on stage, not endpoint lambdas.
+def test_api_gateway_propagation_wait_has_depends_on():
+    """Verify propagation wait has depends_on block."""
+    content = _read_apigateway_tf()
+    assert "depends_on = [" in content
+
+
+def test_api_gateway_propagation_wait_depends_on_stage_resource():
+    """Verify propagation wait depends on stage resource.
 
     This is intentional to break the circular dependency between API Gateway
     and endpoint lambdas. The propagation wait polls the echo endpoint, but
     the dependency is on the stage, not the lambda permission.
     """
     content = _read_apigateway_tf()
-    # Should depend on stage (verified in test_api_gateway_propagation_wait_depends_on_stage)
-    # Should NOT depend on echo_handler permission (breaks circular dependency)
-    assert "depends_on = [" in content
     assert "aws_api_gateway_stage.prod" in content
 
 
@@ -171,6 +174,7 @@ def test_lambda_function_names_map_has_all_handlers():
         'image_for_ecs_runners',
         'rack_designer',
         'runners',
+        'runners_health_check',
         'simulation_soc',
     ]
     for handler in required_handlers:
@@ -181,6 +185,11 @@ def test_lambda_arn_prefix_defined():
     """Verify lambda_arn_prefix local is defined for ARN construction."""
     content = _read_apigateway_tf()
     assert 'lambda_arn_prefix' in content
+
+
+def test_lambda_arn_prefix_uses_lambda_arn_format():
+    """Verify lambda_arn_prefix uses correct Lambda ARN format."""
+    content = _read_apigateway_tf()
     assert 'arn:aws:lambda:' in content
 
 
@@ -188,15 +197,23 @@ def test_apigw_integration_prefix_defined():
     """Verify apigw_integration_prefix local is defined."""
     content = _read_apigateway_tf()
     assert 'apigw_integration_prefix' in content
+
+
+def test_apigw_integration_prefix_uses_apigateway_arn_format():
+    """Verify apigw_integration_prefix uses correct API Gateway ARN format."""
+    content = _read_apigateway_tf()
     assert 'arn:aws:apigateway:' in content
 
 
 def test_arns_constructed_from_function_names():
-    """Verify ARNs are constructed from lambda_function_names, not remote state."""
+    """Verify ARNs reference lambda_function_names map."""
     content = _read_apigateway_tf()
-    # Health ARN should reference the lambda_function_names map
     assert 'local.lambda_function_names.health' in content
-    # Should NOT use remote state for ARN construction
+
+
+def test_arns_not_using_remote_state():
+    """Verify ARNs are not constructed from remote state."""
+    content = _read_apigateway_tf()
     assert 'data.terraform_remote_state.health.outputs.lambda_function_arn' not in content
 
 
@@ -217,8 +234,31 @@ def test_no_conditional_arn_fallback_to_catchall():
             assert '!= ""' not in line or 'lambda_function_names' in content
 
 
-def test_health_handler_function_name_matches_expected():
-    """Verify health handler function name comes from shared module."""
+def test_health_handler_function_name_defined():
+    """Verify health handler function name is defined."""
     content = _read_apigateway_tf()
     assert 'health' in content
+
+
+def test_health_handler_uses_shared_module():
+    """Verify health handler function name comes from shared module."""
+    content = _read_apigateway_tf()
     assert 'module.shared.lambda_handler_names.health' in content
+
+
+def test_runners_health_check_function_name_defined():
+    """Verify runners_health_check function name is defined."""
+    content = _read_apigateway_tf()
+    assert 'runners_health_check' in content
+
+
+def test_runners_health_check_arn_defined():
+    """Verify runners_health_check_arn local is defined."""
+    content = _read_apigateway_tf()
+    assert 'runners_health_check_arn' in content
+
+
+def test_runners_health_check_arn_passed_to_openapi():
+    """Verify RunnersHealthCheckArn is passed to OpenAPI template."""
+    content = _read_apigateway_tf()
+    assert 'RunnersHealthCheckArn' in content

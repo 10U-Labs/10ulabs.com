@@ -341,43 +341,6 @@ async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _get_circuit_breaker_state() -> dict[str, Any]:
-    """Get circuit breaker state from DynamoDB."""
-    table_name = os.environ.get("CIRCUIT_BREAKER_TABLE_NAME")
-    if not table_name:
-        return {"state": "unknown", "error": "table not configured"}
-
-    try:
-        dynamodb = get_dynamodb_client()
-        response = dynamodb.get_item(
-            TableName=table_name, Key={"state_id": {"S": "current"}}
-        )
-        item = response.get("Item", {})
-        return {
-            "state": item.get("state", {}).get("S", "closed"),
-            "last_failure_time": int(item.get("last_failure_time", {}).get("N", "0")),
-            "recovery_attempts": int(item.get("recovery_attempts", {}).get("N", "0")),
-        }
-    except ClientError as e:
-        logger.error("Failed to get circuit breaker state: %s", e)
-        return {"state": "error", "error": str(e)}
-
-
-def _handle_health_check() -> dict[str, Any]:
-    """Handle health check request."""
-    circuit_breaker = _get_circuit_breaker_state()
-    health_status = {
-        "status": "healthy",
-        "timestamp": int(time.time()),
-        "circuit_breaker": circuit_breaker,
-    }
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(health_status),
-    }
-
-
 def _parse_event_body(event: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     """Parse event body from API Gateway event.
 
@@ -515,10 +478,6 @@ async def _handle_api_gateway_event(
             },
             "body": "",
         }
-
-    path = event.get("path") or event.get("rawPath", "")
-    if path == "/v1/runners/health":
-        return _handle_health_check()
 
     return await _process_webhook_event(event, headers, start_time)
 

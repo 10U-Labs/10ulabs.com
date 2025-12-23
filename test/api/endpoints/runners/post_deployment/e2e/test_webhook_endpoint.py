@@ -2,7 +2,7 @@
 import requests
 
 from .conftest import (
-    assert_circuit_breaker_state_in_response,
+    assert_health_status_in_response,
     make_health_check_request,
     skip_if_endpoint_not_deployed,
 )
@@ -58,11 +58,11 @@ def test_v1_runners_health_returns_json(api_url, api_key):
     assert response.headers["Content-Type"] == "application/json"
 
 
-def test_v1_runners_health_returns_circuit_breaker_state(api_url, api_key):
-    """Verify that health endpoint returns circuit breaker state."""
+def test_v1_runners_health_returns_status_healthy(api_url, api_key):
+    """Verify that health endpoint returns healthy status."""
     skip_if_endpoint_not_deployed(api_url, "/v1/runners/health")
     response = make_health_check_request(api_url, api_key)
-    assert_circuit_breaker_state_in_response(response)
+    assert_health_status_in_response(response)
 
 
 def test_v1_runners_post_rejects_missing_github_event_header(api_url):

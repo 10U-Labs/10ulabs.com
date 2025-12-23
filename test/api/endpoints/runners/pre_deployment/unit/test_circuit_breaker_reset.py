@@ -349,6 +349,45 @@ class TestLambdaHandlerPostReset:
         assert_response_status(response, 500)
 
 
+class TestLambdaHandlerPostDirectPath:
+    """Tests for POST /v1/runners/circuit-breaker (without /reset suffix)."""
+
+    def test_01_accepts_post_on_circuit_breaker_path(
+        self, circuit_breaker_reset, lambda_context
+    ):
+        """Test POST works on /v1/runners/circuit-breaker directly."""
+        event = {'httpMethod': 'POST', 'path': '/v1/runners/circuit-breaker'}
+        mock_dynamodb, mock_lambda = _create_post_reset_mocks()
+        response = _invoke_handler(
+            circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
+        )
+        assert_response_status(response, 200)
+
+    def test_02_returns_success_on_direct_path(
+        self, circuit_breaker_reset, lambda_context
+    ):
+        """Test POST on /circuit-breaker returns success."""
+        event = {'httpMethod': 'POST', 'path': '/v1/runners/circuit-breaker'}
+        mock_dynamodb, mock_lambda = _create_post_reset_mocks()
+        response = _invoke_handler(
+            circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
+        )
+        body = parse_response_body(response)
+        assert body['success'] is True
+
+    def test_03_includes_details_on_direct_path(
+        self, circuit_breaker_reset, lambda_context
+    ):
+        """Test POST on /circuit-breaker includes details."""
+        event = {'httpMethod': 'POST', 'path': '/v1/runners/circuit-breaker'}
+        mock_dynamodb, mock_lambda = _create_post_reset_mocks()
+        response = _invoke_handler(
+            circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
+        )
+        body = parse_response_body(response)
+        assert 'details' in body
+
+
 class TestLambdaHandlerMethodNotAllowed:
     """Tests for unsupported HTTP methods."""
 

@@ -43,9 +43,23 @@ def make_health_check_request(api_url, api_key):
 
 
 def assert_circuit_breaker_state_in_response(response):
-    """Assert that the response contains circuit breaker state."""
+    """Assert that the response contains circuit breaker state.
+
+    Used by circuit breaker tests - checks for 'state' field in the response
+    from GET /v1/runners/circuit-breaker endpoint.
+    """
     data = response.json()
-    assert data["circuit_breaker"] is not None
+    assert "state" in data
+
+
+def assert_health_status_in_response(response):
+    """Assert that the health response contains status field.
+
+    Used by health endpoint tests - checks for 'status' field in the response
+    from GET /v1/runners/health endpoint.
+    """
+    data = response.json()
+    assert data["status"] == "healthy"
 
 
 def skip_if_endpoint_not_deployed(api_url, path, method="GET"):

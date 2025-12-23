@@ -12,6 +12,7 @@ locals {
     image_for_ecs_runners = module.shared.lambda_handler_names.image_for_ecs_runners
     rack_designer         = module.shared.lambda_handler_names.rack_designer
     runners               = module.shared.lambda_handler_names.webhook
+    runners_health_check  = "${module.shared.resource_prefix}RunnersHealthCheck"
     simulation_soc        = module.shared.lambda_handler_names.simulation_soc
     webhook               = module.shared.lambda_handler_names.webhook
   }
@@ -34,6 +35,7 @@ locals {
   image_for_ecs_runners_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ecs_runners}/invocations"
   rack_designer_arn         = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_designer}/invocations"
   runners_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.runners}/invocations"
+  runners_health_check_arn  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.runners_health_check}/invocations"
   simulation_soc_arn        = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
 
   # SQS integration for /v1/runners (API Gateway → SQS direct, no Lambda in hot path)
@@ -59,6 +61,7 @@ locals {
     ImageForEC2RunnersHandlerArn = local.image_for_ec2_runners_arn
     RackDesignerHandlerArn       = local.rack_designer_arn
     RunnersHandlerArn            = local.runners_arn
+    RunnersHealthCheckArn        = local.runners_health_check_arn
     SimulationSocHandlerArn      = local.simulation_soc_arn
     # SQS direct integration for /v1/runners webhook ingress
     WebhookIngressSqsUri = local.webhook_ingress_sqs_uri
