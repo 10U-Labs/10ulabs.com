@@ -52,18 +52,32 @@ jobs:
             .github/workflows/endpoint_v1_contact.yml
       - name: Run pylint on source
         run: |
-          python3 -m pylint src/api/endpoints/contact/lambda/handler.py \
+          python3 -m pylint \
+            lib/python/ \
+            src/api/endpoints/contact/lambda/handler.py \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run pylint on tests
         run: |
-          PYTHONPATH=lib/python python3 -m pylint test/api/endpoints/contact/ \
+          PYTHONPATH=lib/python python3 -m pylint \
+            test/conftest.py \
+            test/api/conftest.py \
+            test/api/endpoints/conftest.py \
+            test/api/endpoints/contact/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy on source
-        run: python3 -m mypy src/api/endpoints/contact/lambda/handler.py
+        run: |
+          python3 -m mypy \
+            lib/python/ \
+            src/api/endpoints/contact/lambda/handler.py
       - name: Run mypy on tests
-        run: MYPYPATH=lib/python python3 -m mypy test/api/endpoints/contact/
+        run: |
+          MYPYPATH=lib/python python3 -m mypy \
+            test/conftest.py \
+            test/api/conftest.py \
+            test/api/endpoints/conftest.py \
+            test/api/endpoints/contact/
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
