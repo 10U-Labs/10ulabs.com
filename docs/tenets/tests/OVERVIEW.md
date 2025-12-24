@@ -174,3 +174,47 @@ pytestmark = pytest.mark.layer(N)
 ```
 
 See [PRE_DEPLOYMENT_INTEGRATION_TESTS.md](PRE_DEPLOYMENT_INTEGRATION_TESTS.md) and [POST_DEPLOYMENT_INTEGRATION_TESTS.md](POST_DEPLOYMENT_INTEGRATION_TESTS.md) for layer definitions.
+
+## Static Analysis in Workflows
+
+Linting and type checking must run separately for source and test code.
+
+### Required Workflow Steps
+
+| Step Name | Target |
+|-----------|--------|
+| `Run pylint on source` | `lib/python/` and `src/.../lambdas/` |
+| `Run pylint on tests` | `test/...` (with `PYTHONPATH=lib/python`) |
+| `Run mypy on source` | `lib/python/` and `src/.../lambdas/` |
+| `Run mypy on tests` | `test/...` (with `MYPYPATH=lib/python`) |
+
+### Why Separate Steps?
+
+1. **Different configurations** - Tests need `PYTHONPATH`/`MYPYPATH` set to resolve `lib/python/` imports
+2. **Clear failure attribution** - When a step fails, you immediately know if it's source or test code
+3. **Consistent naming** - All workflows use the same step names for easy identification
+
+### Example
+
+```yaml
+- name: Run pylint on source
+  run: |
+    python3 -m pylint \
+      lib/python/ src/api/endpoints/example/lambdas/ \
+      --fail-on=C,R,W \
+      --fail-under=10.0
+- name: Run pylint on tests
+  run: |
+    PYTHONPATH=lib/python python3 -m pylint \
+      test/api/endpoints/example/ \
+      --fail-on=C,R,W \
+      --fail-under=10.0
+- name: Run mypy on source
+  run: |
+    python3 -m mypy \
+      lib/python/ src/api/endpoints/example/lambdas/
+- name: Run mypy on tests
+  run: |
+    MYPYPATH=lib/python python3 -m mypy \
+      test/api/endpoints/example/
+```
