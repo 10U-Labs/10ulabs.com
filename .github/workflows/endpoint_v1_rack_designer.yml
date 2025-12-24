@@ -156,6 +156,11 @@ jobs:
           TESTS="test/api/endpoints/rack_designer/post_deployment/integration/"
           python3 -m pytest \
             $TESTS --verbose --pythonwarnings=error
+      - name: Run e2e tests
+        run: |
+          TESTS="test/api/endpoints/rack_designer/post_deployment/e2e/"
+          python3 -m pytest \
+            $TESTS --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
