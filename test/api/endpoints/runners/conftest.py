@@ -158,12 +158,6 @@ def events_client(aws_region):
     return boto3.client('events', region_name=aws_region)
 
 
-@pytest.fixture
-def logs_client(aws_region):
-    """Provide CloudWatch Logs client for tests."""
-    return boto3.client('logs', region_name=aws_region)
-
-
 def find_sns_topic_arns(client: Any, topic_name: str) -> List[str]:
     """Find SNS topic ARNs matching a name pattern."""
     topics = client.list_topics()
