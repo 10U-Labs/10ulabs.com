@@ -7,7 +7,7 @@ pytestmark = pytest.mark.layer(4)
 class TestStableAMIExistence:
     """Layer 4: Verify at least one stable AMI exists."""
 
-    def test_01_at_least_one_stable_ami_exists(
+    def test_at_least_one_stable_ami_exists(
         self, ec2_client, ami_purpose_value, ami_stable_tag
     ):
         """Verify at least one stable AMI exists for EC2 runners."""
@@ -25,7 +25,7 @@ class TestStableAMIExistence:
             "Run the Packer build workflow to create an AMI."
         )
 
-    def test_02_stable_ami_is_available(
+    def test_stable_ami_is_available(
         self, ec2_client, ami_purpose_value, ami_stable_tag
     ):
         """Verify that stable AMIs are in available state."""

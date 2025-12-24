@@ -70,3 +70,14 @@ output "api_audit_log_table_name" {
 output "api_audit_log_table_arn" {
   value = aws_dynamodb_table.api_audit_log.arn
 }
+
+# Firehose outputs for log subscriptions in other endpoints
+output "firehose_cloudwatch_logs_arn" {
+  description = "ARN of the CloudWatch Logs Firehose delivery stream"
+  value       = aws_kinesis_firehose_delivery_stream.cloudwatch_logs.arn
+}
+
+output "cloudwatch_logs_firehose_role_arn" {
+  description = "ARN of the IAM role for CloudWatch Logs to Firehose"
+  value       = aws_iam_role.cloudwatch_logs_firehose.arn
+}

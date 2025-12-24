@@ -16,7 +16,7 @@ from botocore.exceptions import ClientError
 class TestKMSAPIAuthorization:
     """Layer 2: Verify we have permission to call KMS APIs."""
 
-    def test_01_can_call_kms_describe_key(self, kms_client, kms_lambda_key_alias):
+    def test_can_call_kms_describe_key(self, kms_client, kms_lambda_key_alias):
         """Verify we have permission to call kms:DescribeKey."""
         try:
             kms_client.describe_key(KeyId=kms_lambda_key_alias)
@@ -35,7 +35,7 @@ class TestKMSAPIAuthorization:
 class TestKMSKeyExistence:
     """Layer 3: Verify the KMS Lambda key exists."""
 
-    def test_01_kms_lambda_key_alias_exists(self, kms_client, kms_lambda_key_alias):
+    def test_kms_lambda_key_alias_exists(self, kms_client, kms_lambda_key_alias):
         """Verify the AWS-managed Lambda KMS key alias exists."""
         try:
             response = kms_client.describe_key(KeyId=kms_lambda_key_alias)
@@ -54,7 +54,7 @@ class TestKMSKeyExistence:
 class TestKMSKeyConfiguration:
     """Layer 4: Verify the KMS key is configured correctly."""
 
-    def test_01_kms_key_is_enabled(self, kms_client, kms_lambda_key_alias):
+    def test_kms_key_is_enabled(self, kms_client, kms_lambda_key_alias):
         """Verify the KMS key is enabled."""
         try:
             response = kms_client.describe_key(KeyId=kms_lambda_key_alias)
@@ -68,7 +68,7 @@ class TestKMSKeyConfiguration:
                 pytest.skip("KMS key not found - covered by existence test")
             raise
 
-    def test_02_kms_key_supports_encrypt_decrypt(self, kms_client, kms_lambda_key_alias):
+    def test_kms_key_supports_encrypt_decrypt(self, kms_client, kms_lambda_key_alias):
         """Verify the KMS key supports ENCRYPT_DECRYPT usage."""
         try:
             response = kms_client.describe_key(KeyId=kms_lambda_key_alias)

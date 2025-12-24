@@ -58,13 +58,13 @@ def test_can_decrypt_github_pat_parameter(ssm_client, ssm_github_pat_name):
 class TestLambdaCapability:
     """Layer 6: Verify capability to invoke runner Lambda functions."""
 
-    def test_01_can_get_ec2_runner_lambda_configuration(
+    def test_can_get_ec2_runner_lambda_configuration(
         self, lambda_client, ec2_runner_outputs
     ):
         """Verify we can read the EC2 runner Lambda configuration."""
         _verify_lambda_configuration(lambda_client, ec2_runner_outputs, "lambda_function_name")
 
-    def test_02_can_get_ecs_runner_lambda_configuration(
+    def test_can_get_ecs_runner_lambda_configuration(
         self, lambda_client, ecs_runner_outputs
     ):
         """Verify we can read the ECS runner Lambda configuration."""

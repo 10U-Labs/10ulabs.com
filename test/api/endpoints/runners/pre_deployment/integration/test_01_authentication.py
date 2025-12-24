@@ -21,7 +21,7 @@ pytestmark = pytest.mark.layer(1)
 class TestAWSCredentialsAuthentication:
     """Layer 1: Verify AWS credentials are available and valid."""
 
-    def test_01_credentials_available(self, sts_client):
+    def test_credentials_available(self, sts_client):
         """Verify AWS credentials are configured."""
         try:
             sts_client.get_caller_identity()
@@ -32,7 +32,7 @@ class TestAWSCredentialsAuthentication:
                 "~/.aws/credentials, or IAM role."
             )
 
-    def test_02_can_call_sts_api(self, sts_client):
+    def test_can_call_sts_api(self, sts_client):
         """Verify we can call sts:GetCallerIdentity."""
         try:
             response = sts_client.get_caller_identity()
@@ -44,7 +44,7 @@ class TestAWSCredentialsAuthentication:
                 "Check AWS credentials are valid and not expired."
             )
 
-    def test_03_caller_identity_has_arn(self, sts_client):
+    def test_caller_identity_has_arn(self, sts_client):
         """Verify caller identity includes ARN."""
         try:
             response = sts_client.get_caller_identity()
@@ -54,7 +54,7 @@ class TestAWSCredentialsAuthentication:
                 f"Failed to get caller ARN: {e.response['Error']['Message']}"
             )
 
-    def test_04_caller_identity_is_role(self, caller_identity):
+    def test_caller_identity_is_role(self, caller_identity):
         """Verify we are running as an IAM role (not user)."""
         arn = caller_identity.get("Arn", "")
         assert ":assumed-role/" in arn or ":role/" in arn, (

@@ -16,7 +16,7 @@ from botocore.exceptions import ClientError
 class TestSSMGitHubAppAuthorization:
     """Layer 2: Verify we have permission to access SSM parameters."""
 
-    def test_01_can_call_get_parameter_api(self, ssm_client, github_app_ssm_id_name):
+    def test_can_call_get_parameter_api(self, ssm_client, github_app_ssm_id_name):
         """Verify we have permission to call ssm:GetParameter."""
         try:
             ssm_client.get_parameter(Name=github_app_ssm_id_name, WithDecryption=False)
@@ -36,7 +36,7 @@ class TestSSMGitHubAppAuthorization:
 class TestSSMGitHubAppExistence:
     """Layer 3: Verify the GitHub App SSM parameters exist."""
 
-    def test_01_github_app_id_parameter_exists(self, ssm_client, github_app_ssm_id_name):
+    def test_github_app_id_parameter_exists(self, ssm_client, github_app_ssm_id_name):
         """Verify the GitHub App ID SSM parameter exists."""
         try:
             response = ssm_client.get_parameter(
@@ -54,7 +54,7 @@ class TestSSMGitHubAppExistence:
                 )
             raise
 
-    def test_02_github_app_installation_id_parameter_exists(
+    def test_github_app_installation_id_parameter_exists(
         self, ssm_client, github_app_ssm_installation_id_name
     ):
         """Verify the GitHub App Installation ID SSM parameter exists."""
@@ -74,7 +74,7 @@ class TestSSMGitHubAppExistence:
                 )
             raise
 
-    def test_03_github_app_private_key_parameter_exists(
+    def test_github_app_private_key_parameter_exists(
         self, ssm_client, github_app_ssm_private_key_name
     ):
         """Verify the GitHub App Private Key SSM parameter exists."""
@@ -98,7 +98,7 @@ class TestSSMGitHubAppExistence:
 class TestSSMGitHubAppConfiguration:
     """Layer 4: Verify the GitHub App SSM parameters are configured correctly."""
 
-    def test_01_github_app_id_is_secure_string(
+    def test_github_app_id_is_secure_string(
         self, ssm_client, github_app_ssm_id_name
     ):
         """Verify the GitHub App ID is stored as SecureString."""
@@ -117,7 +117,7 @@ class TestSSMGitHubAppConfiguration:
                 pytest.skip("Parameter does not exist - covered by existence test")
             raise
 
-    def test_02_github_app_installation_id_is_secure_string(
+    def test_github_app_installation_id_is_secure_string(
         self, ssm_client, github_app_ssm_installation_id_name
     ):
         """Verify the GitHub App Installation ID is stored as SecureString."""
@@ -136,7 +136,7 @@ class TestSSMGitHubAppConfiguration:
                 pytest.skip("Parameter does not exist - covered by existence test")
             raise
 
-    def test_03_github_app_private_key_is_secure_string(
+    def test_github_app_private_key_is_secure_string(
         self, ssm_client, github_app_ssm_private_key_name
     ):
         """Verify the GitHub App Private Key is stored as SecureString."""
@@ -155,7 +155,7 @@ class TestSSMGitHubAppConfiguration:
                 pytest.skip("Parameter does not exist - covered by existence test")
             raise
 
-    def test_04_github_app_id_has_value(self, ssm_client, github_app_ssm_id_name):
+    def test_github_app_id_has_value(self, ssm_client, github_app_ssm_id_name):
         """Verify the GitHub App ID SSM parameter has a non-empty value."""
         try:
             response = ssm_client.get_parameter(

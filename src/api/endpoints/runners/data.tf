@@ -51,7 +51,9 @@ data "terraform_remote_state" "api" {
   }
 
   defaults = {
-    api_key_ssm_parameter_arn = ""
+    api_key_ssm_parameter_arn         = ""
+    cloudwatch_logs_firehose_role_arn = ""
+    firehose_cloudwatch_logs_arn      = ""
   }
 }
 

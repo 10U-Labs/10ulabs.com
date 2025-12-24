@@ -15,7 +15,7 @@ from botocore.exceptions import ClientError
 class TestS3Authentication:
     """Layer 1: Verify AWS credentials can access S3."""
 
-    def test_01_s3_client_can_list_buckets(self, s3_client):
+    def test_s3_client_can_list_buckets(self, s3_client):
         """Verify S3 client can make API calls."""
         try:
             response = s3_client.list_buckets()
@@ -27,7 +27,7 @@ class TestS3Authentication:
 class TestS3Authorization:
     """Layer 2: Verify we have permission to create S3 resources."""
 
-    def test_01_can_call_s3_head_bucket(self, s3_client, s3_prompts_bucket_name):
+    def test_can_call_s3_head_bucket(self, s3_client, s3_prompts_bucket_name):
         """Verify we have permission to check bucket existence."""
         # This will either succeed (bucket exists) or fail with 404 (doesn't exist)
         # Both are acceptable - we just need to verify we have API access

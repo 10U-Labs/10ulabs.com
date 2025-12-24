@@ -8,7 +8,7 @@ pytestmark = pytest.mark.layer(2)
 class TestEC2Authorization:
     """Layer 2: Verify we have permission to call EC2 APIs."""
 
-    def test_01_can_call_describe_images_api(self, ec2_client):
+    def test_can_call_describe_images_api(self, ec2_client):
         """Verify we have permission to call DescribeImages API."""
         try:
             # Use a filter that returns no results to minimize data transfer
@@ -24,7 +24,7 @@ class TestEC2Authorization:
                 )
             raise
 
-    def test_02_can_call_describe_images_with_filters(self, ec2_client):
+    def test_can_call_describe_images_with_filters(self, ec2_client):
         """Verify we can call DescribeImages with tag filters."""
         try:
             ec2_client.describe_images(

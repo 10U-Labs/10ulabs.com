@@ -196,3 +196,50 @@ def test_webhook_handler_role_has_cloudwatch_metrics(iam_client, config):
     assert _role_has_permission(iam_client, role_name, "cloudwatch:PutMetricData"), (
         f"Role {role_name} missing cloudwatch:PutMetricData permission"
     )
+
+
+# === CloudWatch Logs Subscription Filters → Firehose Wiring ===
+
+
+def test_runners_handler_subscription_filter_destinations_firehose(
+    logs_client, runners_handler_log_group
+):
+    """Verify runners handler subscription routes to Firehose."""
+    log_group = runners_handler_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    if response["subscriptionFilters"]:
+        destination_arn = response["subscriptionFilters"][0]["destinationArn"]
+        assert "firehose" in destination_arn
+
+
+def test_circuit_breaker_recovery_subscription_filter_destinations_firehose(
+    logs_client, circuit_breaker_recovery_log_group
+):
+    """Verify circuit breaker recovery subscription routes to Firehose."""
+    log_group = circuit_breaker_recovery_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    if response["subscriptionFilters"]:
+        destination_arn = response["subscriptionFilters"][0]["destinationArn"]
+        assert "firehose" in destination_arn
+
+
+def test_circuit_breaker_remediation_subscription_filter_destinations_firehose(
+    logs_client, circuit_breaker_remediation_log_group
+):
+    """Verify circuit breaker remediation subscription routes to Firehose."""
+    log_group = circuit_breaker_remediation_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    if response["subscriptionFilters"]:
+        destination_arn = response["subscriptionFilters"][0]["destinationArn"]
+        assert "firehose" in destination_arn
+
+
+def test_dlq_reprocessor_subscription_filter_destinations_firehose(
+    logs_client, dlq_reprocessor_log_group
+):
+    """Verify DLQ reprocessor subscription routes to Firehose."""
+    log_group = dlq_reprocessor_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    if response["subscriptionFilters"]:
+        destination_arn = response["subscriptionFilters"][0]["destinationArn"]
+        assert "firehose" in destination_arn

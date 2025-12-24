@@ -34,7 +34,7 @@ SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"
 class TestVPCConfiguration:
     """Layer 5: Verify VPC resources are properly configured."""
 
-    def test_01_vpc_is_available(self, vpc_info, api_shared_runners_outputs):
+    def test_vpc_is_available(self, vpc_info, api_shared_runners_outputs):
         """Verify the VPC is in available state."""
         vpc_id = api_shared_runners_outputs.get("vpc_id")
         if not vpc_id:
@@ -45,7 +45,7 @@ class TestVPCConfiguration:
             f"VPC {vpc_id} is in state '{vpc_info['State']}', not 'available'."
         )
 
-    def test_02_subnets_are_available(self, subnets_info, api_shared_runners_outputs):
+    def test_subnets_are_available(self, subnets_info, api_shared_runners_outputs):
         """Verify all subnets are in available state."""
         if not api_shared_runners_outputs.get("vpc_public_subnet_ids"):
             pytest.skip("vpc_public_subnet_ids output not available")
@@ -66,7 +66,7 @@ class TestVPCConfiguration:
 class TestLambdaConfiguration:
     """Layer 5: Verify Lambda functions are properly configured."""
 
-    def test_01_ec2_runner_lambda_is_active(self, lambda_client, ec2_runner_outputs):
+    def test_ec2_runner_lambda_is_active(self, lambda_client, ec2_runner_outputs):
         """Verify the EC2 runner Lambda function is active."""
         function_name = ec2_runner_outputs.get("lambda_function_name")
         if not function_name:
@@ -74,7 +74,7 @@ class TestLambdaConfiguration:
         response = lambda_client.get_function(FunctionName=function_name)
         assert response["Configuration"]["State"] == "Active"
 
-    def test_02_ecs_runner_lambda_is_active(self, lambda_client, ecs_runner_outputs):
+    def test_ecs_runner_lambda_is_active(self, lambda_client, ecs_runner_outputs):
         """Verify the ECS runner Lambda function is active."""
         function_name = ecs_runner_outputs.get("lambda_function_name")
         if not function_name:
@@ -115,7 +115,7 @@ def test_github_pat_parameter_is_secure_string(ssm_client, ssm_github_pat_name):
 class TestSQSNamingConventions:
     """Layer 5: Verify SQS queue names follow expected conventions."""
 
-    def test_01_queue_names_use_handler_prefix(self):
+    def test_queue_names_use_handler_prefix(self):
         """Verify queue names use the webhook handler name as prefix."""
         resource_names = get_runners_resource_names()
         # All queues should have a consistent prefix pattern
@@ -135,7 +135,7 @@ class TestSQSNamingConventions:
                 "Expected to start with resource prefix."
             )
 
-    def test_02_dlq_names_include_dlq_suffix(self):
+    def test_dlq_names_include_dlq_suffix(self):
         """Verify DLQ names include 'Dlq' suffix."""
         resource_names = get_runners_resource_names()
         dlq_keys = [k for k in resource_names if 'dlq' in k]
@@ -146,7 +146,7 @@ class TestSQSNamingConventions:
                 "DLQ names should clearly indicate dead letter queue purpose."
             )
 
-    def test_03_ingress_queue_short_retention_configured(self):
+    def test_ingress_queue_short_retention_configured(self):
         """Verify ingress queue is configured with short retention for DDoS protection."""
         with open(SQS_TF_FILE, encoding='utf-8') as f:
             content = f.read()

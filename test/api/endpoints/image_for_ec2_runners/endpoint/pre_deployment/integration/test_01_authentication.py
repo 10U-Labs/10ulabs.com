@@ -8,14 +8,14 @@ pytestmark = pytest.mark.layer(1)
 class TestAWSCredentialsExistence:
     """Layer 1: Verify AWS credentials are available and valid."""
 
-    def test_01_credentials_available(self, sts_client):
+    def test_credentials_available(self, sts_client):
         """Verify AWS credentials are configured."""
         assert sts_client is not None, (
             "No AWS credentials found. Configure via environment, "
             "~/.aws/credentials, or IAM role."
         )
 
-    def test_02_can_call_sts_api(self, sts_client):
+    def test_can_call_sts_api(self, sts_client):
         """Verify credentials are valid by calling STS API."""
         try:
             response = sts_client.get_caller_identity()

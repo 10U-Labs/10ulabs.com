@@ -337,3 +337,86 @@ def test_dlq_reprocessor_log_group_retention_is_7_days(dlq_reprocessor_log_group
         f"Log group '{dlq_reprocessor_log_group['name']}' "
         f"retention is {retention} days, expected 7"
     )
+
+
+# === CloudWatch Logs Subscription Filter Configuration ===
+
+
+def test_runners_handler_subscription_filter_name(logs_client, runners_handler_log_group):
+    """Verify runners handler subscription filter has correct name."""
+    log_group = runners_handler_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    filter_names = [f["filterName"] for f in response["subscriptionFilters"]]
+    assert "runners-handler-to-firehose" in filter_names
+
+
+def test_runners_handler_subscription_filter_uses_empty_pattern(
+    logs_client, runners_handler_log_group
+):
+    """Verify runners handler subscription filter captures all logs."""
+    log_group = runners_handler_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    for sub_filter in response["subscriptionFilters"]:
+        if sub_filter["filterName"] == "runners-handler-to-firehose":
+            assert sub_filter["filterPattern"] == ""
+
+
+def test_circuit_breaker_recovery_subscription_filter_name(
+    logs_client, circuit_breaker_recovery_log_group
+):
+    """Verify circuit breaker recovery subscription filter has correct name."""
+    log_group = circuit_breaker_recovery_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    filter_names = [f["filterName"] for f in response["subscriptionFilters"]]
+    assert "circuit-breaker-recovery-to-firehose" in filter_names
+
+
+def test_circuit_breaker_recovery_subscription_filter_uses_empty_pattern(
+    logs_client, circuit_breaker_recovery_log_group
+):
+    """Verify circuit breaker recovery subscription filter captures all logs."""
+    log_group = circuit_breaker_recovery_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    for sub_filter in response["subscriptionFilters"]:
+        if sub_filter["filterName"] == "circuit-breaker-recovery-to-firehose":
+            assert sub_filter["filterPattern"] == ""
+
+
+def test_circuit_breaker_remediation_subscription_filter_name(
+    logs_client, circuit_breaker_remediation_log_group
+):
+    """Verify circuit breaker remediation subscription filter has correct name."""
+    log_group = circuit_breaker_remediation_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    filter_names = [f["filterName"] for f in response["subscriptionFilters"]]
+    assert "circuit-breaker-remediation-to-firehose" in filter_names
+
+
+def test_circuit_breaker_remediation_subscription_filter_uses_empty_pattern(
+    logs_client, circuit_breaker_remediation_log_group
+):
+    """Verify circuit breaker remediation subscription filter captures all logs."""
+    log_group = circuit_breaker_remediation_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    for sub_filter in response["subscriptionFilters"]:
+        if sub_filter["filterName"] == "circuit-breaker-remediation-to-firehose":
+            assert sub_filter["filterPattern"] == ""
+
+
+def test_dlq_reprocessor_subscription_filter_name(logs_client, dlq_reprocessor_log_group):
+    """Verify DLQ reprocessor subscription filter has correct name."""
+    log_group = dlq_reprocessor_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    filter_names = [f["filterName"] for f in response["subscriptionFilters"]]
+    assert "dlq-reprocessor-to-firehose" in filter_names
+
+
+def test_dlq_reprocessor_subscription_filter_uses_empty_pattern(
+    logs_client, dlq_reprocessor_log_group
+):
+    """Verify DLQ reprocessor subscription filter captures all logs."""
+    log_group = dlq_reprocessor_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    for sub_filter in response["subscriptionFilters"]:
+        if sub_filter["filterName"] == "dlq-reprocessor-to-firehose":
+            assert sub_filter["filterPattern"] == ""

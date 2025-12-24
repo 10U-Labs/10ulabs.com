@@ -25,6 +25,7 @@ import pytest
 pytest_plugins = ['pytest_layers']
 
 
+API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
 API_SHARED_ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
 API_SHARED_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "shared" / "runners"
 EC2_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
@@ -83,6 +84,34 @@ def ec2_runner_terraform_initialized():
 def runners_terraform_initialized():
     """Initialize terraform for runners state access."""
     return terraform_init(RUNNERS_DIR)
+
+
+@pytest.fixture(scope="session")
+def firehose_client(aws_region):
+    """Create a Firehose client."""
+    return boto3.client("firehose", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def firehose_delivery_stream_name(shared_config):
+    """Get the Firehose delivery stream name for CloudWatch Logs.
+
+    This is a prerequisite resource created by api_backend that runners
+    depends on for subscription filters.
+    """
+    prefix = shared_config.get('resource_prefix', 'TenULabs')
+    return f"{prefix}-CloudWatchLogs"
+
+
+@pytest.fixture(scope="session")
+def cloudwatch_logs_firehose_role_name(shared_config):
+    """Get the CloudWatch Logs Firehose role name.
+
+    This is a prerequisite resource created by api_backend that runners
+    depends on for subscription filters.
+    """
+    prefix = shared_config.get('resource_prefix', 'TenULabs')
+    return f"{prefix}-CloudWatchLogsFirehose"
 
 
 @pytest.fixture(scope="session")

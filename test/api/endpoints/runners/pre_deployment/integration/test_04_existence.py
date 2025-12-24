@@ -31,24 +31,60 @@ SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"
 # =============================================================================
 
 
+class TestApiBackendFirehoseResources:
+    """Layer 4: Verify api_backend Firehose resources exist in AWS."""
+
+    def test_firehose_delivery_stream_exists(
+        self, firehose_client, firehose_delivery_stream_name
+    ):
+        """Verify Firehose delivery stream exists.
+
+        This resource is created by api_backend and required for runners
+        subscription filters to route logs to S3.
+        """
+        response = firehose_client.describe_delivery_stream(
+            DeliveryStreamName=firehose_delivery_stream_name
+        )
+        assert response["DeliveryStreamDescription"]["DeliveryStreamName"] == (
+            firehose_delivery_stream_name
+        ), (
+            f"Firehose delivery stream '{firehose_delivery_stream_name}' not found. "
+            "Run: cd src/api/backend && terraform apply"
+        )
+
+    def test_cloudwatch_logs_firehose_role_exists(
+        self, iam_client, cloudwatch_logs_firehose_role_name
+    ):
+        """Verify CloudWatch Logs Firehose IAM role exists.
+
+        This role is created by api_backend and required for subscription
+        filters to write to Firehose.
+        """
+        response = iam_client.get_role(RoleName=cloudwatch_logs_firehose_role_name)
+        assert response["Role"]["RoleName"] == cloudwatch_logs_firehose_role_name, (
+            f"IAM role '{cloudwatch_logs_firehose_role_name}' not found. "
+            "Run: cd src/api/backend && terraform apply"
+        )
+
+
 class TestApiSharedRunnersOutputs:
     """Layer 4: Verify api_shared_runners terraform outputs are accessible."""
 
-    def test_01_vpc_id_output_exists(self, api_shared_runners_outputs):
+    def test_vpc_id_output_exists(self, api_shared_runners_outputs):
         """Verify vpc_id output exists."""
         assert api_shared_runners_outputs.get("vpc_id"), (
             "vpc_id output not found in api_shared_runners. "
             "Run: cd src/api/shared/runners && terraform apply"
         )
 
-    def test_02_subnet_ids_output_exists(self, api_shared_runners_outputs):
+    def test_subnet_ids_output_exists(self, api_shared_runners_outputs):
         """Verify vpc_public_subnet_ids output exists."""
         assert api_shared_runners_outputs.get("vpc_public_subnet_ids"), (
             "vpc_public_subnet_ids output not found in api_shared_runners. "
             "Run: cd src/api/shared/runners && terraform apply"
         )
 
-    def test_03_security_group_id_output_exists(self, api_shared_runners_outputs):
+    def test_security_group_id_output_exists(self, api_shared_runners_outputs):
         """Verify runner_security_group_id output exists."""
         assert api_shared_runners_outputs.get("runner_security_group_id"), (
             "runner_security_group_id output not found in api_shared_runners. "
@@ -59,21 +95,21 @@ class TestApiSharedRunnersOutputs:
 class TestApiSharedEcsRunnerOutputs:
     """Layer 4: Verify api_shared_ecs_runner terraform outputs are accessible."""
 
-    def test_01_ecr_repository_arn_output_exists(self, api_shared_ecs_runner_outputs):
+    def test_ecr_repository_arn_output_exists(self, api_shared_ecs_runner_outputs):
         """Verify ecr_repository_arn output exists."""
         assert api_shared_ecs_runner_outputs.get("ecr_repository_arn"), (
             "ecr_repository_arn output not found in api_shared_ecs_runner. "
             "Run: cd src/api/shared/ecs_runner && terraform apply"
         )
 
-    def test_02_ecr_repository_name_output_exists(self, api_shared_ecs_runner_outputs):
+    def test_ecr_repository_name_output_exists(self, api_shared_ecs_runner_outputs):
         """Verify ecr_repository_name output exists."""
         assert api_shared_ecs_runner_outputs.get("ecr_repository_name"), (
             "ecr_repository_name output not found in api_shared_ecs_runner. "
             "Run: cd src/api/shared/ecs_runner && terraform apply"
         )
 
-    def test_03_ecr_repository_url_output_exists(self, api_shared_ecs_runner_outputs):
+    def test_ecr_repository_url_output_exists(self, api_shared_ecs_runner_outputs):
         """Verify ecr_repository_url output exists."""
         assert api_shared_ecs_runner_outputs.get("ecr_repository_url"), (
             "ecr_repository_url output not found in api_shared_ecs_runner. "
@@ -84,17 +120,17 @@ class TestApiSharedEcsRunnerOutputs:
 class TestEC2RunnerOutputs:
     """Layer 4: Verify ec2_runner terraform outputs are accessible."""
 
-    def test_01_lambda_function_arn_output_exists(self, ec2_runner_outputs):
+    def test_lambda_function_arn_output_exists(self, ec2_runner_outputs):
         """Verify ec2_runner has lambda_function_arn output."""
         assert ec2_runner_outputs.get("lambda_function_arn"), \
             "lambda_function_arn output not found in ec2_runner"
 
-    def test_02_lambda_function_name_output_exists(self, ec2_runner_outputs):
+    def test_lambda_function_name_output_exists(self, ec2_runner_outputs):
         """Verify ec2_runner has lambda_function_name output."""
         assert ec2_runner_outputs.get("lambda_function_name"), \
             "lambda_function_name output not found in ec2_runner"
 
-    def test_03_lambda_invoke_arn_output_exists(self, ec2_runner_outputs):
+    def test_lambda_invoke_arn_output_exists(self, ec2_runner_outputs):
         """Verify ec2_runner has lambda_invoke_arn output."""
         assert ec2_runner_outputs.get("lambda_invoke_arn"), \
             "lambda_invoke_arn output not found in ec2_runner"
@@ -103,22 +139,22 @@ class TestEC2RunnerOutputs:
 class TestECSRunnerOutputs:
     """Layer 4: Verify ecs_runner terraform outputs are accessible."""
 
-    def test_01_lambda_function_arn_output_exists(self, ecs_runner_outputs):
+    def test_lambda_function_arn_output_exists(self, ecs_runner_outputs):
         """Verify ecs_runner has lambda_function_arn output."""
         assert ecs_runner_outputs.get("lambda_function_arn"), \
             "lambda_function_arn output not found in ecs_runner"
 
-    def test_02_lambda_function_name_output_exists(self, ecs_runner_outputs):
+    def test_lambda_function_name_output_exists(self, ecs_runner_outputs):
         """Verify ecs_runner has lambda_function_name output."""
         assert ecs_runner_outputs.get("lambda_function_name"), \
             "lambda_function_name output not found in ecs_runner"
 
-    def test_03_cluster_arn_output_exists(self, ecs_runner_outputs):
+    def test_cluster_arn_output_exists(self, ecs_runner_outputs):
         """Verify ecs_runner has cluster_arn output."""
         assert ecs_runner_outputs.get("cluster_arn"), \
             "cluster_arn output not found in ecs_runner"
 
-    def test_04_cluster_name_output_exists(self, ecs_runner_outputs):
+    def test_cluster_name_output_exists(self, ecs_runner_outputs):
         """Verify ecs_runner has cluster_name output."""
         assert ecs_runner_outputs.get("cluster_name"), \
             "cluster_name output not found in ecs_runner"
@@ -132,7 +168,7 @@ class TestECSRunnerOutputs:
 class TestVPCResourceExistence:
     """Layer 4: Verify VPC resources exist in AWS."""
 
-    def test_01_vpc_exists(self, vpc_info, api_shared_runners_outputs):
+    def test_vpc_exists(self, vpc_info, api_shared_runners_outputs):
         """Verify the VPC exists."""
         vpc_id = api_shared_runners_outputs.get("vpc_id")
         if not vpc_id:
@@ -142,7 +178,7 @@ class TestVPCResourceExistence:
             "Run: cd src/api/shared/runners && terraform apply"
         )
 
-    def test_02_subnets_exist(self, subnets_info, api_shared_runners_outputs):
+    def test_subnets_exist(self, subnets_info, api_shared_runners_outputs):
         """Verify all subnets exist."""
         subnet_ids_str = api_shared_runners_outputs.get("vpc_public_subnet_ids")
         if not subnet_ids_str:
@@ -153,7 +189,7 @@ class TestVPCResourceExistence:
             "Some subnets may have been deleted."
         )
 
-    def test_03_security_group_exists(self, ec2_client, api_shared_runners_outputs):
+    def test_security_group_exists(self, ec2_client, api_shared_runners_outputs):
         """Verify the security group exists."""
         sg_id = api_shared_runners_outputs.get("runner_security_group_id")
         if not sg_id:
@@ -186,7 +222,7 @@ def test_ecr_repository_exists(ecr_repository_info, api_shared_ecs_runner_output
 class TestLambdaResourceExistence:
     """Layer 4: Verify Lambda functions exist in AWS."""
 
-    def test_01_ec2_runner_lambda_exists(self, lambda_client, ec2_runner_outputs):
+    def test_ec2_runner_lambda_exists(self, lambda_client, ec2_runner_outputs):
         """Verify the EC2 runner Lambda function exists."""
         function_name = ec2_runner_outputs.get("lambda_function_name")
         if not function_name:
@@ -194,7 +230,7 @@ class TestLambdaResourceExistence:
         response = lambda_client.get_function(FunctionName=function_name)
         assert response["Configuration"]["FunctionName"] == function_name
 
-    def test_02_ecs_runner_lambda_exists(self, lambda_client, ecs_runner_outputs):
+    def test_ecs_runner_lambda_exists(self, lambda_client, ecs_runner_outputs):
         """Verify the ECS runner Lambda function exists."""
         function_name = ecs_runner_outputs.get("lambda_function_name")
         if not function_name:
@@ -206,7 +242,7 @@ class TestLambdaResourceExistence:
 class TestSSMResourceExistence:
     """Layer 4: Verify SSM parameters exist in AWS."""
 
-    def test_01_github_pat_parameter_exists(self, ssm_client, ssm_github_pat_name):
+    def test_github_pat_parameter_exists(self, ssm_client, ssm_github_pat_name):
         """Verify the GitHub PAT SSM parameter exists."""
         try:
             response = ssm_client.get_parameter(
@@ -224,7 +260,7 @@ class TestSSMResourceExistence:
                 )
             raise
 
-    def test_02_github_pat_parameter_has_value(self, ssm_client, ssm_github_pat_name):
+    def test_github_pat_parameter_has_value(self, ssm_client, ssm_github_pat_name):
         """Verify the GitHub PAT SSM parameter has a non-empty value."""
         try:
             response = ssm_client.get_parameter(
@@ -252,14 +288,14 @@ class TestSSMResourceExistence:
 class TestSQSTerraformConfigExistence:
     """Layer 4: Verify SQS queue definitions exist in Terraform config."""
 
-    def test_01_sqs_tf_file_exists(self):
+    def test_sqs_tf_file_exists(self):
         """Verify sqs.tf file exists in runners endpoint."""
         assert SQS_TF_FILE.exists(), (
             f"sqs.tf not found at {SQS_TF_FILE}. "
             "The runners endpoint requires SQS queue definitions."
         )
 
-    def test_02_sqs_queues_extractable(self):
+    def test_sqs_queues_extractable(self):
         """Verify SQS queue names can be extracted from sqs.tf."""
         queues = extract_sqs_queue_names(SQS_TF_FILE)
         assert len(queues) > 0, (
@@ -267,7 +303,7 @@ class TestSQSTerraformConfigExistence:
             "Expected at least one aws_sqs_queue resource."
         )
 
-    def test_03_webhook_ingress_queue_defined(self):
+    def test_webhook_ingress_queue_defined(self):
         """Verify webhook_ingress queue is defined in Terraform."""
         queues = extract_sqs_queue_names(SQS_TF_FILE)
         queue_resources = [name for name, _ in queues]
@@ -276,7 +312,7 @@ class TestSQSTerraformConfigExistence:
             "Required for API Gateway -> SQS direct integration."
         )
 
-    def test_04_webhook_ingress_dlq_defined(self):
+    def test_webhook_ingress_dlq_defined(self):
         """Verify webhook_ingress_dlq is defined in Terraform."""
         queues = extract_sqs_queue_names(SQS_TF_FILE)
         queue_resources = [name for name, _ in queues]
@@ -285,7 +321,7 @@ class TestSQSTerraformConfigExistence:
             "Required for failed webhook ingress message handling."
         )
 
-    def test_05_ignored_events_queue_defined(self):
+    def test_ignored_events_queue_defined(self):
         """Verify ignored_events queue is defined in Terraform."""
         queues = extract_sqs_queue_names(SQS_TF_FILE)
         queue_resources = [name for name, _ in queues]
@@ -294,7 +330,7 @@ class TestSQSTerraformConfigExistence:
             "Required for storing unhandled webhook events."
         )
 
-    def test_06_job_queue_defined(self):
+    def test_job_queue_defined(self):
         """Verify job_queue is defined in Terraform."""
         queues = extract_sqs_queue_names(SQS_TF_FILE)
         queue_resources = [name for name, _ in queues]

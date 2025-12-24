@@ -576,7 +576,7 @@ resource "aws_lambda_function" "circuit_breaker_reset" {
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_reset" {
   name              = "/aws/lambda/${local.circuit_breaker_reset_function_name}"
-  retention_in_days = 30
+  retention_in_days = 7
 
   tags = merge(local.common_tags, {
     Name = "${local.circuit_breaker_reset_function_name}Logs"
@@ -689,7 +689,7 @@ resource "aws_lambda_function" "circuit_breaker_remediation" {
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_remediation" {
   name              = "/aws/lambda/${local.circuit_breaker_remediation_function_name}"
-  retention_in_days = 30
+  retention_in_days = 7
 
   tags = merge(local.common_tags, {
     Name = "${local.circuit_breaker_remediation_function_name}Logs"
@@ -747,7 +747,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
 
 resource "aws_cloudwatch_log_group" "dlq_reprocessor" {
   name              = "/aws/lambda/${local.dlq_reprocessor_function_name}"
-  retention_in_days = 30
+  retention_in_days = 7
 
   tags = merge(local.common_tags, {
     Name = "${local.dlq_reprocessor_function_name}Logs"
@@ -852,7 +852,7 @@ resource "aws_lambda_function" "circuit_breaker_recovery" {
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
   name              = "/aws/lambda/${local.circuit_breaker_recovery_function_name}"
-  retention_in_days = 30
+  retention_in_days = 7
 
   tags = merge(local.common_tags, {
     Name = "${local.circuit_breaker_recovery_function_name}Logs"
@@ -956,7 +956,7 @@ resource "aws_lambda_function" "drift_recovery" {
 
 resource "aws_cloudwatch_log_group" "drift_recovery" {
   name              = "/aws/lambda/${local.drift_recovery_function_name}"
-  retention_in_days = 30
+  retention_in_days = 7
 
   tags = merge(local.common_tags, {
     Name = "${local.drift_recovery_function_name}Logs"

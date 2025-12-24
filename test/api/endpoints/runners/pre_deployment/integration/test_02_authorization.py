@@ -18,7 +18,7 @@ import pytest
 pytestmark = pytest.mark.layer(2)
 
 
-def test_01_can_call_iam_get_role_api(iam_client, current_role_name):
+def test_can_call_iam_get_role_api(iam_client, current_role_name):
     """Verify we have permission to call iam:GetRole."""
     if not current_role_name:
         pytest.skip("Could not determine current role name")
@@ -35,7 +35,7 @@ def test_01_can_call_iam_get_role_api(iam_client, current_role_name):
         raise
 
 
-def test_02_can_call_dynamodb_list_tables_api(dynamodb_client):
+def test_can_call_dynamodb_list_tables_api(dynamodb_client):
     """Verify we have permission to call dynamodb:ListTables."""
     try:
         dynamodb_client.list_tables(Limit=1)
@@ -48,7 +48,7 @@ def test_02_can_call_dynamodb_list_tables_api(dynamodb_client):
         raise
 
 
-def test_03_can_call_sqs_list_queues_api(sqs_client):
+def test_can_call_sqs_list_queues_api(sqs_client):
     """Verify we have permission to call sqs:ListQueues."""
     try:
         sqs_client.list_queues(MaxResults=1)
@@ -61,7 +61,7 @@ def test_03_can_call_sqs_list_queues_api(sqs_client):
         raise
 
 
-def test_04_can_call_lambda_list_functions_api(lambda_client):
+def test_can_call_lambda_list_functions_api(lambda_client):
     """Verify we have permission to call lambda:ListFunctions."""
     try:
         lambda_client.list_functions(MaxItems=1)
@@ -74,7 +74,7 @@ def test_04_can_call_lambda_list_functions_api(lambda_client):
         raise
 
 
-def test_05_can_call_ssm_get_parameter_api(ssm_client, ssm_github_pat_name):
+def test_can_call_ssm_get_parameter_api(ssm_client, ssm_github_pat_name):
     """Verify we have permission to call ssm:GetParameter."""
     try:
         ssm_client.get_parameter(Name=ssm_github_pat_name, WithDecryption=False)
@@ -87,5 +87,26 @@ def test_05_can_call_ssm_get_parameter_api(ssm_client, ssm_github_pat_name):
             )
         if code == "ParameterNotFound":
             pass  # Parameter doesn't exist, but we have permission - that's OK here
+        else:
+            raise
+
+
+def test_can_call_firehose_describe_delivery_stream_api(
+    firehose_client, firehose_delivery_stream_name
+):
+    """Verify we have permission to call firehose:DescribeDeliveryStream."""
+    try:
+        firehose_client.describe_delivery_stream(
+            DeliveryStreamName=firehose_delivery_stream_name
+        )
+    except ClientError as e:
+        code = e.response["Error"]["Code"]
+        if code == "AccessDeniedException":
+            pytest.fail(
+                "No permission to call firehose:DescribeDeliveryStream. "
+                "Check IAM permissions for Firehose access."
+            )
+        if code == "ResourceNotFoundException":
+            pass  # Stream doesn't exist, but we have permission - that's OK here
         else:
             raise

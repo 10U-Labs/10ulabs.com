@@ -208,3 +208,42 @@ def test_dlq_reprocessor_log_group_exists(logs_client, config):
         lg for lg in response["logGroups"] if lg["logGroupName"] == log_group_name
     ]
     assert len(log_groups) == 1
+
+
+# === CloudWatch Logs Subscription Filters ===
+
+
+def test_runners_handler_subscription_filter_exists(
+    logs_client, runners_handler_log_group
+):
+    """Verify RunnersHandler log group has subscription filter."""
+    log_group = runners_handler_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    assert len(response["subscriptionFilters"]) > 0
+
+
+def test_circuit_breaker_recovery_subscription_filter_exists(
+    logs_client, circuit_breaker_recovery_log_group
+):
+    """Verify CircuitBreakerRecovery log group has subscription filter."""
+    log_group = circuit_breaker_recovery_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    assert len(response["subscriptionFilters"]) > 0
+
+
+def test_circuit_breaker_remediation_subscription_filter_exists(
+    logs_client, circuit_breaker_remediation_log_group
+):
+    """Verify CircuitBreakerRemediation log group has subscription filter."""
+    log_group = circuit_breaker_remediation_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    assert len(response["subscriptionFilters"]) > 0
+
+
+def test_dlq_reprocessor_subscription_filter_exists(
+    logs_client, dlq_reprocessor_log_group
+):
+    """Verify DLQReprocessor log group has subscription filter."""
+    log_group = dlq_reprocessor_log_group["name"]
+    response = logs_client.describe_subscription_filters(logGroupName=log_group)
+    assert len(response["subscriptionFilters"]) > 0

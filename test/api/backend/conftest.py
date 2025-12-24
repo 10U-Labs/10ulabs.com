@@ -74,13 +74,6 @@ def _add_derived_config(result: Dict[str, str]) -> None:
     result['cloudwatch_logs_firehose_role_name'] = f"{prefix}-CloudWatchLogsFirehose"
     result['lambda_runners_role_name'] = f"{lambda_fn}-ServiceRole"
     result['webhook_handler_service_role_name'] = f"{lambda_fn}-ServiceRole"
-    result['circuit_breaker_remediation_log_group_name'] = (
-        f"/aws/lambda/{prefix}-CircuitBreakerRemediation"
-    )
-    result['dlq_reprocessor_log_group_name'] = f"/aws/lambda/{prefix}-DLQReprocessor"
-    result['circuit_breaker_recovery_log_group_name'] = (
-        f"/aws/lambda/{prefix}-CircuitBreakerRecovery"
-    )
 
 
 @pytest.fixture(name="config", scope="module")
