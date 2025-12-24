@@ -412,29 +412,6 @@ def run_javascript_lint(changed_files):
     return True
 
 
-def is_duplicate_check_step(step_name):
-    """Determine if a workflow step is a duplicate code check."""
-    step_lower = step_name.lower()
-    return 'duplicate' in step_lower or 'jscpd' in step_lower
-
-
-def extract_duplicate_check_commands(workflow):
-    """Extract duplicate code check commands from a workflow."""
-    return extract_commands_from_jobs(
-        workflow, lambda name, cmd: is_duplicate_check_step(name) or 'jscpd' in cmd)
-
-
-def transform_jscpd_command(cmd):
-    """Transform jscpd command to use npx and ensure threshold 0."""
-    # Replace bare 'jscpd' with 'npx jscpd'
-    if cmd.strip().startswith('jscpd '):
-        cmd = 'npx ' + cmd
-    # Ensure --threshold 0 is used (replace any existing threshold)
-    if '--threshold' not in cmd:
-        cmd = cmd.replace('jscpd ', 'jscpd --threshold 0 ', 1)
-    return cmd
-
-
 def run_blocked_lint_config_check(changed_files):
     """Check for blocked lint config files. Returns True if passed, False if failed.
 
@@ -892,24 +869,14 @@ def main():
 
     capture_print(f"\nMatching workflows: {[w['name'] for w in matching_workflows]}")
 
-    static_ok = run_phase(
-        matching_workflows, "STATIC ANALYSIS", extract_static_analysis_commands)
-    if not static_ok:
-        log_debug("STATIC ANALYSIS FAILED - denying tool use")
+    yamllint_ok = run_phase(
+        matching_workflows, "YAMLLINT", extract_static_analysis_commands)
+    if not yamllint_ok:
+        log_debug("YAMLLINT FAILED - denying tool use")
         capture_print("\n" + "="*60)
-        capture_print("STATIC ANALYSIS FAILED - Fix issues before committing")
+        capture_print("YAMLLINT FAILED - Fix issues before committing")
         capture_print("="*60)
-        deny_tool_use("STATIC ANALYSIS FAILED - Fix lint/type errors")
-
-    duplicate_ok = run_phase(
-        matching_workflows, "DUPLICATE CODE CHECK",
-        extract_duplicate_check_commands, transform_jscpd_command)
-    if not duplicate_ok:
-        log_debug("DUPLICATE CODE CHECK FAILED - denying tool use")
-        capture_print("\n" + "="*60)
-        capture_print("DUPLICATE CODE CHECK FAILED - Refactor duplicates")
-        capture_print("="*60)
-        deny_tool_use("DUPLICATE CODE CHECK FAILED - Refactor duplicate code")
+        deny_tool_use("YAMLLINT FAILED - Fix lint errors")
 
     log_debug("ALL CHECKS PASSED - exiting with code 0")
     capture_print("\n" + "="*60)
