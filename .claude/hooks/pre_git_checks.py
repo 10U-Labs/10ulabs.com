@@ -504,9 +504,12 @@ def is_static_analysis_step(step_name):
                      'check if', 'should run']
     if any(kw in step_lower for kw in skip_keywords):
         return False
+    # Skip pylint and mypy - too slow for local pre-commit, rely on CI
+    if 'pylint' in step_lower or 'mypy' in step_lower:
+        return False
     # Look for specific linting/type-checking tool names and patterns
     static_keywords = [
-        'lint', 'pylint', 'mypy', 'type check', 'static analysis',
+        'lint', 'type check', 'static analysis',
         'format check', 'fmt check', 'hadolint', 'tflint',
         'yamllint', 'jsonlint', 'terraform format'
     ]
