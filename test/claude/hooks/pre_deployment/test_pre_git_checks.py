@@ -51,15 +51,21 @@ def test_file_matches_workflow_paths_empty_list(pre_git_checks):
     assert result is False
 
 
-def test_is_static_analysis_step_detects_lint(pre_git_checks):
-    """Test that is_static_analysis_step detects lint."""
+def test_is_static_analysis_step_skips_pylint(pre_git_checks):
+    """Test that is_static_analysis_step skips pylint (too slow for local)."""
     result = pre_git_checks.is_static_analysis_step('Run pylint')
-    assert result is True
+    assert result is False
 
 
-def test_is_static_analysis_step_detects_mypy(pre_git_checks):
-    """Test that is_static_analysis_step detects mypy."""
+def test_is_static_analysis_step_skips_mypy(pre_git_checks):
+    """Test that is_static_analysis_step skips mypy (too slow for local)."""
     result = pre_git_checks.is_static_analysis_step('Type check with mypy')
+    assert result is False
+
+
+def test_is_static_analysis_step_detects_yamllint(pre_git_checks):
+    """Test that is_static_analysis_step detects yamllint."""
+    result = pre_git_checks.is_static_analysis_step('Run yamllint')
     assert result is True
 
 
@@ -118,18 +124,18 @@ def test_extract_static_analysis_commands_returns_list(pre_git_checks, sample_wo
     assert isinstance(result, list)
 
 
-def test_extract_static_analysis_commands_finds_pylint(pre_git_checks, sample_workflow):
-    """Test that Extract static analysis commands finds pylint."""
+def test_extract_static_analysis_commands_finds_yamllint(pre_git_checks, sample_workflow):
+    """Test that extract_static_analysis_commands finds yamllint."""
     result = pre_git_checks.extract_static_analysis_commands(sample_workflow)
     names = [cmd['name'] for cmd in result]
-    assert 'Run pylint' in names
+    assert 'Run yamllint' in names
 
 
-def test_extract_static_analysis_commands_finds_mypy(pre_git_checks, sample_workflow):
-    """Test that Extract static analysis commands finds mypy."""
+def test_extract_static_analysis_commands_finds_tflint(pre_git_checks, sample_workflow):
+    """Test that extract_static_analysis_commands finds tflint."""
     result = pre_git_checks.extract_static_analysis_commands(sample_workflow)
     names = [cmd['name'] for cmd in result]
-    assert 'Run mypy' in names
+    assert 'Run tflint' in names
 
 
 def test_extract_static_analysis_commands_excludes_deploy(pre_git_checks, sample_workflow):
@@ -552,37 +558,3 @@ def test_run_blocked_lint_config_check_allows_deleted_pylintrc(pre_git_checks):
     assert result is True
 
 
-def test_is_duplicate_check_step_detects_duplicate_in_name(pre_git_checks):
-    """Test is_duplicate_check_step returns True for duplicate in name."""
-    result = pre_git_checks.is_duplicate_check_step('Check for duplicate code')
-    assert result is True
-
-
-def test_is_duplicate_check_step_detects_jscpd_in_name(pre_git_checks):
-    """Test is_duplicate_check_step returns True for jscpd in name."""
-    result = pre_git_checks.is_duplicate_check_step('Run jscpd')
-    assert result is True
-
-
-def test_is_duplicate_check_step_returns_false_for_other_steps(pre_git_checks):
-    """Test is_duplicate_check_step returns False for unrelated steps."""
-    result = pre_git_checks.is_duplicate_check_step('Run pylint')
-    assert result is False
-
-
-def test_transform_jscpd_command_adds_npx(pre_git_checks):
-    """Test transform_jscpd_command adds npx prefix."""
-    result = pre_git_checks.transform_jscpd_command('jscpd src/')
-    assert result.startswith('npx jscpd')
-
-
-def test_transform_jscpd_command_adds_threshold_zero(pre_git_checks):
-    """Test transform_jscpd_command adds --threshold 0."""
-    result = pre_git_checks.transform_jscpd_command('jscpd src/')
-    assert '--threshold 0' in result
-
-
-def test_transform_jscpd_command_preserves_existing_threshold(pre_git_checks):
-    """Test transform_jscpd_command does not duplicate threshold."""
-    result = pre_git_checks.transform_jscpd_command('jscpd --threshold 5 src/')
-    assert result.count('--threshold') == 1

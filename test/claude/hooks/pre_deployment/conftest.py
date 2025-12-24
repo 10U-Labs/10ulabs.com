@@ -78,8 +78,8 @@ def sample_workflow():
         'jobs': {
             'static-analysis': {
                 'steps': [
-                    {'name': 'Run pylint', 'run': 'pylint src/'},
-                    {'name': 'Run mypy', 'run': 'mypy src/'},
+                    {'name': 'Run yamllint', 'run': 'yamllint .'},
+                    {'name': 'Run tflint', 'run': 'tflint'},
                     {'name': 'Deploy', 'run': 'deploy.sh'}
                 ]
             },
