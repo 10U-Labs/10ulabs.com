@@ -66,14 +66,14 @@ jobs:
         run: jsonlint -q etc/workflow-dependencies.json
       - name: Run pylint
         run: |
-          python3 -m pylint src/workflowctl/*.py \
+          python3 -m pylint lib/python/ src/workflowctl/ \
             --fail-on=C,R,W --fail-under=10.0
       - name: Run mypy
-        run: python3 -m mypy src/workflowctl/*.py
+        run: python3 -m mypy lib/python/ src/workflowctl/
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            src/workflowctl/
+            lib/python/ src/workflowctl/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
