@@ -41,24 +41,11 @@ resource "aws_ecs_task_definition" "runner" {
     operating_system_family = var.fargate_operating_system_family
   }
 
-  volume {
-    name = "runner-diag"
-  }
-
   container_definitions = jsonencode([
     {
       name      = var.container_name
       image     = "${data.terraform_remote_state.api_shared_ecs_runner.outputs.ecr_repository_url}:latest"
       essential = true
-
-      # Volume permissions are fixed by Lambda command override (sudo chown)
-      mountPoints = [
-        {
-          sourceVolume  = "runner-diag"
-          containerPath = "/home/runner/_diag"
-          readOnly      = false
-        }
-      ]
 
       logConfiguration = {
         logDriver = "awslogs"
@@ -70,41 +57,6 @@ resource "aws_ecs_task_definition" "runner" {
       }
 
       environment = []
-    },
-    {
-      name      = "cloudwatch-agent"
-      image     = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent:latest"
-      essential = false
-
-      # Write config to expected location then start agent
-      command = [
-        "/bin/bash", "-c",
-        "echo \"$CW_CONFIG_CONTENT\" > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json && exec /opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent"
-      ]
-
-      mountPoints = [
-        {
-          sourceVolume  = "runner-diag"
-          containerPath = "/home/runner/_diag"
-          readOnly      = true
-        }
-      ]
-
-      environment = [
-        {
-          name  = "CW_CONFIG_CONTENT"
-          value = file("${path.module}/../image_for_ecs_runners/post/cloudwatch-agent-config.json")
-        }
-      ]
-
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.ecs_runner.name
-          "awslogs-region"        = module.shared.aws_region
-          "awslogs-stream-prefix" = "cloudwatch-agent"
-        }
-      }
     }
   ])
 
