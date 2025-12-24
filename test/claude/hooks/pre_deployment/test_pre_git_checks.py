@@ -556,5 +556,3 @@ def test_run_blocked_lint_config_check_allows_deleted_pylintrc(pre_git_checks):
     changed_files = ['nonexistent/path/.pylintrc']
     result = pre_git_checks.run_blocked_lint_config_check(changed_files)
     assert result is True
-
-
