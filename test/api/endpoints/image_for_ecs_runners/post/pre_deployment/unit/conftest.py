@@ -12,8 +12,11 @@ from test.api.endpoints.image_for_ecs_runners.conftest import (
 from dockerfile_parse import DockerfileParser
 import pytest
 
+# Add directories to path for imports
 sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, FILES_DIR)
+# Add this directory to allow importing test_helpers
+sys.path.insert(0, os.path.dirname(__file__))
 entrypoint_path = os.path.join(FILES_DIR, 'entrypoint.py')
 entrypoint_spec = importlib.util.spec_from_file_location("entrypoint", entrypoint_path)
 if entrypoint_spec is None or entrypoint_spec.loader is None:

@@ -6,15 +6,7 @@ before configuring the runner, enabling CloudWatch sidecar to read logs.
 from unittest.mock import Mock, patch
 import pytest
 import entrypoint
-
-
-def _setup_popen_mock(mock_popen, returncode=0):
-    """Configure Popen mock for tests."""
-    popen_process = Mock()
-    popen_process.wait.return_value = returncode
-    mock_popen.return_value.__enter__ = Mock(return_value=popen_process)
-    mock_popen.return_value.__exit__ = Mock(return_value=False)
-    return popen_process
+from test_helpers import setup_popen_mock, run_entrypoint
 
 
 def _find_mkdir_call(mock_run):
@@ -56,11 +48,7 @@ def _get_call_indices(mock_run):
 ])
 def test_main_calls_sudo_mkdir_for_diag(mock_run, mock_popen):
     """Test that main calls sudo mkdir for _diag directory."""
-    mock_run.return_value = Mock(returncode=0)
-    _setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
-        entrypoint.main()
-
+    run_entrypoint(mock_run, mock_popen)
     mkdir_args = _find_mkdir_call(mock_run)
     assert mkdir_args is not None and mkdir_args[0] == 'sudo' and mkdir_args[1] == 'mkdir'
 
@@ -73,11 +61,7 @@ def test_main_calls_sudo_mkdir_for_diag(mock_run, mock_popen):
 ])
 def test_main_calls_sudo_chown_for_diag(mock_run, mock_popen):
     """Test that main calls sudo chown for _diag directory."""
-    mock_run.return_value = Mock(returncode=0)
-    _setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
-        entrypoint.main()
-
+    run_entrypoint(mock_run, mock_popen)
     chown_args = _find_chown_call(mock_run)
     assert chown_args is not None and chown_args[0] == 'sudo' and chown_args[1] == 'chown'
 
@@ -90,11 +74,7 @@ def test_main_calls_sudo_chown_for_diag(mock_run, mock_popen):
 ])
 def test_main_calls_mkdir_before_chown(mock_run, mock_popen):
     """Test that mkdir is called before chown for _diag directory."""
-    mock_run.return_value = Mock(returncode=0)
-    _setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
-        entrypoint.main()
-
+    run_entrypoint(mock_run, mock_popen)
     mkdir_index, chown_index = _get_call_indices(mock_run)
     assert mkdir_index is not None and chown_index is not None and mkdir_index < chown_index
 
@@ -112,7 +92,7 @@ def test_main_continues_if_permission_fix_fails(mock_run, mock_popen):
         Mock(returncode=1),  # chown fails
         Mock(returncode=0),  # config.sh succeeds
     ]
-    _setup_popen_mock(mock_popen)
+    setup_popen_mock(mock_popen)
 
     with pytest.raises(SystemExit) as exc_info:
         entrypoint.main()
