@@ -122,6 +122,9 @@ def filter_files_by_commits(commits_json: str) -> set[str]:
     except json.JSONDecodeError:
         return set()
 
+    if not isinstance(commits, list):
+        return set()
+
     excluded_files: set[str] = set()
     for commit in commits:
         message = commit.get("message", "")

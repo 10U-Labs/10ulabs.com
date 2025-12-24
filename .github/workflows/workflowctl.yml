@@ -26,27 +26,6 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Validate required files
-        run: |
-          echo "Validating required files exist..."
-          if [ ! -f "etc/workflow-dependencies.json" ]; then
-            echo "Error: etc/workflow-dependencies.json not found"
-            exit 1
-          fi
-          if [ ! -f "src/workflowctl/workflowctl.py" ]; then
-            echo "Error: src/workflowctl/workflowctl.py not found"
-            exit 1
-          fi
-          echo "All required files present"
-      - env:
-          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
-        id: files
-        name: Get changed files
-        run: |
-          python3 src/workflowctl/workflowctl.py get-changed-files \
-            --base "${{ github.event.before }}" \
-            --head "${{ github.sha }}" \
-            --commits "$COMMITS_JSON" >> "$GITHUB_OUTPUT"
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -72,16 +51,7 @@ jobs:
             types-PyYAML==6.0.* \
             yamllint==1.35.*
           echo "Dependencies installed successfully"
-      - id: check-sa
-        name: Check if static analysis should run
-        run: |
-          python3 src/workflowctl/workflowctl.py should-run \
-            --check static-analysis \
-            --changed "${{ steps.files.outputs.changed }}" >> "$GITHUB_OUTPUT"
-      - if: >-
-          github.event_name == 'workflow_dispatch' ||
-          steps.check-sa.outputs.should_run == 'true'
-        name: Linting YAML files
+      - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -92,53 +62,38 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/workflowctl.yml
-      - if: >-
-          github.event_name == 'workflow_dispatch' ||
-          steps.check-sa.outputs.should_run == 'true'
-        name: Linting JSON files
+      - name: Linting JSON files
         run: jsonlint -q etc/workflow-dependencies.json
-      - if: >-
-          github.event_name == 'workflow_dispatch' ||
-          steps.check-sa.outputs.should_run == 'true'
-        name: Run pylint
+      - name: Run pylint
         run: |
           python3 -m pylint src/workflowctl/*.py \
             --fail-on=C,R,W --fail-under=10.0
-      - if: >-
-          github.event_name == 'workflow_dispatch' ||
-          steps.check-sa.outputs.should_run == 'true'
-        name: Run mypy
+      - name: Run mypy
         run: python3 -m mypy src/workflowctl/*.py
-      - if: >-
-          github.event_name == 'workflow_dispatch' ||
-          steps.check-sa.outputs.should_run == 'true'
-        name: Check for duplicate code in source Python files
+      - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             src/workflowctl/
-      - if: >-
-          github.event_name == 'workflow_dispatch' ||
-          steps.check-sa.outputs.should_run == 'true'
-        name: Check for duplicate code in test Python files
+      - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             test/conftest.py test/workflowctl/
-      - id: check-ut
-        name: Check if unit tests should run
-        run: |
-          python3 src/workflowctl/workflowctl.py should-run \
-            --check unit-tests \
-            --changed "${{ steps.files.outputs.changed }}" >> "$GITHUB_OUTPUT"
-      - if: >-
-          github.event_name == 'workflow_dispatch' ||
-          steps.check-ut.outputs.should_run == 'true'
-        name: Run unit tests
+      - name: Run unit tests
         run: |
           echo "Running unit tests..."
           python3 -m pytest \
             test/workflowctl/ \
             --verbose --pythonwarnings=error
           echo "Unit tests completed"
+      - env:
+          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+        id: files
+        name: Get changed files
+        run: |
+          python3 src/workflowctl/workflowctl.py get-changed-files \
+            --base "${{ github.event.before }}" \
+            --head "${{ github.sha }}" \
+            --commits "$COMMITS_JSON" >> "$GITHUB_OUTPUT"
       - id: running
         name: Get running workflows
         run: |
@@ -186,20 +141,7 @@ jobs:
         run: echo "No workflow-related files changed or no workflows computed"
       - if: >-
           steps.plan.outputs.root_workflows != '' &&
-          (inputs.dry_run == true ||
-           contains(github.event.head_commit.message, '[dry run]'))
-        name: Dry run
-        run: |
-          echo "DRY RUN MODE - Would dispatch the following workflows:"
-          ROOTS="${{ steps.plan.outputs.root_workflows }}"
-          echo "$ROOTS" | while read -r WORKFLOW; do
-            [ -n "$WORKFLOW" ] && echo "  - ${WORKFLOW}.yml"
-          done
-      - if: >-
-          steps.plan.outputs.root_workflows != '' &&
-          steps.running.outputs.workflows != '[]' &&
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
+          steps.running.outputs.workflows != '[]'
         name: Cancel superseded workflows
         run: |
           echo "Canceling workflows that will be re-run from merge roots..."
@@ -214,10 +156,7 @@ jobs:
             --graph etc/workflow-dependencies.json
       - env:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-        if: >-
-          steps.plan.outputs.root_workflows != '' &&
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
+        if: steps.plan.outputs.root_workflows != ''
         name: Dispatch root workflows (fire-and-forget)
         run: |
           python3 src/workflowctl/workflowctl.py dispatch-roots \
@@ -236,10 +175,6 @@ on:
       - 'test/claude/**'
   workflow_dispatch:
     inputs:
-      dry_run:
-        default: false
-        description: Dry run mode (show structure without executing)
-        type: boolean
       github_hosted:
         default: false
         description: Use GitHub-hosted runners

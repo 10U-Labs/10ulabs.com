@@ -223,6 +223,26 @@ class TestFilterFilesByCommits:
         """Test that invalid JSON returns empty set."""
         assert filter_files_by_commits("not valid json") == set()
 
+    def test_returns_empty_for_null_json(self) -> None:
+        """Test that JSON null returns empty set."""
+        assert filter_files_by_commits("null") == set()
+
+    def test_returns_empty_for_object_json(self) -> None:
+        """Test that JSON object returns empty set."""
+        assert filter_files_by_commits("{}") == set()
+
+    def test_returns_empty_for_string_json(self) -> None:
+        """Test that JSON string returns empty set."""
+        assert filter_files_by_commits('"hello"') == set()
+
+    def test_returns_empty_for_number_json(self) -> None:
+        """Test that JSON number returns empty set."""
+        assert filter_files_by_commits("123") == set()
+
+    def test_returns_empty_for_boolean_json(self) -> None:
+        """Test that JSON boolean returns empty set."""
+        assert filter_files_by_commits("true") == set()
+
     @patch("get_changed_files.get_files_for_commit")
     def test_excludes_files_from_skip_ci_commits(
         self,

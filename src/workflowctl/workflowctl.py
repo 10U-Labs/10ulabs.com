@@ -11,7 +11,6 @@ Usage:
     python3 src/workflowctl/workflowctl.py cancel --repo owner/repo --merge-roots '["x"]'
     python3 src/workflowctl/workflowctl.py dispatch --workflow bootstrap --repo owner/repo
     python3 src/workflowctl/workflowctl.py get-changed-files --base SHA --head SHA
-    python3 src/workflowctl/workflowctl.py should-run --check static-analysis --changed FILES
     python3 src/workflowctl/workflowctl.py dispatch-roots --repo owner/repo --roots ROOTS
 """
 import sys
@@ -22,7 +21,6 @@ import dispatch
 import dispatch_roots
 import get_changed_files
 import get_running
-import should_run
 
 
 COMMANDS = {
@@ -31,7 +29,6 @@ COMMANDS = {
     "cancel": ("Cancel superseded workflow runs", cancel.main),
     "dispatch": ("Dispatch descendant workflows", dispatch.main),
     "get-changed-files": ("Get changed files between commits", get_changed_files.main),
-    "should-run": ("Check if static analysis/tests should run", should_run.main),
     "dispatch-roots": ("Dispatch root workflows", dispatch_roots.main),
 }
 
