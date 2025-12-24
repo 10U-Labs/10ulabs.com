@@ -93,26 +93,3 @@ def test_signal_handler_terminates_runner_process(mock_run, mock_signal, mock_po
     with pytest.raises(SystemExit):
         signal_handler(None, None)
     mock_process.terminate.assert_called()
-
-
-@patch('entrypoint.subprocess.Popen')
-@patch('entrypoint.stop_cloudwatch_agent')
-@patch('entrypoint.signal.signal')
-@patch('entrypoint.subprocess.run')
-@patch('sys.argv', [
-    'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
-    '--labels', 'lbl', '--token', 'tok'
-])
-def test_signal_handler_stops_cloudwatch_agent(
-    mock_run, mock_signal, mock_stop, mock_popen
-):
-    """Test that signal handler stops CloudWatch agent."""
-    mock_run.return_value = Mock(returncode=0)
-    setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
-        entrypoint.main()
-    signal_handler = mock_signal.call_args_list[0][0][1]
-    mock_stop.reset_mock()
-    with pytest.raises(SystemExit):
-        signal_handler(None, None)
-    mock_stop.assert_called_once()

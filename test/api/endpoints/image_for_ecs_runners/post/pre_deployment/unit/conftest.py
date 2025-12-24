@@ -31,14 +31,6 @@ def reset_monitor_state():
     yield
 
 
-@pytest.fixture(autouse=True)
-def reset_cw_state():
-    """Reset entrypoint _cw_state before each test to ensure test isolation."""
-    entrypoint._cw_state["stop_event"] = None
-    entrypoint._cw_state["thread"] = None
-    yield
-
-
 promote_path = os.path.join(FILES_DIR, 'promote_docker_image.py')
 promote_spec = importlib.util.spec_from_file_location("promote_docker_image", promote_path)
 if promote_spec is None or promote_spec.loader is None:

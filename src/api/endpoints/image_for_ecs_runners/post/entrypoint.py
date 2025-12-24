@@ -15,76 +15,8 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-# Module-level state for CloudWatch agent and run monitor
-_cw_state: dict[str, Any] = {"stop_event": None, "thread": None}
+# Module-level state for run monitor
 monitor_state: dict[str, Any] = {"stop_event": None, "should_terminate": False}
-
-
-def _run_cloudwatch_agent(toml_path: str, stop_event: threading.Event) -> None:
-    """Run CloudWatch agent in a thread until stop event is set."""
-    with subprocess.Popen(
-        ['/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent',
-         '-config', toml_path],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    ) as process:
-        # Wait for stop signal, checking periodically
-        while not stop_event.wait(timeout=1.0):
-            if process.poll() is not None:
-                break
-        # Stop event received or process exited, terminate if still running
-        if process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                process.kill()
-
-
-def start_cloudwatch_agent():
-    """Start the CloudWatch agent for log collection.
-
-    Run agent directly without systemd (containers don't have systemd).
-    """
-    print("Starting CloudWatch agent...", flush=True)
-    config_path = '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json'
-    toml_path = '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml'
-
-    # Translate JSON config to TOML
-    result = subprocess.run(
-        ['/opt/aws/amazon-cloudwatch-agent/bin/config-translator',
-         '--input', config_path,
-         '--output', toml_path,
-         '--mode', 'auto'],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-    if result.returncode != 0:
-        print(f"Warning: Config translation failed: {result.stderr}", flush=True)
-        return
-
-    # Start agent in background thread
-    stop_event = threading.Event()
-    _cw_state["stop_event"] = stop_event
-    thread = threading.Thread(
-        target=_run_cloudwatch_agent,
-        args=(toml_path, stop_event),
-        daemon=True
-    )
-    thread.start()
-    _cw_state["thread"] = thread
-    print("CloudWatch agent started successfully", flush=True)
-
-
-def stop_cloudwatch_agent():
-    """Stop the CloudWatch agent and wait for it to terminate."""
-    stop_event = _cw_state.get("stop_event")
-    thread = _cw_state.get("thread")
-    if stop_event is not None:
-        stop_event.set()
-    if thread is not None:
-        thread.join(timeout=5)
 
 
 def cleanup_runner(token: str) -> None:
@@ -236,7 +168,6 @@ def _create_signal_handler(state: dict):
                     state["process"].wait(timeout=2)
                 except subprocess.TimeoutExpired:
                     print("Runner still not dead after SIGKILL", flush=True)
-        stop_cloudwatch_agent()
         print("Shutdown complete", flush=True)
         sys.exit(0)
     return signal_handler
@@ -266,7 +197,6 @@ def main():
         print("Error: config.sh failed", flush=True)
         sys.exit(1)
 
-    start_cloudwatch_agent()
     if run_id and github_token:
         start_run_monitor(repo, run_id, github_token, args.check_interval)
 
@@ -276,7 +206,6 @@ def main():
         returncode = process.wait()
 
     stop_run_monitor()
-    stop_cloudwatch_agent()
     print(f"Runner exited with code {returncode}", flush=True)
     sys.exit(returncode)
 

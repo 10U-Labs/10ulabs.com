@@ -39,7 +39,7 @@ def test_run_sh_called_after_successful_configuration(mock_run, mock_popen):
     _setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    # run.sh should be one of the Popen calls (CloudWatch agent is another)
+    # run.sh should be one of the Popen calls
     popen_calls = [call[0][0] for call in mock_popen.call_args_list]
     assert ['./run.sh'] in popen_calls
 
@@ -71,7 +71,7 @@ def test_run_sh_uses_popen(mock_run, mock_popen):
     _setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    # Popen should be called at least once (for run.sh, plus CloudWatch agent)
+    # Popen should be called at least once (for run.sh)
     assert mock_popen.called
 
 

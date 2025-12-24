@@ -14,7 +14,6 @@ RUN apt-get update && \
     mkdir -p /staging/tmp /staging/usr/local/bin /staging/usr/local/lib && \
     curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o /tmp/awscliv2.zip && \
     unzip -q /tmp/awscliv2.zip -d /staging/tmp && \
-    curl -fsSL -o /staging/tmp/amazon-cloudwatch-agent.deb "https://amazoncloudwatch-agent.s3.amazonaws.com/debian/arm64/latest/amazon-cloudwatch-agent.deb" && \
     curl -fsSL -o /staging/usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_arm64" && \
     chmod +x /staging/usr/local/bin/yq && \
     curl -fsSL -o /staging/usr/local/bin/hadolint "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-arm64" && \
@@ -37,11 +36,10 @@ FROM debian:stable-slim
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /home/runner
 COPY --from=builder /staging/tmp/aws /tmp/aws
-COPY --from=builder /staging/tmp/amazon-cloudwatch-agent.deb /tmp/
 COPY --from=builder /staging/tmp/runner.tar.gz /tmp/
 COPY --from=builder /staging/usr/local/bin /usr/local/bin
 COPY --from=builder /staging/usr/local/lib /usr/local/lib
-COPY entrypoint.py cloudwatch-agent-config.json /tmp/
+COPY entrypoint.py /tmp/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates curl fontconfig git jq tar wget \
@@ -55,7 +53,6 @@ RUN apt-get update && \
         sudo unzip x11-xkb-utils xfonts-scalable xfonts-utils xserver-common xvfb zip zlib1g && \
     /tmp/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli && \
     rm -rf /tmp/aws && \
-    dpkg -i /tmp/amazon-cloudwatch-agent.deb && rm /tmp/amazon-cloudwatch-agent.deb && \
     npm install -g @eslint/js eslint globals jscpd jsonlint && npm cache clean --force && \
     ln -s /usr/local/lib/node_modules /home/runner/node_modules && \
     python3 -m pip install --no-cache-dir --no-compile --break-system-packages \
@@ -66,7 +63,6 @@ RUN apt-get update && \
     useradd -m -s /bin/bash runner && echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     tar xzf /tmp/runner.tar.gz && rm /tmp/runner.tar.gz && \
     mv /tmp/entrypoint.py /home/runner/entrypoint.py && chmod 755 /home/runner/entrypoint.py && \
-    mv /tmp/cloudwatch-agent-config.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json && \
     chown -R runner:runner /home/runner && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /var/cache/debconf/* \
            /var/log/* /tmp/* /root/.cache \
