@@ -57,20 +57,17 @@ jobs:
             .github/workflows/endpoint_v1_rack_designer.yml
       - name: Run pylint
         run: |
-          for file in src/api/endpoints/rack_designer/lambdas/*.py; do
-            python3 -m pylint "$file" \
-              --fail-on=C,R,W \
-              --fail-under=10.0
-          done
+          python3 -m pylint \
+            lib/python/ src/api/endpoints/rack_designer/lambdas/ \
+            --fail-on=C,R,W \
+            --fail-under=10.0
           PYTHONPATH=lib/python python3 -m pylint \
             test/api/endpoints/rack_designer/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
         run: |
-          for file in src/api/endpoints/rack_designer/lambdas/*.py; do
-            python3 -m mypy "$file"
-          done
+          python3 -m mypy lib/python/ src/api/endpoints/rack_designer/lambdas/
           MYPYPATH=lib/python python3 -m mypy test/api/endpoints/rack_designer/
       - name: Check for duplicate code in source Python files
         run: |
