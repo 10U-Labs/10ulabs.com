@@ -13,6 +13,18 @@ def _setup_popen_mock(mock_popen, returncode=0):
     return config_process
 
 
+def _find_config_sh_call(mock_run):
+    """Find the config.sh call in the mock call list.
+
+    The first two calls are permission-fix calls (mkdir, chown), config.sh is third.
+    """
+    for call in mock_run.call_args_list:
+        args = call[0][0] if call[0] else []
+        if args and args[0] == './config.sh':
+            return args
+    return None
+
+
 @patch('entrypoint.subprocess.Popen')
 @patch('entrypoint.subprocess.run')
 @patch('sys.argv', [
@@ -25,7 +37,8 @@ def test_config_sh_called_with_correct_url_format(mock_run, mock_popen):
     _setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_run.call_args_list[0][0][0][2] == 'https://github.com/test/repo'
+    config_args = _find_config_sh_call(mock_run)
+    assert config_args[2] == 'https://github.com/test/repo'
 
 
 @patch('entrypoint.subprocess.Popen')
@@ -40,7 +53,8 @@ def test_config_sh_called_with_correct_token_parameter(mock_run, mock_popen):
     _setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_run.call_args_list[0][0][0][4] == 'my-token'
+    config_args = _find_config_sh_call(mock_run)
+    assert config_args[4] == 'my-token'
 
 
 @patch('entrypoint.subprocess.Popen')
@@ -55,7 +69,8 @@ def test_config_sh_called_with_correct_name_parameter(mock_run, mock_popen):
     _setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_run.call_args_list[0][0][0][6] == 'my-runner'
+    config_args = _find_config_sh_call(mock_run)
+    assert config_args[6] == 'my-runner'
 
 
 @patch('entrypoint.subprocess.Popen')
@@ -70,7 +85,8 @@ def test_config_sh_called_with_correct_labels_parameter(mock_run, mock_popen):
     _setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_run.call_args_list[0][0][0][8] == 'my-labels'
+    config_args = _find_config_sh_call(mock_run)
+    assert config_args[8] == 'my-labels'
 
 
 @patch('entrypoint.subprocess.Popen')
@@ -85,7 +101,8 @@ def test_config_sh_called_with_work_parameter(mock_run, mock_popen):
     _setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_run.call_args_list[0][0][0][10] == '_work'
+    config_args = _find_config_sh_call(mock_run)
+    assert config_args[10] == '_work'
 
 
 @patch('entrypoint.subprocess.Popen')
@@ -100,4 +117,5 @@ def test_config_sh_called_with_unattended_flag(mock_run, mock_popen):
     _setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_run.call_args_list[0][0][0][11] == '--unattended'
+    config_args = _find_config_sh_call(mock_run)
+    assert config_args[11] == '--unattended'

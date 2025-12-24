@@ -136,8 +136,23 @@ def _parse_args():
     return parser.parse_args()
 
 
+def _ensure_diag_permissions():
+    """Ensure _diag folder has correct permissions for runner user.
+
+    When using a shared volume (for CloudWatch sidecar), ECS creates the
+    volume with root ownership. This fixes permissions so runner can write.
+    """
+    diag_path = '/home/runner/_diag'
+    # Create and fix ownership - runner has sudo NOPASSWD
+    subprocess.run(['sudo', 'mkdir', '-p', diag_path], check=False, capture_output=True)
+    subprocess.run(['sudo', 'chown', 'runner:runner', diag_path], check=False, capture_output=True)
+
+
 def _configure_runner(repo: str, registration_token: str, runner_name: str, runner_labels: str):
     """Configure the GitHub Actions runner."""
+    # Fix _diag permissions before config (for shared volume with sidecar)
+    _ensure_diag_permissions()
+
     config_result = subprocess.run([
         './config.sh',
         '--url', f'https://github.com/{repo}',
