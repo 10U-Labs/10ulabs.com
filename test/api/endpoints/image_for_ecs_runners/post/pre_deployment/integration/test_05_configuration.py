@@ -1,10 +1,14 @@
-"""Layer 4: Configuration tests for ECS runner image deployment.
+"""Layer 5: Configuration tests for ECS runner image deployment.
 
 These tests verify that prerequisite resources are configured correctly.
 Per PRE_DEPLOYMENT_INTEGRATION_TESTS.md tenets, configuration tests
 verify settings and configuration - assumes existence tests passed.
 """
+import pytest
+
 from .conftest import BASE_IMAGE, BASE_TAG
+
+pytestmark = pytest.mark.layer(5)
 
 
 class TestECRRepositoryConfiguration:

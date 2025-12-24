@@ -10,6 +10,9 @@ import pytest
 import requests
 from botocore.exceptions import ClientError
 
+# Enable layer marker plugin for test ordering
+pytest_plugins = ['pytest_layers']
+
 
 API_SHARED_ECR_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
 AWS_REGION = "us-east-1"

@@ -8,6 +8,8 @@ from botocore.exceptions import ClientError
 
 import pytest
 
+pytestmark = pytest.mark.layer(2)
+
 
 class TestECRAuthorization:
     """Verify permission to inspect ECR repository."""

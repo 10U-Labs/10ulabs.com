@@ -1,4 +1,4 @@
-"""Layer 5: Capability tests for ECS runner image deployment.
+"""Layer 6: Capability tests for ECS runner image deployment.
 
 These tests verify that we can perform required operations.
 Per PRE_DEPLOYMENT_INTEGRATION_TESTS.md tenets, capability tests
@@ -7,6 +7,8 @@ verify we can perform operations - assumes configuration tests passed.
 from botocore.exceptions import ClientError
 
 import pytest
+
+pytestmark = pytest.mark.layer(6)
 
 
 class TestECRCapability:

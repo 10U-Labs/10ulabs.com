@@ -1,12 +1,15 @@
-"""Layer 3: Existence tests for ECS runner image deployment.
+"""Layer 4: Existence tests for ECS runner image deployment.
 
 These tests verify that prerequisite resources exist.
 Per PRE_DEPLOYMENT_INTEGRATION_TESTS.md tenets, existence tests verify
-resources exist - assumes authorization tests passed.
+resources exist - assumes state tests passed.
 """
+import pytest
 import requests
 
 from .conftest import BASE_IMAGE, BASE_TAG
+
+pytestmark = pytest.mark.layer(4)
 
 
 class TestTerraformOutputsExist:

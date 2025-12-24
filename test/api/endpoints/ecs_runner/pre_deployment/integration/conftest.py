@@ -58,6 +58,18 @@ def ec2_client():
 
 
 @pytest.fixture(scope="session")
+def ecs_client():
+    """Create an ECS client."""
+    return boto3.client("ecs", region_name=AWS_REGION)
+
+
+@pytest.fixture(scope="session")
+def logs_client():
+    """Create a CloudWatch Logs client."""
+    return boto3.client("logs", region_name=AWS_REGION)
+
+
+@pytest.fixture(scope="session")
 def image_for_ecs_runners_terraform_initialized():
     """Initialize terraform for image_for_ecs_runners state access."""
     return terraform_init(IMAGE_FOR_ECS_RUNNERS_DIR)
