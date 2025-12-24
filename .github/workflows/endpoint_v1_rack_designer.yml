@@ -175,7 +175,8 @@ jobs:
             $TRIGGER_FLAG \
             --workflow endpoint_v1_rack_designer \
             --repo ${{ github.repository }}
-name: Deploy /v1/rack-designer endpoint
+name: >-
+  Ensuring /v1/rack-designer API endpoint exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
