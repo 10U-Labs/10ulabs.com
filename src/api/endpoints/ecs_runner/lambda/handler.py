@@ -611,12 +611,17 @@ def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str
     logger.info("Using capacity provider %s for job %s", capacity_provider, job_id)
 
     # Build container overrides with environment variable for run monitoring
+    # Wrap command to fix shared volume permissions before running entrypoint
+    labels = ','.join(cfg['job_labels'])
+    entrypoint_cmd = (
+        f"sudo chown runner:runner /home/runner/_diag 2>/dev/null; "
+        f"exec /home/runner/entrypoint.py "
+        f"--repo '{cfg['github_repo']}' --name '{runner_name}' "
+        f"--labels '{labels}' --token '{cfg['registration_token']}'"
+    )
     container_overrides: Dict[str, Any] = {
         'name': os.environ['CONTAINER_NAME'],
-        'command': [
-            '--repo', cfg['github_repo'], '--name', runner_name,
-            '--labels', ','.join(cfg['job_labels']), '--token', cfg['registration_token']
-        ],
+        'command': ['/bin/bash', '-c', entrypoint_cmd],
     }
 
     # Pass GitHub token to container for workflow run status monitoring
