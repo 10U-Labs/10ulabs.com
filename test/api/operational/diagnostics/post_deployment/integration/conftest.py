@@ -6,6 +6,7 @@ from test.api.conftest import skip_if_endpoint_not_deployed
 
 import boto3
 import pytest
+from test_fixtures.aws import get_log_group_info
 
 # Re-export for local imports
 __all__ = ['skip_if_endpoint_not_deployed']
@@ -24,14 +25,4 @@ def diagnostics_handler_log_group(logs_client, config):
         'diagnostics_handler_function_name', 'TenULabsDiagnosticsHandler'
     )
     log_group_name = f"/aws/lambda/{function_name}"
-    response = logs_client.describe_log_groups(
-        logGroupNamePrefix=log_group_name,
-        limit=1
-    )
-    log_groups = response.get("logGroups", [])
-    matching = [lg for lg in log_groups if lg["logGroupName"] == log_group_name]
-    return {
-        "name": log_group_name,
-        "exists": len(matching) > 0,
-        "retention": matching[0].get("retentionInDays") if matching else None
-    }
+    return get_log_group_info(logs_client, log_group_name)
