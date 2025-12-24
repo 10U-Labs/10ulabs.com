@@ -46,6 +46,27 @@ def test_ecr_repository_has_aes256_encryption(api_shared_ecs_runner_dir):
     assert 'encryption_type = "AES256"' in content
 
 
+def test_ecr_repository_has_mutable_image_tags(api_shared_ecs_runner_dir):
+    """Test that ECR repository has MUTABLE image tag mutability."""
+    ecr_tf = api_shared_ecs_runner_dir / "ecr.tf"
+    content = ecr_tf.read_text()
+    assert 'image_tag_mutability = "MUTABLE"' in content
+
+
+def test_ecr_repository_uses_common_tags(api_shared_ecs_runner_dir):
+    """Test that ECR repository uses common_tags for tagging."""
+    ecr_tf = api_shared_ecs_runner_dir / "ecr.tf"
+    content = ecr_tf.read_text()
+    assert "local.common_tags" in content
+
+
+def test_common_tags_has_managed_by_terraform(api_shared_ecs_runner_dir):
+    """Test that common_tags includes ManagedBy = terraform."""
+    locals_tf = api_shared_ecs_runner_dir / "locals.tf"
+    content = locals_tf.read_text()
+    assert 'ManagedBy   = "terraform"' in content
+
+
 def test_ecr_lifecycle_policy_defined(api_shared_ecs_runner_dir):
     """Test that ECR lifecycle policy is defined."""
     ecr_tf = api_shared_ecs_runner_dir / "ecr.tf"
