@@ -5,6 +5,8 @@ This module tests:
 - Subscription filters in log_subscriptions.tf
 """
 
+from repo_utils import extract_brace_block
+
 
 def _get_log_group_section(content: str, log_group_name: str) -> str:
     """Extract the log group resource section from Terraform content."""
@@ -12,15 +14,10 @@ def _get_log_group_section(content: str, log_group_name: str) -> str:
     start = content.find(resource_pattern)
     if start == -1:
         return ""
-    brace_count = 0
-    for i, char in enumerate(content[start:], start):
-        if char == '{':
-            brace_count += 1
-        elif char == '}':
-            brace_count -= 1
-            if brace_count == 0:
-                return content[start:i + 1]
-    return content[start:]
+    brace_start = content.find('{', start)
+    if brace_start == -1:
+        return ""
+    return extract_brace_block(content, brace_start)
 
 
 # =============================================================================
@@ -135,7 +132,8 @@ def test_circuit_breaker_remediation_subscription_filter_exists(runners_src_path
     """Verify circuit_breaker_remediation subscription filter exists."""
     with open(runners_src_path / "log_subscriptions.tf", encoding="utf-8") as f:
         content = f.read()
-    assert 'resource "aws_cloudwatch_log_subscription_filter" "circuit_breaker_remediation"' in content
+    resource = 'resource "aws_cloudwatch_log_subscription_filter"'
+    assert f'{resource} "circuit_breaker_remediation"' in content
 
 
 def test_dlq_reprocessor_subscription_filter_exists(runners_src_path):
@@ -191,7 +189,8 @@ def test_spot_interruption_handler_subscription_filter_exists(runners_src_path):
     """Verify spot_interruption_handler subscription filter exists."""
     with open(runners_src_path / "log_subscriptions.tf", encoding="utf-8") as f:
         content = f.read()
-    assert 'resource "aws_cloudwatch_log_subscription_filter" "spot_interruption_handler"' in content
+    resource = 'resource "aws_cloudwatch_log_subscription_filter"'
+    assert f'{resource} "spot_interruption_handler"' in content
 
 
 def test_stale_runner_cleanup_subscription_filter_exists(runners_src_path):

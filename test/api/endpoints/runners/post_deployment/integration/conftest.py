@@ -14,6 +14,14 @@ def sqs_client_fixture(aws_region):
     return boto3.client("sqs", region_name=aws_region)
 
 
+@pytest.fixture(name="runners_handler_log_group", scope="module")
+def runners_handler_log_group_fixture(logs_client, config):
+    """Get the runners handler log group info."""
+    function_name = config["webhook_handler_function_name"]
+    log_group_name = f"/aws/lambda/{function_name}"
+    return get_log_group_info(logs_client, log_group_name)
+
+
 @pytest.fixture(name="circuit_breaker_recovery_log_group", scope="module")
 def circuit_breaker_recovery_log_group_fixture(logs_client, config):
     """Get the circuit breaker recovery log group info."""
