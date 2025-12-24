@@ -1,8 +1,8 @@
 """Pytest fixtures for EC2 runner integration tests."""
-import boto3
 from botocore.exceptions import ClientError
 import pytest
 
+from test_fixtures.aws import get_log_group_info
 from test_fixtures.terraform import terraform_output
 
 from ...conftest import EC2_RUNNER_SRC
@@ -15,12 +15,6 @@ pytest_plugins = ['pytest_layers']
 
 api_url = api_url_fixture
 api_key = api_key_fixture
-
-
-@pytest.fixture(scope="session")
-def kms_client(aws_region):
-    """Create a KMS client."""
-    return boto3.client("kms", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
@@ -47,6 +41,14 @@ def lambda_role_arn(shared_config):
 def ec2_runner_role_name():
     """Get the EC2 runner IAM role name from terraform outputs."""
     return terraform_output(EC2_RUNNER_SRC, "ec2_runner_role_name")
+
+
+@pytest.fixture(scope="module")
+def handler_log_group(request, logs_client):
+    """Get the Lambda handler log group info from CloudWatch."""
+    function_name = request.getfixturevalue("lambda_function_name")
+    log_group_name = f"/aws/lambda/{function_name}"
+    return get_log_group_info(logs_client, log_group_name)
 
 
 def get_inline_policy_actions(iam_client, role_name: str, policy_name: str) -> list:

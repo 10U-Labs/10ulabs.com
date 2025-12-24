@@ -139,6 +139,38 @@ class TestECRImageArchitecture:
         assert result is True
 
 
+class TestCloudWatchLogGroupConfiguration:
+    """Verify CloudWatch log groups are configured correctly."""
+
+    def test_lambda_log_group_has_retention_set(self, lambda_log_group):
+        """Verify Lambda log group has retention policy configured."""
+        assert lambda_log_group["retention"] is not None, (
+            f"Log group '{lambda_log_group['name']}' has no retention policy set"
+        )
+
+    def test_lambda_log_group_retention_is_14_days(self, lambda_log_group):
+        """Verify Lambda log group retention is set to 14 days."""
+        retention = lambda_log_group["retention"]
+        assert retention == 14, (
+            f"Log group '{lambda_log_group['name']}' retention is {retention} days, "
+            "expected 14 days"
+        )
+
+    def test_ecs_log_group_has_retention_set(self, ecs_log_group):
+        """Verify ECS log group has retention policy configured."""
+        assert ecs_log_group["retention"] is not None, (
+            f"Log group '{ecs_log_group['name']}' has no retention policy set"
+        )
+
+    def test_ecs_log_group_retention_is_7_days(self, ecs_log_group):
+        """Verify ECS log group retention is set to 7 days."""
+        retention = ecs_log_group["retention"]
+        assert retention == 7, (
+            f"Log group '{ecs_log_group['name']}' retention is {retention} days, "
+            "expected 7 days"
+        )
+
+
 class TestNamingConventions:
     """Verify deployed resources follow naming conventions."""
 

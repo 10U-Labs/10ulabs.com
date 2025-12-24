@@ -48,3 +48,10 @@ def test_ec2_runner_role_exists(iam_client, ec2_runner_role_name):
                 "Run terraform apply in src/api/endpoints/ec2_runner/"
             )
         raise
+
+
+def test_handler_log_group_exists(handler_log_group):
+    """Verify CloudWatch log group for Lambda handler exists."""
+    assert handler_log_group["exists"], (
+        f"CloudWatch log group '{handler_log_group['name']}' does not exist"
+    )

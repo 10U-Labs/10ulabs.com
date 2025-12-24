@@ -1,6 +1,7 @@
 """Pytest fixtures for ECS runner post-deployment integration tests."""
-import boto3
 import pytest
+
+from test_fixtures.aws import get_log_group_info
 
 from ...conftest import ECS_RUNNER_SRC, terraform_output
 
@@ -32,16 +33,18 @@ def cluster_name():
     return terraform_output(ECS_RUNNER_SRC, "cluster_name")
 
 
-@pytest.fixture(scope="session")
-def lambda_client(config):
-    """Create a Lambda client."""
-    return boto3.client("lambda", region_name=config["aws_region"])
+@pytest.fixture(scope="module")
+def lambda_log_group(request, logs_client):
+    """Get the Lambda handler log group info from CloudWatch."""
+    function_name = request.getfixturevalue("lambda_function_name")
+    log_group_name = f"/aws/lambda/{function_name}"
+    return get_log_group_info(logs_client, log_group_name)
 
 
-@pytest.fixture(scope="session")
-def iam_client(config):
-    """Create an IAM client."""
-    return boto3.client("iam", region_name=config["aws_region"])
+@pytest.fixture(scope="module")
+def ecs_log_group(logs_client):
+    """Get the ECS task log group info from CloudWatch."""
+    return get_log_group_info(logs_client, "/ecs/github-runner")
 
 
 @pytest.fixture(scope="session")

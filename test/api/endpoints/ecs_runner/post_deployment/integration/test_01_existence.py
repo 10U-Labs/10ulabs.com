@@ -58,3 +58,19 @@ class TestECSTaskDefinitionExistence:
         if task_definition is None:
             pytest.skip("ECS task definition not deployed")
         assert "taskDefinitionArn" in task_definition
+
+
+class TestCloudWatchLogGroupExistence:
+    """Verify CloudWatch log groups exist."""
+
+    def test_lambda_log_group_exists(self, lambda_log_group):
+        """Verify CloudWatch log group for Lambda handler exists."""
+        assert lambda_log_group["exists"], (
+            f"CloudWatch log group '{lambda_log_group['name']}' does not exist"
+        )
+
+    def test_ecs_log_group_exists(self, ecs_log_group):
+        """Verify CloudWatch log group for ECS tasks exists."""
+        assert ecs_log_group["exists"], (
+            f"CloudWatch log group '{ecs_log_group['name']}' does not exist"
+        )

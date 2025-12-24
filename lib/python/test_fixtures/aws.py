@@ -84,6 +84,29 @@ def logs_client(request):
     return boto3.client("logs", region_name=region)
 
 
+def get_log_group_info(client, log_group_name: str) -> dict:
+    """Get CloudWatch log group info.
+
+    Args:
+        client: CloudWatch Logs boto3 client
+        log_group_name: Full log group name (e.g., /aws/lambda/MyFunction)
+
+    Returns dict with keys: name, exists, retention.
+    Use this helper in endpoint-specific log group fixtures.
+    """
+    response = client.describe_log_groups(
+        logGroupNamePrefix=log_group_name,
+        limit=1
+    )
+    log_groups = response.get("logGroups", [])
+    matching = [lg for lg in log_groups if lg["logGroupName"] == log_group_name]
+    return {
+        "name": log_group_name,
+        "exists": len(matching) > 0,
+        "retention": matching[0].get("retentionInDays") if matching else None
+    }
+
+
 @pytest.fixture(scope="session")
 def caller_identity(request):
     """Get the current caller identity."""

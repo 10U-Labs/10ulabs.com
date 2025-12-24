@@ -5,6 +5,8 @@ Layer marker system and AWS clients inherited from parent conftest.
 
 import pytest
 
+from test_fixtures.aws import get_log_group_info
+
 
 pytest_plugins = ['pytest_layers']
 
@@ -22,17 +24,7 @@ def contact_handler_log_group(request, logs_client):
     """Get the contact handler log group info from CloudWatch."""
     function_name = request.getfixturevalue("contact_handler_function_name")
     log_group_name = f"/aws/lambda/{function_name}"
-    response = logs_client.describe_log_groups(
-        logGroupNamePrefix=log_group_name,
-        limit=1
-    )
-    log_groups = response.get("logGroups", [])
-    matching = [lg for lg in log_groups if lg["logGroupName"] == log_group_name]
-    return {
-        "name": log_group_name,
-        "exists": len(matching) > 0,
-        "retention": matching[0].get("retentionInDays") if matching else None
-    }
+    return get_log_group_info(logs_client, log_group_name)
 
 
 @pytest.fixture(scope="module")
