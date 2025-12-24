@@ -20,3 +20,10 @@ def test_lambda_function_has_arn(lambda_function):
 def test_lambda_function_has_role(lambda_function):
     """Verify the Lambda function has a Role configured."""
     assert "Role" in lambda_function
+
+
+def test_handler_log_group_exists(handler_log_group):
+    """Verify CloudWatch log group for Lambda handler exists."""
+    assert handler_log_group["exists"], (
+        f"CloudWatch log group '{handler_log_group['name']}' does not exist"
+    )

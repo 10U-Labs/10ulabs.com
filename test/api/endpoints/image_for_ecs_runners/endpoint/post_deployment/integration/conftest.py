@@ -7,6 +7,8 @@ from test.api.endpoints.image_for_ecs_runners.endpoint.helpers import (
 
 import pytest
 
+from test_fixtures.aws import get_log_group_info
+
 # Enable layer marker plugin for test ordering
 pytest_plugins = ['pytest_layers']
 
@@ -53,3 +55,11 @@ def lambda_config_fixture(lambda_client, lambda_function):
 def env_vars_fixture(lambda_config):
     """Get environment variables from Lambda config."""
     return lambda_config.get("Environment", {}).get("Variables", {})
+
+
+@pytest.fixture(name="handler_log_group", scope="module")
+def handler_log_group_fixture(logs_client, lambda_function):
+    """Get the Lambda handler log group info from CloudWatch."""
+    function_name = lambda_function["FunctionName"]
+    log_group_name = f"/aws/lambda/{function_name}"
+    return get_log_group_info(logs_client, log_group_name)

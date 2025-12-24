@@ -5,6 +5,8 @@ configured correctly.
 """
 import pytest
 
+from test_fixtures.aws import get_log_group_info
+
 # Enable layer marker plugin for test ordering
 pytest_plugins = ['pytest_layers']
 
@@ -16,6 +18,13 @@ def handler_function_name_fixture(config):
         'image_for_ec2_runners_handler_function_name',
         'TenULabsImageForEC2RunnersHandler'
     )
+
+
+@pytest.fixture(name="handler_log_group", scope="module")
+def handler_log_group_fixture(logs_client, handler_function_name):
+    """Get the Lambda handler log group info from CloudWatch."""
+    log_group_name = f"/aws/lambda/{handler_function_name}"
+    return get_log_group_info(logs_client, log_group_name)
 
 
 @pytest.fixture(name="handler_role_name", scope="module")

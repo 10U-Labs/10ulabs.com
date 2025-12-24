@@ -276,3 +276,64 @@ def test_runner_starter_name_is_pascalcase(lambda_client, config):
     response = lambda_client.get_function(FunctionName=function_name)
     actual_name = response["Configuration"]["FunctionName"]
     assert _is_pascalcase(actual_name), f"Name '{actual_name}' is not PascalCase"
+
+
+# === CloudWatch Log Group Configuration ===
+
+
+def test_circuit_breaker_recovery_log_group_has_retention(
+    circuit_breaker_recovery_log_group
+):
+    """Verify circuit breaker recovery log group has retention configured."""
+    assert circuit_breaker_recovery_log_group["retention"] is not None, (
+        f"Log group '{circuit_breaker_recovery_log_group['name']}' "
+        "has no retention policy"
+    )
+
+
+def test_circuit_breaker_recovery_log_group_retention_is_7_days(
+    circuit_breaker_recovery_log_group
+):
+    """Verify circuit breaker recovery log group retention is 7 days."""
+    retention = circuit_breaker_recovery_log_group["retention"]
+    assert retention == 7, (
+        f"Log group '{circuit_breaker_recovery_log_group['name']}' "
+        f"retention is {retention} days, expected 7"
+    )
+
+
+def test_circuit_breaker_remediation_log_group_has_retention(
+    circuit_breaker_remediation_log_group
+):
+    """Verify circuit breaker remediation log group has retention configured."""
+    assert circuit_breaker_remediation_log_group["retention"] is not None, (
+        f"Log group '{circuit_breaker_remediation_log_group['name']}' "
+        "has no retention policy"
+    )
+
+
+def test_circuit_breaker_remediation_log_group_retention_is_7_days(
+    circuit_breaker_remediation_log_group
+):
+    """Verify circuit breaker remediation log group retention is 7 days."""
+    retention = circuit_breaker_remediation_log_group["retention"]
+    assert retention == 7, (
+        f"Log group '{circuit_breaker_remediation_log_group['name']}' "
+        f"retention is {retention} days, expected 7"
+    )
+
+
+def test_dlq_reprocessor_log_group_has_retention(dlq_reprocessor_log_group):
+    """Verify DLQ reprocessor log group has retention configured."""
+    assert dlq_reprocessor_log_group["retention"] is not None, (
+        f"Log group '{dlq_reprocessor_log_group['name']}' has no retention policy"
+    )
+
+
+def test_dlq_reprocessor_log_group_retention_is_7_days(dlq_reprocessor_log_group):
+    """Verify DLQ reprocessor log group retention is 7 days."""
+    retention = dlq_reprocessor_log_group["retention"]
+    assert retention == 7, (
+        f"Log group '{dlq_reprocessor_log_group['name']}' "
+        f"retention is {retention} days, expected 7"
+    )

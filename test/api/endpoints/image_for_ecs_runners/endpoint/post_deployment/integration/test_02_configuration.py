@@ -75,3 +75,21 @@ class TestNamingConventions:
             if e.response["Error"]["Code"] == "NoSuchEntity":
                 pytest.skip(f"IAM role '{role_name}' does not exist")
             raise
+
+
+class TestCloudWatchLogGroupConfiguration:
+    """Verify CloudWatch log group is configured correctly."""
+
+    def test_handler_log_group_has_retention_set(self, handler_log_group):
+        """Verify log group has retention policy configured."""
+        assert handler_log_group["retention"] is not None, (
+            f"Log group '{handler_log_group['name']}' has no retention policy set"
+        )
+
+    def test_handler_log_group_retention_is_7_days(self, handler_log_group):
+        """Verify log group retention is set to 7 days."""
+        retention = handler_log_group["retention"]
+        assert retention == 7, (
+            f"Log group '{handler_log_group['name']}' retention is {retention} days, "
+            "expected 7 days"
+        )

@@ -48,3 +48,23 @@ class TestIAMRoleConfiguration:
     ):
         """Verify IAM role has an assume role policy document."""
         assert 'AssumeRolePolicyDocument' in fetched_iam_role['Role']
+
+
+class TestImageForEC2RunnersLogGroupConfiguration:
+    """Layer 2: Verify ImageForEC2Runners log group is configured correctly."""
+
+    def test_image_for_ec2_runners_log_group_has_retention(self, handler_log_group):
+        """Verify ImageForEC2Runners log group has retention configured."""
+        assert handler_log_group["retention"] is not None, (
+            f"ImageForEC2Runners log group '{handler_log_group['name']}' "
+            "should have retention set"
+        )
+
+    def test_image_for_ec2_runners_log_group_retention_is_7_days(
+        self, handler_log_group
+    ):
+        """Verify ImageForEC2Runners log group uses 7-day retention."""
+        retention = handler_log_group["retention"]
+        assert retention == 7, (
+            f"ImageForEC2Runners log group retention is {retention} days, expected 7"
+        )

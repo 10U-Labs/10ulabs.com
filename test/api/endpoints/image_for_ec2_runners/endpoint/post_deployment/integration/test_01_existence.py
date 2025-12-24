@@ -40,3 +40,10 @@ class TestIAMRoleExists:
     ):
         """Verify IAM role has an ARN."""
         assert fetched_iam_role['Role']['Arn'].startswith('arn:aws:iam::')
+
+
+def test_image_for_ec2_runners_handler_log_group_exists(handler_log_group):
+    """Verify ImageForEC2RunnersHandler CloudWatch log group exists."""
+    assert handler_log_group["exists"], (
+        f"ImageForEC2Runners log group '{handler_log_group['name']}' does not exist"
+    )
