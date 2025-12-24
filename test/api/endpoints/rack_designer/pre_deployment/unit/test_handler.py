@@ -1,6 +1,6 @@
 """Unit tests for rack designer Lambda handler."""
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from .conftest import create_mock_dynamodb
 
