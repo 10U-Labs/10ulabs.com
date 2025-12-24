@@ -184,9 +184,9 @@ Linting and type checking must run separately for source and test code.
 | Step Name | Target |
 |-----------|--------|
 | `Run pylint on source` | `lib/python/` and `src/.../lambdas/` |
-| `Run pylint on tests` | `test/...` (with `PYTHONPATH=lib/python`) |
+| `Run pylint on tests` | `lib/python/`, parent conftest files, and `test/.../endpoint/` (with `PYTHONPATH=lib/python`) |
 | `Run mypy on source` | `lib/python/` and `src/.../lambdas/` |
-| `Run mypy on tests` | `test/...` (with `MYPYPATH=lib/python`) |
+| `Run mypy on tests` | `lib/python/`, parent conftest files, and `test/.../endpoint/` (with `MYPYPATH=lib/python`) |
 
 ### Why Separate Steps?
 
@@ -206,7 +206,8 @@ Linting and type checking must run separately for source and test code.
 - name: Run pylint on tests
   run: |
     PYTHONPATH=lib/python python3 -m pylint \
-      test/api/endpoints/example/ \
+      lib/python/ test/conftest.py test/api/conftest.py \
+      test/api/endpoints/conftest.py test/api/endpoints/example/ \
       --fail-on=C,R,W \
       --fail-under=10.0
 - name: Run mypy on source
@@ -216,5 +217,6 @@ Linting and type checking must run separately for source and test code.
 - name: Run mypy on tests
   run: |
     MYPYPATH=lib/python python3 -m mypy \
-      test/api/endpoints/example/
+      lib/python/ test/conftest.py test/api/conftest.py \
+      test/api/endpoints/conftest.py test/api/endpoints/example/
 ```
