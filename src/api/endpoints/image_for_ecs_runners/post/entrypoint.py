@@ -16,7 +16,7 @@ import urllib.request
 from typing import Any
 
 # Module-level state for CloudWatch agent and run monitor
-_cw_state: dict[str, Any] = {"stop_event": None}
+_cw_state: dict[str, Any] = {"stop_event": None, "thread": None}
 monitor_state: dict[str, Any] = {"stop_event": None, "should_terminate": False}
 
 
@@ -73,14 +73,18 @@ def start_cloudwatch_agent():
         daemon=True
     )
     thread.start()
+    _cw_state["thread"] = thread
     print("CloudWatch agent started successfully", flush=True)
 
 
 def stop_cloudwatch_agent():
-    """Stop the CloudWatch agent by signaling the background thread."""
+    """Stop the CloudWatch agent and wait for it to terminate."""
     stop_event = _cw_state.get("stop_event")
+    thread = _cw_state.get("thread")
     if stop_event is not None:
         stop_event.set()
+    if thread is not None:
+        thread.join(timeout=5)
 
 
 def cleanup_runner(token: str) -> None:
