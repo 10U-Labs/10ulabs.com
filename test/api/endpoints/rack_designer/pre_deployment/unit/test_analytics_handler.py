@@ -1,6 +1,8 @@
 """Unit tests for rack designer analytics event handler."""
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
+from .conftest import create_mock_dynamodb
 
 
 def test_handle_events_missing_session_id(handler):
@@ -44,20 +46,26 @@ def test_handle_events_too_many_events(handler):
     assert response['statusCode'] == 400
 
 
+def _create_events_request(events_list, session_context=None):
+    """Create an events request body for testing."""
+    payload = {'session_id': 'abc', 'device_id': 'def', 'events': events_list}
+    if session_context:
+        payload['session_context'] = session_context
+    return {'body': json.dumps(payload), 'headers': {}}
+
+
 def test_handle_events_invalid_event_missing_type(handler):
     """Test handle_events returns 400 for event missing type."""
-    events = [{'timestamp': '2025-01-01T00:00:00Z'}]
-    body = json.dumps({'session_id': 'abc', 'device_id': 'def', 'events': events})
-    event = {'body': body, 'headers': {}}
+    events_with_missing_type = [{'timestamp': '2025-01-01T00:00:00Z'}]
+    event = _create_events_request(events_with_missing_type)
     response = handler.handle_events(event)
     assert response['statusCode'] == 400
 
 
 def test_handle_events_invalid_event_missing_timestamp(handler):
     """Test handle_events returns 400 for event missing timestamp."""
-    events = [{'event_type': 'test'}]
-    body = json.dumps({'session_id': 'abc', 'device_id': 'def', 'events': events})
-    event = {'body': body, 'headers': {}}
+    events_with_missing_ts = [{'event_type': 'test'}]
+    event = _create_events_request(events_with_missing_ts)
     response = handler.handle_events(event)
     assert response['statusCode'] == 400
 
@@ -65,13 +73,10 @@ def test_handle_events_invalid_event_missing_timestamp(handler):
 @patch('boto3.client')
 def test_handle_events_success_single_event(mock_boto_client, handler):
     """Test handle_events returns 200 for single valid event."""
-    mock_dynamodb = MagicMock()
-    mock_dynamodb.batch_write_item.return_value = {}
-    mock_boto_client.return_value = mock_dynamodb
+    mock_boto_client.return_value = create_mock_dynamodb('batch_write_item')
     handler.clear_clients()
     events = [{'event_type': 'test', 'timestamp': '2025-01-01T00:00:00Z'}]
-    body = json.dumps({'session_id': 'abc', 'device_id': 'def', 'events': events})
-    event = {'body': body, 'headers': {}}
+    event = _create_events_request(events)
     with patch.dict('os.environ', {'RACK_DESIGNER_EVENTS_TABLE': 'test-events-table'}):
         response = handler.handle_events(event)
     assert response['statusCode'] == 200
@@ -80,16 +85,13 @@ def test_handle_events_success_single_event(mock_boto_client, handler):
 @patch('boto3.client')
 def test_handle_events_success_multiple_events(mock_boto_client, handler):
     """Test handle_events returns 200 for multiple valid events."""
-    mock_dynamodb = MagicMock()
-    mock_dynamodb.batch_write_item.return_value = {}
-    mock_boto_client.return_value = mock_dynamodb
+    mock_boto_client.return_value = create_mock_dynamodb('batch_write_item')
     handler.clear_clients()
     events = [
         {'event_type': 'test1', 'timestamp': '2025-01-01T00:00:00Z'},
         {'event_type': 'test2', 'timestamp': '2025-01-01T00:00:01Z'}
     ]
-    body = json.dumps({'session_id': 'abc', 'device_id': 'def', 'events': events})
-    event = {'body': body, 'headers': {}}
+    event = _create_events_request(events)
     with patch.dict('os.environ', {'RACK_DESIGNER_EVENTS_TABLE': 'test-events-table'}):
         response = handler.handle_events(event)
     assert response['statusCode'] == 200
@@ -98,21 +100,11 @@ def test_handle_events_success_multiple_events(mock_boto_client, handler):
 @patch('boto3.client')
 def test_handle_events_with_session_context(mock_boto_client, handler):
     """Test handle_events handles session context correctly."""
-    mock_dynamodb = MagicMock()
-    mock_dynamodb.batch_write_item.return_value = {}
-    mock_boto_client.return_value = mock_dynamodb
+    mock_boto_client.return_value = create_mock_dynamodb('batch_write_item')
     handler.clear_clients()
     events = [{'event_type': 'test', 'timestamp': '2025-01-01T00:00:00Z'}]
     session_context = {'user_agent': 'test', 'referrer': 'http://example.com'}
-    event = {
-        'body': json.dumps({
-            'session_id': 'abc',
-            'device_id': 'def',
-            'events': events,
-            'session_context': session_context
-        }),
-        'headers': {}
-    }
+    event = _create_events_request(events, session_context)
     with patch.dict('os.environ', {'RACK_DESIGNER_EVENTS_TABLE': 'test-events-table'}):
         response = handler.handle_events(event)
     assert response['statusCode'] == 200

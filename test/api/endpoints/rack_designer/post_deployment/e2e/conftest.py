@@ -3,6 +3,7 @@
 E2E tests verify critical user journeys from end to end.
 These tests make real HTTP requests to the deployed API and frontend.
 """
+import requests
 import pytest
 
 
@@ -24,35 +25,25 @@ def test_device_id_fixture():
     return "e2e-test-device"
 
 
-def create_test_configuration(rack_height=12, rack_count=3, placed_parts=None):
-    """Create a valid rack configuration for testing.
+def save_and_load_config(api_url, config, device_id):
+    """Save a configuration and retrieve it, returning the loaded data.
 
     Args:
-        rack_height: Height of the rack (1-42).
-        rack_count: Number of racks (>= 1).
-        placed_parts: List of placed parts, defaults to empty list.
+        api_url: Base API URL.
+        config: Configuration dictionary to save.
+        device_id: Device identifier.
 
     Returns:
-        Dictionary with valid rack configuration.
+        Tuple of (config_hash, loaded_configuration_data).
     """
-    return {
-        "rackHeight": rack_height,
-        "rackCount": rack_count,
-        "placedParts": placed_parts or []
-    }
-
-
-def create_test_payload(config=None, device_id="e2e-test-device"):
-    """Create a valid API payload for testing.
-
-    Args:
-        config: Rack configuration dictionary, defaults to basic config.
-        device_id: Device identifier for tracking.
-
-    Returns:
-        Dictionary with configuration and device_id.
-    """
-    return {
-        "configuration": config or create_test_configuration(),
-        "device_id": device_id
-    }
+    post_response = requests.post(
+        f"{api_url}/v1/rack-designer/configurations",
+        json={"configuration": config, "device_id": device_id},
+        timeout=10
+    )
+    config_hash = post_response.json()["config_hash"]
+    get_response = requests.get(
+        f"{api_url}/v1/rack-designer/configurations/{config_hash}",
+        timeout=10
+    )
+    return config_hash, get_response

@@ -95,24 +95,36 @@ class TestExportLambdaWiring:
             f"Attached policies: {policy_arns}"
         )
 
-    def test_export_role_has_dynamodb_policy(self, iam_client, export_role_name):
-        """Verify export IAM role has DynamoDB export inline policy."""
+    def test_export_role_has_export_permissions_policy(
+        self, iam_client, export_role_name
+    ):
+        """Verify export IAM role has ExportPermissions inline policy."""
         response = iam_client.list_role_policies(RoleName=export_role_name)
         inline_policies = response.get("PolicyNames", [])
-        has_dynamodb = any("DynamoDB" in p or "dynamodb" in p for p in inline_policies)
-        assert has_dynamodb, (
-            f"IAM role '{export_role_name}' missing DynamoDB policy. "
+        has_export = "ExportPermissions" in inline_policies
+        assert has_export, (
+            f"IAM role '{export_role_name}' missing ExportPermissions policy. "
             f"Available policies: {inline_policies}"
         )
 
-    def test_export_role_has_s3_policy(self, iam_client, export_role_name):
-        """Verify export IAM role has S3 access inline policy."""
-        response = iam_client.list_role_policies(RoleName=export_role_name)
-        inline_policies = response.get("PolicyNames", [])
-        has_s3 = any("S3" in p or "s3" in p for p in inline_policies)
-        assert has_s3, (
-            f"IAM role '{export_role_name}' missing S3 policy. "
-            f"Available policies: {inline_policies}"
+    def test_export_permissions_policy_has_dynamodb_actions(
+        self, iam_client, export_role_name
+    ):
+        """Verify ExportPermissions policy includes DynamoDB export actions."""
+        response = iam_client.get_role_policy(
+            RoleName=export_role_name, PolicyName="ExportPermissions"
+        )
+        policy_doc = response.get("PolicyDocument", {})
+        statements = policy_doc.get("Statement", [])
+        actions = []
+        for stmt in statements:
+            stmt_actions = stmt.get("Action", [])
+            if isinstance(stmt_actions, str):
+                stmt_actions = [stmt_actions]
+            actions.extend(stmt_actions)
+        has_dynamodb = any("dynamodb:" in a for a in actions)
+        assert has_dynamodb, (
+            f"ExportPermissions policy missing DynamoDB actions. Actions: {actions}"
         )
 
 

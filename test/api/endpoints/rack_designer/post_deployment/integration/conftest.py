@@ -121,11 +121,11 @@ def scheduler_role_name(request):
 def configurations_table_name(request):
     """Get the configurations DynamoDB table name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackDesignerConfigurations"
+    return f"{prefix}-rack-designer-configurations"
 
 
 @pytest.fixture(scope="module")
 def events_table_name(request):
     """Get the events DynamoDB table name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackDesignerEvents"
+    return f"{prefix}-rack-designer-events"
