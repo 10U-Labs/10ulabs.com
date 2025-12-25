@@ -12,7 +12,6 @@ from repo_utils import extract_brace_block
 from terraform_config import (
     get_tfvars_values,
     get_endpoint_local_values,
-    get_shared_config,
 )
 
 
@@ -139,18 +138,18 @@ def parse_tfvars(tfvars_path: Path) -> Dict[str, Any]:
     return get_tfvars_values(tfvars_path.parent)
 
 
-def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, str]:
+def parse_locals_file(locals_path: Path, _shared: Dict[str, str]) -> Dict[str, str]:
     """Parse a Terraform locals file and resolve shared module references.
 
     Args:
         locals_path: Path to the locals.tf file.
-        shared: Dict of shared module outputs for resolving references (unused).
+        _shared: Dict of shared module outputs for resolving references (unused).
 
     Returns:
         Dict mapping local names to resolved values.
 
     Note:
         Wrapper around terraform_config.get_endpoint_local_values() for backwards compatibility.
-        The shared parameter is no longer used - terraform_config resolves references internally.
+        The _shared parameter is no longer used - terraform_config resolves references internally.
     """
     return get_endpoint_local_values(locals_path.parent)

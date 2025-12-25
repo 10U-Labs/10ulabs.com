@@ -5,8 +5,12 @@ patterns like backend.tf and outputs.tf verification.
 """
 import re
 from pathlib import Path
+from typing import Optional
 
+import pytest
+from naming_conventions import validate_name
 from repo_utils import REPO_ROOT
+from terraform_config import extract_iam_role_names, extract_lambda_function_names
 
 API_BACKEND_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "backend" / "outputs.tf"
 
@@ -96,7 +100,7 @@ def create_backend_terraform_tests(
 
 def create_outputs_terraform_tests(
     endpoint_src: Path,
-    required_outputs: list = None,
+    required_outputs: Optional[list] = None,
 ):
     """Create a test class for outputs.tf verification.
 
@@ -124,8 +128,7 @@ def create_outputs_terraform_tests(
     for output_name in required_outputs:
 
         def make_test(name):
-            def test_output_exists(self):
-                f"""Verify {name} output is defined."""
+            def test_output_exists(_self):
                 with open(outputs_file, encoding="utf-8") as f:
                     content = f.read()
                 assert f'output "{name}"' in content
@@ -144,7 +147,7 @@ def create_remote_state_contract_tests(
     endpoint_src: Path,
     endpoint_name: str,
     lambda_file: str = "lambda.tf",
-    required_outputs: list = None,
+    required_outputs: Optional[list] = None,
 ):
     """Create a test class for remote state contract verification.
 
@@ -188,8 +191,7 @@ def create_remote_state_contract_tests(
         for output_name in required_outputs:
 
             def make_test(name):
-                def test_output_exists(self):
-                    f"""Verify {name} output exists in api backend."""
+                def test_output_exists(_self):
                     outputs = get_api_backend_outputs()
                     assert name in outputs, (
                         f"{name} output missing from api/backend/outputs.tf. "
@@ -223,10 +225,6 @@ def create_naming_conventions_tests(
     Returns:
         Tuple of (TestIAMRoleNamingConventions, TestLambdaFunctionNamingConventions)
     """
-    import pytest
-    from naming_conventions import validate_name
-    from terraform_config import extract_iam_role_names, extract_lambda_function_names
-
     iam_path = endpoint_src / iam_file
     lambda_path = endpoint_src / lambda_file
 

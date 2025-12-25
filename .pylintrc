@@ -1,0 +1,26 @@
+[MAIN]
+# Use multiple processes to speed up Pylint
+jobs=0
+
+[MESSAGES CONTROL]
+# Disable certain checks that don't apply well to test fixtures
+# R0903: Too few public methods - test base classes intentionally have few methods
+# R0913: Too many arguments - factory functions may have many optional parameters
+# R0917: Too many positional arguments - same as R0913
+disable=too-few-public-methods,
+        too-many-arguments,
+        too-many-positional-arguments
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+
+# Maximum number of lines in a module
+max-module-lines=1500
+
+[SIMILARITIES]
+# Minimum lines number of a similarity
+min-similarity-lines=10
+
+# Ignore imports when computing similarities
+ignore-imports=yes

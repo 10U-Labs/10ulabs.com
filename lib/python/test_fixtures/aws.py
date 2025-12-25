@@ -4,6 +4,7 @@ Use by adding to conftest.py:
     pytest_plugins = ['test_fixtures.aws']
 """
 import boto3
+from botocore.exceptions import ClientError
 import pytest
 from terraform_config import get_shared_config
 
@@ -198,9 +199,7 @@ def api_gateway_info(request):
 
     Requires `apigateway_client` and `api_backend_outputs` fixtures.
     """
-    from botocore.exceptions import ClientError
-
-    apigateway_client = request.getfixturevalue("apigateway_client")
+    client = request.getfixturevalue("apigateway_client")
     api_backend_outputs = request.getfixturevalue("api_backend_outputs")
 
     api_id = api_backend_outputs.get("api_gateway_rest_api_id")
@@ -208,9 +207,9 @@ def api_gateway_info(request):
         return {"id": None, "exists": False, "accessible": False}
 
     try:
-        response = apigateway_client.get_rest_api(restApiId=api_id)
+        response = client.get_rest_api(restApiId=api_id)
         endpoint_config = response.get("endpointConfiguration", {})
-        resources_response = apigateway_client.get_resources(restApiId=api_id)
+        resources_response = client.get_resources(restApiId=api_id)
         paths = [r.get("path", "") for r in resources_response.get("items", [])]
         return {
             "id": api_id,
@@ -244,6 +243,6 @@ def api_key_fixture(request):
 
     Requires 'ssm_client' fixture.
     """
-    ssm_client = request.getfixturevalue("ssm_client")
-    param_response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
+    client = request.getfixturevalue("ssm_client")
+    param_response = client.get_parameter(Name='/api/key', WithDecryption=True)
     return param_response['Parameter']['Value'] if param_response else None

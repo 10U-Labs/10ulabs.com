@@ -15,6 +15,7 @@ Usage:
 
 import re
 from pathlib import Path
+from typing import Optional
 
 
 def extract_block_content(content: str, start_pos: int) -> str:
@@ -65,7 +66,9 @@ def check_lambda_lifecycle_rules(lambda_tf_path: Path) -> None:
             )
 
 
-def create_lambda_lifecycle_tests(endpoint_src: Path, tf_files: list = None):
+def create_lambda_lifecycle_tests(
+    endpoint_src: Path, tf_files: Optional[list] = None
+):
     """Create a test class for Lambda lifecycle configuration tests.
 
     Args:

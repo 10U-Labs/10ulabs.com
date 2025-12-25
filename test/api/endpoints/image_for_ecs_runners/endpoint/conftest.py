@@ -3,10 +3,8 @@ import os
 from typing import Any, Dict
 
 import pytest
-from repo_utils import REPO_ROOT
-from test_fixtures import get_shared_config
 
-from .helpers import get_api_fqdn, get_ecr_repository, get_github_repo
+from .helpers import get_ecr_repository, get_github_repo
 
 
 # Note: aws_region fixture is inherited from test/api/conftest.py -> test_fixtures.aws
