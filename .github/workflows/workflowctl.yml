@@ -26,6 +26,36 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+      - id: detect-changes
+        name: Detect workflowctl-related changes
+        run: |
+          echo "Checking for workflowctl-related file changes..."
+          WORKFLOWCTL_PATHS=(
+            ".github/workflows/workflowctl.yml"
+            "etc/workflow-dependencies.json"
+            "lib/python/"
+            "src/workflowctl/"
+            "test/workflowctl/"
+          )
+          CHANGED_FILES=$(git diff --name-only "${{ github.event.before }}" \
+            "${{ github.sha }}" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          WORKFLOWCTL_CHANGED="false"
+          for path in "${WORKFLOWCTL_PATHS[@]}"; do
+            if echo "$CHANGED_FILES" | grep -q "^${path}"; then
+              echo "Match found: $path"
+              WORKFLOWCTL_CHANGED="true"
+              break
+            fi
+          done
+          echo "workflowctl_changed=$WORKFLOWCTL_CHANGED" >> "$GITHUB_OUTPUT"
+      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Workflowctl testing required
+        run: echo "Workflowctl-related files changed. Running tests..."
+      - if: steps.detect-changes.outputs.workflowctl_changed != 'true'
+        name: Workflowctl testing not required
+        run: echo "No workflowctl-related files changed. Skipping tests."
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -51,7 +81,8 @@ jobs:
             types-PyYAML==6.0.* \
             yamllint==1.35.*
           echo "Dependencies installed successfully"
-      - name: Linting YAML files
+      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -62,32 +93,40 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/workflowctl.yml
-      - name: Linting JSON files
+      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Linting JSON files
         run: jsonlint -q etc/workflow-dependencies.json
-      - name: Run pylint on source
+      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Run pylint on source
         run: |
           python3 -m pylint lib/python/ src/workflowctl/ \
             --fail-on=C,R,W --fail-under=10.0
-      - name: Run pylint on tests
+      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:src/workflowctl python3 -m pylint \
             lib/python/ test/workflowctl/ \
             --fail-on=C,R,W --fail-under=10.0
-      - name: Run mypy on source
+      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Run mypy on source
         run: python3 -m mypy lib/python/ src/workflowctl/
-      - name: Run mypy on tests
+      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Run mypy on tests
         run: |
           MYPYPATH=lib/python:src/workflowctl python3 -m mypy \
             lib/python/ test/workflowctl/
-      - name: Check for duplicate code in source Python files
+      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ src/workflowctl/
-      - name: Check for duplicate code in test Python files
+      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
-      - name: Run unit tests
+      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Run unit tests
         run: |
           echo "Running unit tests..."
           python3 -m pytest \
