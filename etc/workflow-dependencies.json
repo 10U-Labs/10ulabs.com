@@ -27,7 +27,7 @@
     "depends_on": [
       "operational_diagnostics"
     ],
-    "name": "Deploying API Shared Networking Infrastructure",
+    "name": "Ensuring API shared networking infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/api_shared_networking.yml",
       "src/api/shared/networking/**",
