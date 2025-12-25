@@ -1,9 +1,0 @@
-{
-  "name": "github",
-  "version": "1.0.0",
-  "description": "Shared GitHub API utilities using Octokit",
-  "main": "index.js",
-  "dependencies": {
-    "@octokit/rest": "^21.0.0"
-  }
-}
