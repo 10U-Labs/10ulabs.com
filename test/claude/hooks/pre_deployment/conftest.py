@@ -66,39 +66,3 @@ def test_standards_checker():
     return load_hook_module("test_standards_checker.py", "test_standards_checker")
 
 
-@pytest.fixture
-def sample_workflow():
-    """Provide a sample workflow dictionary for testing."""
-    return {
-        'on': {
-            'push': {
-                'paths': ['src/**/*.py', 'test/**']
-            }
-        },
-        'jobs': {
-            'static-analysis': {
-                'steps': [
-                    {'name': 'Run yamllint', 'run': 'yamllint .'},
-                    {'name': 'Run tflint', 'run': 'tflint'},
-                    {'name': 'Deploy', 'run': 'deploy.sh'}
-                ]
-            },
-            'unit-tests': {
-                'steps': [
-                    {'name': 'Run unit tests', 'run': 'pytest test/pre_deployment/unit/'},
-                    {'name': 'Coverage', 'run': 'coverage report'}
-                ]
-            }
-        }
-    }
-
-
-@pytest.fixture
-def sample_workflow_no_paths():
-    """Provide a sample workflow without paths for testing."""
-    return {
-        'on': {
-            'push': {}
-        },
-        'jobs': {}
-    }

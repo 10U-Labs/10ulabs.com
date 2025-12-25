@@ -88,15 +88,14 @@ Duplicate code detection must run in two separate steps when source code exists:
 - name: Check for duplicate code in test Python files
   run: |
     jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-      lib/python/ test/conftest.py test/api/conftest.py \
-      test/path/to/tests/
+      lib/python/ test/
 ```
 
 Key points:
 
 - Threshold is always 0 (no duplicates allowed)
 - Both include `lib/python/` in the targets
-- Test step includes all relevant conftest.py files in the path hierarchy
+- Test step includes the full `test/` directory
 
 ## 5. Just-In-Time (JIT) Dependency Installation
 
