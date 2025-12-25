@@ -75,7 +75,7 @@ Test uses a flag that causes the system to skip or minimize resource creation.
 def test_webhook_processing_with_dry_run(api_endpoint, signed_payload):
     """Verify webhook is processed (dry-run mode)."""
     response = requests.post(
-        f"{api_endpoint}/v1/runners",
+        f"{api_endpoint}/v1/webhooks/github/jit-runner-requests",
         headers={
             "X-Hub-Signature-256": signed_payload["signature"],
             "X-Dry-Run": "true"  # System processes but doesn't create runner
@@ -97,7 +97,7 @@ def test_runner_provisioning(api_endpoint, canary_payload):
     # Canary payload uses labels that create a minimal runner
     # Runner runs a 5-second health check and terminates
     response = requests.post(
-        f"{api_endpoint}/v1/runners",
+        f"{api_endpoint}/v1/webhooks/github/jit-runner-requests",
         headers=canary_payload["headers"],
         json=canary_payload["body"]
     )
@@ -130,7 +130,7 @@ def test_webhook_to_runner_flow(api_endpoint, signed_webhook):
     """Verify webhook flows through to runner creation."""
     # 1. Send HTTP request
     response = requests.post(
-        f"{api_endpoint}/v1/runners",
+        f"{api_endpoint}/v1/webhooks/github/jit-runner-requests",
         headers=signed_webhook["headers"],
         json=signed_webhook["body"]
     )
@@ -236,7 +236,7 @@ def test_webhook_response_time(api_endpoint, signed_payload):
     """Verify webhook returns within 5 seconds."""
     start = time.time()
     response = requests.post(
-        f"{api_endpoint}/v1/runners",
+        f"{api_endpoint}/v1/webhooks/github/jit-runner-requests",
         headers=signed_payload["headers"],
         json=signed_payload["body"],
         timeout=5  # Fail fast

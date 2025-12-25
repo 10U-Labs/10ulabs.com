@@ -250,13 +250,13 @@
         }
       }
     },
-    "/v1/runners": {
+    "/v1/webhooks/github/jit-runner-requests": {
       "post": {
-        "summary": "GitHub Webhook for Runner Requests",
+        "summary": "GitHub Webhook for JIT Runner Requests",
         "description": "Receives GitHub workflow_job webhook events and queues them for processing (API Gateway → SQS direct integration, no Lambda in hot path)",
-        "operationId": "createRunner",
+        "operationId": "receiveJitRunnerRequest",
         "tags": [
-          "/v1/runners"
+          "/v1/webhooks"
         ],
         "x-amazon-apigateway-request-validator": "validate-headers",
         "parameters": [
@@ -331,11 +331,11 @@
         }
       },
       "options": {
-        "summary": "CORS preflight for runners endpoint",
+        "summary": "CORS preflight for JIT runner requests webhook",
         "description": "Handles CORS preflight requests",
-        "operationId": "runnersOptions",
+        "operationId": "jitRunnerRequestsOptions",
         "tags": [
-          "/v1/runners"
+          "/v1/webhooks"
         ],
         "responses": {
           "200": {
@@ -377,13 +377,13 @@
         }
       }
     },
-    "/v1/runners/health": {
+    "/v1/webhooks/github/jit-runner-requests/health": {
       "get": {
-        "summary": "Runners Health Check",
-        "description": "Returns the health status of the runners service",
-        "operationId": "runnersHealth",
+        "summary": "JIT Runner Requests Webhook Health Check",
+        "description": "Returns the health status of the JIT runner requests webhook service",
+        "operationId": "jitRunnerRequestsHealth",
         "tags": [
-          "/v1/runners"
+          "/v1/webhooks"
         ],
         "security": [
           {
@@ -396,17 +396,17 @@
           }
         },
         "x-amazon-apigateway-integration": {
-          "uri": "${RunnersHealthCheckArn}",
+          "uri": "${JitRunnerRequestsHealthArn}",
           "httpMethod": "POST",
           "type": "aws_proxy"
         }
       },
       "options": {
-        "summary": "CORS preflight for runners health endpoint",
+        "summary": "CORS preflight for JIT runner requests health endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "runnersHealthOptions",
+        "operationId": "jitRunnerRequestsHealthOptions",
         "tags": [
-          "/v1/runners"
+          "/v1/webhooks"
         ],
         "responses": {
           "200": {
@@ -448,13 +448,13 @@
         }
       }
     },
-    "/v1/runners/circuit-breaker": {
+    "/v1/webhooks/github/jit-runner-requests/circuit-breaker": {
       "get": {
         "summary": "Get Circuit Breaker Status",
-        "description": "Returns the current status of the runners circuit breaker including DynamoDB state, SQS event source state, and Lambda concurrency",
-        "operationId": "getCircuitBreakerStatus",
+        "description": "Returns the current status of the JIT runner requests webhook circuit breaker including DynamoDB state, SQS event source state, and Lambda concurrency",
+        "operationId": "getJitRunnerRequestsCircuitBreakerStatus",
         "tags": [
-          "/v1/runners"
+          "/v1/webhooks"
         ],
         "security": [
           {
@@ -553,9 +553,9 @@
       "post": {
         "summary": "Reset Circuit Breaker",
         "description": "Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
-        "operationId": "resetCircuitBreaker",
+        "operationId": "resetJitRunnerRequestsCircuitBreaker",
         "tags": [
-          "/v1/runners"
+          "/v1/webhooks"
         ],
         "security": [
           {
@@ -667,9 +667,9 @@
       "options": {
         "summary": "CORS preflight for circuit breaker endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "circuitBreakerOptions",
+        "operationId": "jitRunnerRequestsCircuitBreakerOptions",
         "tags": [
-          "/v1/runners"
+          "/v1/webhooks"
         ],
         "responses": {
           "200": {
@@ -711,14 +711,14 @@
         }
       }
     },
-    "/v1/runners/circuit-breaker/reset": {
+    "/v1/webhooks/github/jit-runner-requests/circuit-breaker/reset": {
       "post": {
         "summary": "Reset Circuit Breaker (Deprecated)",
-        "description": "DEPRECATED: Use POST /v1/runners/circuit-breaker instead. Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
-        "operationId": "resetCircuitBreakerLegacy",
+        "description": "DEPRECATED: Use POST /v1/webhooks/github/jit-runner-requests/circuit-breaker instead. Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
+        "operationId": "resetJitRunnerRequestsCircuitBreakerLegacy",
         "deprecated": true,
         "tags": [
-          "/v1/runners"
+          "/v1/webhooks"
         ],
         "security": [
           {
@@ -742,9 +742,9 @@
       "options": {
         "summary": "CORS preflight for circuit breaker reset endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "circuitBreakerResetOptions",
+        "operationId": "jitRunnerRequestsCircuitBreakerResetOptions",
         "tags": [
-          "/v1/runners"
+          "/v1/webhooks"
         ],
         "responses": {
           "200": {
@@ -2570,8 +2570,8 @@
       "description": "Rack designer configuration endpoints"
     },
     {
-      "name": "/v1/runners",
-      "description": "GitHub runner webhook endpoints"
+      "name": "/v1/webhooks",
+      "description": "Webhook receiver endpoints"
     },
     {
       "name": "/v1/simulation-soc",
@@ -2595,8 +2595,8 @@
         "/v1/image-for-ec2-runners",
         "/v1/image-for-ecs-runners",
         "/v1/rack-designer",
-        "/v1/runners",
-        "/v1/simulation-soc"
+        "/v1/simulation-soc",
+        "/v1/webhooks"
       ]
     }
   ],

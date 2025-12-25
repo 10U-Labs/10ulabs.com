@@ -5,7 +5,7 @@ concurrency:
 jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
-    name: Deploy /v1/runners endpoint
+    name: Deploy /v1/webhooks/github/jit-runner-requests endpoint
     permissions:
       actions: write
       contents: read
@@ -25,7 +25,7 @@ jobs:
         run: |
           TF_SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
           LOCALS=src/bootstrap/locals.tf
-          BACKEND=src/api/endpoints/runners/backend.tf
+          BACKEND=src/api/endpoints/webhooks/github/jit_runner_requests/backend.tf
           AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
@@ -73,14 +73,14 @@ jobs:
           python-version: '3.13'
       - name: Terraform Format Check
         run: |
-          cd src/api/endpoints/runners
+          cd src/api/endpoints/webhooks/github/jit_runner_requests
           terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/api/endpoints/runners && terraform init
+        run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/api/endpoints/runners && tflint --init && tflint
+        run: cd src/api/endpoints/webhooks/github/jit_runner_requests && tflint --init && tflint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -97,7 +97,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/endpoint_v1_runners.yml
+            .github/workflows/webhooks_github_jit_runner_requests.yml
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -106,13 +106,13 @@ jobs:
         run: python3 -m pip install pylint
       - name: Run pylint on source
         run: |
-          python3 -m pylint lib/python/ src/api/endpoints/runners/lambdas/ \
+          python3 -m pylint lib/python/ src/api/endpoints/webhooks/github/jit_runner_requests/lambdas/ \
             --fail-under=10.0
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
             lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py test/api/endpoints/runners/ \
+            test/api/endpoints/conftest.py test/api/endpoints/webhooks/github/jit_runner_requests/ \
             --fail-under=10.0
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
@@ -121,12 +121,12 @@ jobs:
         name: Install mypy
         run: python3 -m pip install mypy boto3-stubs types-requests types-PyYAML
       - name: Run mypy on source
-        run: python3 -m mypy lib/python/ src/api/endpoints/runners/lambdas/
+        run: python3 -m mypy lib/python/ src/api/endpoints/webhooks/github/jit_runner_requests/lambdas/
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy \
             lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py test/api/endpoints/runners/
+            test/api/endpoints/conftest.py test/api/endpoints/webhooks/github/jit_runner_requests/
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -136,7 +136,7 @@ jobs:
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/api/endpoints/runners/lambdas/
+            lib/python/ src/api/endpoints/webhooks/github/jit_runner_requests/lambdas/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -150,32 +150,32 @@ jobs:
       - name: Run unit tests
         run: |
           PYTHONPATH=lib/python python3 -m pytest \
-            test/api/endpoints/runners/pre_deployment/unit/ \
+            test/api/endpoints/webhooks/github/jit_runner_requests/pre_deployment/unit/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          TEST=test/api/endpoints/runners/pre_deployment/integration
+          TEST=test/api/endpoints/webhooks/github/jit_runner_requests/pre_deployment/integration
           PYTHONPATH=lib/python python3 -m pytest \
             $TEST/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Apply
-        run: cd src/api/endpoints/runners && terraform apply -auto-approve
+        run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          TEST=test/api/endpoints/runners/post_deployment/integration
+          TEST=test/api/endpoints/webhooks/github/jit_runner_requests/post_deployment/integration
           PYTHONPATH=lib/python python3 -m pytest \
             $TEST/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Run E2E tests
         run: |
           PYTHONPATH=lib/python python3 -m pytest \
-            test/api/endpoints/runners/post_deployment/e2e/ \
+            test/api/endpoints/webhooks/github/jit_runner_requests/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         name: Disable USE_GITHUB_HOSTED variable
         run: |
-          echo "Runners workflow completed successfully."
+          echo "Jit runner requests workflow completed successfully."
           echo "Disabling USE_GITHUB_HOSTED to switch future workflows to ECS."
           gh variable set USE_GITHUB_HOSTED --body "false" \
             --repo ${{ github.repository }}
@@ -196,9 +196,9 @@ jobs:
           fi
           python3 src/workflowctl/workflowctl.py dispatch \
             $TRIGGER_FLAG \
-            --workflow endpoint_v1_runners \
+            --workflow webhooks_github_jit_runner_requests \
             --repo ${{ github.repository }}
-name: Ensuring the /v1/runners API endpoint exists and is properly configured
+name: Ensuring the /v1/webhooks/github/jit-runner-requests API endpoint exists and is properly configured
 on:
   workflow_dispatch:
     inputs:

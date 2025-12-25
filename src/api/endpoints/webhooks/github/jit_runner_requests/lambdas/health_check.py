@@ -1,7 +1,7 @@
-"""Simple health check Lambda for runners service.
+"""Simple health check Lambda for JIT runner requests webhook service.
 
 This is a lightweight liveness check with no external dependencies.
-For circuit breaker status, use GET /v1/runners/circuit-breaker.
+For circuit breaker status, use GET /v1/webhooks/github/jit-runner-requests/circuit-breaker.
 """
 
 import json
@@ -48,7 +48,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         return _build_response(200, {
             "status": "healthy",
             "timestamp": int(time.time()),
-            "service": "runners",
+            "service": "jit-runner-requests",
         })
 
     return _build_response(405, {

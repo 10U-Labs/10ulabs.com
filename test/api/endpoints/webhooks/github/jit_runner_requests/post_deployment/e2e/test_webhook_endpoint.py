@@ -31,36 +31,36 @@ def _create_workflow_job_headers(with_signature=False):
 def _post_webhook(api_url, payload, headers):
     """Make a POST request to the webhook endpoint."""
     return requests.post(
-        f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10
+        f"{api_url}/v1/webhooks/github/jit-runner-requests", json=payload, headers=headers, timeout=10
     )
 
 
 def test_v1_runners_health_get_requires_auth(api_url):
     """Verify that health endpoint requires authentication."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/runners/health")
+    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests/health")
     response = requests.get(
-        f"{api_url}/v1/runners/health", headers=TEST_HEADERS, timeout=10
+        f"{api_url}/v1/webhooks/github/jit-runner-requests/health", headers=TEST_HEADERS, timeout=10
     )
     assert response.status_code == 403
 
 
 def test_v1_runners_health_get_with_valid_api_key(api_url, api_key):
     """Verify that health endpoint works with valid API key."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/runners/health")
+    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests/health")
     response = make_health_check_request(api_url, api_key)
     assert response.status_code == 200
 
 
 def test_v1_runners_health_returns_json(api_url, api_key):
     """Verify that health endpoint returns JSON."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/runners/health")
+    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests/health")
     response = make_health_check_request(api_url, api_key)
     assert response.headers["Content-Type"] == "application/json"
 
 
 def test_v1_runners_health_returns_status_healthy(api_url, api_key):
     """Verify that health endpoint returns healthy status."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/runners/health")
+    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests/health")
     response = make_health_check_request(api_url, api_key)
     assert_health_status_in_response(response)
 
@@ -71,17 +71,17 @@ def test_v1_runners_post_rejects_missing_github_event_header(api_url):
     API Gateway request validation requires x-github-event header to filter
     out non-GitHub traffic (bots, scanners) at the gateway layer.
     """
-    skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
+    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests", "POST")
     payload = {"action": "queued"}
     response = requests.post(
-        f"{api_url}/v1/runners", json=payload, headers=TEST_HEADERS, timeout=10
+        f"{api_url}/v1/webhooks/github/jit-runner-requests", json=payload, headers=TEST_HEADERS, timeout=10
     )
     assert response.status_code == 400
 
 
 def test_v1_runners_post_ignores_missing_signature(api_url):
     """Verify that webhook ignores requests without signature."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
+    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests", "POST")
     headers = _create_workflow_job_headers(with_signature=False)
     payload = _create_workflow_job_payload()
     response = _post_webhook(api_url, payload, headers)
@@ -95,7 +95,7 @@ def test_v1_runners_post_accepts_request_to_sqs(api_url):
     asynchronously in the Lambda that processes from SQS. The endpoint always
     returns 200 to accept the request into the queue.
     """
-    skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
+    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests", "POST")
     headers = _create_workflow_job_headers(with_signature=True)
     payload = _create_workflow_job_payload()
     response = _post_webhook(api_url, payload, headers)
@@ -106,7 +106,7 @@ def test_v1_runners_post_accepts_request_to_sqs(api_url):
 
 def test_workflow_job_completed_action_returns_200(api_url):
     """Verify that completed workflow job returns 200."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
+    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests", "POST")
     headers = _create_workflow_job_headers(with_signature=True)
     payload = _create_workflow_job_payload(
         action="completed", labels=["ubuntu-latest"], full_name="test/repo"
@@ -117,7 +117,7 @@ def test_workflow_job_completed_action_returns_200(api_url):
 
 def test_workflow_job_without_self_hosted_labels_returns_200(api_url):
     """Verify that workflow job without self-hosted labels returns 200."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
+    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests", "POST")
     headers = _create_workflow_job_headers(with_signature=True)
     payload = _create_workflow_job_payload(
         job_id=456, labels=["ubuntu-latest"], full_name="test/repo"

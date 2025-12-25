@@ -38,7 +38,7 @@ resource "aws_sqs_queue_policy" "webhook_ingress" {
       Resource = aws_sqs_queue.webhook_ingress.arn
       Condition = {
         ArnLike = {
-          "aws:SourceArn" = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:*/*/POST/v1/runners"
+          "aws:SourceArn" = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:*/*/POST/v1/webhooks/github/jit-runner-requests"
         }
       }
     }]

@@ -12,9 +12,9 @@ def _fetch_github_hooks(github_pat, github_repo):
         return json.loads(response.read())
 
 
-def _get_runners_webhook(hooks, api_fqdn):
-    """Get the webhook for the runners endpoint from a list of hooks."""
-    webhook_url = f"https://{api_fqdn}/v1/runners"
+def _get_jit_runner_requests_webhook(hooks, api_fqdn):
+    """Get the webhook for the jit-runner-requests endpoint from a list of hooks."""
+    webhook_url = f"https://{api_fqdn}/v1/webhooks/github/jit-runner-requests"
     matching = [hook for hook in hooks if hook["config"]["url"] == webhook_url]
     return matching[0] if matching else None
 
@@ -25,22 +25,22 @@ def test_repository_has_at_least_one_webhook(github_pat, config):
     assert len(hooks) > 0
 
 
-def test_github_webhook_for_runners_endpoint_exists(github_pat, config):
-    """Test github webhook for runners endpoint exists."""
+def test_github_webhook_for_jit_runner_requests_endpoint_exists(github_pat, config):
+    """Test github webhook for jit-runner-requests endpoint exists."""
     hooks = _fetch_github_hooks(github_pat, config['github_repo'])
-    webhook = _get_runners_webhook(hooks, config['api_fqdn'])
+    webhook = _get_jit_runner_requests_webhook(hooks, config['api_fqdn'])
     assert webhook is not None
 
 
-def test_github_webhook_for_runners_endpoint_listens_for_workflow_job_events(github_pat, config):
-    """Test github webhook for runners endpoint listens for workflow job events."""
+def test_github_webhook_for_jit_runner_requests_endpoint_listens_for_workflow_job_events(github_pat, config):
+    """Test github webhook for jit-runner-requests endpoint listens for workflow job events."""
     hooks = _fetch_github_hooks(github_pat, config['github_repo'])
-    webhook = _get_runners_webhook(hooks, config['api_fqdn'])
+    webhook = _get_jit_runner_requests_webhook(hooks, config['api_fqdn'])
     assert "workflow_job" in webhook["events"]
 
 
-def test_github_webhook_for_runners_endpoint_is_active(github_pat, config):
-    """Test github webhook for runners endpoint is active."""
+def test_github_webhook_for_jit_runner_requests_endpoint_is_active(github_pat, config):
+    """Test github webhook for jit-runner-requests endpoint is active."""
     hooks = _fetch_github_hooks(github_pat, config['github_repo'])
-    webhook = _get_runners_webhook(hooks, config['api_fqdn'])
+    webhook = _get_jit_runner_requests_webhook(hooks, config['api_fqdn'])
     assert webhook["active"] is True

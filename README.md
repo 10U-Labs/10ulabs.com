@@ -23,7 +23,7 @@ endpoint_v1_image_for_ecs_runners
     ↓
 endpoint_v1_ecs_runner
     ↓
-endpoint_v1_runners
+webhooks_github_jit_runner_requests
     ↓
 endpoint_v1_contact
     ↓

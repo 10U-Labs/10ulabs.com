@@ -10,10 +10,10 @@ locals {
     health                = module.shared.lambda_handler_names.health
     image_for_ec2_runners = module.shared.lambda_handler_names.image_for_ec2_runners
     image_for_ecs_runners = module.shared.lambda_handler_names.image_for_ecs_runners
-    rack_designer         = module.shared.lambda_handler_names.rack_designer
-    runners               = module.shared.lambda_handler_names.webhook
-    runners_health_check  = "${module.shared.resource_prefix}RunnersHealthCheck"
-    simulation_soc        = module.shared.lambda_handler_names.simulation_soc
+    rack_designer                  = module.shared.lambda_handler_names.rack_designer
+    jit_runner_requests            = module.shared.lambda_handler_names.webhook
+    jit_runner_requests_health     = "${module.shared.resource_prefix}JitRunnerRequestsHealth"
+    simulation_soc                 = module.shared.lambda_handler_names.simulation_soc
     webhook               = module.shared.lambda_handler_names.webhook
   }
 
@@ -33,13 +33,13 @@ locals {
   health_arn                = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.health}/invocations"
   image_for_ec2_runners_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ec2_runners}/invocations"
   image_for_ecs_runners_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ecs_runners}/invocations"
-  rack_designer_arn         = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_designer}/invocations"
-  runners_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.runners}/invocations"
-  runners_health_check_arn  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.runners_health_check}/invocations"
-  simulation_soc_arn        = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
+  rack_designer_arn                = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_designer}/invocations"
+  jit_runner_requests_arn          = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.jit_runner_requests}/invocations"
+  jit_runner_requests_health_arn   = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.jit_runner_requests_health}/invocations"
+  simulation_soc_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
 
-  # SQS integration for /v1/runners (API Gateway → SQS direct, no Lambda in hot path)
-  # Construct queue name from shared module (avoid dependency on runners remote state)
+  # SQS integration for /v1/webhooks/github/jit-runner-requests (API Gateway → SQS direct, no Lambda in hot path)
+  # Construct queue name from shared module (avoid dependency on jit_runner_requests remote state)
   webhook_ingress_queue_name = "${local.lambda_function_names.webhook}Ingress"
   webhook_ingress_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.webhook_ingress_queue_name}"
 
@@ -59,11 +59,11 @@ locals {
     HealthHandlerArn             = local.health_arn
     ImageForEcsRunnersHandlerArn = local.image_for_ecs_runners_arn
     ImageForEC2RunnersHandlerArn = local.image_for_ec2_runners_arn
-    RackDesignerHandlerArn       = local.rack_designer_arn
-    RunnersHandlerArn            = local.runners_arn
-    RunnersHealthCheckArn        = local.runners_health_check_arn
-    SimulationSocHandlerArn      = local.simulation_soc_arn
-    # SQS direct integration for /v1/runners webhook ingress
+    RackDesignerHandlerArn            = local.rack_designer_arn
+    JitRunnerRequestsHandlerArn       = local.jit_runner_requests_arn
+    JitRunnerRequestsHealthArn        = local.jit_runner_requests_health_arn
+    SimulationSocHandlerArn           = local.simulation_soc_arn
+    # SQS direct integration for /v1/webhooks/github/jit-runner-requests webhook ingress
     WebhookIngressSqsUri = local.webhook_ingress_sqs_uri
     ApiGatewaySqsRoleArn = aws_iam_role.api_gateway_sqs.arn
     # SQS direct integration for /v1/agents

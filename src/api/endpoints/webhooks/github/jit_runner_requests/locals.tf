@@ -44,7 +44,7 @@ locals {
   runner_starter_function_name              = "${module.shared.resource_prefix}RunnerStarter"
   runner_terminator_function_name           = "${module.shared.resource_prefix}RunnerTerminator"
   ignored_events_archiver_function_name     = "${module.shared.resource_prefix}IgnoredEventsArchiver"
-  health_check_function_name                = "${module.shared.resource_prefix}RunnersHealthCheck"
+  health_check_function_name                = "${module.shared.resource_prefix}JitRunnerRequestsHealth"
 
   # IAM role names (single source of truth)
   lambda_runners_handler_role_name      = "${module.shared.lambda_handler_names.webhook}ServiceRole"
@@ -59,7 +59,7 @@ locals {
   runner_terminator_role_name           = "${module.shared.resource_prefix}RunnerTerminatorRole"
   ignored_events_archiver_role_name     = "${module.shared.resource_prefix}IgnoredEventsArchiverRole"
   config_recorder_role_name             = "${module.shared.resource_prefix}ConfigRecorderRole"
-  health_check_role_name                = "${module.shared.resource_prefix}RunnersHealthCheckRole"
+  health_check_role_name                = "${module.shared.resource_prefix}JitRunnerRequestsHealthRole"
 
   common_tags = {
     ManagedBy = "terraform"

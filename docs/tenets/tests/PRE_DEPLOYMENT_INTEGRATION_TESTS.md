@@ -215,11 +215,11 @@ def test_state_bucket_has_versioning_enabled(s3_client, config):
     response = s3_client.get_bucket_versioning(Bucket=config["state_bucket_name"])
     assert response.get("Status") == "Enabled"
 
-def test_api_gateway_has_runners_resource(apigateway_client, config):
-    """Verify API Gateway has /v1/runners resource."""
+def test_api_gateway_has_jit_runner_requests_resource(apigateway_client, config):
+    """Verify API Gateway has /v1/webhooks/github/jit-runner-requests resource."""
     response = apigateway_client.get_resources(restApiId=config["api_gateway_id"])
     paths = [r["path"] for r in response["items"]]
-    assert "/v1/runners" in paths
+    assert "/v1/webhooks/github/jit-runner-requests" in paths
 ```
 
 ```python
@@ -342,7 +342,7 @@ def config():
 
 | Workflow | Prerequisites to Test | NOT Test (created by this workflow) |
 |----------|----------------------|-------------------------------------|
-| `endpoint_v1_runners` | IAM role from bootstrap, API Gateway from api_backend | SQS queues, DynamoDB tables, Lambda functions |
+| `webhooks_github_jit_runner_requests` | IAM role from bootstrap, API Gateway from api_backend | SQS queues, DynamoDB tables, Lambda functions |
 | `api_backend` | S3 buckets from bootstrap, Route53 zone | API Gateway, Lambda functions |
 | `endpoint_v1_health` | API Gateway from api_backend | Lambda function |
 | `image_for_ecs_runners` | ECR repository from bootstrap | Docker image |

@@ -13,7 +13,7 @@ def _make_circuit_breaker_request(api_url, api_key):
     """Make an HTTP request to the circuit breaker status endpoint."""
     headers = {"x-api-key": api_key, "x-test-mode": "true"}
     return requests.get(
-        f"{api_url}/v1/runners/circuit-breaker",
+        f"{api_url}/v1/webhooks/github/jit-runner-requests/circuit-breaker",
         headers=headers,
         timeout=DEFAULT_REQUEST_TIMEOUT,
     )
@@ -78,10 +78,10 @@ def test_circuit_breaker_auto_recovery_second_request_has_state(api_url, api_key
 
 
 def test_circuit_breaker_status_endpoint_returns_200_or_503(api_url, api_key):
-    """Test GET /v1/runners/circuit-breaker returns status."""
+    """Test GET /v1/webhooks/github/jit-runner-requests/circuit-breaker returns status."""
     headers = {"x-api-key": api_key}
     response = requests.get(
-        f"{api_url}/v1/runners/circuit-breaker",
+        f"{api_url}/v1/webhooks/github/jit-runner-requests/circuit-breaker",
         headers=headers,
         timeout=DEFAULT_REQUEST_TIMEOUT,
     )
@@ -89,10 +89,10 @@ def test_circuit_breaker_status_endpoint_returns_200_or_503(api_url, api_key):
 
 
 def test_circuit_breaker_status_endpoint_returns_json(api_url, api_key):
-    """Test GET /v1/runners/circuit-breaker returns JSON response."""
+    """Test GET /v1/webhooks/github/jit-runner-requests/circuit-breaker returns JSON response."""
     headers = {"x-api-key": api_key}
     response = requests.get(
-        f"{api_url}/v1/runners/circuit-breaker",
+        f"{api_url}/v1/webhooks/github/jit-runner-requests/circuit-breaker",
         headers=headers,
         timeout=DEFAULT_REQUEST_TIMEOUT,
     )
@@ -103,7 +103,7 @@ def test_circuit_breaker_status_contains_healthy_field(api_url, api_key):
     """Test status response contains healthy field."""
     headers = {"x-api-key": api_key}
     response = requests.get(
-        f"{api_url}/v1/runners/circuit-breaker",
+        f"{api_url}/v1/webhooks/github/jit-runner-requests/circuit-breaker",
         headers=headers,
         timeout=DEFAULT_REQUEST_TIMEOUT,
     )
@@ -115,7 +115,7 @@ def test_circuit_breaker_status_contains_state_field(api_url, api_key):
     """Test status response contains state field."""
     headers = {"x-api-key": api_key}
     response = requests.get(
-        f"{api_url}/v1/runners/circuit-breaker",
+        f"{api_url}/v1/webhooks/github/jit-runner-requests/circuit-breaker",
         headers=headers,
         timeout=DEFAULT_REQUEST_TIMEOUT,
     )
@@ -127,7 +127,7 @@ def test_circuit_breaker_status_contains_sqs_event_source_field(api_url, api_key
     """Test status response contains sqs_event_source field."""
     headers = {"x-api-key": api_key}
     response = requests.get(
-        f"{api_url}/v1/runners/circuit-breaker",
+        f"{api_url}/v1/webhooks/github/jit-runner-requests/circuit-breaker",
         headers=headers,
         timeout=DEFAULT_REQUEST_TIMEOUT,
     )
@@ -135,7 +135,7 @@ def test_circuit_breaker_status_contains_sqs_event_source_field(api_url, api_key
     assert "sqs_event_source" in data
 
 
-# NOTE: POST /v1/runners/circuit-breaker (reset) is not tested here because
+# NOTE: POST /v1/webhooks/github/jit-runner-requests/circuit-breaker (reset) is not tested here because
 # calling it would reset a legitimately open circuit breaker, potentially
 # causing damage. The reset endpoint should only be tested manually or in
 # isolated environments.

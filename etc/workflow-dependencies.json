@@ -47,7 +47,7 @@
   },
   "endpoint_v1_contact": {
     "depends_on": [
-      "endpoint_v1_runners"
+      "webhooks_github_jit_runner_requests"
     ],
     "name": "Ensuring /v1/contact API endpoint exists and is properly configured",
     "paths": [
@@ -146,18 +146,18 @@
       "test/api/endpoints/rack_designer/**"
     ]
   },
-  "endpoint_v1_runners": {
+  "webhooks_github_jit_runner_requests": {
     "depends_on": [
       "endpoint_v1_ecs_runner"
     ],
-    "name": "Ensuring the /v1/runners API endpoint exists and is properly configured",
+    "name": "Ensuring the /v1/webhooks/github/jit-runner-requests API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/endpoint_v1_runners.yml",
+      ".github/workflows/webhooks_github_jit_runner_requests.yml",
       "etc/runners.json",
       "lib/python/runner_labels/**",
-      "src/api/endpoints/runners/**",
+      "src/api/endpoints/webhooks/github/jit_runner_requests/**",
       "test/api/conftest.py",
-      "test/api/endpoints/runners/**"
+      "test/api/endpoints/webhooks/github/jit_runner_requests/**"
     ]
   },
   "endpoint_v1_simulation_soc": {
