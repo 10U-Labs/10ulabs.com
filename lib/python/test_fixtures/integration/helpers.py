@@ -112,3 +112,26 @@ def handle_ecr_authorization_error(error: ClientError, operation: str, repositor
         pass  # Repository doesn't exist, but we have permission - OK for layer 2
     else:
         raise error
+
+
+def check_s3_head_bucket_permission(s3_client, bucket_name: str):
+    """Check permission to call s3:HeadBucket on a bucket.
+
+    Used by Layer 2 authorization tests to verify S3 permissions.
+
+    Args:
+        s3_client: boto3 S3 client
+        bucket_name: Name of the S3 bucket to check
+
+    Raises:
+        pytest.fail: If access is denied (403 or AccessDenied)
+        ClientError: Re-raises for other error codes besides 404
+    """
+    try:
+        s3_client.head_bucket(Bucket=bucket_name)
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code in ("403", "AccessDenied"):
+            pytest.fail(f"No permission to call s3:HeadBucket on '{bucket_name}'")
+        if error_code != "404":
+            raise

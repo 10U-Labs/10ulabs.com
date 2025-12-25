@@ -4,6 +4,7 @@ Verify permission to inspect prerequisite resources (not existence, not capabili
 """
 import pytest
 from botocore.exceptions import ClientError
+from test_fixtures.integration.helpers import check_s3_head_bucket_permission
 
 pytestmark = pytest.mark.layer(2)
 
@@ -32,14 +33,7 @@ def test_can_call_iam_list_attached_role_policies(iam_client, github_actions_rol
 
 def test_can_call_s3_head_bucket(s3_client, state_bucket_name):
     """Verify permission to call s3:HeadBucket."""
-    try:
-        s3_client.head_bucket(Bucket=state_bucket_name)
-    except ClientError as e:
-        error_code = e.response["Error"]["Code"]
-        if error_code in ("403", "AccessDenied"):
-            pytest.fail(f"No permission to call s3:HeadBucket on '{state_bucket_name}'")
-        if error_code != "404":
-            raise
+    check_s3_head_bucket_permission(s3_client, state_bucket_name)
 
 
 def test_can_call_route53_get_hosted_zone(route53_client, hosted_zone_id):
