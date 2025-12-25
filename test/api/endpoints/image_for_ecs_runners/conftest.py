@@ -12,8 +12,6 @@ POST_DIR = os.path.join(BASE_DIR, 'post')
 FILES_DIR = POST_DIR  # Backwards compatibility alias
 CONFIG_PATH = os.path.join(POST_DIR, 'config.json')
 DOCKERFILE_PATH = os.path.join(POST_DIR, 'Dockerfile')
-# container_name is defined in ecs_runner (the runner that uses this image)
-TFVARS_PATH = str(REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner" / "terraform.tfvars")
 
 
 def get_aws_region():

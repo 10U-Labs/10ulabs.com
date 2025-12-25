@@ -3,24 +3,17 @@ import json
 import os
 import subprocess
 
-from test.api.endpoints.image_for_ecs_runners.conftest import DOCKERFILE_PATH, TFVARS_PATH
+from test.api.endpoints.image_for_ecs_runners.conftest import CONFIG_PATH, DOCKERFILE_PATH
 
 import boto3
 import pytest
 
 
-def _get_tfvar_value(var_name):
-    with open(TFVARS_PATH, 'r', encoding='utf-8') as f:
-        content = f.read()
-    idx = content.find(f'{var_name}')
-    if idx == -1:
-        return None
-    line = content[idx:content.find('\n', idx)]
-    start = line.find('"') + 1
-    end = line.find('"', start)
-    if 0 < start < end:
-        return line[start:end]
-    return None
+def _get_config_value(key):
+    """Get a value from the image config.json."""
+    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    return config.get(key)
 
 
 def get_dockerfile_path():
@@ -33,7 +26,7 @@ def get_docker_image_tag():
     try:
         tag = os.environ["TEST_DOCKER_IMAGE_TAG"]
     except KeyError:
-        container_name = _get_tfvar_value("container_name")
+        container_name = _get_config_value("container_name")
         tag = f"{container_name}:test"
     return tag
 
