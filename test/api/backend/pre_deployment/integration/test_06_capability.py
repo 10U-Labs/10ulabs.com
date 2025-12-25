@@ -16,9 +16,10 @@ pytestmark = pytest.mark.layer(6)
 
 
 class TestIAMCapabilities(Layer6IAMCapabilityTests):
-    """Layer 6: Verify IAM and S3 listing capabilities."""
+    """Layer 6: Verify IAM and S3 listing capabilities.
 
-    pass  # All tests inherited from base class
+    All tests inherited from base class.
+    """
 
 
 class TestS3StateCapabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTests):

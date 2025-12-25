@@ -9,6 +9,7 @@ pytestmark = pytest.mark.layer(5)
 
 
 class TestIAMConfiguration(Layer5IAMConfigurationTests):
-    """Layer 5: Verify IAM role configuration."""
+    """Layer 5: Verify IAM role configuration.
 
-    pass  # All tests inherited from base class
+    All tests inherited from base class.
+    """

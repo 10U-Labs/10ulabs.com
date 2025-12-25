@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 from typing import Any, Dict
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -100,7 +100,7 @@ def drift_recovery(config):
         'AWS_REGION': config['aws_region'],
         'GITHUB_REPO': config['github_repo'],
         'GITHUB_TOKEN_PARAMETER_NAME': config['ssm_parameter_name_for_github_pat'],
-        'SNS_TOPIC_ARN': f'arn:aws:sns:{TEST_AWS_REGION}:123456789012:test-topic',
+        'SNS_TOPIC_ARN': f"arn:aws:sns:{config['aws_region']}:123456789012:test-topic",
         'MANAGED_VPC_ID': 'vpc-managed123'
     }
     with patch.dict('os.environ', env_vars):

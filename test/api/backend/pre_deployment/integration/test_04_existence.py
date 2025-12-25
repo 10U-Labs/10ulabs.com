@@ -15,9 +15,10 @@ pytestmark = pytest.mark.layer(4)
 class TestIAMAndStateExistence(
     Layer4IAMRoleExistenceTests, Layer4TerraformStateExistenceTests
 ):
-    """Layer 4: Verify IAM role and state bucket exist."""
+    """Layer 4: Verify IAM role and state bucket exist.
 
-    pass  # All tests inherited from base classes
+    All tests inherited from base classes.
+    """
 
 
 class TestBootstrapPrerequisites:
