@@ -76,11 +76,7 @@ jobs:
           cd src/api/endpoints/webhooks/github/jit_runner_requests
           terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: |
-          cd src/api/endpoints/webhooks/github/jit_runner_requests
-          # Use -migrate-state to migrate from old runners/ state key to new location
-          # -input=false allows non-interactive migration in CI
-          terraform init -migrate-state -input=false
+        run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
