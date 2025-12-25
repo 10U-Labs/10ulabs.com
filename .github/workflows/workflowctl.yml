@@ -77,7 +77,7 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/conftest.py test/workflowctl/
+            lib/python/ test/
       - name: Run unit tests
         run: |
           echo "Running unit tests..."

@@ -112,7 +112,7 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/conftest.py test/www/
+            lib/python/ test/
       - name: Install npm dependencies
         run: npm ci --prefix src/www/paths/index
       - name: Run unit tests

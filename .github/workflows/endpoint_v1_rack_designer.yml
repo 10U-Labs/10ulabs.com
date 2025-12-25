@@ -84,8 +84,7 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py test/api/endpoints/rack_designer/
+            lib/python/ test/
       - name: Terraform Format Check
         run: |
           cd src/api/endpoints/rack_designer
