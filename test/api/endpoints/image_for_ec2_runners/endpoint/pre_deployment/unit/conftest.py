@@ -1,5 +1,4 @@
 """Pytest fixtures for pre-deployment unit tests."""
-import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -7,6 +6,7 @@ from typing import Callable, Generator
 from unittest.mock import MagicMock, patch
 
 from botocore.exceptions import ClientError
+from module_utils import load_module_from_path
 import pytest
 from repo_utils import REPO_ROOT
 
@@ -38,12 +38,7 @@ if LIB_PATH not in sys.path:
 def load_handler_module() -> ModuleType:
     """Load the Lambda handler module dynamically."""
     handler_path = ENDPOINT_SRC / "lambda" / "handler.py"
-    spec = importlib.util.spec_from_file_location("handler", handler_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_module_from_path("handler", handler_path)
 
 
 @pytest.fixture(name="handler_module")
@@ -139,14 +134,7 @@ def project_root() -> Path:
 @pytest.fixture(name="module_loader")
 def _module_loader_fixture() -> Callable[[str, Path], ModuleType]:
     """Provide a function to load modules from file paths."""
-    def _load(name: str, path: Path) -> ModuleType:
-        spec = importlib.util.spec_from_file_location(name, path)
-        assert spec is not None
-        assert spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
-    return _load
+    return load_module_from_path
 
 
 @pytest.fixture(name="build_ami_module")

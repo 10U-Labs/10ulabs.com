@@ -6,6 +6,24 @@ from types import ModuleType
 from typing import Any
 
 
+def load_module_from_path(module_name: str, path: Path) -> ModuleType:
+    """Load a Python module from a file path.
+
+    Args:
+        module_name: Name to give the loaded module.
+        path: Path to the Python file to load.
+
+    Returns:
+        The loaded module object.
+    """
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def reset_module_state(module: ModuleType, **state_vars: Any) -> None:
     """Reset module-level state variables to specified values.
 
@@ -43,10 +61,5 @@ def create_lambda_loader(lambdas_dir: Path):
         lambdas_dir_str = str(lambdas_dir)
         if lambdas_dir_str not in sys.path:
             sys.path.insert(0, lambdas_dir_str)
-        spec = importlib.util.spec_from_file_location(module_name, handler_path)
-        assert spec is not None
-        assert spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
+        return load_module_from_path(module_name, handler_path)
     return load_lambda_module

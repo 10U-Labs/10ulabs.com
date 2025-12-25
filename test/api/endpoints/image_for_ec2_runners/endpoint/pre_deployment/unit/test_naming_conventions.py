@@ -8,6 +8,14 @@ from test_fixtures.terraform_tests import create_naming_conventions_tests
 
 IMAGE_EC2_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
 
-TestIAMRoleNamingConventions, TestLambdaFunctionNamingConventions = (
-    create_naming_conventions_tests(endpoint_src=IMAGE_EC2_SRC, use_handler_names=True)
-)
+
+def _register_naming_convention_tests():
+    """Register dynamically created test classes in module globals for pytest discovery."""
+    iam_class, lambda_class = create_naming_conventions_tests(
+        endpoint_src=IMAGE_EC2_SRC, use_handler_names=True
+    )
+    globals()['TestIAMRoleNamingConventions'] = iam_class
+    globals()['TestLambdaFunctionNamingConventions'] = lambda_class
+
+
+_register_naming_convention_tests()
