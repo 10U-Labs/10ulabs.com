@@ -1,9 +1,9 @@
 """Pytest fixtures for hook tests."""
-import importlib.util
 import sys
 from types import ModuleType
 
 import pytest
+from module_utils import load_module_from_path
 from repo_utils import REPO_ROOT
 
 HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"
@@ -16,12 +16,7 @@ if str(HOOKS_DIR) not in sys.path:
 def load_hook_module(hook_name: str, module_name: str) -> ModuleType:
     """Load a hook module by name for testing."""
     hook_path = HOOKS_DIR / hook_name
-    spec = importlib.util.spec_from_file_location(module_name, hook_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_module_from_path(module_name, hook_path)
 
 
 @pytest.fixture
@@ -64,5 +59,3 @@ def code_quality_checker():
 def test_standards_checker():
     """Load the test_standards_checker hook module."""
     return load_hook_module("test_standards_checker.py", "test_standards_checker")
-
-

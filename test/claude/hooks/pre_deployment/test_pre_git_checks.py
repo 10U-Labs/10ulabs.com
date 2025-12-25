@@ -1,4 +1,5 @@
 """Tests for pre_git_checks hook."""
+import ast
 
 
 def test_run_blocked_lint_config_check_blocks_pylintrc(pre_git_checks, tmp_path):
@@ -148,7 +149,6 @@ def test_check_file_for_single_assert_skips_files_without_test_path(pre_git_chec
 
 def test_count_asserts_in_function_counts_single_assert(pre_git_checks):
     """Test that count_asserts_in_function counts single assert."""
-    import ast
     source = '''
 def test_something():
     assert 1 == 1
@@ -161,7 +161,6 @@ def test_something():
 
 def test_count_asserts_in_function_counts_multiple_asserts(pre_git_checks):
     """Test that count_asserts_in_function counts multiple asserts."""
-    import ast
     source = '''
 def test_something():
     assert 1 == 1
@@ -176,7 +175,6 @@ def test_something():
 
 def test_count_asserts_in_function_counts_zero_asserts(pre_git_checks):
     """Test that count_asserts_in_function counts zero asserts."""
-    import ast
     source = '''
 def test_something():
     pass
