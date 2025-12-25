@@ -1,38 +1,21 @@
 """Pytest fixtures for diagnostics handler pre-deployment unit tests."""
-import importlib.util
 import json
 from types import ModuleType
 
 import pytest
 
-from lambda_response import (
-    parse_response_body,
-    assert_response_status,
-    assert_json_content_type,
-    assert_cors_headers,
-)
+from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
 
-# Re-export for backward compatibility
-__all__ = [
-    'parse_response_body',
-    'assert_response_status',
-    'assert_json_content_type',
-    'assert_cors_headers',
-]
-
 DIAGNOSTICS_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
+
+# Create loader for diagnostics lambda directory
+_load_lambda = create_lambda_loader(DIAGNOSTICS_SRC / "lambda")
 
 
 def load_diagnostics_handler_module() -> ModuleType:
     """Load the diagnostics handler module dynamically."""
-    handler_path = DIAGNOSTICS_SRC / "lambda" / "handler.py"
-    spec = importlib.util.spec_from_file_location("diagnostics_handler", handler_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return _load_lambda("handler.py", "diagnostics_handler")
 
 
 @pytest.fixture

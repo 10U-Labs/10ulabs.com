@@ -224,6 +224,13 @@ def create_ecs_runner_outputs_tests():
     class TestECSRunnerOutputs:
         """Verify ecs_runner terraform outputs are accessible."""
 
+        def test_task_definition_arn_output_exists(self, ecs_runner_outputs):
+            """Verify task_definition_arn output is available."""
+            assert ecs_runner_outputs.get("task_definition_arn"), (
+                "task_definition_arn output not found in ecs_runner. "
+                "Run terraform apply in src/api/endpoints/ecs_runner/"
+            )
+
         def test_cluster_arn_output_exists(self, ecs_runner_outputs):
             """Verify cluster_arn output is available."""
             assert ecs_runner_outputs.get("cluster_arn"), (
