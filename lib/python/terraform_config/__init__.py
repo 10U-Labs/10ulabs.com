@@ -205,27 +205,37 @@ def _resolve_local_interpolations(value: str, local_values: Dict[str, str]) -> s
     return value
 
 
-def get_tfvars_values(tf_dir: Path) -> Dict[str, str]:
+def get_tfvars_values(tf_dir: Path) -> Dict[str, Any]:
     """Parse terraform.tfvars file in the given directory.
 
     Args:
         tf_dir: Path to the Terraform directory
 
     Returns:
-        Dict mapping variable names to their string values.
+        Dict mapping variable names to their values (strings or lists).
     """
     tfvars_file = tf_dir / "terraform.tfvars"
     if not tfvars_file.exists():
         return {}
 
-    values = {}
+    values: Dict[str, Any] = {}
     with open(tfvars_file, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith("#"):
+                # Parse string values: key = "value"
                 match = re.match(r'(\w+)\s*=\s*"([^"]+)"', line)
                 if match:
                     values[match.group(1)] = match.group(2)
+                    continue
+                # Parse list values: key = ["val1", "val2"]
+                list_match = re.match(r'(\w+)\s*=\s*\[([^\]]*)\]', line)
+                if list_match:
+                    key = list_match.group(1)
+                    list_content = list_match.group(2)
+                    # Extract quoted strings from the list
+                    items = re.findall(r'"([^"]+)"', list_content)
+                    values[key] = items
     return values
 
 

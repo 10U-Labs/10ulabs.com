@@ -1,5 +1,4 @@
 """Pytest fixtures for EC2 runner pre-deployment unit tests."""
-import importlib.util
 import json
 from typing import Any, Dict
 from types import ModuleType
@@ -14,7 +13,7 @@ from lambda_response import (
     assert_json_content_type,
 )
 from boto_mocks import create_client_error, create_multi_client_mock, setup_mock_ec2_vpc_responses
-from module_utils import reset_module_state
+from module_utils import load_module_from_path, reset_module_state
 
 from ...conftest import EC2_RUNNER_SRC
 
@@ -31,12 +30,7 @@ __all__ = [
 def load_handler_module() -> ModuleType:
     """Load the EC2 runner handler module dynamically."""
     handler_path = EC2_RUNNER_SRC / "lambda" / "handler.py"
-    spec = importlib.util.spec_from_file_location("ec2_runner_handler", handler_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_module_from_path("ec2_runner_handler", handler_path)
 
 
 @pytest.fixture

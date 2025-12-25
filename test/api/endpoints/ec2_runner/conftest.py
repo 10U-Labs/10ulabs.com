@@ -26,8 +26,14 @@ def _get_ec2_runner_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     config = get_endpoint_local_values(API_BACKEND_SRC)
     config.update(get_endpoint_local_values(EC2_RUNNER_SRC))
     config['api_fqdn'] = f"api.{shared_config['domain_name']}"
-    config['github_repo_full'] = f"{shared_config['github_org']}/{shared_config['name_for_github_repo']}"
+    github_org = shared_config['github_org']
+    github_repo = shared_config['name_for_github_repo']
+    config['github_repo_full'] = f"{github_org}/{github_repo}"
     return config
+
+
+# Alias for compatibility with e2e tests
+_parse_api_locals = _get_ec2_runner_locals
 
 
 @pytest.fixture(name="config", scope="module")
