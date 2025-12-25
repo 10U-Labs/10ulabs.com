@@ -34,7 +34,7 @@ resource "github_repository_webhook" "workflow_job" {
   repository = local.github_repo
 
   configuration {
-    url          = "https://${local.api_fqdn}/v1/runners"
+    url          = "https://${local.api_fqdn}/v1/webhooks/github/jit-runner-requests"
     content_type = "json"
     secret       = random_password.webhook_secret.result
     insecure_ssl = false
