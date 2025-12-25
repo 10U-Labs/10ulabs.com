@@ -54,22 +54,27 @@ def get_all_github_runners(
         return None
 
 
-def is_runner_busy(
-    github_token: str, github_repo: str, runner_name: str
+def is_job_active(
+    github_token: str, github_repo: str, job_id: str
 ) -> bool:
-    """Check if a GitHub runner is busy (actively running a job).
+    """Check if a GitHub Actions job is still active.
 
     Returns:
-        True if the runner is busy, False otherwise
+        True if the job is queued or in progress, False otherwise
     """
-    runners = get_all_github_runners(github_token, github_repo)
-    if runners is None:
-        # If we can't check, assume busy to be safe
-        return True
-    runner = next((r for r in runners if r.get("name") == runner_name), None)
-    if not runner:
+    if not job_id:
         return False
-    return runner.get("busy", False)
+    try:
+        path = f"/repos/{github_repo}/actions/jobs/{job_id}"
+        data = github_api_request("GET", path, token=github_token)
+        status = data.get("status", "")
+        return status in ("queued", "in_progress")
+    except urllib.error.HTTPError as err:
+        if err.code == 404:
+            return False
+        logger.error("Failed to check job %s status: %s", job_id, str(err))
+        # If we can't check, assume active to be safe
+        return True
 
 
 def delete_github_runner_by_id(
@@ -93,25 +98,6 @@ def delete_github_runner_by_id(
             return True
         logger.error("Failed to delete GitHub runner %s: %s", runner_name, str(err))
         return False
-
-
-def delete_github_runner(
-    github_token: str, github_repo: str, runner_name: str
-) -> bool:
-    """Delete a GitHub runner by name.
-
-    Returns:
-        True if successfully deleted or not found
-    """
-    runners = get_all_github_runners(github_token, github_repo)
-    if runners is None:
-        return False
-    runner = next((r for r in runners if r.get("name") == runner_name), None)
-    if not runner:
-        return True
-    return delete_github_runner_by_id(
-        github_token, github_repo, runner["id"], runner_name
-    )
 
 
 def terminate_ecs_task(task_arn: str) -> bool:
@@ -155,7 +141,7 @@ def is_orphaned_ecs_task(
     return {
         "task_arn": task.get("taskArn", ""),
         "age_seconds": int(age_seconds),
-        "runner_name": tags.get("Name", ""),
+        "job_id": tags.get("GitHubJobId", ""),
         "github_repo": tags.get("GitHubRepo", ""),
     }
 
@@ -225,7 +211,7 @@ def get_orphaned_ec2_instances() -> list[dict[str, Any]]:
                             {
                                 "instance_id": instance["InstanceId"],
                                 "age_seconds": int(age_seconds),
-                                "runner_name": tags.get("Name", ""),
+                                "job_id": tags.get("GitHubJobId", ""),
                                 "github_repo": tags.get("GitHubRepo", ""),
                             }
                         )
@@ -353,16 +339,16 @@ def cleanup_orphaned_resources(github_token: str) -> dict[str, int]:
     # Clean orphaned ECS tasks
     orphaned_tasks = get_orphaned_ecs_tasks()
     for task in orphaned_tasks:
-        runner_name = task.get("runner_name", "")
+        job_id = task.get("job_id", "")
         task_repo = task.get("github_repo") or github_repo
 
-        # Skip if the runner is actively running a job
-        if runner_name and task_repo and github_token:
-            if is_runner_busy(github_token, task_repo, runner_name):
+        # Skip if the job is still active
+        if job_id and task_repo and github_token:
+            if is_job_active(github_token, task_repo, job_id):
                 logger.info(
-                    "Skipping busy ECS task: %s (runner=%s)",
+                    "Skipping ECS task with active job: %s (job_id=%s)",
                     task["task_arn"],
-                    runner_name,
+                    job_id,
                 )
                 counts["ecs_skipped"] += 1
                 continue
@@ -374,24 +360,22 @@ def cleanup_orphaned_resources(github_token: str) -> dict[str, int]:
         )
         if terminate_ecs_task(task["task_arn"]):
             counts["ecs_cleaned"] += 1
-            if runner_name and task_repo and github_token:
-                delete_github_runner(github_token, task_repo, runner_name)
         else:
             counts["errors"] += 1
 
     # Clean orphaned EC2 instances
     orphaned_instances = get_orphaned_ec2_instances()
     for instance in orphaned_instances:
-        runner_name = instance.get("runner_name", "")
+        job_id = instance.get("job_id", "")
         instance_repo = instance.get("github_repo") or github_repo
 
-        # Skip if the runner is actively running a job
-        if runner_name and instance_repo and github_token:
-            if is_runner_busy(github_token, instance_repo, runner_name):
+        # Skip if the job is still active
+        if job_id and instance_repo and github_token:
+            if is_job_active(github_token, instance_repo, job_id):
                 logger.info(
-                    "Skipping busy EC2 instance: %s (runner=%s)",
+                    "Skipping EC2 instance with active job: %s (job_id=%s)",
                     instance["instance_id"],
-                    runner_name,
+                    job_id,
                 )
                 counts["ec2_skipped"] += 1
                 continue
@@ -403,8 +387,6 @@ def cleanup_orphaned_resources(github_token: str) -> dict[str, int]:
         )
         if terminate_ec2_instance(instance["instance_id"]):
             counts["ec2_cleaned"] += 1
-            if runner_name and instance_repo and github_token:
-                delete_github_runner(github_token, instance_repo, runner_name)
         else:
             counts["errors"] += 1
 
