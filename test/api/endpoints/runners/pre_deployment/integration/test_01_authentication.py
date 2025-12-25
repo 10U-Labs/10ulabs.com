@@ -11,8 +11,12 @@ Six-layer testing model:
 - Layer 5: Configuration - Are resources configured correctly?
 - Layer 6: Capability - Can we perform required operations?
 """
-from botocore.exceptions import ClientError, NoCredentialsError
 import pytest
+
+from test_fixtures.integration.helpers import (
+    check_credentials_available,
+    check_credentials_valid,
+)
 
 
 pytestmark = pytest.mark.layer(1)
@@ -23,36 +27,19 @@ class TestAWSCredentialsAuthentication:
 
     def test_credentials_available(self, sts_client):
         """Verify AWS credentials are configured."""
-        try:
-            sts_client.get_caller_identity()
-        except NoCredentialsError:
-            pytest.fail(
-                "No AWS credentials found. "
-                "Configure credentials via environment variables, "
-                "~/.aws/credentials, or IAM role."
-            )
+        check_credentials_available(sts_client)
 
     def test_can_call_sts_api(self, sts_client):
         """Verify we can call sts:GetCallerIdentity."""
-        try:
-            response = sts_client.get_caller_identity()
-            assert "Account" in response
-        except ClientError as e:
-            pytest.fail(
-                f"Failed to call sts:GetCallerIdentity: "
-                f"{e.response['Error']['Message']}. "
-                "Check AWS credentials are valid and not expired."
-            )
+        check_credentials_valid(sts_client)
+        response = sts_client.get_caller_identity()
+        assert "Account" in response
 
     def test_caller_identity_has_arn(self, sts_client):
         """Verify caller identity includes ARN."""
-        try:
-            response = sts_client.get_caller_identity()
-            assert "Arn" in response
-        except ClientError as e:
-            pytest.fail(
-                f"Failed to get caller ARN: {e.response['Error']['Message']}"
-            )
+        check_credentials_valid(sts_client)
+        response = sts_client.get_caller_identity()
+        assert "Arn" in response
 
     def test_caller_identity_is_role(self, caller_identity):
         """Verify we are running as an IAM role (not user)."""
