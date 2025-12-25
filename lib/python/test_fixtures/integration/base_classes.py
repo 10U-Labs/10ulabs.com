@@ -203,13 +203,13 @@ class Layer5S3ConfigurationTests:
                 )
             raise
 
-    def test_state_bucket_versioning_enabled(self, s3_client, state_bucket_name):
-        """Verify the state bucket has versioning enabled."""
+    def test_state_bucket_versioning_disabled(self, s3_client, state_bucket_name):
+        """Verify the state bucket has versioning disabled."""
         response = s3_client.get_bucket_versioning(Bucket=state_bucket_name)
         status = response.get("Status", "")
-        assert status == "Enabled", (
+        assert status != "Enabled", (
             f"State bucket '{state_bucket_name}' versioning is '{status}', "
-            "expected 'Enabled'. Enable versioning for state recovery."
+            "but versioning must be disabled per project policy."
         )
 
 
