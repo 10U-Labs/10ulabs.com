@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from cancel import (
     cancel_run,
     get_workflows_to_cancel,
@@ -93,13 +91,10 @@ class TestGetWorkflowsToCancel:
 
     def test_multiple_roots_combine_descendants(self) -> None:
         """Test multiple merge roots combine their descendants."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": []},
-            "c": {"depends_on": ["a"]},
-            "d": {"depends_on": ["b"]},
-        }
-        to_cancel = get_workflows_to_cancel(["a", "b"], graph)
+        # Two independent root workflows (a, b) each with one child (c, d)
+        multi_root_graph = {"a": {"depends_on": []}, "b": {"depends_on": []},
+                            "c": {"depends_on": ["a"]}, "d": {"depends_on": ["b"]}}
+        to_cancel = get_workflows_to_cancel(["a", "b"], multi_root_graph)
         assert to_cancel == {"a", "b", "c", "d"}
 
     def test_empty_roots_returns_empty(self) -> None:
@@ -121,6 +116,11 @@ class TestBuildNameToKeyMap:
             "Health Endpoint": "operational_health",
         }
         assert name_to_key == expected
+
+    def test_empty_graph_returns_empty_map(self) -> None:
+        """Test empty graph returns empty mapping."""
+        name_to_key = build_name_to_key_map({})
+        assert not name_to_key
 
 
 class TestCancelRun:

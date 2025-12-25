@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, mock_open, patch
 
-import pytest
-
 from dispatch_roots import (
     dispatch_workflow,
     should_trigger_descendants,
@@ -136,7 +134,7 @@ class TestDispatchWorkflow:
 
     def test_dry_run_returns_true(self) -> None:
         """Test dry run mode returns True."""
-        with patch("dispatch_roots.dispatch_gh_workflow") as mock_dispatch:
+        with patch("dispatch_roots.dispatch_gh_workflow"):
             result = dispatch_workflow("test", "owner/repo", False, dry_run=True)
             assert result is True
 
@@ -151,7 +149,7 @@ class TestDispatchWorkflow:
     def test_dispatches_returns_true_on_success(
         self,
         mock_dispatch: MagicMock,
-        mock_accepts: MagicMock
+        _mock_accepts: MagicMock
     ) -> None:
         """Test dispatch returns True on success."""
         mock_dispatch.return_value = True
@@ -163,7 +161,7 @@ class TestDispatchWorkflow:
     def test_dispatches_without_flag_when_trigger_false(
         self,
         mock_dispatch: MagicMock,
-        mock_accepts: MagicMock
+        _mock_accepts: MagicMock
     ) -> None:
         """Test dispatch passes None extra_args when trigger_descendants False."""
         mock_dispatch.return_value = True
@@ -204,7 +202,7 @@ class TestDispatchWorkflow:
     def test_returns_false_on_dispatch_failure(
         self,
         mock_dispatch: MagicMock,
-        mock_accepts: MagicMock
+        _mock_accepts: MagicMock
     ) -> None:
         """Test returns False when dispatch fails."""
         mock_dispatch.return_value = False

@@ -3,8 +3,6 @@ import json
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from get_changed_files import (
     ZERO_SHA,
     commit_exists,
@@ -92,7 +90,7 @@ class TestGetChangedFiles:
     @patch("get_changed_files.commit_exists")
     def test_uses_head_minus_one_for_zero_sha(
         self,
-        mock_exists: MagicMock,
+        _mock_exists: MagicMock,
         mock_diff: MagicMock
     ) -> None:
         """Test that ZERO_SHA triggers HEAD~1 fallback."""

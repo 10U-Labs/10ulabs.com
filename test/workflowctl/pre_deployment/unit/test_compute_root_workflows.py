@@ -1,7 +1,6 @@
 """Unit tests for compute_roots.py."""
 
 import io
-import sys
 from unittest.mock import patch
 
 import pytest
@@ -455,53 +454,16 @@ class TestTopologicalSort:
         result = topological_sort(workflows, SAMPLE_GRAPH)
         assert result.index("api") < result.index("health")
 
-    def test_diamond_pattern_root_first(self) -> None:
-        """Test diamond-shaped graph has root first."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        workflows = {"root", "left", "right", "bottom"}
-        result = topological_sort(workflows, graph)
-        assert result[0] == "root"
-
-    def test_diamond_pattern_bottom_last(self) -> None:
-        """Test diamond-shaped graph has bottom last."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        workflows = {"root", "left", "right", "bottom"}
-        result = topological_sort(workflows, graph)
-        assert result[-1] == "bottom"
-
-    def test_diamond_pattern_left_before_bottom(self) -> None:
-        """Test diamond-shaped graph has left before bottom."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        workflows = {"root", "left", "right", "bottom"}
-        result = topological_sort(workflows, graph)
-        assert result.index("left") < result.index("bottom")
-
-    def test_diamond_pattern_right_before_bottom(self) -> None:
-        """Test diamond-shaped graph has right before bottom."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        workflows = {"root", "left", "right", "bottom"}
-        result = topological_sort(workflows, graph)
-        assert result.index("right") < result.index("bottom")
+    def test_diamond_pattern_ordering(self) -> None:
+        """Test diamond-shaped graph maintains correct ordering."""
+        graph = {"root": {"depends_on": []}, "left": {"depends_on": ["root"]},
+                 "right": {"depends_on": ["root"]},
+                 "bottom": {"depends_on": ["left", "right"]}}
+        result = topological_sort({"root", "left", "right", "bottom"}, graph)
+        assert (result[0], result[-1],
+                result.index("left") < result.index("bottom"),
+                result.index("right") < result.index("bottom")) == (
+                    "root", "bottom", True, True)
 
     def test_partial_graph(self) -> None:
         """Test sorting subset of graph."""
@@ -516,133 +478,33 @@ class TestTopologicalSortLevels:
 
     def test_single_workflow(self) -> None:
         """Test single workflow returns single level."""
-        workflows = {"bootstrap"}
-        levels = topological_sort_levels(workflows, SAMPLE_GRAPH)
+        levels = topological_sort_levels({"bootstrap"}, SAMPLE_GRAPH)
         assert levels == [["bootstrap"]]
 
     def test_linear_chain(self) -> None:
         """Test linear chain returns one workflow per level."""
-        workflows = {"bootstrap", "www_shared", "api"}
-        levels = topological_sort_levels(workflows, SAMPLE_GRAPH)
+        levels = topological_sort_levels({"bootstrap", "www_shared", "api"},
+                                         SAMPLE_GRAPH)
         assert levels == [["bootstrap"], ["www_shared"], ["api"]]
 
-    def test_parallel_workflows_has_three_levels(self) -> None:
-        """Test parallel workflows graph has 3 levels."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        workflows = {"root", "left", "right", "bottom"}
-        levels = topological_sort_levels(workflows, graph)
-        assert len(levels) == 3
+    def test_parallel_workflows_structure(self) -> None:
+        """Test parallel workflows are grouped correctly by level."""
+        graph = {"root": {"depends_on": []}, "left": {"depends_on": ["root"]},
+                 "right": {"depends_on": ["root"]},
+                 "bottom": {"depends_on": ["left", "right"]}}
+        levels = topological_sort_levels({"root", "left", "right", "bottom"},
+                                         graph)
+        assert (len(levels), levels[0], sorted(levels[1]), levels[2]) == (
+            3, ["root"], ["left", "right"], ["bottom"])
 
-    def test_parallel_workflows_root_in_first_level(self) -> None:
-        """Test parallel workflows has root in first level."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        workflows = {"root", "left", "right", "bottom"}
-        levels = topological_sort_levels(workflows, graph)
-        assert levels[0] == ["root"]
-
-    def test_parallel_workflows_left_right_in_second_level(self) -> None:
-        """Test parallel workflows has left and right in second level."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        workflows = {"root", "left", "right", "bottom"}
-        levels = topological_sort_levels(workflows, graph)
-        assert sorted(levels[1]) == ["left", "right"]
-
-    def test_parallel_workflows_bottom_in_third_level(self) -> None:
-        """Test parallel workflows has bottom in third level."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        workflows = {"root", "left", "right", "bottom"}
-        levels = topological_sort_levels(workflows, graph)
-        assert levels[2] == ["bottom"]
-
-    def test_complex_parallel_has_four_levels(self) -> None:
-        """Test complex parallel graph has 4 levels."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": ["a"]},
-            "c": {"depends_on": ["a"]},
-            "d": {"depends_on": ["b"]},
-            "e": {"depends_on": ["c"]},
-            "f": {"depends_on": ["d", "e"]},
-        }
-        workflows = {"a", "b", "c", "d", "e", "f"}
-        levels = topological_sort_levels(workflows, graph)
-        assert len(levels) == 4
-
-    def test_complex_parallel_a_in_first_level(self) -> None:
-        """Test complex parallel graph has a in first level."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": ["a"]},
-            "c": {"depends_on": ["a"]},
-            "d": {"depends_on": ["b"]},
-            "e": {"depends_on": ["c"]},
-            "f": {"depends_on": ["d", "e"]},
-        }
-        workflows = {"a", "b", "c", "d", "e", "f"}
-        levels = topological_sort_levels(workflows, graph)
-        assert levels[0] == ["a"]
-
-    def test_complex_parallel_bc_in_second_level(self) -> None:
-        """Test complex parallel graph has b and c in second level."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": ["a"]},
-            "c": {"depends_on": ["a"]},
-            "d": {"depends_on": ["b"]},
-            "e": {"depends_on": ["c"]},
-            "f": {"depends_on": ["d", "e"]},
-        }
-        workflows = {"a", "b", "c", "d", "e", "f"}
-        levels = topological_sort_levels(workflows, graph)
-        assert sorted(levels[1]) == ["b", "c"]
-
-    def test_complex_parallel_de_in_third_level(self) -> None:
-        """Test complex parallel graph has d and e in third level."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": ["a"]},
-            "c": {"depends_on": ["a"]},
-            "d": {"depends_on": ["b"]},
-            "e": {"depends_on": ["c"]},
-            "f": {"depends_on": ["d", "e"]},
-        }
-        workflows = {"a", "b", "c", "d", "e", "f"}
-        levels = topological_sort_levels(workflows, graph)
-        assert sorted(levels[2]) == ["d", "e"]
-
-    def test_complex_parallel_f_in_fourth_level(self) -> None:
-        """Test complex parallel graph has f in fourth level."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": ["a"]},
-            "c": {"depends_on": ["a"]},
-            "d": {"depends_on": ["b"]},
-            "e": {"depends_on": ["c"]},
-            "f": {"depends_on": ["d", "e"]},
-        }
-        workflows = {"a", "b", "c", "d", "e", "f"}
-        levels = topological_sort_levels(workflows, graph)
-        assert levels[3] == ["f"]
+    def test_complex_parallel_structure(self) -> None:
+        """Test complex parallel graph levels are correct."""
+        graph = {"a": {"depends_on": []}, "b": {"depends_on": ["a"]},
+                 "c": {"depends_on": ["a"]}, "d": {"depends_on": ["b"]},
+                 "e": {"depends_on": ["c"]}, "f": {"depends_on": ["d", "e"]}}
+        levels = topological_sort_levels({"a", "b", "c", "d", "e", "f"}, graph)
+        assert (len(levels), levels[0], sorted(levels[1]), sorted(levels[2]),
+                levels[3]) == (4, ["a"], ["b", "c"], ["d", "e"], ["f"])
 
 
 class TestComputeExecutionPlan:
@@ -675,38 +537,14 @@ class TestComputeExecutionPlan:
         expected = ["ecr", "image_for_ecs_runners", "ecs_runner", "contact"]
         assert plan == expected
 
-    def test_multiple_roots_includes_all_descendants(self) -> None:
-        """Test multiple roots include all descendants."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": []},
-            "c": {"depends_on": ["a"]},
-            "d": {"depends_on": ["b"]},
-        }
+    def test_multiple_roots_execution_order(self) -> None:
+        """Test multiple roots include all descendants in correct order."""
+        graph = {"a": {"depends_on": []}, "b": {"depends_on": []},
+                 "c": {"depends_on": ["a"]}, "d": {"depends_on": ["b"]}}
         plan = compute_execution_plan(["a", "b"], graph)
-        assert set(plan) == {"a", "b", "c", "d"}
-
-    def test_multiple_roots_a_before_c(self) -> None:
-        """Test multiple roots has a before c."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": []},
-            "c": {"depends_on": ["a"]},
-            "d": {"depends_on": ["b"]},
-        }
-        plan = compute_execution_plan(["a", "b"], graph)
-        assert plan.index("a") < plan.index("c")
-
-    def test_multiple_roots_b_before_d(self) -> None:
-        """Test multiple roots has b before d."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": []},
-            "c": {"depends_on": ["a"]},
-            "d": {"depends_on": ["b"]},
-        }
-        plan = compute_execution_plan(["a", "b"], graph)
-        assert plan.index("b") < plan.index("d")
+        assert (set(plan), plan.index("a") < plan.index("c"),
+                plan.index("b") < plan.index("d")) == (
+                    {"a", "b", "c", "d"}, True, True)
 
 
 class TestComputeExecutionPlanLevels:
@@ -733,79 +571,22 @@ class TestComputeExecutionPlanLevels:
         levels = compute_execution_plan_levels(["bootstrap"], SAMPLE_GRAPH)
         assert levels[-1] == ["contact"]
 
-    def test_parallel_branches_has_three_levels(self) -> None:
-        """Test parallel branches graph has 3 levels."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
+    def test_parallel_branches_level_structure(self) -> None:
+        """Test parallel branches graph has correct level structure."""
+        graph = {"root": {"depends_on": []}, "left": {"depends_on": ["root"]},
+                 "right": {"depends_on": ["root"]},
+                 "bottom": {"depends_on": ["left", "right"]}}
         levels = compute_execution_plan_levels(["root"], graph)
-        assert len(levels) == 3
+        assert (len(levels), levels[0], sorted(levels[1]), levels[2]) == (
+            3, ["root"], ["left", "right"], ["bottom"])
 
-    def test_parallel_branches_root_in_first_level(self) -> None:
-        """Test parallel branches has root in first level."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        levels = compute_execution_plan_levels(["root"], graph)
-        assert levels[0] == ["root"]
-
-    def test_parallel_branches_left_right_in_second_level(self) -> None:
-        """Test parallel branches has left and right in second level."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        levels = compute_execution_plan_levels(["root"], graph)
-        assert sorted(levels[1]) == ["left", "right"]
-
-    def test_parallel_branches_bottom_in_third_level(self) -> None:
-        """Test parallel branches has bottom in third level."""
-        graph = {
-            "root": {"depends_on": []},
-            "left": {"depends_on": ["root"]},
-            "right": {"depends_on": ["root"]},
-            "bottom": {"depends_on": ["left", "right"]},
-        }
-        levels = compute_execution_plan_levels(["root"], graph)
-        assert levels[2] == ["bottom"]
-
-    def test_multiple_roots_same_level_has_two_levels(self) -> None:
-        """Test multiple independent roots has 2 levels."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": []},
-            "c": {"depends_on": ["a", "b"]},
-        }
+    def test_multiple_roots_same_level_structure(self) -> None:
+        """Test multiple independent roots level structure."""
+        graph = {"a": {"depends_on": []}, "b": {"depends_on": []},
+                 "c": {"depends_on": ["a", "b"]}}
         levels = compute_execution_plan_levels(["a", "b"], graph)
-        assert len(levels) == 2
-
-    def test_multiple_roots_same_level_ab_in_first_level(self) -> None:
-        """Test multiple independent roots has a and b in first level."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": []},
-            "c": {"depends_on": ["a", "b"]},
-        }
-        levels = compute_execution_plan_levels(["a", "b"], graph)
-        assert sorted(levels[0]) == ["a", "b"]
-
-    def test_multiple_roots_same_level_c_in_second_level(self) -> None:
-        """Test multiple independent roots has c in second level."""
-        graph = {
-            "a": {"depends_on": []},
-            "b": {"depends_on": []},
-            "c": {"depends_on": ["a", "b"]},
-        }
-        levels = compute_execution_plan_levels(["a", "b"], graph)
-        assert levels[1] == ["c"]
+        assert (len(levels), sorted(levels[0]), levels[1]) == (
+            2, ["a", "b"], ["c"])
 
 
 class TestOutputSlots:

@@ -3,13 +3,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from utils import (
-    build_name_to_key_map,
-    get_workflow_runs,
-    load_dependency_graph,
-)
+from utils import build_name_to_key_map, get_workflow_runs
 
 
 # Sample dependency graph for testing
@@ -48,7 +42,7 @@ class TestBuildNameToKeyMap:
     def test_empty_graph(self) -> None:
         """Test with empty graph."""
         name_to_key = build_name_to_key_map({})
-        assert name_to_key == {}
+        assert not name_to_key
 
     def test_workflow_without_name(self) -> None:
         """Test workflow config without name field is skipped."""

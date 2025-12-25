@@ -3,8 +3,6 @@
 import sys
 from unittest.mock import patch, MagicMock
 
-import pytest
-
 import workflowctl
 
 
@@ -41,7 +39,8 @@ class TestWorkflowctlCLI:
         original = workflowctl.COMMANDS["get-running"]
         try:
             workflowctl.COMMANDS["get-running"] = (original[0], mock_main)
-            with patch.object(sys, "argv", ["workflowctl.py", "get-running", "--repo", "test/repo"]):
+            argv = ["workflowctl.py", "get-running", "--repo", "test/repo"]
+            with patch.object(sys, "argv", argv):
                 result = workflowctl.main()
             mock_main.assert_called_once()
             assert result == 0
@@ -54,7 +53,9 @@ class TestWorkflowctlCLI:
         original = workflowctl.COMMANDS["cancel"]
         try:
             workflowctl.COMMANDS["cancel"] = (original[0], mock_main)
-            with patch.object(sys, "argv", ["workflowctl.py", "cancel", "--repo", "test/repo", "--merge-roots", "[]"]):
+            argv = ["workflowctl.py", "cancel", "--repo", "test/repo",
+                    "--merge-roots", "[]"]
+            with patch.object(sys, "argv", argv):
                 result = workflowctl.main()
             mock_main.assert_called_once()
             assert result == 0
@@ -67,7 +68,9 @@ class TestWorkflowctlCLI:
         original = workflowctl.COMMANDS["dispatch"]
         try:
             workflowctl.COMMANDS["dispatch"] = (original[0], mock_main)
-            with patch.object(sys, "argv", ["workflowctl.py", "dispatch", "--workflow", "test", "--repo", "test/repo"]):
+            argv = ["workflowctl.py", "dispatch", "--workflow", "test",
+                    "--repo", "test/repo"]
+            with patch.object(sys, "argv", argv):
                 result = workflowctl.main()
             mock_main.assert_called_once()
             assert result == 0
