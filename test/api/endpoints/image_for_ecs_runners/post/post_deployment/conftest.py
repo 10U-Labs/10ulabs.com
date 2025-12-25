@@ -3,17 +3,10 @@ import json
 import os
 import subprocess
 
-from test.api.endpoints.image_for_ecs_runners.conftest import CONFIG_PATH, DOCKERFILE_PATH
+from test.api.endpoints.image_for_ecs_runners.conftest import DOCKERFILE_PATH
 
 import boto3
 import pytest
-
-
-def _get_config_value(key):
-    """Get a value from the image config.json."""
-    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    return config.get(key)
 
 
 def get_dockerfile_path():
@@ -22,13 +15,8 @@ def get_dockerfile_path():
 
 
 def get_docker_image_tag():
-    """Get the Docker image tag from environment or config."""
-    try:
-        tag = os.environ["TEST_DOCKER_IMAGE_TAG"]
-    except KeyError:
-        container_name = _get_config_value("container_name")
-        tag = f"{container_name}:test"
-    return tag
+    """Get the Docker image tag for local testing."""
+    return os.environ.get("TEST_DOCKER_IMAGE_TAG", "ecs-runner-image:test")
 
 
 @pytest.fixture(scope="module")
