@@ -9,6 +9,7 @@ Six-layer testing model:
 
 import pytest
 from repo_utils import REPO_ROOT
+from terraform_config import get_shared_config
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
 
@@ -19,5 +20,5 @@ API_SHARED_ECS_RUNNER_SRC = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
 
 TestOrphanedResources = create_orphaned_resource_tests(
     terraform_dir=API_SHARED_ECS_RUNNER_SRC,
-    region="us-east-2",
+    region=get_shared_config()["aws_region"],
 )

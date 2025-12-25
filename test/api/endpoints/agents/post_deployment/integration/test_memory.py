@@ -11,6 +11,14 @@ import pytest
 from botocore.exceptions import ClientError
 
 
+def _find_policy_for_collection(policies, collection_name):
+    """Check if any policy matches the given collection name."""
+    for policy in policies:
+        if collection_name.replace("-", "") in policy["name"].replace("-", ""):
+            return True
+    return False
+
+
 class TestOpenSearchCollectionExistence:
     """Layer 3: Verify the OpenSearch Serverless collection exists."""
 
@@ -65,13 +73,7 @@ class TestOpenSearchCollectionConfiguration:
                 type="encryption"
             )
             policies = response.get("securityPolicySummaries", [])
-            # Look for a policy that covers our collection
-            found = False
-            for policy in policies:
-                if memory_collection_name.replace("-", "") in policy["name"].replace("-", ""):
-                    found = True
-                    break
-            assert found, (
+            assert _find_policy_for_collection(policies, memory_collection_name), (
                 f"No encryption policy found for collection '{memory_collection_name}'."
             )
         except ClientError as err:
@@ -86,13 +88,7 @@ class TestOpenSearchCollectionConfiguration:
                 type="network"
             )
             policies = response.get("securityPolicySummaries", [])
-            # Look for a policy that covers our collection
-            found = False
-            for policy in policies:
-                if memory_collection_name.replace("-", "") in policy["name"].replace("-", ""):
-                    found = True
-                    break
-            assert found, (
+            assert _find_policy_for_collection(policies, memory_collection_name), (
                 f"No network policy found for collection '{memory_collection_name}'."
             )
         except ClientError as err:
@@ -107,13 +103,7 @@ class TestOpenSearchCollectionConfiguration:
                 type="data"
             )
             policies = response.get("accessPolicySummaries", [])
-            # Look for a policy that covers our collection
-            found = False
-            for policy in policies:
-                if memory_collection_name.replace("-", "") in policy["name"].replace("-", ""):
-                    found = True
-                    break
-            assert found, (
+            assert _find_policy_for_collection(policies, memory_collection_name), (
                 f"No access policy found for collection '{memory_collection_name}'."
             )
         except ClientError as err:

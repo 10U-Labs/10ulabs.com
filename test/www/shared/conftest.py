@@ -1,29 +1,16 @@
 """Pytest fixtures for www shared tests."""
-import re
 from typing import Dict
 
 import boto3
 import pytest
 from repo_utils import REPO_ROOT
-
+from test_fixtures.config import parse_locals_file
 
 
 def _parse_website_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     """Parse website locals from Terraform."""
     locals_path = REPO_ROOT / "src" / "www" / "shared" / "locals.tf"
-    config = {}
-    with open(locals_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if '=' in line and not line.startswith('#') and not line.startswith('locals'):
-                if match := re.match(r'(\w+)\s*=\s*(.+)', line):
-                    key, value = match.groups()
-                    value = value.strip()
-                    if value.startswith('"') and value.endswith('"'):
-                        config[key] = value[1:-1]
-                    elif 'module.shared.' in value:
-                        ref = value.replace('module.shared.', '').strip()
-                        config[key] = shared_config.get(ref, '')
+    config = parse_locals_file(locals_path, shared_config)
     config['www_fqdn'] = f"www.{shared_config.get('domain_name', '')}"
     config['apex_fqdn'] = shared_config.get('domain_name', '')
     domain_name = shared_config.get('domain_name', '')
@@ -51,7 +38,7 @@ def config_fixture(shared_config) -> Dict[str, str]:
     """Provide website configuration for tests."""
     website_locals = _parse_website_locals(shared_config)
     result = {}
-    result['aws_region'] = website_locals.get('aws_region', '')
+    result['aws_region'] = shared_config['aws_region']
     result['aws_account_id'] = website_locals.get('aws_account_id', '')
     result['central_logs_bucket'] = shared_config.get('name_for_central_logs_bucket', '')
     result['website_fqdn'] = website_locals.get('www_fqdn', '')

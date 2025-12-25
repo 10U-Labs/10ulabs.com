@@ -11,6 +11,6 @@ AGENTS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "agents"
 def config_fixture(shared_config) -> Dict[str, str]:
     """Create configuration fixture from shared config."""
     result: Dict[str, str] = {}
-    result["aws_region"] = shared_config.get("aws_region", "us-east-2")
+    result["aws_region"] = shared_config["aws_region"]
     result["domain_name"] = shared_config.get("domain_name", "")
     return result

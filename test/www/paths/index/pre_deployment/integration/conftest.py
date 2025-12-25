@@ -1,11 +1,7 @@
 """Pytest fixtures for pre-deployment integration tests."""
 import boto3
 import pytest
-from repo_utils import REPO_ROOT
-from test_fixtures.terraform import terraform_init, terraform_output
-
-
-WWW_SHARED_DIR = REPO_ROOT / "src" / "www" / "shared"
+from test_fixtures.integration import create_www_shared_fixtures
 
 
 @pytest.fixture(scope="session")
@@ -20,28 +16,8 @@ def cloudfront_client(aws_region):
     return boto3.client("cloudfront", region_name=aws_region)
 
 
-@pytest.fixture(scope="session")
-def www_shared_terraform_initialized():
-    """Initialize terraform for www_shared state access."""
-    return terraform_init(WWW_SHARED_DIR)
-
-
-@pytest.fixture(scope="session")
-def www_shared_outputs(request):
-    """Get www_shared terraform outputs."""
-    if not request.getfixturevalue("www_shared_terraform_initialized"):
-        pytest.skip("Terraform init failed for www_shared")
-    return {
-        "bucket_name": terraform_output(
-            WWW_SHARED_DIR, "bucket_name"
-        ),
-        "bucket_arn": terraform_output(
-            WWW_SHARED_DIR, "bucket_arn"
-        ),
-        "website_domain_name": terraform_output(
-            WWW_SHARED_DIR, "website_domain_name"
-        ),
-        "cloudfront_distribution_id": terraform_output(
-            WWW_SHARED_DIR, "cloudfront_distribution_id"
-        ),
-    }
+# Create www_shared fixtures with CloudFront and website domain
+www_shared_terraform_initialized, www_shared_outputs = create_www_shared_fixtures(
+    include_cloudfront=True,
+    include_website_domain=True,
+)

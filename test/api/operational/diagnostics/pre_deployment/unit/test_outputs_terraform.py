@@ -1,30 +1,10 @@
 """Unit tests for diagnostics endpoint outputs Terraform configuration."""
-from test.api.operational.diagnostics.pre_deployment.unit.conftest import DIAGNOSTICS_SRC
+from repo_utils import REPO_ROOT
+from test_fixtures.terraform_tests import create_outputs_terraform_tests
 
-OUTPUTS_FILE = DIAGNOSTICS_SRC / "outputs.tf"
+DIAGNOSTICS_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
 
-
-def test_outputs_terraform_file_exists():
-    """Verify outputs.tf file exists."""
-    assert OUTPUTS_FILE.exists()
-
-
-def test_lambda_function_arn_output_exists():
-    """Verify lambda_function_arn output is defined."""
-    with open(OUTPUTS_FILE, encoding="utf-8") as f:
-        content = f.read()
-    assert 'output "lambda_function_arn"' in content
-
-
-def test_lambda_function_name_output_exists():
-    """Verify lambda_function_name output is defined."""
-    with open(OUTPUTS_FILE, encoding="utf-8") as f:
-        content = f.read()
-    assert 'output "lambda_function_name"' in content
-
-
-def test_log_group_name_output_exists():
-    """Verify log_group_name output is defined."""
-    with open(OUTPUTS_FILE, encoding="utf-8") as f:
-        content = f.read()
-    assert 'output "log_group_name"' in content
+TestOutputsTerraform = create_outputs_terraform_tests(
+    endpoint_src=DIAGNOSTICS_SRC,
+    required_outputs=["lambda_function_arn", "lambda_function_name", "log_group_name"],
+)

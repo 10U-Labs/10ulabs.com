@@ -8,6 +8,7 @@ from botocore.exceptions import ClientError
 
 import pytest
 
+from test_fixtures.integration import handle_ecr_error
 from .conftest import get_repository_name_or_skip
 
 pytestmark = pytest.mark.layer(6)
@@ -97,14 +98,7 @@ class TestECRCapability:
                 maxResults=1
             )
         except ClientError as e:
-            if e.response["Error"]["Code"] == "RepositoryNotFoundException":
-                pytest.skip("Repository does not exist")
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                pytest.fail(
-                    f"No permission to call ecr:DescribeImages on '{repository_name}'. "
-                    "This is required to manage Docker images for ECS tasks."
-                )
-            raise
+            handle_ecr_error(e, "ecr:DescribeImages", repository_name)
 
 
 class TestCloudWatchLogsCapability:

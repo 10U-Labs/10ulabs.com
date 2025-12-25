@@ -17,6 +17,7 @@ from botocore.exceptions import ClientError
 import pytest
 
 from terraform_config import extract_sqs_queue_names
+from test_fixtures.integration import create_security_group_existence_test
 
 
 pytestmark = pytest.mark.layer(4)
@@ -189,23 +190,11 @@ class TestVPCResourceExistence:
             "Some subnets may have been deleted."
         )
 
-    def test_security_group_exists(self, ec2_client, api_shared_runners_outputs):
-        """Verify the security group exists."""
-        sg_id = api_shared_runners_outputs.get("runner_security_group_id")
-        if not sg_id:
-            pytest.skip("runner_security_group_id output not available")
-        try:
-            response = ec2_client.describe_security_groups(GroupIds=[sg_id])
-            assert len(response["SecurityGroups"]) == 1, (
-                f"Security group {sg_id} not found."
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "InvalidGroup.NotFound":
-                pytest.fail(
-                    f"Security group {sg_id} does not exist. "
-                    "Run: cd src/api/shared/runners && terraform apply"
-                )
-            raise
+    # Use factory for security group existence test
+    test_security_group_exists = create_security_group_existence_test(
+        outputs_fixture="api_shared_runners_outputs",
+        terraform_path="src/api/shared/runners",
+    )
 
 
 def test_ecr_repository_exists(ecr_repository_info, api_shared_ecs_runner_outputs):

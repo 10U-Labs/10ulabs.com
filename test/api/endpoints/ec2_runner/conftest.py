@@ -1,88 +1,53 @@
 """Pytest fixtures for EC2 runner tests."""
-import importlib
 import os
-import sys
 from typing import Any, Dict
 
 from test.api.conftest import get_runner_labels
-from test.api.endpoints.conftest import parse_locals_file, parse_tfvars
 
-import boto3
 import pytest
 from repo_utils import REPO_ROOT
+from test_fixtures import get_shared_config, get_tfvars_values, get_endpoint_local_values
 
 EC2_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
+API_BACKEND_SRC = REPO_ROOT / "src" / "api" / "backend"
 
-# Add lib/python to path for unit tests that use --confcutdir
-LIB_DIR = REPO_ROOT / "lib" / "python"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
-
-
-def _get_shared_config() -> Dict[str, str]:
-    """Load and return shared config using dynamic import."""
-    terraform_config = importlib.import_module("terraform_config")
-    return terraform_config.get_shared_config()
+# Use shared AWS fixtures (provides ec2_client, dynamodb_client, etc.)
+pytest_plugins = ['test_fixtures.aws']
 
 
 @pytest.fixture(name="shared_config", scope="session")
 def shared_config_fixture() -> Dict[str, str]:
     """Provide shared config for tests using --confcutdir."""
-    return _get_shared_config()
+    return get_shared_config()
 
 
-def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
-    """Parse API and EC2 runner locals files into a config dict."""
-    api_locals_path = REPO_ROOT / "src" / "api" / "backend" / "locals.tf"
-    ec2_locals_path = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner" / "locals.tf"
-    config = parse_locals_file(api_locals_path, shared_config)
-    ec2_runner_locals = parse_locals_file(ec2_locals_path, shared_config)
-    config.update(ec2_runner_locals)
-    config['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
-    github_org = shared_config.get('github_org', '')
-    repo_name = shared_config.get('name_for_github_repo', '')
-    config['github_repo_full'] = f"{github_org}/{repo_name}"
+def _get_ec2_runner_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
+    """Get EC2 runner locals using terraform_config (single source of truth)."""
+    config = get_endpoint_local_values(API_BACKEND_SRC)
+    config.update(get_endpoint_local_values(EC2_RUNNER_SRC))
+    config['api_fqdn'] = f"api.{shared_config['domain_name']}"
+    config['github_repo_full'] = f"{shared_config['github_org']}/{shared_config['name_for_github_repo']}"
     return config
 
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture(shared_config) -> Dict[str, Any]:
     """Provide configuration for EC2 runner tests."""
-    api_tfvars_path = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
-    ec2_tfvars_path = (
-        REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner" / "terraform.tfvars"
-    )
-    result = parse_tfvars(api_tfvars_path)
-    ec2_runner_vars = parse_tfvars(ec2_tfvars_path)
-    result.update(ec2_runner_vars)
-    api_locals = _parse_api_locals(shared_config)
-    result['aws_region'] = api_locals.get('aws_region', '')
-    result['api_fqdn'] = api_locals.get('api_fqdn', '')
-    result['github_repo'] = api_locals.get('github_repo_full', '')
-    result['resource_prefix'] = api_locals.get('resource_prefix', '')
-    result['ec2_runner_ami_purpose_tag'] = api_locals.get('ec2_runner_ami_purpose_tag', '')
-    result['ec2_runner_ami_purpose_value'] = api_locals.get(
-        'ec2_runner_ami_purpose_value', ''
-    )
-    result['ec2_runner_ami_stable_tag'] = api_locals.get('ec2_runner_ami_stable_tag', '')
+    result: Dict[str, Any] = get_tfvars_values(API_BACKEND_SRC)
+    result.update(get_tfvars_values(EC2_RUNNER_SRC))
+    ec2_locals = _get_ec2_runner_locals(shared_config)
+    result['aws_region'] = shared_config['aws_region']
+    result['api_fqdn'] = ec2_locals['api_fqdn']
+    result['github_repo'] = ec2_locals['github_repo_full']
+    result['resource_prefix'] = ec2_locals.get('resource_prefix', '')
+    result['ec2_runner_ami_purpose_tag'] = ec2_locals.get('ec2_runner_ami_purpose_tag', '')
+    result['ec2_runner_ami_purpose_value'] = ec2_locals.get('ec2_runner_ami_purpose_value', '')
+    result['ec2_runner_ami_stable_tag'] = ec2_locals.get('ec2_runner_ami_stable_tag', '')
     result['ssm_parameter_name_for_github_pat'] = os.environ.get(
         'SSM_PARAMETER_NAME_FOR_GITHUB_PAT', '/test/github/pat'
     )
     result['ssm_parameter_name_for_api_key'] = result.get(
         'ssm_parameter_name_for_api_key', '/api/key'
     )
-    runner_labels = get_runner_labels()
-    result.update(runner_labels)
+    result.update(get_runner_labels())
     return result
-
-
-@pytest.fixture
-def ec2_client(aws_region):
-    """Provide an EC2 client."""
-    return boto3.client('ec2', region_name=aws_region)
-
-
-@pytest.fixture
-def dynamodb_client(aws_region):
-    """Provide a DynamoDB client."""
-    return boto3.client('dynamodb', region_name=aws_region)

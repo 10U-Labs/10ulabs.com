@@ -39,11 +39,11 @@ def config(shared_config):
     Shadows parent config fixture with simpler structure for integration tests.
     Resource names come from terraform_config (single source of truth).
     """
-    prefix = shared_config.get('resource_prefix', 'TenULabs')
+    prefix = shared_config['resource_prefix']
     resource_names = get_runners_resource_names(prefix)
     return {
         'resource_prefix': prefix,
-        'aws_region': shared_config.get('aws_region', 'us-east-2'),
+        'aws_region': shared_config['aws_region'],
         'idempotency_table_name': resource_names['idempotency_table'],
         'circuit_breaker_state_table_name': resource_names['circuit_breaker_state_table'],
         'workflow_runners_table_name': resource_names['workflow_runners_table'],

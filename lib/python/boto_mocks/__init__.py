@@ -150,3 +150,23 @@ def create_mock_lambda_delete_concurrency_error() -> MagicMock:
         'DeleteFunctionConcurrency'
     )
     return mock_lambda
+
+
+def setup_mock_ec2_vpc_responses(mock_ec2: MagicMock) -> None:
+    """Configure common EC2 VPC-related mock responses.
+
+    Sets up describe_security_groups, describe_subnets, and describe_vpcs
+    return values used in Lambda dependency validation tests.
+
+    Args:
+        mock_ec2: The EC2 mock to configure.
+    """
+    mock_ec2.describe_security_groups.return_value = {
+        'SecurityGroups': [{'GroupId': 'sg-test'}]
+    }
+    mock_ec2.describe_subnets.return_value = {
+        'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
+    }
+    mock_ec2.describe_vpcs.return_value = {
+        'Vpcs': [{'VpcId': 'vpc-test'}]
+    }

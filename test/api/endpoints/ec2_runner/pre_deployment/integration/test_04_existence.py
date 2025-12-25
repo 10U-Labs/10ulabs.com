@@ -6,6 +6,7 @@ workflows that this workflow depends on.
 import pytest
 from botocore.exceptions import ClientError
 
+from test_fixtures.integration import create_security_group_existence_test
 from .conftest import get_stable_ami_filters
 
 pytestmark = pytest.mark.layer(4)
@@ -116,20 +117,8 @@ class TestVPCResources:
                 )
             raise
 
-    def test_security_group_exists(self, ec2_client, runners_outputs):
-        """Verify the security group exists."""
-        sg_id = runners_outputs.get("runner_security_group_id")
-        if not sg_id:
-            pytest.skip("runner_security_group_id output not found")
-        try:
-            response = ec2_client.describe_security_groups(GroupIds=[sg_id])
-            assert len(response["SecurityGroups"]) == 1, (
-                f"Security group {sg_id} not found."
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "InvalidGroup.NotFound":
-                pytest.fail(
-                    f"Security group {sg_id} does not exist. "
-                    "Run: cd src/api/endpoints/runners && terraform apply"
-                )
-            raise
+    # Use factory for security group existence test
+    test_security_group_exists = create_security_group_existence_test(
+        outputs_fixture="runners_outputs",
+        terraform_path="src/api/endpoints/runners",
+    )

@@ -13,7 +13,8 @@ from lambda_response import (
     assert_response_status,
     assert_json_content_type,
 )
-from boto_mocks import create_client_error, create_multi_client_mock
+from boto_mocks import create_client_error, create_multi_client_mock, setup_mock_ec2_vpc_responses
+from module_utils import reset_module_state
 
 from ...conftest import EC2_RUNNER_SRC
 
@@ -60,16 +61,7 @@ def ec2_runner_handler(config: Dict[str, str]) -> Any:
     }
     with patch.dict('os.environ', env_vars):
         module = load_handler_module()
-        if hasattr(module, '_clients'):
-            setattr(module, '_clients', {})
-        if hasattr(module, '_github_token_cache'):
-            setattr(module, '_github_token_cache', {'value': None})
-        if hasattr(module, '_api_key_cache'):
-            setattr(module, '_api_key_cache', {'value': None})
-        if hasattr(module, '_dependencies_validated'):
-            setattr(module, '_dependencies_validated', {
-                'checked': True, 'valid': True, 'errors': []
-            })
+        reset_module_state(module)
         yield module
 
 
@@ -122,15 +114,7 @@ def mock_boto_client():
             {'ImageId': 'ami-test123', 'CreationDate': '2024-01-01T00:00:00Z'}
         ]
     }
-    mock_ec2.describe_security_groups.return_value = {
-        'SecurityGroups': [{'GroupId': 'sg-test'}]
-    }
-    mock_ec2.describe_subnets.return_value = {
-        'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-    }
-    mock_ec2.describe_vpcs.return_value = {
-        'Vpcs': [{'VpcId': 'vpc-test'}]
-    }
+    setup_mock_ec2_vpc_responses(mock_ec2)
     mock_ec2.describe_instances.return_value = {
         'Reservations': [{
             'Instances': [{

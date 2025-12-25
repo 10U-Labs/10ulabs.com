@@ -9,6 +9,11 @@ from typing import Any, Dict, List
 import boto3
 
 from repo_utils import extract_brace_block
+from terraform_config import (
+    get_tfvars_values,
+    get_endpoint_local_values,
+    get_shared_config,
+)
 
 
 def parse_terraform_archive_file_sources(tf_content: str) -> Dict[str, List[str]]:
@@ -127,25 +132,11 @@ def parse_tfvars(tfvars_path: Path) -> Dict[str, Any]:
 
     Returns:
         Dict mapping variable names to values (strings or lists).
+
+    Note:
+        Wrapper around terraform_config.get_tfvars_values() for backwards compatibility.
     """
-    result: Dict[str, Any] = {}
-    with open(tfvars_path, encoding="utf-8") as f:
-        content = f.read()
-    list_pattern = r'(\w+)\s*=\s*\[([^\]]*)\]'
-    for match in re.finditer(list_pattern, content, re.DOTALL):
-        key = match.group(1)
-        values_str = match.group(2)
-        values = [v.strip().strip('"') for v in values_str.split(',') if v.strip()]
-        result[key] = values
-    for line in content.split('\n'):
-        line = line.strip()
-        if line and not line.startswith("#") and '=' in line and '[' not in line:
-            line_match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-            if line_match:
-                key, value = line_match.groups()
-                if key not in result:
-                    result[key] = value.strip('"')
-    return result
+    return get_tfvars_values(tfvars_path.parent)
 
 
 def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, str]:
@@ -153,23 +144,13 @@ def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, st
 
     Args:
         locals_path: Path to the locals.tf file.
-        shared: Dict of shared module outputs for resolving references.
+        shared: Dict of shared module outputs for resolving references (unused).
 
     Returns:
         Dict mapping local names to resolved values.
+
+    Note:
+        Wrapper around terraform_config.get_endpoint_local_values() for backwards compatibility.
+        The shared parameter is no longer used - terraform_config resolves references internally.
     """
-    config: Dict[str, str] = {}
-    with open(locals_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if '=' in line and not line.startswith('#') and not line.startswith('locals'):
-                match = re.match(r'(\w+)\s*=\s*(.+)', line)
-                if match:
-                    key, value = match.groups()
-                    value = value.strip()
-                    if value.startswith('"') and value.endswith('"'):
-                        config[key] = value[1:-1]
-                    elif 'module.shared.' in value:
-                        ref = value.replace('module.shared.', '').strip()
-                        config[key] = shared.get(ref, '')
-    return config
+    return get_endpoint_local_values(locals_path.parent)

@@ -1,58 +1,25 @@
 """Shared fixtures and utilities for ECS runner image tests."""
 import os
-import re
 import subprocess
 
 import pytest
+from repo_utils import REPO_ROOT
+from terraform_config import get_shared_config
 
-
-SHARED_MODULE_PATH = os.path.join(
-    os.path.dirname(__file__), '../../../../lib/terraform/modules/shared/outputs.tf'
-)
-SHARED_LOCALS_PATH = os.path.join(
-    os.path.dirname(__file__), '../../../../lib/terraform/modules/shared/locals.tf'
-)
-BASE_DIR = os.path.join(
-    os.path.dirname(__file__), '../../../../src/api/endpoints/image_for_ecs_runners'
-)
+# Path constants for backwards compatibility
+BASE_DIR = str(REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ecs_runners")
 POST_DIR = os.path.join(BASE_DIR, 'post')
 FILES_DIR = POST_DIR  # Backwards compatibility alias
 CONFIG_PATH = os.path.join(POST_DIR, 'config.json')
 DOCKERFILE_PATH = os.path.join(POST_DIR, 'Dockerfile')
-TFVARS_PATH = os.path.join(
-    os.path.dirname(__file__), '../../../../src/api/endpoints/ecs_runner/terraform.tfvars'
-)
-
-
-def _get_terraform_output_value(output_name):
-    """Extract a value from terraform outputs.tf file."""
-    with open(SHARED_MODULE_PATH, 'r', encoding='utf-8') as f:
-        content = f.read()
-    pattern = rf'output\s+"{output_name}"\s*\{{\s*value\s*=\s*"([^"]+)"'
-    match = re.search(pattern, content)
-    if match:
-        return match.group(1)
-    return None
-
-
-def _get_terraform_local_value(local_name):
-    """Extract a value from terraform locals.tf file."""
-    with open(SHARED_LOCALS_PATH, 'r', encoding='utf-8') as f:
-        content = f.read()
-    pattern = rf'{local_name}\s*=\s*"([^"]+)"'
-    match = re.search(pattern, content)
-    if match:
-        return match.group(1)
-    return None
 
 
 def get_aws_region():
-    """Get AWS region from environment or terraform locals."""
+    """Get AWS region from environment or terraform config."""
     try:
-        region = os.environ["AWS_REGION"]
+        return os.environ["AWS_REGION"]
     except KeyError:
-        region = _get_terraform_local_value("aws_region")
-    return region
+        return get_shared_config()["aws_region"]
 
 
 def get_aws_account_id():
@@ -67,43 +34,23 @@ def get_aws_account_id():
 
 
 def get_ecr_repository():
-    """Get ECR repository name from terraform outputs."""
-    return _get_terraform_output_value("ecr_repository_name_runners")
+    """Get ECR repository name from terraform config."""
+    return get_shared_config()["ecr_repository_name_runners"]
 
 
 def get_github_repo():
-    """Get GitHub repository name from git remote URL."""
-    result = subprocess.run(
-        ["git", "remote", "get-url", "origin"],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-    url = result.stdout.strip()
-    if url.find("github.com") != -1:
-        if url.startswith("git@github.com:"):
-            repo = url.replace("git@github.com:", "").replace(".git", "")
-        elif url.startswith("https://github.com/"):
-            repo = url.replace("https://github.com/", "").replace(".git", "")
-        else:
-            raise ValueError(f"Unexpected GitHub URL format: {url}")
-        return repo
-    raise ValueError(f"Not a GitHub repository: {url}")
+    """Get GitHub repository name from terraform config."""
+    config = get_shared_config()
+    return f"{config['github_org']}/{config['name_for_github_repo']}"
 
 
 def get_github_pat():
     """Get GitHub PAT from environment variable."""
-    try:
-        pat = os.environ["GITHUB_PAT"]
-    except KeyError:
-        pat = None
-    return pat
+    return os.environ.get("GITHUB_PAT")
 
 
-@pytest.fixture(scope="module")
-def aws_region():
-    """Fixture providing the AWS region."""
-    return get_aws_region()
+# Note: aws_region fixture is inherited from test/api/conftest.py -> test_fixtures.aws
+# Do not redefine it here.
 
 
 @pytest.fixture(scope="module")

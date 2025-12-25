@@ -3,17 +3,8 @@
 Verify AWS credentials are valid before testing authorization, existence, or capability.
 """
 import pytest
+from test_fixtures.integration import create_simple_layer1_authentication_tests
 
 pytestmark = pytest.mark.layer(1)
 
-
-def test_aws_credentials_valid(sts_client):
-    """Verify AWS credentials are valid."""
-    response = sts_client.get_caller_identity()
-    assert response["Account"] is not None
-
-
-def test_aws_credentials_not_expired(sts_client):
-    """Verify AWS credentials are not expired."""
-    response = sts_client.get_caller_identity()
-    assert "Arn" in response
+TestAWSAuthentication = create_simple_layer1_authentication_tests()

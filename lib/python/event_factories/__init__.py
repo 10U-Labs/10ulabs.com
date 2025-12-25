@@ -147,3 +147,31 @@ def create_circuit_breaker_open_state() -> Dict[str, Any]:
         'failure_count': 5,
         'last_failure_time': time.time()
     }
+
+
+def create_ecs_runner_post_event(
+    job_id: int = 123,
+    job_labels: Optional[List[str]] = None,
+    github_repo: str = 'test/repo'
+) -> Dict[str, Any]:
+    """Create an ECS runner POST event.
+
+    Args:
+        job_id: The workflow job ID.
+        job_labels: List of runner labels. Defaults to ['fargate', 'self-hosted'].
+        github_repo: Repository full name (owner/repo).
+
+    Returns:
+        Dict representing an ECS runner POST API event.
+    """
+    if job_labels is None:
+        job_labels = ['fargate', 'self-hosted']
+    return {
+        'path': '/v1/ecs-runner',
+        'httpMethod': 'POST',
+        'body': json.dumps({
+            'job_id': job_id,
+            'job_labels': job_labels,
+            'github_repo': github_repo
+        })
+    }

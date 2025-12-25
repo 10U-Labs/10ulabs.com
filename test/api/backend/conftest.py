@@ -1,5 +1,4 @@
 """Pytest fixtures and configuration for API backend tests."""
-import re
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -7,27 +6,14 @@ from test.api.conftest import get_runner_labels
 
 import boto3
 import pytest
-
-
-def _parse_tfvars_file(tfvars_path: Path) -> Dict[str, str]:
-    """Parse a terraform.tfvars file and return key-value pairs."""
-    config: Dict[str, str] = {}
-    with open(tfvars_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-                if match:
-                    key, value = match.groups()
-                    config[key] = value.strip('"')
-    return config
+from test_fixtures.config import parse_tfvars_file, parse_locals_file
 
 
 def parse_bootstrap_tfvar(var_name: str) -> str:
     """Parse a variable from bootstrap terraform.tfvars file."""
     base = Path(__file__).parent.parent.parent.parent
     tfvars_path = base / "src" / "bootstrap" / "terraform.tfvars"
-    config = _parse_tfvars_file(tfvars_path)
+    config = parse_tfvars_file(tfvars_path)
     return config.get(var_name, "")
 
 
@@ -35,27 +21,14 @@ def parse_health_tfvars() -> Dict[str, str]:
     """Parse health endpoint terraform.tfvars configuration."""
     base = Path(__file__).parent.parent.parent.parent
     tfvars_path = base / "src" / "api" / "operational" / "health" / "terraform.tfvars"
-    return _parse_tfvars_file(tfvars_path)
+    return parse_tfvars_file(tfvars_path)
 
 
 def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     """Parse API backend locals.tf file for configuration values."""
     base = Path(__file__).parent.parent.parent.parent
     locals_path = base / "src" / "api" / "backend" / "locals.tf"
-    config = {}
-    with open(locals_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if '=' in line and not line.startswith('#') and not line.startswith('locals'):
-                match = re.match(r'(\w+)\s*=\s*(.+)', line)
-                if match:
-                    key, value = match.groups()
-                    value = value.strip()
-                    if value.startswith('"') and value.endswith('"'):
-                        config[key] = value[1:-1]
-                    elif 'module.shared.' in value:
-                        ref = value.replace('module.shared.', '').strip()
-                        config[key] = shared_config.get(ref, '')
+    config = parse_locals_file(locals_path, shared_config)
     config['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
     github_org = shared_config.get('github_org', '')
     github_repo = shared_config.get('name_for_github_repo', '')
@@ -81,9 +54,9 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     """Provide merged configuration from terraform files."""
     base = Path(__file__).parent.parent.parent.parent
     tfvars_path = base / "src" / "api" / "backend" / "terraform.tfvars"
-    result: Dict[str, Any] = dict(_parse_tfvars_file(tfvars_path))
+    result: Dict[str, Any] = dict(parse_tfvars_file(tfvars_path))
     api_locals = _parse_api_locals(shared_config)
-    result['aws_region'] = api_locals.get('aws_region', '')
+    result['aws_region'] = shared_config['aws_region']
     result['aws_account_id'] = api_locals.get('aws_account_id', '')
     result['central_logs_bucket'] = shared_config.get('name_for_central_logs_bucket', '')
     result['api_fqdn'] = api_locals.get('api_fqdn', '')

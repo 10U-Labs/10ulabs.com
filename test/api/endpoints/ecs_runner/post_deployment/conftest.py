@@ -16,17 +16,7 @@ def ecs_client_fixture(aws_region):
     return boto3.client("ecs", region_name=aws_region)
 
 
-@pytest.fixture(name="api_url", scope="module")
-def api_url_fixture(config):
-    """Provide the API URL from config."""
-    return f"https://{config['api_fqdn']}"
-
-
-@pytest.fixture(name="api_key", scope="module")
-def api_key_fixture(ssm_client):
-    """Retrieve the API key from SSM Parameter Store."""
-    param_response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
-    return param_response['Parameter']['Value'] if param_response else None
+# api_url and api_key fixtures are inherited from test_fixtures.aws
 
 
 def make_authenticated_get(url, api_key, timeout=DEFAULT_REQUEST_TIMEOUT):

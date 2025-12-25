@@ -9,20 +9,7 @@ import pytest
 DEFAULT_REQUEST_TIMEOUT = 10
 
 
-@pytest.fixture(name="api_url", scope="module")
-def api_url_fixture(config):
-    """Provide the API URL from config."""
-    return f"https://{config['api_fqdn']}"
-
-
-@pytest.fixture(name="api_key", scope="module")
-def api_key_fixture(ssm_client):
-    """Retrieve the API key from SSM Parameter Store."""
-    param_response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
-    result = None
-    if param_response:
-        result = param_response['Parameter']['Value']
-    return result
+# api_url and api_key fixtures are inherited from test_fixtures.aws
 
 
 @pytest.fixture(name="github_pat", scope="module")

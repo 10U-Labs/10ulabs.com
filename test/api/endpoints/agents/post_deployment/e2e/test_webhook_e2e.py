@@ -13,8 +13,8 @@ class TestWebhookEndpoint:
         """Get the webhook Function URL."""
         # The Function URL is output from Terraform
         # For now, we construct it from the shared config
-        aws_region = shared_config.get("aws_region", "us-east-2")
-        resource_prefix = shared_config.get("resource_prefix", "10ulabs")
+        aws_region = shared_config["aws_region"]
+        resource_prefix = shared_config["resource_prefix"]
 
         # Function URL format: https://{url-id}.lambda-url.{region}.on.aws/
         # We need to get this from Terraform outputs or environment
@@ -48,9 +48,10 @@ class TestWebhookEndpoint:
             f"{response.text}"
         )
 
-    def test_webhook_skips_non_failure_events_returns_200(self, webhook_url):
-        """Test that webhook returns 200 for non-failure workflow events."""
-        event = {
+    @pytest.fixture
+    def non_failure_event(self):
+        """Create a non-failure workflow event for testing."""
+        return {
             "action": "completed",
             "workflow_run": {
                 "id": 12345,
@@ -63,37 +64,28 @@ class TestWebhookEndpoint:
             },
         }
 
+    def test_webhook_skips_non_failure_events_returns_200(
+        self, webhook_url, non_failure_event
+    ):
+        """Test that webhook returns 200 for non-failure workflow events."""
         response = requests.post(
             webhook_url,
-            json=event,
+            json=non_failure_event,
             headers={"Content-Type": "application/json"},
             timeout=30,
         )
-
         assert response.status_code == 200
 
-    def test_webhook_skips_non_failure_events_indicates_skip(self, webhook_url):
+    def test_webhook_skips_non_failure_events_indicates_skip(
+        self, webhook_url, non_failure_event
+    ):
         """Test that webhook response indicates event was skipped."""
-        event = {
-            "action": "completed",
-            "workflow_run": {
-                "id": 12345,
-                "name": "Test Workflow",
-                "conclusion": "success",  # Not a failure
-            },
-            "repository": {
-                "name": "test-repo",
-                "owner": {"login": "test-owner"},
-            },
-        }
-
         response = requests.post(
             webhook_url,
-            json=event,
+            json=non_failure_event,
             headers={"Content-Type": "application/json"},
             timeout=30,
         )
-
         body = response.json()
         assert "success" in str(body).lower() or "ignoring" in str(body).lower()
 
@@ -199,13 +191,12 @@ class TestFIFODeduplication:
     def sqs_client(self, shared_config):
         """Get SQS client."""
         import boto3
-        aws_region = shared_config.get("aws_region", "us-east-2")
-        return boto3.client("sqs", region_name=aws_region)
+        return boto3.client("sqs", region_name=shared_config["aws_region"])
 
     @pytest.fixture
     def webhook_queue_url(self, sqs_client, shared_config):
         """Get the webhook FIFO queue URL."""
-        resource_prefix = shared_config.get("resource_prefix", "10ulabs")
+        resource_prefix = shared_config["resource_prefix"]
         queue_name = f"{resource_prefix}-webhook-ingress.fifo"
         try:
             response = sqs_client.get_queue_url(QueueName=queue_name)

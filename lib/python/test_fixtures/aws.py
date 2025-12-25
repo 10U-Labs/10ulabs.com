@@ -142,3 +142,108 @@ def ecr_repository_name(request):
     """Provide the ECR repository name for agents."""
     config = request.getfixturevalue("shared_config")
     return config["ecr_repository_name_agents"]
+
+
+@pytest.fixture(scope="session")
+def lambda_client(request):
+    """Create a Lambda client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("lambda", region_name=region)
+
+
+@pytest.fixture(scope="session")
+def apigateway_client(request):
+    """Create an API Gateway client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("apigateway", region_name=region)
+
+
+@pytest.fixture(scope="session")
+def dynamodb_client(request):
+    """Create a DynamoDB client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("dynamodb", region_name=region)
+
+
+@pytest.fixture(scope="session")
+def ecs_client(request):
+    """Create an ECS client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("ecs", region_name=region)
+
+
+@pytest.fixture(scope="session")
+def ec2_client(request):
+    """Create an EC2 client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("ec2", region_name=region)
+
+
+@pytest.fixture(scope="session")
+def ses_client(request):
+    """Create an SES client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("ses", region_name=region)
+
+
+@pytest.fixture(scope="session")
+def state_bucket_region(request):
+    """Provide the AWS region for the state bucket."""
+    return request.getfixturevalue("aws_region")
+
+
+@pytest.fixture(scope="module")
+def api_gateway_info(request):
+    """Get API Gateway info, handling missing/not-found cases gracefully.
+
+    Requires `apigateway_client` and `api_backend_outputs` fixtures.
+    """
+    from botocore.exceptions import ClientError
+
+    apigateway_client = request.getfixturevalue("apigateway_client")
+    api_backend_outputs = request.getfixturevalue("api_backend_outputs")
+
+    api_id = api_backend_outputs.get("api_gateway_rest_api_id")
+    if not api_id:
+        return {"id": None, "exists": False, "accessible": False}
+
+    try:
+        response = apigateway_client.get_rest_api(restApiId=api_id)
+        endpoint_config = response.get("endpointConfiguration", {})
+        resources_response = apigateway_client.get_resources(restApiId=api_id)
+        paths = [r.get("path", "") for r in resources_response.get("items", [])]
+        return {
+            "id": api_id,
+            "exists": True,
+            "accessible": True,
+            "endpoint_types": endpoint_config.get("types", []),
+            "paths": paths
+        }
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code == "AccessDeniedException":
+            return {"id": api_id, "exists": None, "accessible": False}
+        if error_code == "NotFoundException":
+            return {"id": api_id, "exists": False, "accessible": True}
+        raise
+
+
+@pytest.fixture(name="api_url", scope="module")
+def api_url_fixture(request):
+    """Provide the API URL from config.
+
+    Requires a 'config' fixture with 'api_fqdn' key.
+    """
+    config = request.getfixturevalue("config")
+    return f"https://{config['api_fqdn']}"
+
+
+@pytest.fixture(name="api_key", scope="module")
+def api_key_fixture(request):
+    """Retrieve the API key from SSM Parameter Store.
+
+    Requires 'ssm_client' fixture.
+    """
+    ssm_client = request.getfixturevalue("ssm_client")
+    param_response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
+    return param_response['Parameter']['Value'] if param_response else None

@@ -15,6 +15,7 @@ from lambda_response import (
     assert_json_content_type,
     assert_cors_headers,
 )
+from boto_mocks import setup_mock_ec2_vpc_responses
 
 # Re-export for backward compatibility
 __all__ = [
@@ -68,13 +69,7 @@ def valid_dependency_env_vars() -> Dict[str, str]:
 def mock_ec2_valid_deps() -> MagicMock:
     """Create mock EC2 client with all valid dependencies."""
     mock_ec2 = MagicMock()
-    mock_ec2.describe_security_groups.return_value = {
-        'SecurityGroups': [{'GroupId': 'sg-test'}]
-    }
-    mock_ec2.describe_subnets.return_value = {
-        'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]
-    }
-    mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
+    setup_mock_ec2_vpc_responses(mock_ec2)
     return mock_ec2
 
 

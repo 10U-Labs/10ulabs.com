@@ -8,17 +8,15 @@ These tests verify that www_shared resources this endpoint depends on exist.
 
 from botocore.exceptions import ClientError
 import pytest
+from test_fixtures.integration import create_www_shared_s3_existence_tests
+
+
+# Use shared S3 bucket existence tests
+TestWWWSharedS3 = create_www_shared_s3_existence_tests()
 
 
 class TestWWWSharedOutputs:
     """Layer 3: Verify www_shared terraform outputs are accessible."""
-
-    def test_bucket_name_output_exists(self, www_shared_outputs):
-        """Verify bucket_name output is available."""
-        assert www_shared_outputs.get("bucket_name"), (
-            "bucket_name output not found in www_shared. "
-            "Run terraform apply in src/www/shared/"
-        )
 
     def test_website_domain_name_output_exists(self, www_shared_outputs):
         """Verify website_domain_name output is available."""
@@ -35,23 +33,8 @@ class TestWWWSharedOutputs:
         )
 
 
-class TestS3AndCloudFront:
-    """Layer 3: Verify S3 bucket and CloudFront distribution exist."""
-
-    def test_s3_bucket_exists(self, s3_client, www_shared_outputs):
-        """Verify the S3 bucket exists in AWS."""
-        bucket_name = www_shared_outputs.get("bucket_name")
-        if not bucket_name:
-            pytest.skip("bucket_name output not available")
-        try:
-            s3_client.head_bucket(Bucket=bucket_name)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "404":
-                pytest.fail(
-                    f"S3 bucket '{bucket_name}' does not exist. "
-                    "Run terraform apply in src/www/shared/"
-                )
-            raise
+class TestCloudFrontDistribution:
+    """Layer 3: Verify CloudFront distribution exists and is deployed."""
 
     def test_cloudfront_distribution_exists(self, cloudfront_client, www_shared_outputs):
         """Verify the CloudFront distribution exists in AWS."""

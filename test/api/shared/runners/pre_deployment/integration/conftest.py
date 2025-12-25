@@ -35,4 +35,4 @@ def api_shared_runners_src():
 @pytest.fixture(scope="session")
 def state_bucket_region(shared_config):
     """Provide the expected region for the state bucket."""
-    return shared_config.get("aws_region", "us-east-2")
+    return shared_config["aws_region"]

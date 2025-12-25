@@ -7,36 +7,13 @@ Six-layer testing model:
 """
 
 import pytest
+from test_fixtures.integration import Layer1EndpointAuthenticationTests
 
 
 pytestmark = pytest.mark.layer(1)
 
 
-class TestAWSAuthentication:
+class TestAWSAuthentication(Layer1EndpointAuthenticationTests):
     """Layer 1: Verify AWS credentials are valid."""
 
-    def test_aws_credentials_are_valid(self, sts_client):
-        """Verify AWS credentials are valid by calling GetCallerIdentity."""
-        response = sts_client.get_caller_identity()
-        assert response["Account"] is not None, (
-            "AWS credentials invalid - GetCallerIdentity returned no Account"
-        )
-
-    def test_aws_credentials_return_account_id(self, sts_client):
-        """Verify AWS credentials return a valid account ID."""
-        response = sts_client.get_caller_identity()
-        assert len(response["Account"]) == 12, (
-            f"AWS account ID has unexpected length: {len(response['Account'])}"
-        )
-
-    def test_aws_credentials_return_arn(self, sts_client):
-        """Verify AWS credentials return an ARN."""
-        response = sts_client.get_caller_identity()
-        assert "Arn" in response, "AWS credentials did not return an ARN"
-
-    def test_aws_credentials_arn_has_valid_format(self, sts_client):
-        """Verify AWS credentials ARN has valid format."""
-        response = sts_client.get_caller_identity()
-        assert response["Arn"].startswith("arn:aws:"), (
-            f"ARN has unexpected format: {response['Arn']}"
-        )
+    pass  # All tests inherited from base class

@@ -13,6 +13,8 @@ from lambda_response import (
     assert_json_content_type,
 )
 from urllib_mocks import create_mock_urllib_response
+from module_utils import reset_module_state
+from event_factories import create_ecs_runner_post_event
 
 from ...conftest import ECS_RUNNER_SRC
 
@@ -54,32 +56,14 @@ def ecs_runner_handler(config: Dict[str, str]) -> Any:
     }
     with patch.dict('os.environ', env_vars):
         module = load_handler_module()
-        if hasattr(module, '_clients'):
-            setattr(module, '_clients', {})
-        if hasattr(module, '_github_token_cache'):
-            setattr(module, '_github_token_cache', {'value': None})
-        if hasattr(module, '_dependencies_validated'):
-            deps = {'checked': True, 'valid': True, 'errors': []}
-            setattr(module, '_dependencies_validated', deps)
+        reset_module_state(module)
         yield module
 
 
 @pytest.fixture
 def ecs_runner_post_event_factory():
     """Factory to create ECS runner POST event payloads."""
-    def _create_event(job_id=123, job_labels=None, github_repo='test/repo'):
-        if job_labels is None:
-            job_labels = ['fargate', 'self-hosted']
-        return {
-            'path': '/v1/ecs-runner',
-            'httpMethod': 'POST',
-            'body': json.dumps({
-                'job_id': job_id,
-                'job_labels': job_labels,
-                'github_repo': github_repo
-            })
-        }
-    return _create_event
+    return create_ecs_runner_post_event
 
 
 @pytest.fixture

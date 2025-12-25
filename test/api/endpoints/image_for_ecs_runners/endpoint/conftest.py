@@ -1,23 +1,16 @@
 """Pytest fixtures for image_for_ecs_runners endpoint tests."""
 import os
-import sys
 from typing import Any, Dict
 
 import pytest
 from repo_utils import REPO_ROOT
+from test_fixtures import get_shared_config
 
-from .helpers import get_aws_region, get_github_repo, get_ecr_repository
-
-# Add lib/python to path for imports
-LIB_DIR = REPO_ROOT / "lib" / "python"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
+from .helpers import get_api_fqdn, get_ecr_repository, get_github_repo
 
 
-@pytest.fixture(scope="session")
-def aws_region() -> str:
-    """Return the AWS region for tests."""
-    return get_aws_region()
+# Note: aws_region fixture is inherited from test/api/conftest.py -> test_fixtures.aws
+# Do not redefine it here.
 
 
 @pytest.fixture(scope="module")
@@ -33,10 +26,10 @@ def ecr_repository() -> str:
 
 
 @pytest.fixture(scope="module")
-def config() -> Dict[str, Any]:
+def config(shared_config) -> Dict[str, Any]:
     """Return the test configuration dictionary."""
     return {
-        'aws_region': get_aws_region(),
+        'aws_region': shared_config['aws_region'],
         'github_repo': get_github_repo(),
         'ecr_repository': get_ecr_repository(),
     }
