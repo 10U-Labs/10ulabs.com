@@ -123,7 +123,9 @@ jobs:
         run: |
           BASE_DIR=src/api/endpoints/image_for_ecs_runners
           TEST_DIR=test/api/endpoints/image_for_ecs_runners/post/
-          MYPYPATH=lib/python:$BASE_DIR:$BASE_DIR/post python3 -m mypy $TEST_DIR
+          UNIT_DIR=$TEST_DIR/pre_deployment/unit
+          MYPYPATH=lib/python:$BASE_DIR:$BASE_DIR/post:$UNIT_DIR \
+            python3 -m mypy --explicit-package-bases $TEST_DIR
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
