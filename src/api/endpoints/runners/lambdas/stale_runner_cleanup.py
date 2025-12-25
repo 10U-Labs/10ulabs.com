@@ -54,6 +54,24 @@ def _get_all_github_runners(
         return None
 
 
+def _is_runner_busy(
+    github_token: str, github_repo: str, runner_name: str
+) -> bool:
+    """Check if a GitHub runner is busy (actively running a job).
+
+    Returns:
+        True if the runner is busy, False otherwise
+    """
+    runners = _get_all_github_runners(github_token, github_repo)
+    if runners is None:
+        # If we can't check, assume busy to be safe
+        return True
+    runner = next((r for r in runners if r.get("name") == runner_name), None)
+    if not runner:
+        return False
+    return runner.get("busy", False)
+
+
 def _delete_github_runner_by_id(
     github_token: str, github_repo: str, runner_id: int, runner_name: str
 ) -> bool:
@@ -329,12 +347,26 @@ def _cleanup_orphaned_resources(github_token: str) -> dict[str, int]:
     Returns:
         Dictionary with cleanup counts
     """
-    counts = {"ecs_cleaned": 0, "ec2_cleaned": 0, "errors": 0}
+    counts = {"ecs_cleaned": 0, "ecs_skipped": 0, "ec2_cleaned": 0, "ec2_skipped": 0, "errors": 0}
     github_repo = os.environ.get("GITHUB_REPO", "")
 
     # Clean orphaned ECS tasks
     orphaned_tasks = _get_orphaned_ecs_tasks()
     for task in orphaned_tasks:
+        runner_name = task.get("runner_name", "")
+        task_repo = task.get("github_repo") or github_repo
+
+        # Skip if the runner is actively running a job
+        if runner_name and task_repo and github_token:
+            if _is_runner_busy(github_token, task_repo, runner_name):
+                logger.info(
+                    "Skipping busy ECS task: %s (runner=%s)",
+                    task["task_arn"],
+                    runner_name,
+                )
+                counts["ecs_skipped"] += 1
+                continue
+
         logger.info(
             "Cleaning orphaned ECS task: %s (age=%ds)",
             task["task_arn"],
@@ -342,8 +374,6 @@ def _cleanup_orphaned_resources(github_token: str) -> dict[str, int]:
         )
         if _terminate_ecs_task(task["task_arn"]):
             counts["ecs_cleaned"] += 1
-            runner_name = task.get("runner_name", "")
-            task_repo = task.get("github_repo") or github_repo
             if runner_name and task_repo and github_token:
                 _delete_github_runner(github_token, task_repo, runner_name)
         else:
@@ -352,6 +382,20 @@ def _cleanup_orphaned_resources(github_token: str) -> dict[str, int]:
     # Clean orphaned EC2 instances
     orphaned_instances = _get_orphaned_ec2_instances()
     for instance in orphaned_instances:
+        runner_name = instance.get("runner_name", "")
+        instance_repo = instance.get("github_repo") or github_repo
+
+        # Skip if the runner is actively running a job
+        if runner_name and instance_repo and github_token:
+            if _is_runner_busy(github_token, instance_repo, runner_name):
+                logger.info(
+                    "Skipping busy EC2 instance: %s (runner=%s)",
+                    instance["instance_id"],
+                    runner_name,
+                )
+                counts["ec2_skipped"] += 1
+                continue
+
         logger.info(
             "Cleaning orphaned EC2 instance: %s (age=%ds)",
             instance["instance_id"],
@@ -359,17 +403,17 @@ def _cleanup_orphaned_resources(github_token: str) -> dict[str, int]:
         )
         if terminate_ec2_instance(instance["instance_id"]):
             counts["ec2_cleaned"] += 1
-            runner_name = instance.get("runner_name", "")
-            instance_repo = instance.get("github_repo") or github_repo
             if runner_name and instance_repo and github_token:
                 _delete_github_runner(github_token, instance_repo, runner_name)
         else:
             counts["errors"] += 1
 
     logger.info(
-        "Orphaned resource cleanup complete: ecs=%d, ec2=%d, errors=%d",
+        "Orphaned resource cleanup complete: ecs=%d (skipped=%d), ec2=%d (skipped=%d), errors=%d",
         counts["ecs_cleaned"],
+        counts["ecs_skipped"],
         counts["ec2_cleaned"],
+        counts["ec2_skipped"],
         counts["errors"],
     )
     return counts
@@ -392,7 +436,9 @@ def lambda_handler(_event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
     result = {
         "orphaned_ecs_cleaned": orphan_result["ecs_cleaned"],
+        "orphaned_ecs_skipped": orphan_result["ecs_skipped"],
         "orphaned_ec2_cleaned": orphan_result["ec2_cleaned"],
+        "orphaned_ec2_skipped": orphan_result["ec2_skipped"],
         "orphaned_github_cleaned": github_result["github_cleaned"],
         "errors": orphan_result["errors"] + github_result["errors"],
     }

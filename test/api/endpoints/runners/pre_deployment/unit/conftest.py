@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from repo_utils import REPO_ROOT
+from lambda_response import parse_response_body, assert_response_status
 from test_fixtures.unit import (
     create_lambda_loader,
     create_workflow_job_event,
@@ -16,12 +17,29 @@ from test_fixtures.unit import (
     create_circuit_breaker_closed_state,
     create_circuit_breaker_open_state,
     create_mock_urllib_response,
+    assert_no_hardcoded_env_defaults,
+    create_mock_lambda_list_mappings_error,
+    create_mock_lambda_put_concurrency_error,
+    create_mock_sns_publish_error,
+    create_mock_lambda_with_mappings,
+    create_mock_lambda_with_disabled_mappings,
+    create_mock_lambda_delete_concurrency_error,
 )
 
-# Additional re-exports specific to runners
+# Re-exports for test files
 __all__ = [
     'create_mock_dynamodb_for_reset',
     'circuit_breaker_utils',
+    'parse_response_body',
+    'assert_response_status',
+    'assert_no_hardcoded_env_defaults',
+    'get_lambda_path',
+    'create_mock_lambda_list_mappings_error',
+    'create_mock_lambda_put_concurrency_error',
+    'create_mock_sns_publish_error',
+    'create_mock_lambda_with_mappings',
+    'create_mock_lambda_with_disabled_mappings',
+    'create_mock_lambda_delete_concurrency_error',
 ]
 
 
@@ -76,6 +94,11 @@ RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 RUNNERS_LAMBDAS_PATH = RUNNERS_SRC_PATH / "lambdas"
 
 
+def get_lambda_path(filename: str) -> Path:
+    """Get the full path to a lambda file."""
+    return RUNNERS_LAMBDAS_PATH / filename
+
+
 @pytest.fixture
 def runners_src_path() -> Path:
     """Provide path to runners source directory."""
@@ -101,8 +124,6 @@ def load_common_module(filename: str, module_name: str) -> ModuleType:
 circuit_breaker_utils = load_common_module(
     "circuit_breaker_utils.py", "circuit_breaker_utils"
 )
-
-# parse_lambda_response_payload imported from test_fixtures.unit
 
 
 @pytest.fixture
@@ -224,11 +245,6 @@ def circuit_breaker_open_state():
 def mock_urllib_response_factory():
     """Factory for creating mock urllib responses."""
     return create_mock_urllib_response
-
-
-# assert_no_hardcoded_env_defaults imported from test_fixtures.unit
-# TEST_CONSTANTS imported from test_fixtures.unit
-# ENV_VAR_PRESETS imported from test_fixtures.unit
 
 
 @pytest.fixture
