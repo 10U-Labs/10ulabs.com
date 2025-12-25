@@ -91,9 +91,9 @@ class TestVPCResources:
             )
         except ClientError as e:
             if e.response["Error"]["Code"] == "InvalidVpcID.NotFound":
+                jit_path = "src/api/endpoints/webhooks/github/jit_runner_requests"
                 pytest.fail(
-                    f"VPC {vpc_id} does not exist. "
-                    "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
+                    f"VPC {vpc_id} does not exist. Run: cd {jit_path} && terraform apply"
                 )
             raise
 
@@ -111,9 +111,10 @@ class TestVPCResources:
             )
         except ClientError as e:
             if e.response["Error"]["Code"] == "InvalidSubnetID.NotFound":
+                jit_path = "src/api/endpoints/webhooks/github/jit_runner_requests"
                 pytest.fail(
                     f"One or more subnets not found: {subnet_ids}. "
-                    "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
+                    f"Run: cd {jit_path} && terraform apply"
                 )
             raise
 
