@@ -43,7 +43,7 @@ data "archive_file" "runners_handler" {
     filename = "common/webhook_ingress.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
@@ -175,7 +175,7 @@ data "archive_file" "runner_starter" {
     filename = "common/webhook_ingress.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
@@ -292,7 +292,7 @@ data "archive_file" "runner_terminator" {
     filename = "common/webhook_ingress.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
@@ -410,7 +410,7 @@ data "archive_file" "ignored_events_archiver" {
     filename = "common/webhook_ingress.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
@@ -525,7 +525,7 @@ data "archive_file" "circuit_breaker_reset" {
     filename = "common/webhook_ingress.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
@@ -636,7 +636,7 @@ data "archive_file" "circuit_breaker_remediation" {
     filename = "common/webhook_ingress.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
@@ -799,7 +799,7 @@ data "archive_file" "circuit_breaker_recovery" {
     filename = "common/webhook_ingress.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
@@ -904,7 +904,7 @@ data "archive_file" "drift_recovery" {
     filename = "common/webhook_ingress.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
@@ -1014,7 +1014,7 @@ data "archive_file" "spot_interruption_handler" {
     filename = "common/webhook_ingress.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
@@ -1120,7 +1120,7 @@ data "archive_file" "stale_runner_cleanup" {
     filename = "common/webhook_ingress.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
