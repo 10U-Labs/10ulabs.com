@@ -4,6 +4,7 @@ import os
 import pytest
 from repo_utils import REPO_ROOT
 from terraform_config import get_shared_config
+from test_fixtures.integration import get_aws_account_id_via_cli
 
 # Path constants for backwards compatibility
 BASE_DIR = str(REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ecs_runners")
@@ -11,7 +12,8 @@ POST_DIR = os.path.join(BASE_DIR, 'post')
 FILES_DIR = POST_DIR  # Backwards compatibility alias
 CONFIG_PATH = os.path.join(POST_DIR, 'config.json')
 DOCKERFILE_PATH = os.path.join(POST_DIR, 'Dockerfile')
-TFVARS_PATH = os.path.join(BASE_DIR, 'terraform.tfvars')
+# container_name is defined in ecs_runner (the runner that uses this image)
+TFVARS_PATH = str(REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner" / "terraform.tfvars")
 
 
 def get_aws_region():
@@ -24,7 +26,6 @@ def get_aws_region():
 
 def get_aws_account_id():
     """Get AWS account ID using the AWS CLI."""
-    from test_fixtures.integration import get_aws_account_id_via_cli
     return get_aws_account_id_via_cli()
 
 
