@@ -26,7 +26,7 @@ pytest_plugins = ['pytest_layers']
 
 
 API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
-API_SHARED_ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
+API_SHARED_DOCKER_REPOSITORY_DIR = REPO_ROOT / "src" / "api" / "shared" / "docker_repository"
 API_SHARED_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "shared" / "networking"
 EC2_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
 RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
@@ -177,31 +177,31 @@ def api_shared_networking_outputs(request):
 
 
 @pytest.fixture(scope="session")
-def api_shared_ecs_runner_terraform_initialized():
-    """Initialize terraform for api_shared_ecs_runner state access."""
-    return terraform_init(API_SHARED_ECS_RUNNER_DIR)
+def api_shared_docker_repository_terraform_initialized():
+    """Initialize terraform for api_shared_docker_repository state access."""
+    return terraform_init(API_SHARED_DOCKER_REPOSITORY_DIR)
 
 
 @pytest.fixture(scope="session")
-def api_shared_ecs_runner_outputs(request):
-    """Get api_shared_ecs_runner terraform outputs.
+def api_shared_docker_repository_outputs(request):
+    """Get api_shared_docker_repository terraform outputs.
 
     These outputs are REQUIRED (no defaults in runners/data.tf):
     - ecr_repository_arn: Used by outputs passthrough
     - ecr_repository_name: Used by outputs passthrough
     - ecr_repository_url: Used by outputs passthrough
     """
-    if not request.getfixturevalue("api_shared_ecs_runner_terraform_initialized"):
-        pytest.skip("Terraform init failed for api_shared_ecs_runner")
+    if not request.getfixturevalue("api_shared_docker_repository_terraform_initialized"):
+        pytest.skip("Terraform init failed for api_shared_docker_repository")
     return {
         "ecr_repository_arn": terraform_output(
-            API_SHARED_ECS_RUNNER_DIR, "ecr_repository_arn"
+            API_SHARED_DOCKER_REPOSITORY_DIR, "ecr_repository_arn"
         ),
         "ecr_repository_name": terraform_output(
-            API_SHARED_ECS_RUNNER_DIR, "ecr_repository_name"
+            API_SHARED_DOCKER_REPOSITORY_DIR, "ecr_repository_name"
         ),
         "ecr_repository_url": terraform_output(
-            API_SHARED_ECS_RUNNER_DIR, "ecr_repository_url"
+            API_SHARED_DOCKER_REPOSITORY_DIR, "ecr_repository_url"
         ),
     }
 
@@ -245,7 +245,7 @@ def subnets_info(request):
 def ecr_repository_info(request):
     """Fetch ECR repository details from AWS. Returns None if not found."""
     client = request.getfixturevalue("ecr_client")
-    outputs = request.getfixturevalue("api_shared_ecs_runner_outputs")
+    outputs = request.getfixturevalue("api_shared_docker_repository_outputs")
     repo_name = outputs.get("ecr_repository_name")
     if not repo_name:
         return None

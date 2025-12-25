@@ -12,15 +12,15 @@
       "test/api/conftest.py"
     ]
   },
-  "api_shared_ecs_runner": {
+  "api_shared_docker_repository": {
     "depends_on": [
       "endpoint_v1_ec2_runner"
     ],
-    "name": "Deploying API Shared ECS Runner Infrastructure",
+    "name": "Deploying API Shared Docker Repository Infrastructure",
     "paths": [
-      ".github/workflows/api_shared_ecs_runner.yml",
-      "src/api/shared/ecs_runner/**",
-      "test/api/shared/ecs_runner/**"
+      ".github/workflows/api_shared_docker_repository.yml",
+      "src/api/shared/docker_repository/**",
+      "test/api/shared/docker_repository/**"
     ]
   },
   "api_shared_networking": {
@@ -115,7 +115,7 @@
   },
   "endpoint_v1_image_for_ecs_runners": {
     "depends_on": [
-      "api_shared_ecs_runner"
+      "api_shared_docker_repository"
     ],
     "name": "Ensuring /v1/image-for-ecs-runners API endpoint exists and is properly configured",
     "paths": [

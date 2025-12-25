@@ -39,15 +39,15 @@ output "webhook_parameter_arn" {
 }
 
 output "ecr_repository_arn" {
-  value = data.terraform_remote_state.api_shared_ecs_runner.outputs.ecr_repository_arn
+  value = data.terraform_remote_state.api_shared_docker_repository.outputs.ecr_repository_arn
 }
 
 output "ecr_repository_name" {
-  value = data.terraform_remote_state.api_shared_ecs_runner.outputs.ecr_repository_name
+  value = data.terraform_remote_state.api_shared_docker_repository.outputs.ecr_repository_name
 }
 
 output "ecr_repository_uri" {
-  value = data.terraform_remote_state.api_shared_ecs_runner.outputs.ecr_repository_url
+  value = data.terraform_remote_state.api_shared_docker_repository.outputs.ecr_repository_url
 }
 
 output "ec2_instance_profile_name" {

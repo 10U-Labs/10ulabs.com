@@ -48,7 +48,7 @@ resource "aws_ecs_task_definition" "runner" {
   container_definitions = jsonencode([
     {
       name      = var.container_name
-      image     = "${data.terraform_remote_state.api_shared_ecs_runner.outputs.ecr_repository_url}:latest"
+      image     = "${data.terraform_remote_state.api_shared_docker_repository.outputs.ecr_repository_url}:latest"
       essential = true
 
       mountPoints = [

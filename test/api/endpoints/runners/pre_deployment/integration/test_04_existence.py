@@ -94,27 +94,27 @@ class TestApiSharedNetworkingOutputs:
 
 
 class TestApiSharedEcsRunnerOutputs:
-    """Layer 4: Verify api_shared_ecs_runner terraform outputs are accessible."""
+    """Layer 4: Verify api_shared_docker_repository terraform outputs are accessible."""
 
-    def test_ecr_repository_arn_output_exists(self, api_shared_ecs_runner_outputs):
+    def test_ecr_repository_arn_output_exists(self, api_shared_docker_repository_outputs):
         """Verify ecr_repository_arn output exists."""
-        assert api_shared_ecs_runner_outputs.get("ecr_repository_arn"), (
-            "ecr_repository_arn output not found in api_shared_ecs_runner. "
-            "Run: cd src/api/shared/ecs_runner && terraform apply"
+        assert api_shared_docker_repository_outputs.get("ecr_repository_arn"), (
+            "ecr_repository_arn output not found in api_shared_docker_repository. "
+            "Run: cd src/api/shared/docker_repository && terraform apply"
         )
 
-    def test_ecr_repository_name_output_exists(self, api_shared_ecs_runner_outputs):
+    def test_ecr_repository_name_output_exists(self, api_shared_docker_repository_outputs):
         """Verify ecr_repository_name output exists."""
-        assert api_shared_ecs_runner_outputs.get("ecr_repository_name"), (
-            "ecr_repository_name output not found in api_shared_ecs_runner. "
-            "Run: cd src/api/shared/ecs_runner && terraform apply"
+        assert api_shared_docker_repository_outputs.get("ecr_repository_name"), (
+            "ecr_repository_name output not found in api_shared_docker_repository. "
+            "Run: cd src/api/shared/docker_repository && terraform apply"
         )
 
-    def test_ecr_repository_url_output_exists(self, api_shared_ecs_runner_outputs):
+    def test_ecr_repository_url_output_exists(self, api_shared_docker_repository_outputs):
         """Verify ecr_repository_url output exists."""
-        assert api_shared_ecs_runner_outputs.get("ecr_repository_url"), (
-            "ecr_repository_url output not found in api_shared_ecs_runner. "
-            "Run: cd src/api/shared/ecs_runner && terraform apply"
+        assert api_shared_docker_repository_outputs.get("ecr_repository_url"), (
+            "ecr_repository_url output not found in api_shared_docker_repository. "
+            "Run: cd src/api/shared/docker_repository && terraform apply"
         )
 
 
@@ -197,14 +197,14 @@ class TestVPCResourceExistence:
     )
 
 
-def test_ecr_repository_exists(ecr_repository_info, api_shared_ecs_runner_outputs):
+def test_ecr_repository_exists(ecr_repository_info, api_shared_docker_repository_outputs):
     """Verify the ECR repository exists."""
-    repo_name = api_shared_ecs_runner_outputs.get("ecr_repository_name")
+    repo_name = api_shared_docker_repository_outputs.get("ecr_repository_name")
     if not repo_name:
         pytest.skip("ecr_repository_name output not available")
     assert ecr_repository_info is not None, (
         f"ECR repository '{repo_name}' not found. "
-        "Run: cd src/api/shared/ecs_runner && terraform apply"
+        "Run: cd src/api/shared/docker_repository && terraform apply"
     )
 
 

@@ -17,7 +17,7 @@ endpoint_v1_image_for_ec2_runners
     ↓
 endpoint_v1_ec2_runner
     ↓
-api_shared_ecs_runner
+api_shared_docker_repository
     ↓
 endpoint_v1_image_for_ecs_runners
     ↓
