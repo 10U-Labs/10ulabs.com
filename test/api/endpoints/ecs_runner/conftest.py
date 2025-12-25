@@ -7,7 +7,6 @@ from test.api.conftest import get_runner_labels
 import pytest
 from repo_utils import REPO_ROOT
 from test_fixtures import get_shared_config, get_tfvars_values, get_endpoint_local_values
-from test_fixtures.terraform import terraform_output
 
 ECS_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
 API_BACKEND_SRC = REPO_ROOT / "src" / "api" / "backend"
@@ -27,7 +26,9 @@ def _get_ecs_runner_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     config = get_endpoint_local_values(API_BACKEND_SRC)
     config.update(get_endpoint_local_values(ECS_RUNNER_SRC))
     config['api_fqdn'] = f"api.{shared_config['domain_name']}"
-    config['github_repo_full'] = f"{shared_config['github_org']}/{shared_config['name_for_github_repo']}"
+    github_org = shared_config['github_org']
+    github_repo = shared_config['name_for_github_repo']
+    config['github_repo_full'] = f"{github_org}/{github_repo}"
     return config
 
 

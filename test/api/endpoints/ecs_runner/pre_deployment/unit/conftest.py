@@ -1,6 +1,4 @@
 """Shared fixtures and utilities for ECS runner pre-deployment unit tests."""
-import importlib.util
-import json
 from types import ModuleType
 from typing import Any, Dict
 from unittest.mock import MagicMock, Mock, patch
@@ -13,7 +11,7 @@ from lambda_response import (
     assert_json_content_type,
 )
 from urllib_mocks import create_mock_urllib_response
-from module_utils import reset_module_state
+from module_utils import load_module_from_path, reset_module_state
 from event_factories import create_ecs_runner_post_event
 
 from ...conftest import ECS_RUNNER_SRC
@@ -29,12 +27,7 @@ __all__ = [
 def load_handler_module() -> ModuleType:
     """Load the ECS runner handler module dynamically."""
     handler_path = ECS_RUNNER_SRC / "lambda" / "handler.py"
-    spec = importlib.util.spec_from_file_location("ecs_runner_handler", handler_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_module_from_path("ecs_runner_handler", handler_path)
 
 
 @pytest.fixture
@@ -57,6 +50,8 @@ def ecs_runner_handler(config: Dict[str, str]) -> Any:
     with patch.dict('os.environ', env_vars):
         module = load_handler_module()
         reset_module_state(module)
+        # Set dependencies as valid for unit tests (skips infrastructure validation)
+        module.set_dependencies_status(checked=True, valid=True, errors=[])
         yield module
 
 
@@ -98,6 +93,7 @@ def create_fargate_runner_env(use_spot=None):
         'TASK_DEFINITION': 'test-task',
         'SUBNETS': 'subnet-1',
         'SECURITY_GROUPS': 'sg-1',
+        'VPC_ID': 'vpc-test',
         'CONTAINER_NAME': 'test-container',
         'GITHUB_TOKEN_SECRET_NAME': '/test/token'
     }

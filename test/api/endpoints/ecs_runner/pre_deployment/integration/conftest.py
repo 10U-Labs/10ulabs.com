@@ -47,8 +47,8 @@ def ecr_client():
 
 
 IMAGE_FOR_ECS_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ecs_runners"
-API_SHARED_ECR_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
-RUNNERS_DIR = REPO_ROOT / "src" / "api" / "shared" / "runners"
+API_SHARED_ECR_DIR = REPO_ROOT / "src" / "api" / "shared" / "docker_repository"
+RUNNERS_DIR = REPO_ROOT / "src" / "api" / "shared" / "networking"
 
 
 @pytest.fixture(scope="session")

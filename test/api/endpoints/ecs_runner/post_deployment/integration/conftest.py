@@ -2,8 +2,9 @@
 import pytest
 
 from test_fixtures.aws import get_log_group_info
+from test_fixtures.terraform import terraform_output
 
-from ...conftest import ECS_RUNNER_SRC, terraform_output
+from ...conftest import ECS_RUNNER_SRC
 
 # Enable layer marker plugin for test ordering
 pytest_plugins = ['pytest_layers']
