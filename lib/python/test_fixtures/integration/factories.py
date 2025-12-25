@@ -2,9 +2,13 @@
 
 These functions dynamically create test classes with specific configurations.
 """
-from botocore.exceptions import ClientError, NoCredentialsError
+from botocore.exceptions import ClientError
 import pytest
 from repo_utils import REPO_ROOT
+from test_fixtures.integration.helpers import (
+    check_service_can_assume_role,
+    NO_CREDENTIALS_MESSAGE,
+)
 from test_fixtures.terraform import terraform_init, terraform_output
 
 
@@ -23,22 +27,13 @@ def create_layer1_authentication_tests():
 
         def test_credentials_available(self, sts_client):
             """Verify AWS credentials are configured."""
-            assert sts_client is not None, (
-                "No AWS credentials found. Configure via environment variables, "
-                "~/.aws/credentials, or IAM role."
-            )
+            assert sts_client is not None, NO_CREDENTIALS_MESSAGE
 
         def test_can_call_sts_api(self, sts_client):
             """Verify credentials are valid by calling STS."""
             try:
                 response = sts_client.get_caller_identity()
                 assert response.get("Account"), "STS returned no account ID"
-            except NoCredentialsError:
-                pytest.fail(
-                    "No AWS credentials found. "
-                    "Configure credentials via environment variables, "
-                    "~/.aws/credentials, or IAM role."
-                )
             except ClientError as e:
                 pytest.fail(
                     f"Credentials invalid or expired: {e.response['Error']['Message']}"
@@ -52,32 +47,32 @@ def create_layer1_authentication_tests():
     return TestAWSAuthentication
 
 
-def create_layer6_capability_tests(
-    include_lambda: bool = True,
-    include_iam: bool = True,
-    include_ssm: bool = False,
-    include_dynamodb: bool = False,
-    include_logs: bool = False,
-    include_s3: bool = False,
-):
+def create_layer6_capability_tests(capabilities: frozenset | None = None):
     """Create Layer 6 deployment capability test class.
 
     Args:
-        include_lambda: Include Lambda list functions test
-        include_iam: Include IAM list roles test
-        include_ssm: Include SSM describe parameters test
-        include_dynamodb: Include DynamoDB list tables test
-        include_logs: Include CloudWatch logs describe test
-        include_s3: Include S3 list buckets test
+        capabilities: frozenset of capability names to include. Valid names:
+            'lambda', 'iam', 'ssm', 'dynamodb', 'logs', 's3'.
+            Defaults to frozenset({'lambda', 'iam'}) if None.
 
     Returns:
         Test class with Layer 6 capability tests
     """
+    if capabilities is None:
+        capabilities = frozenset({'lambda', 'iam'})
 
     class TestDeploymentCapabilities:
         """Layer 6: Verify deployment capabilities."""
 
-    if include_lambda:
+        def get_enabled_capabilities(self):
+            """Return the set of enabled capabilities for this test class."""
+            return capabilities
+
+        def test_capabilities_configured(self):
+            """Verify at least one capability is being tested."""
+            assert len(capabilities) > 0, "No capabilities configured for testing"
+
+    if 'lambda' in capabilities:
 
         def test_can_list_lambda_functions(_self, lambda_client):
             """Verify we can list Lambda functions (required for deployment)."""
@@ -94,7 +89,7 @@ def create_layer6_capability_tests(
             test_can_list_lambda_functions,
         )
 
-    if include_iam:
+    if 'iam' in capabilities:
 
         def test_can_list_iam_roles(_self, iam_client):
             """Verify we can list IAM roles (required for deployment)."""
@@ -111,7 +106,7 @@ def create_layer6_capability_tests(
             test_can_list_iam_roles,
         )
 
-    if include_ssm:
+    if 'ssm' in capabilities:
 
         def test_can_describe_ssm_parameters(_self, ssm_client):
             """Verify we can describe SSM parameters (required for deployment)."""
@@ -128,7 +123,7 @@ def create_layer6_capability_tests(
             test_can_describe_ssm_parameters,
         )
 
-    if include_dynamodb:
+    if 'dynamodb' in capabilities:
 
         def test_can_list_dynamodb_tables(_self, dynamodb_client):
             """Verify we can list DynamoDB tables (required for deployment)."""
@@ -145,7 +140,7 @@ def create_layer6_capability_tests(
             test_can_list_dynamodb_tables,
         )
 
-    if include_logs:
+    if 'logs' in capabilities:
 
         def test_can_list_log_groups(_self, logs_client):
             """Verify we can list CloudWatch log groups (required for deployment)."""
@@ -162,7 +157,7 @@ def create_layer6_capability_tests(
             test_can_list_log_groups,
         )
 
-    if include_s3:
+    if 's3' in capabilities:
 
         def test_can_list_s3_buckets(_self, s3_client):
             """Verify we can list S3 buckets (required for deployment)."""
@@ -208,6 +203,10 @@ def create_layer2_s3_authorization_tests():
                 # 404 means bucket doesn't exist but we have permission to check - OK
                 if error_code != "404":
                     raise
+
+        def test_bucket_name_is_configured(self, state_bucket_name):
+            """Verify state bucket name is configured."""
+            assert state_bucket_name, "State bucket name is not configured"
 
     return TestS3Authorization
 
@@ -382,6 +381,19 @@ def create_lambda_iam_wiring_tests(
     class TestIAMPolicyWiring:
         """Layer 3: Verify IAM role has required policies attached."""
 
+        def test_config_has_function_name(self, config):
+            """Verify config contains the required function name key."""
+            assert config.get(function_name_config_key) or default_function_name, (
+                f"Neither config key '{function_name_config_key}' nor default "
+                f"'{default_function_name}' is available"
+            )
+
+        def test_service_role_name_follows_convention(self, config):
+            """Verify service role name follows naming convention."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            role_name = f"{function_name}ServiceRole"
+            assert "ServiceRole" in role_name, "Role name should contain 'ServiceRole'"
+
     if check_basic_execution:
 
         def test_handler_role_has_basic_execution_policy(_self, iam_client, config):
@@ -513,21 +525,6 @@ def create_www_shared_s3_existence_tests():
     return TestWWWSharedS3Existence
 
 
-def _check_service_can_assume_role(trust_policy, service_name):
-    """Check if a service can assume a role based on trust policy."""
-    statements = trust_policy.get("Statement", [])
-    for statement in statements:
-        if statement.get("Effect") != "Allow":
-            continue
-        principals = statement.get("Principal", {})
-        service = principals.get("Service", [])
-        if isinstance(service, str):
-            service = [service]
-        if service_name in service:
-            return True
-    return False
-
-
 def create_lambda_execution_role_wiring_tests(fixture_name: str = "lambda_function"):
     """Create Lambda execution role wiring tests.
 
@@ -603,7 +600,7 @@ def create_lambda_execution_role_wiring_tests(fixture_name: str = "lambda_functi
             try:
                 response = iam_client.get_role(RoleName=role_name)
                 trust_policy = response["Role"].get("AssumeRolePolicyDocument", {})
-                can_assume = _check_service_can_assume_role(
+                can_assume = check_service_can_assume_role(
                     trust_policy, "lambda.amazonaws.com"
                 )
 

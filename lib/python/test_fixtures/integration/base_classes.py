@@ -10,8 +10,12 @@ The 6-layer testing model:
 """
 import uuid
 
-from botocore.exceptions import ClientError, NoCredentialsError
+from botocore.exceptions import ClientError
 import pytest
+from test_fixtures.integration.helpers import (
+    check_credentials_available,
+    check_credentials_valid,
+)
 
 
 class Layer1AuthenticationTests:
@@ -23,25 +27,11 @@ class Layer1AuthenticationTests:
 
     def test_aws_credentials_are_available(self, sts_client):
         """Verify AWS credentials are configured."""
-        try:
-            sts_client.get_caller_identity()
-        except NoCredentialsError:
-            pytest.fail(
-                "No AWS credentials found. "
-                "Configure credentials via environment variables, "
-                "~/.aws/credentials, or IAM role."
-            )
+        check_credentials_available(sts_client)
 
     def test_aws_credentials_are_valid(self, sts_client):
         """Verify we can call sts:GetCallerIdentity."""
-        try:
-            sts_client.get_caller_identity()
-        except ClientError as e:
-            pytest.fail(
-                f"Failed to call sts:GetCallerIdentity: "
-                f"{e.response['Error']['Message']}. "
-                "Check AWS credentials are valid and not expired."
-            )
+        check_credentials_valid(sts_client)
 
     def test_aws_credentials_return_account(self, caller_identity):
         """Verify STS response contains Account."""
@@ -129,6 +119,13 @@ class Layer2S3AuthorizationTests:
             else:
                 raise
 
+    def test_state_bucket_name_configured(self, state_bucket_name):
+        """Verify state bucket name is configured."""
+        assert state_bucket_name, (
+            "State bucket name is not configured. "
+            "Check shared config for name_for_terraform_state_bucket."
+        )
+
 
 class Layer2ECRAuthorizationTests:
     """Layer 2: Verify permission to inspect ECR repositories.
@@ -147,6 +144,10 @@ class Layer2ECRAuthorizationTests:
                     "Check IAM permissions for ecr:DescribeRepositories."
                 )
             raise
+
+    def test_ecr_client_is_valid(self, ecr_client):
+        """Verify ECR client is available and valid."""
+        assert ecr_client is not None, "ECR client is not available"
 
 
 class Layer4TerraformStateExistenceTests:
@@ -264,6 +265,10 @@ class Layer4IAMRoleExistenceTests:
                 )
             raise
 
+    def test_current_role_name_is_configured(self, current_role_name):
+        """Verify current role name is determined."""
+        assert current_role_name, "Current role name could not be determined"
+
 
 class Layer4PrerequisiteExistenceTests(
     Layer4IAMRoleExistenceTests, Layer4TerraformStateExistenceTests
@@ -303,6 +308,24 @@ class Layer5IAMConfigurationTests:
                 )
             raise
 
+    def test_role_has_at_least_one_policy(self, iam_client, current_role_name):
+        """Verify the role has at least one policy attached."""
+        if not current_role_name:
+            pytest.skip("Could not determine current role name")
+        try:
+            response = iam_client.list_attached_role_policies(
+                RoleName=current_role_name
+            )
+            assert len(response["AttachedPolicies"]) > 0, (
+                f"Role '{current_role_name}' has no attached policies"
+            )
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "AccessDenied":
+                pytest.skip(
+                    "Cannot verify - no permission to list attached policies"
+                )
+            raise
+
 
 class Layer5S3RegionTests:
     """Layer 5: Verify S3 bucket region configuration.
@@ -323,6 +346,10 @@ class Layer5S3RegionTests:
             f"Bucket '{state_bucket_name}' is in region '{actual_region}', "
             f"expected '{state_bucket_region}'."
         )
+
+    def test_expected_region_is_configured(self, state_bucket_region):
+        """Verify expected bucket region is configured."""
+        assert state_bucket_region, "Expected bucket region is not configured"
 
 
 class Layer5PrerequisiteConfigurationTests(
@@ -606,6 +633,10 @@ class Layer5APIGatewayRegionalTests:
         assert "REGIONAL" in types, (
             f"API Gateway '{api_gateway_info['id']}' should be REGIONAL, got: {types}"
         )
+
+    def test_api_gateway_info_has_id(self, api_gateway_info):
+        """Verify API Gateway info contains an ID."""
+        assert "id" in api_gateway_info, "API Gateway info missing 'id' field"
 
 
 class Layer6DeploymentCapabilityTests:

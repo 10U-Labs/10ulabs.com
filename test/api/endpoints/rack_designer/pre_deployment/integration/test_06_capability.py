@@ -15,8 +15,5 @@ pytestmark = pytest.mark.layer(6)
 
 
 TestDeploymentCapabilities = create_layer6_capability_tests(
-    include_lambda=True,
-    include_iam=True,
-    include_dynamodb=True,
-    include_logs=True,
+    frozenset({'lambda', 'iam', 'dynamodb', 'logs'})
 )

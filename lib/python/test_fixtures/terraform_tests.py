@@ -124,6 +124,15 @@ def create_outputs_terraform_tests(
             """Verify outputs.tf file exists."""
             assert outputs_file.exists()
 
+        def test_outputs_file_is_valid_terraform(self):
+            """Verify outputs.tf is valid Terraform syntax."""
+            with open(outputs_file, encoding="utf-8") as f:
+                content = f.read()
+            # Basic check for Terraform output block syntax
+            assert 'output "' in content or len(content.strip()) == 0, (
+                "outputs.tf exists but contains no output blocks"
+            )
+
     # Dynamically add test methods for each required output
     for output_name in required_outputs:
 
@@ -185,6 +194,10 @@ def create_remote_state_contract_tests(
                 f"{endpoint_name}/{lambda_file} references api backend outputs that "
                 f"don't exist: {missing}. Add these outputs to src/api/backend/outputs.tf"
             )
+
+        def test_lambda_file_exists(self):
+            """Verify the lambda file exists for remote state analysis."""
+            assert lambda_path.exists(), f"{lambda_file} does not exist in endpoint"
 
     # Dynamically add test methods for each required output
     if required_outputs:

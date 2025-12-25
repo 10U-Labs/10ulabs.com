@@ -54,6 +54,10 @@ from test_fixtures.integration.factories import (
     create_www_shared_s3_existence_tests,
     handle_ecr_error,
 )
+from test_fixtures.integration.helpers import (
+    get_aws_account_id_via_cli,
+    handle_ecr_authorization_error,
+)
 
 __all__ = [
     # Base classes
@@ -93,4 +97,7 @@ __all__ = [
     "create_www_shared_fixtures",
     "create_www_shared_s3_existence_tests",
     "handle_ecr_error",
+    # Helper functions
+    "get_aws_account_id_via_cli",
+    "handle_ecr_authorization_error",
 ]

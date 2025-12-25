@@ -1,7 +1,6 @@
 """Pytest fixtures for image_for_ecs_runners post (Docker build) tests."""
 import os
 import re
-import subprocess
 import sys
 from typing import Any, Dict
 
@@ -52,13 +51,8 @@ def get_aws_region() -> str:
 
 def get_aws_account_id() -> str:
     """Get AWS account ID using the AWS CLI."""
-    result = subprocess.run(
-        ["aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-    return result.stdout.strip()
+    from test_fixtures.integration import get_aws_account_id_via_cli
+    return get_aws_account_id_via_cli()
 
 
 def get_ecr_repository() -> str:

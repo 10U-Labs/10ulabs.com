@@ -7,6 +7,7 @@ permission to inspect - not existence or capability.
 from botocore.exceptions import ClientError
 
 import pytest
+from test_fixtures.integration import handle_ecr_authorization_error
 
 pytestmark = pytest.mark.layer(2)
 
@@ -22,15 +23,9 @@ class TestECRAuthorization:
         try:
             ecr_client.describe_repositories(repositoryNames=[repository_name])
         except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                pytest.fail(
-                    f"No permission to call ecr:DescribeRepositories on '{repository_name}'. "
-                    "Check IAM policy."
-                )
-            if e.response["Error"]["Code"] == "RepositoryNotFoundException":
-                pass  # Repository doesn't exist, but we have permission to check
-            else:
-                raise
+            handle_ecr_authorization_error(
+                e, "ecr:DescribeRepositories", repository_name
+            )
 
     def test_can_get_authorization_token(self, ecr_client):
         """Verify permission to call ecr:GetAuthorizationToken."""

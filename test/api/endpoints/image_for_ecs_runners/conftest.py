@@ -1,6 +1,5 @@
 """Shared fixtures and utilities for ECS runner image tests."""
 import os
-import subprocess
 
 import pytest
 from repo_utils import REPO_ROOT
@@ -12,6 +11,7 @@ POST_DIR = os.path.join(BASE_DIR, 'post')
 FILES_DIR = POST_DIR  # Backwards compatibility alias
 CONFIG_PATH = os.path.join(POST_DIR, 'config.json')
 DOCKERFILE_PATH = os.path.join(POST_DIR, 'Dockerfile')
+TFVARS_PATH = os.path.join(BASE_DIR, 'terraform.tfvars')
 
 
 def get_aws_region():
@@ -24,13 +24,8 @@ def get_aws_region():
 
 def get_aws_account_id():
     """Get AWS account ID using the AWS CLI."""
-    result = subprocess.run(
-        ["aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-    return result.stdout.strip()
+    from test_fixtures.integration import get_aws_account_id_via_cli
+    return get_aws_account_id_via_cli()
 
 
 def get_ecr_repository():
