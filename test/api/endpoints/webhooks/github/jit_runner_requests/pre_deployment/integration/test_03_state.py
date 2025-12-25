@@ -20,7 +20,7 @@ from terraform_drift.test_helpers import create_orphaned_resource_tests
 
 pytestmark = pytest.mark.layer(3)
 
-TERRAFORM_DIR = Path(__file__).parents[6] / "src" / "api" / "endpoints" / "runners"
+TERRAFORM_DIR = Path(__file__).parents[8] / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
 
 
 # Use the factory from terraform_drift to create orphan detection tests

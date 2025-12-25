@@ -16,7 +16,7 @@ from terraform_config import (
     extract_sqs_queue_names,
 )
 
-RUNNERS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
+RUNNERS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
 
 IAM_ROLES = extract_iam_role_names(RUNNERS_SRC / "iam.tf")
 LAMBDA_FUNCTIONS = extract_lambda_function_names(

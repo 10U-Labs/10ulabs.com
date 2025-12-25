@@ -3,7 +3,7 @@
 Layer 1: Verify all deployed resources exist.
 These tests run first to catch deployment failures before checking configuration.
 """
-from test.api.endpoints.runners.conftest import find_sns_topic_arns
+from test.api.endpoints.webhooks.github.jit_runner_requests.conftest import find_sns_topic_arns
 
 import pytest
 

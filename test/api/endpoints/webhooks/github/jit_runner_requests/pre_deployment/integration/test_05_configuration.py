@@ -22,7 +22,7 @@ from terraform_config import get_runners_resource_names
 pytestmark = pytest.mark.layer(5)
 
 
-RUNNERS_SRC = Path(__file__).parents[6] / "src" / "api" / "endpoints" / "runners"
+RUNNERS_SRC = Path(__file__).parents[8] / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
 SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"
 
 

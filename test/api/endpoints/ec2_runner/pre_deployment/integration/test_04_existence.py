@@ -44,21 +44,21 @@ class TestRunnersOutputs:
         """Verify vpc_id output exists."""
         assert runners_outputs.get("vpc_id"), (
             "vpc_id output not found in runners. "
-            "Run: cd src/api/endpoints/runners && terraform apply"
+            "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
         )
 
     def test_subnet_ids_output_exists(self, runners_outputs):
         """Verify vpc_public_subnet_ids output exists."""
         assert runners_outputs.get("vpc_public_subnet_ids"), (
             "vpc_public_subnet_ids output not found in runners. "
-            "Run: cd src/api/endpoints/runners && terraform apply"
+            "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
         )
 
     def test_security_group_id_output_exists(self, runners_outputs):
         """Verify runner_security_group_id output exists."""
         assert runners_outputs.get("runner_security_group_id"), (
             "runner_security_group_id output not found in runners. "
-            "Run: cd src/api/endpoints/runners && terraform apply"
+            "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
         )
 
 
@@ -87,13 +87,13 @@ class TestVPCResources:
             response = ec2_client.describe_vpcs(VpcIds=[vpc_id])
             assert len(response["Vpcs"]) == 1, (
                 f"VPC {vpc_id} not found. "
-                "Run: cd src/api/endpoints/runners && terraform apply"
+                "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
             )
         except ClientError as e:
             if e.response["Error"]["Code"] == "InvalidVpcID.NotFound":
                 pytest.fail(
                     f"VPC {vpc_id} does not exist. "
-                    "Run: cd src/api/endpoints/runners && terraform apply"
+                    "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
                 )
             raise
 
@@ -113,12 +113,12 @@ class TestVPCResources:
             if e.response["Error"]["Code"] == "InvalidSubnetID.NotFound":
                 pytest.fail(
                     f"One or more subnets not found: {subnet_ids}. "
-                    "Run: cd src/api/endpoints/runners && terraform apply"
+                    "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
                 )
             raise
 
     # Use factory for security group existence test
     test_security_group_exists = create_security_group_existence_test(
         outputs_fixture="runners_outputs",
-        terraform_path="src/api/endpoints/runners",
+        terraform_path="src/api/endpoints/webhooks/github/jit_runner_requests",
     )

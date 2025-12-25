@@ -13,7 +13,7 @@ Inherited fixtures from parent conftest files:
   caller_identity, current_role_arn, current_role_name, ssm_client, ssm_github_pat_name
 - test/api/conftest.py: lambda_client, ecs_runner_terraform_initialized,
   ecs_runner_outputs, terraform_init, terraform_output
-- test/api/endpoints/runners/conftest.py: dynamodb_client
+- test/api/endpoints/webhooks/github/jit_runner_requests/conftest.py: dynamodb_client
 """
 from test.api.conftest import REPO_ROOT, terraform_init, terraform_output
 from terraform_config import get_runners_resource_names
@@ -29,7 +29,7 @@ API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
 API_SHARED_DOCKER_REPOSITORY_DIR = REPO_ROOT / "src" / "api" / "shared" / "docker_repository"
 API_SHARED_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "shared" / "networking"
 EC2_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
-RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
+RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
 
 
 @pytest.fixture(scope="session")

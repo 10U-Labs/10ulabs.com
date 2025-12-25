@@ -16,7 +16,7 @@ import pytest
 pytest_plugins = ['pytest_layers']
 
 IMAGE_FOR_EC2_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
-RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
+RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
 
 
 @pytest.fixture(scope="session")
