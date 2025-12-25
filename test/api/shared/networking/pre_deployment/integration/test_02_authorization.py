@@ -1,4 +1,4 @@
-"""Layer 2: Authorization tests for api/shared/runners pre-deployment.
+"""Layer 2: Authorization tests for api/shared/networking pre-deployment.
 
 Tests that credentials have permission to INSPECT prerequisite resources.
 Not existence, not capability - just permission to check.
@@ -20,8 +20,6 @@ pytestmark = pytest.mark.layer(2)
 
 class TestIAMRoleInspectionAuthorization(Layer2IAMAuthorizationTests):
     """Layer 2: Verify permission to inspect IAM roles."""
-
-    pass  # All tests inherited from base class
 
 
 class TestS3BucketInspectionAuthorization(Layer2S3AuthorizationTests):

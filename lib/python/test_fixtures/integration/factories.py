@@ -762,7 +762,7 @@ def handle_ecr_error(error: ClientError, operation: str, repository_name: str) -
 def create_security_group_existence_test(
     outputs_fixture: str,
     sg_id_key: str = "runner_security_group_id",
-    terraform_path: str = "src/api/shared/runners",
+    terraform_path: str = "src/api/shared/networking",
 ):
     """Create a security group existence test method.
 

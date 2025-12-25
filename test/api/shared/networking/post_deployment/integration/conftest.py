@@ -1,11 +1,11 @@
-"""Pytest fixtures for api/shared/runners post-deployment integration tests.
+"""Pytest fixtures for api/shared/networking post-deployment integration tests.
 
 These tests follow the 3-layer testing model from POST_DEPLOYMENT_INTEGRATION_TESTS.md:
 - Layer 1: Existence - Resources were created
 - Layer 2: Configuration - Resources configured correctly
 - Layer 3: Wiring - Components connected properly
 
-Layer marker system inherited from parent conftest (test/api/shared/runners/conftest.py).
+Layer marker system inherited from parent conftest (test/api/shared/networking/conftest.py).
 """
 
 import boto3

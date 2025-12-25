@@ -1,4 +1,4 @@
-"""Layer 1: Authentication tests for api/shared/runners pre-deployment.
+"""Layer 1: Authentication tests for api/shared/networking pre-deployment.
 
 Tests ONLY that AWS credentials are valid. No authorization or resource checks.
 
@@ -15,5 +15,3 @@ pytestmark = pytest.mark.layer(1)
 
 class TestAWSAuthentication(Layer1AuthenticationTests):
     """Layer 1: Verify AWS credentials are valid."""
-
-    pass  # All tests inherited from base class

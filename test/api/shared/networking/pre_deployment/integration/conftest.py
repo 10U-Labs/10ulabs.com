@@ -1,4 +1,4 @@
-"""Pytest fixtures for api/shared/runners pre-deployment integration tests.
+"""Pytest fixtures for api/shared/networking pre-deployment integration tests.
 
 These tests follow the 6-layer testing model from PRE_DEPLOYMENT_INTEGRATION_TESTS.md:
 - Layer 1: Authentication - Are AWS credentials configured and valid?
@@ -15,21 +15,21 @@ from repo_utils import REPO_ROOT
 pytest_plugins = ['test_fixtures.aws']
 
 
-API_SHARED_RUNNERS_SRC = REPO_ROOT / "src" / "api" / "shared" / "runners"
+API_SHARED_NETWORKING_SRC = REPO_ROOT / "src" / "api" / "shared" / "networking"
 
-STATE_KEY = "api/shared/runners/terraform.tfstate"
+STATE_KEY = "api/shared/networking/terraform.tfstate"
 
 
 @pytest.fixture(scope="session")
-def runners_state_key():
-    """Provide the terraform state key for api_shared_runners."""
+def networking_state_key():
+    """Provide the terraform state key for api_shared_networking."""
     return STATE_KEY
 
 
 @pytest.fixture(scope="session")
-def api_shared_runners_src():
-    """Provide path to api_shared_runners source directory."""
-    return API_SHARED_RUNNERS_SRC
+def api_shared_networking_src():
+    """Provide path to api_shared_networking source directory."""
+    return API_SHARED_NETWORKING_SRC
 
 
 @pytest.fixture(scope="session")

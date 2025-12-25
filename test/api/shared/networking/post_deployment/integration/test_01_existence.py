@@ -1,4 +1,4 @@
-"""Layer 1: Existence tests for api/shared/runners post-deployment.
+"""Layer 1: Existence tests for api/shared/networking post-deployment.
 
 Tests ONLY that resources exist. No configuration checks.
 These tests verify that resources created by THIS workflow exist after deployment.
@@ -19,7 +19,7 @@ class TestVPCResourcesExist:
     def test_runners_vpc_exists(self, runners_vpc):
         """Verify the runners VPC exists."""
         assert runners_vpc is not None, (
-            "Runners VPC not found. Run terraform apply in src/api/shared/runners/"
+            "Runners VPC not found. Run terraform apply in src/api/shared/networking/"
         )
 
     def test_runners_subnets_exist(self, ec2_client):
@@ -32,7 +32,7 @@ class TestVPCResourcesExist:
         )
         assert len(response["Subnets"]) >= 1, (
             "Runners subnets not found. "
-            "Run terraform apply in src/api/shared/runners/"
+            "Run terraform apply in src/api/shared/networking/"
         )
 
     def test_runners_internet_gateway_exists(self, ec2_client):
@@ -45,12 +45,12 @@ class TestVPCResourcesExist:
         )
         assert len(response["InternetGateways"]) >= 1, (
             "Runners internet gateway not found. "
-            "Run terraform apply in src/api/shared/runners/"
+            "Run terraform apply in src/api/shared/networking/"
         )
 
     def test_runners_security_group_exists(self, runners_security_group):
         """Verify the runner security group exists."""
         assert runners_security_group is not None, (
             "Runner security group not found. "
-            "Run terraform apply in src/api/shared/runners/"
+            "Run terraform apply in src/api/shared/networking/"
         )

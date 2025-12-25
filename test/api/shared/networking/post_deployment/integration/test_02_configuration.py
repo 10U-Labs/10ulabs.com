@@ -1,4 +1,4 @@
-"""Layer 2: Configuration tests for api/shared/runners post-deployment.
+"""Layer 2: Configuration tests for api/shared/networking post-deployment.
 
 Tests that resources have correct settings. Assumes existence tests passed.
 

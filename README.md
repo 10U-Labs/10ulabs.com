@@ -11,7 +11,7 @@ operational_health
     ↓
 operational_diagnostics
     ↓
-api_shared_runners
+api_shared_networking
     ↓
 endpoint_v1_image_for_ec2_runners
     ↓

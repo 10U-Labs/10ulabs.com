@@ -23,15 +23,15 @@
       "test/api/shared/ecs_runner/**"
     ]
   },
-  "api_shared_runners": {
+  "api_shared_networking": {
     "depends_on": [
       "operational_diagnostics"
     ],
-    "name": "Deploying API Shared Runners Infrastructure",
+    "name": "Deploying API Shared Networking Infrastructure",
     "paths": [
-      ".github/workflows/api_shared_runners.yml",
-      "src/api/shared/runners/**",
-      "test/api/shared/runners/**"
+      ".github/workflows/api_shared_networking.yml",
+      "src/api/shared/networking/**",
+      "test/api/shared/networking/**"
     ]
   },
   "bootstrap": {
@@ -93,7 +93,7 @@
   },
   "endpoint_v1_image_for_ec2_runners": {
     "depends_on": [
-      "api_shared_runners"
+      "api_shared_networking"
     ],
     "name": "Ensuring /v1/image-for-ec2-runners API endpoint exists and is properly configured",
     "paths": [

@@ -27,7 +27,7 @@ pytest_plugins = ['pytest_layers']
 
 API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
 API_SHARED_ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
-API_SHARED_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "shared" / "runners"
+API_SHARED_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "shared" / "networking"
 EC2_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
 RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 
@@ -149,29 +149,29 @@ def ec2_client(aws_region):
 
 
 @pytest.fixture(scope="session")
-def api_shared_runners_terraform_initialized():
-    """Initialize terraform for api_shared_runners state access."""
-    return terraform_init(API_SHARED_RUNNERS_DIR)
+def api_shared_networking_terraform_initialized():
+    """Initialize terraform for api_shared_networking state access."""
+    return terraform_init(API_SHARED_NETWORKING_DIR)
 
 
 @pytest.fixture(scope="session")
-def api_shared_runners_outputs(request):
-    """Get api_shared_runners terraform outputs.
+def api_shared_networking_outputs(request):
+    """Get api_shared_networking terraform outputs.
 
     These outputs are REQUIRED (no defaults in runners/data.tf):
     - vpc_id: Used by drift_recovery Lambda and outputs passthrough
     - vpc_public_subnet_ids: Used by outputs passthrough
     - runner_security_group_id: Used by outputs passthrough
     """
-    if not request.getfixturevalue("api_shared_runners_terraform_initialized"):
-        pytest.skip("Terraform init failed for api_shared_runners")
+    if not request.getfixturevalue("api_shared_networking_terraform_initialized"):
+        pytest.skip("Terraform init failed for api_shared_networking")
     return {
-        "vpc_id": terraform_output(API_SHARED_RUNNERS_DIR, "vpc_id"),
+        "vpc_id": terraform_output(API_SHARED_NETWORKING_DIR, "vpc_id"),
         "vpc_public_subnet_ids": terraform_output(
-            API_SHARED_RUNNERS_DIR, "vpc_public_subnet_ids"
+            API_SHARED_NETWORKING_DIR, "vpc_public_subnet_ids"
         ),
         "runner_security_group_id": terraform_output(
-            API_SHARED_RUNNERS_DIR, "runner_security_group_id"
+            API_SHARED_NETWORKING_DIR, "runner_security_group_id"
         ),
     }
 
@@ -214,7 +214,7 @@ def api_shared_ecs_runner_outputs(request):
 def vpc_info(request):
     """Fetch VPC details from AWS. Returns None if VPC not found."""
     client = request.getfixturevalue("ec2_client")
-    outputs = request.getfixturevalue("api_shared_runners_outputs")
+    outputs = request.getfixturevalue("api_shared_networking_outputs")
     vpc_id = outputs.get("vpc_id")
     if not vpc_id:
         return None
@@ -229,7 +229,7 @@ def vpc_info(request):
 def subnets_info(request):
     """Fetch subnet details from AWS. Returns empty list if not found."""
     client = request.getfixturevalue("ec2_client")
-    outputs = request.getfixturevalue("api_shared_runners_outputs")
+    outputs = request.getfixturevalue("api_shared_networking_outputs")
     subnet_ids_str = outputs.get("vpc_public_subnet_ids")
     if not subnet_ids_str:
         return []

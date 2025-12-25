@@ -7,7 +7,7 @@ jobs:
     if: >-
       github.ref == 'refs/heads/main' &&
       github.event.inputs.dry_run != 'true'
-    name: Deploy API Shared Runners Infrastructure
+    name: Deploy API Shared Networking Infrastructure
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -31,8 +31,9 @@ jobs:
             sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
+          TF_PROVIDERS="src/api/shared/networking/providers.tf"
           TERRAFORM_VERSION=$(grep 'required_version' \
-            src/api/shared/runners/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+            $TF_PROVIDERS | cut -d'"' -f2 | sed 's/>= //')
           ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
@@ -55,9 +56,11 @@ jobs:
           terraform_version: ${{ steps.config.outputs.terraform_version }}
           terraform_wrapper: false
       - name: Terraform Format Check
-        run: cd src/api/shared/runners && terraform fmt -diff -check -recursive
+        run: |
+          cd src/api/shared/networking
+          terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/api/shared/runners && terraform init
+        run: cd src/api/shared/networking && terraform init
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -69,7 +72,7 @@ jobs:
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/api/shared/runners && tflint --init && tflint
+        run: cd src/api/shared/networking && tflint --init && tflint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -94,7 +97,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/api_shared_runners.yml
+            .github/workflows/api_shared_networking.yml
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -104,7 +107,7 @@ jobs:
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/api/shared/runners/ \
+            lib/python/ test/api/shared/networking/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - if: >-
@@ -116,7 +119,7 @@ jobs:
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy \
-            lib/python/ test/api/shared/runners/
+            lib/python/ test/api/shared/networking/
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -136,19 +139,19 @@ jobs:
       - name: Run unit tests
         run: |
           python3 -m pytest \
-            test/api/shared/runners/pre_deployment/unit/ \
+            test/api/shared/networking/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
-            test/api/shared/runners/pre_deployment/integration/ \
+            test/api/shared/networking/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
-        run: cd src/api/shared/runners && terraform apply -auto-approve
+        run: cd src/api/shared/networking && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
           python3 -m pytest \
-            test/api/shared/runners/post_deployment/integration/ \
+            test/api/shared/networking/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,9 +170,9 @@ jobs:
           fi
           python3 src/workflowctl/workflowctl.py dispatch \
             $TRIGGER_FLAG \
-            --workflow api_shared_runners \
+            --workflow api_shared_networking \
             --repo ${{ github.repository }}
-name: Deploying API Shared Runners Infrastructure
+name: Deploying API Shared Networking Infrastructure
 on:
   workflow_dispatch:
     inputs:

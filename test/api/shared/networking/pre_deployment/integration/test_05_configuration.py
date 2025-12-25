@@ -1,4 +1,4 @@
-"""Layer 5: Configuration tests for api/shared/runners pre-deployment.
+"""Layer 5: Configuration tests for api/shared/networking pre-deployment.
 
 Tests that prerequisite resources are configured correctly. Assumes existence passed.
 
@@ -15,5 +15,3 @@ pytestmark = pytest.mark.layer(5)
 
 class TestPrerequisiteResourcesConfiguration(Layer5PrerequisiteConfigurationTests):
     """Layer 5: Verify prerequisite resources are configured correctly."""
-
-    pass  # All tests inherited from base class

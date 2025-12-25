@@ -12,7 +12,7 @@ Six-layer testing model:
 - Layer 6: Capability - Can we perform required operations? (THIS FILE)
 
 Note: The endpoint_v1_runners deployment relies on prerequisites from other
-workflows (api_shared_runners, api_shared_ecs_runner, ec2_runner, ecs_runner).
+workflows (api_shared_networking, api_shared_ecs_runner, ec2_runner, ecs_runner).
 Capability tests here verify we can perform operations on those prerequisites.
 """
 import pytest

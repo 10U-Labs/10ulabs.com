@@ -68,28 +68,28 @@ class TestApiBackendFirehoseResources:
         )
 
 
-class TestApiSharedRunnersOutputs:
-    """Layer 4: Verify api_shared_runners terraform outputs are accessible."""
+class TestApiSharedNetworkingOutputs:
+    """Layer 4: Verify api_shared_networking terraform outputs are accessible."""
 
-    def test_vpc_id_output_exists(self, api_shared_runners_outputs):
+    def test_vpc_id_output_exists(self, api_shared_networking_outputs):
         """Verify vpc_id output exists."""
-        assert api_shared_runners_outputs.get("vpc_id"), (
-            "vpc_id output not found in api_shared_runners. "
-            "Run: cd src/api/shared/runners && terraform apply"
+        assert api_shared_networking_outputs.get("vpc_id"), (
+            "vpc_id output not found in api_shared_networking. "
+            "Run: cd src/api/shared/networking && terraform apply"
         )
 
-    def test_subnet_ids_output_exists(self, api_shared_runners_outputs):
+    def test_subnet_ids_output_exists(self, api_shared_networking_outputs):
         """Verify vpc_public_subnet_ids output exists."""
-        assert api_shared_runners_outputs.get("vpc_public_subnet_ids"), (
-            "vpc_public_subnet_ids output not found in api_shared_runners. "
-            "Run: cd src/api/shared/runners && terraform apply"
+        assert api_shared_networking_outputs.get("vpc_public_subnet_ids"), (
+            "vpc_public_subnet_ids output not found in api_shared_networking. "
+            "Run: cd src/api/shared/networking && terraform apply"
         )
 
-    def test_security_group_id_output_exists(self, api_shared_runners_outputs):
+    def test_security_group_id_output_exists(self, api_shared_networking_outputs):
         """Verify runner_security_group_id output exists."""
-        assert api_shared_runners_outputs.get("runner_security_group_id"), (
-            "runner_security_group_id output not found in api_shared_runners. "
-            "Run: cd src/api/shared/runners && terraform apply"
+        assert api_shared_networking_outputs.get("runner_security_group_id"), (
+            "runner_security_group_id output not found in api_shared_networking. "
+            "Run: cd src/api/shared/networking && terraform apply"
         )
 
 
@@ -169,19 +169,19 @@ class TestECSRunnerOutputs:
 class TestVPCResourceExistence:
     """Layer 4: Verify VPC resources exist in AWS."""
 
-    def test_vpc_exists(self, vpc_info, api_shared_runners_outputs):
+    def test_vpc_exists(self, vpc_info, api_shared_networking_outputs):
         """Verify the VPC exists."""
-        vpc_id = api_shared_runners_outputs.get("vpc_id")
+        vpc_id = api_shared_networking_outputs.get("vpc_id")
         if not vpc_id:
             pytest.skip("vpc_id output not available")
         assert vpc_info is not None, (
             f"VPC {vpc_id} not found. "
-            "Run: cd src/api/shared/runners && terraform apply"
+            "Run: cd src/api/shared/networking && terraform apply"
         )
 
-    def test_subnets_exist(self, subnets_info, api_shared_runners_outputs):
+    def test_subnets_exist(self, subnets_info, api_shared_networking_outputs):
         """Verify all subnets exist."""
-        subnet_ids_str = api_shared_runners_outputs.get("vpc_public_subnet_ids")
+        subnet_ids_str = api_shared_networking_outputs.get("vpc_public_subnet_ids")
         if not subnet_ids_str:
             pytest.skip("vpc_public_subnet_ids output not available")
         subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
@@ -192,8 +192,8 @@ class TestVPCResourceExistence:
 
     # Use factory for security group existence test
     test_security_group_exists = create_security_group_existence_test(
-        outputs_fixture="api_shared_runners_outputs",
-        terraform_path="src/api/shared/runners",
+        outputs_fixture="api_shared_networking_outputs",
+        terraform_path="src/api/shared/networking",
     )
 
 

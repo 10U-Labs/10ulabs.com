@@ -1,4 +1,4 @@
-"""Layer 4: Existence tests for api/shared/runners pre-deployment.
+"""Layer 4: Existence tests for api/shared/networking pre-deployment.
 
 Tests that prerequisite resources exist. Assumes authorization passed.
 
@@ -15,5 +15,3 @@ pytestmark = pytest.mark.layer(4)
 
 class TestPrerequisiteResourcesExist(Layer4PrerequisiteExistenceTests):
     """Layer 4: Verify prerequisite resources exist."""
-
-    pass  # All tests inherited from base class

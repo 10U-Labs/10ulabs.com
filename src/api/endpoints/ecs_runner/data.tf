@@ -1,8 +1,8 @@
-data "terraform_remote_state" "api_shared_runners" {
+data "terraform_remote_state" "api_shared_networking" {
   backend = "s3"
   config = {
     bucket = module.shared.name_for_terraform_state_bucket
-    key    = "api/shared/runners/terraform.tfstate"
+    key    = "api/shared/networking/terraform.tfstate"
     region = module.shared.aws_region
   }
 }

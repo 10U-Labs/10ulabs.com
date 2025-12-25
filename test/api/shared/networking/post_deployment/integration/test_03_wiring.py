@@ -1,4 +1,4 @@
-"""Layer 3: Wiring tests for api/shared/runners post-deployment.
+"""Layer 3: Wiring tests for api/shared/networking post-deployment.
 
 Tests that components are connected. Assumes existence and configuration passed.
 

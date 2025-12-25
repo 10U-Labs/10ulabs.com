@@ -7,7 +7,7 @@ repository. These patterns are derived from the following reference workflows:
 - `www_shared.yml`
 - `api_backend.yml`
 - `operational_health.yml`
-- `api_shared_runners.yml`
+- `api_shared_networking.yml`
 
 ## 1. Static Analysis Step Ordering
 

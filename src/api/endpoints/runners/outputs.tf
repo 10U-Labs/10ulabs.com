@@ -7,15 +7,15 @@ output "lambda_function_name" {
 }
 
 output "vpc_id" {
-  value = data.terraform_remote_state.api_shared_runners.outputs.vpc_id
+  value = data.terraform_remote_state.api_shared_networking.outputs.vpc_id
 }
 
 output "vpc_public_subnet_ids" {
-  value = data.terraform_remote_state.api_shared_runners.outputs.vpc_public_subnet_ids
+  value = data.terraform_remote_state.api_shared_networking.outputs.vpc_public_subnet_ids
 }
 
 output "runner_security_group_id" {
-  value = data.terraform_remote_state.api_shared_runners.outputs.runner_security_group_id
+  value = data.terraform_remote_state.api_shared_networking.outputs.runner_security_group_id
 }
 
 output "workflow_runners_table_name" {
