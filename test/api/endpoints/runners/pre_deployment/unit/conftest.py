@@ -6,39 +6,14 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
-from lambda_response import parse_response_body, assert_response_status
-from test_fixtures.unit import (
-    create_lambda_loader,
-    create_workflow_job_event,
-    create_sqs_event,
-    create_dlq_message,
-    create_circuit_breaker_closed_state,
-    create_circuit_breaker_open_state,
-    create_mock_urllib_response,
-    assert_no_hardcoded_env_defaults,
-    create_mock_lambda_list_mappings_error,
-    create_mock_lambda_put_concurrency_error,
-    create_mock_sns_publish_error,
-    create_mock_lambda_with_mappings,
-    create_mock_lambda_with_disabled_mappings,
-    create_mock_lambda_delete_concurrency_error,
-)
 
 # Re-exports for test files
 __all__ = [
-    'create_mock_dynamodb_for_reset',
     'circuit_breaker_utils',
-    'parse_response_body',
-    'assert_response_status',
-    'assert_no_hardcoded_env_defaults',
     'get_lambda_path',
-    'create_mock_lambda_list_mappings_error',
-    'create_mock_lambda_put_concurrency_error',
-    'create_mock_sns_publish_error',
-    'create_mock_lambda_with_mappings',
-    'create_mock_lambda_with_disabled_mappings',
-    'create_mock_lambda_delete_concurrency_error',
+    'load_lambda_module',
 ]
 
 
@@ -169,81 +144,6 @@ def circuit_breaker_recovery(config):
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("circuit_breaker_recovery.py", "circuit_breaker_recovery")
         yield module
-
-
-@pytest.fixture
-def mock_sqs():
-    """Provide mocked SQS client."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_sqs_client = MagicMock()
-        mock_boto_client.return_value = mock_sqs_client
-        yield mock_sqs_client
-
-
-@pytest.fixture
-def mock_dynamodb():
-    """Provide mocked DynamoDB client."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_dynamodb_client = MagicMock()
-        mock_boto_client.return_value = mock_dynamodb_client
-        yield mock_dynamodb_client
-
-
-@pytest.fixture
-def mock_ssm():
-    """Provide mocked SSM client."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_ssm_client = MagicMock()
-        mock_ssm_client.get_parameter.return_value = {
-            'Parameter': {'Value': 'test-token'}
-        }
-        mock_boto_client.return_value = mock_ssm_client
-        yield mock_ssm_client
-
-
-@pytest.fixture
-def mock_cloudwatch():
-    """Provide mocked CloudWatch client."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_cw_client = MagicMock()
-        mock_boto_client.return_value = mock_cw_client
-        yield mock_cw_client
-
-
-@pytest.fixture
-def workflow_job_event_factory():
-    """Factory for creating workflow_job webhook events."""
-    return create_workflow_job_event
-
-
-@pytest.fixture
-def sqs_event_factory():
-    """Factory for creating SQS trigger events."""
-    return create_sqs_event
-
-
-@pytest.fixture
-def dlq_message_factory():
-    """Factory for creating DLQ message events."""
-    return create_dlq_message
-
-
-@pytest.fixture
-def circuit_breaker_closed_state():
-    """Provide closed circuit breaker state."""
-    return create_circuit_breaker_closed_state()
-
-
-@pytest.fixture
-def circuit_breaker_open_state():
-    """Provide open circuit breaker state."""
-    return create_circuit_breaker_open_state()
-
-
-@pytest.fixture
-def mock_urllib_response_factory():
-    """Factory for creating mock urllib responses."""
-    return create_mock_urllib_response
 
 
 @pytest.fixture

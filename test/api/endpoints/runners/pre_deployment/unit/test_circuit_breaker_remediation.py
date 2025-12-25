@@ -5,17 +5,16 @@ from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
 
-from .conftest import (
-    parse_response_body,
-    assert_response_status,
+from boto_mocks import (
     create_mock_lambda_list_mappings_error,
     create_mock_lambda_put_concurrency_error,
     create_mock_sns_publish_error,
     create_mock_lambda_with_mappings,
     create_mock_lambda_with_disabled_mappings,
     create_mock_lambda_delete_concurrency_error,
-    circuit_breaker_utils,
 )
+from lambda_response import parse_response_body, assert_response_status
+from .conftest import circuit_breaker_utils
 
 
 def _create_alarm_event(state='ALARM', reason='Threshold exceeded'):

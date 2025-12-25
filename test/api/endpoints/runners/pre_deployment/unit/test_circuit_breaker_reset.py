@@ -8,13 +8,12 @@ from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
 
-from .conftest import (
-    parse_response_body,
-    assert_response_status,
+from boto_mocks import (
     create_mock_lambda_list_mappings_error,
     create_mock_lambda_with_disabled_mappings,
-    circuit_breaker_utils,
 )
+from lambda_response import parse_response_body, assert_response_status
+from .conftest import circuit_breaker_utils
 
 
 CB_ENV = {'WEBHOOK_FUNCTION_NAME': 'test-function', 'STATE_TABLE_NAME': 'test-table'}

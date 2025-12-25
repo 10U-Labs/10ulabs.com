@@ -1,18 +1,14 @@
 """Pytest fixtures for pre-deployment unit tests."""
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from repo_utils import REPO_ROOT
-from test_fixtures.unit import (
-    create_lambda_loader,
-    create_workflow_job_event,
-    create_sqs_event,
-)
 from event_factories import create_ecs_runner_post_event
+from module_utils import create_lambda_loader
+from repo_utils import REPO_ROOT
 
 BACKEND_LAMBDAS_PATH = REPO_ROOT / "src" / "api" / "backend" / "lambdas"
 
@@ -136,45 +132,6 @@ def spot_interruption_handler(config):
 
 
 @pytest.fixture
-def mock_sqs():
-    """Provide a mock SQS client."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_sqs_client = MagicMock()
-        mock_boto_client.return_value = mock_sqs_client
-        yield mock_sqs_client
-
-
-@pytest.fixture
-def mock_dynamodb():
-    """Provide a mock DynamoDB client."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_dynamodb_client = MagicMock()
-        mock_boto_client.return_value = mock_dynamodb_client
-        yield mock_dynamodb_client
-
-
-@pytest.fixture
-def mock_ssm():
-    """Provide a mock SSM client with test parameter."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_ssm_client = MagicMock()
-        mock_ssm_client.get_parameter.return_value = {
-            'Parameter': {'Value': 'test-token'}
-        }
-        mock_boto_client.return_value = mock_ssm_client
-        yield mock_ssm_client
-
-
-@pytest.fixture
-def mock_cloudwatch():
-    """Provide a mock CloudWatch client."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_cw_client = MagicMock()
-        mock_boto_client.return_value = mock_cw_client
-        yield mock_cw_client
-
-
-@pytest.fixture
 def catchall_unknown_event():
     """Create an event for an unknown path."""
     return {'path': '/unknown', 'httpMethod': 'GET'}
@@ -184,44 +141,3 @@ def catchall_unknown_event():
 def ecs_runner_post_event_factory():
     """Factory for creating ECS runner POST events."""
     return create_ecs_runner_post_event
-
-
-@pytest.fixture
-def workflow_job_event_factory():
-    """Factory for creating workflow job events."""
-    return create_workflow_job_event
-
-
-@pytest.fixture
-def sqs_event_factory():
-    """Factory for creating SQS events."""
-    return create_sqs_event
-
-
-@pytest.fixture
-def dlq_message_factory():
-    """Factory for creating DLQ messages."""
-    return create_dlq_message
-
-
-@pytest.fixture
-def circuit_breaker_closed_state():
-    """Provide a closed circuit breaker state."""
-    return create_circuit_breaker_closed_state()
-
-
-@pytest.fixture
-def circuit_breaker_open_state():
-    """Provide an open circuit breaker state."""
-    return create_circuit_breaker_open_state()
-
-
-@pytest.fixture
-def mock_urllib_response_factory():
-    """Factory for creating mock urllib responses."""
-    return create_mock_urllib_response
-
-
-# assert_no_hardcoded_env_defaults imported from test_fixtures.unit
-# TEST_CONSTANTS imported from test_fixtures.unit
-# ENV_VAR_PRESETS imported from test_fixtures.unit

@@ -1,6 +1,6 @@
 """Tests for Lambda handler functions."""
 
-from .conftest import (
+from lambda_response import (
     assert_cors_headers,
     assert_json_content_type,
     assert_response_status,

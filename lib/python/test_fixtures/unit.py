@@ -3,13 +3,11 @@
 This module provides common test utilities, mock fixtures, and constants
 that are shared across multiple Lambda unit test suites.
 """
-import importlib.util
 import json
 import re
-import sys
 from pathlib import Path
-from typing import Any
 from types import ModuleType
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -40,7 +38,7 @@ from event_factories import (
     create_circuit_breaker_open_state,
 )
 from urllib_mocks import create_mock_urllib_response
-from module_utils import reset_module_state
+from module_utils import reset_module_state, create_lambda_loader
 from repo_utils import REPO_ROOT
 
 # Re-export for backward compatibility with existing tests
@@ -129,13 +127,11 @@ def load_handler_module(relative_path: str, module_name: str) -> ModuleType:
         Loaded Python module
     """
     base_path = REPO_ROOT / "src" / "api"
-    handler_path = base_path / relative_path
-    spec = importlib.util.spec_from_file_location(module_name, handler_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    # Get the directory containing the handler
+    handler_dir = base_path / Path(relative_path).parent
+    filename = Path(relative_path).name
+    loader = create_lambda_loader(handler_dir)
+    return loader(filename, module_name)
 
 
 def parse_lambda_response_payload(response: Any) -> Any:
@@ -166,104 +162,77 @@ def assert_no_hardcoded_env_defaults(lambda_path: Path) -> None:
     assert len(matches) == 0
 
 
-def create_lambda_loader(lambdas_dir: Path):
-    """Create a lambda loader function for a specific lambdas directory.
-
-    Args:
-        lambdas_dir: Path to the lambdas directory
-
-    Returns:
-        Function that loads lambda modules by filename
-    """
-    def load_lambda_module(filename: str, module_name: str) -> ModuleType:
-        """Load a lambda module by filename."""
-        handler_path = lambdas_dir / filename
-        lambdas_dir_str = str(lambdas_dir)
-        # Add lambdas dir to sys.path so 'from common.xxx import' works
-        if lambdas_dir_str not in sys.path:
-            sys.path.insert(0, lambdas_dir_str)
-        spec = importlib.util.spec_from_file_location(module_name, handler_path)
-        assert spec is not None
-        assert spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
-    return load_lambda_module
+# Standalone fixtures for pytest_plugins loading
+@pytest.fixture
+def mock_sqs():
+    """Provide a mock SQS client."""
+    with patch('boto3.client') as mock_boto_client:
+        mock_sqs_client = MagicMock()
+        mock_boto_client.return_value = mock_sqs_client
+        yield mock_sqs_client
 
 
-def create_unit_test_fixtures():
-    """Create standard unit test fixtures class.
+@pytest.fixture
+def mock_dynamodb():
+    """Provide a mock DynamoDB client."""
+    with patch('boto3.client') as mock_boto_client:
+        mock_dynamodb_client = MagicMock()
+        mock_boto_client.return_value = mock_dynamodb_client
+        yield mock_dynamodb_client
 
-    Returns:
-        Class with standard pytest fixtures for unit testing
-    """
 
-    class UnitTestFixtures:
-        """Standard unit test fixtures for Lambda testing."""
+@pytest.fixture
+def mock_ssm():
+    """Provide a mock SSM client with test parameter."""
+    with patch('boto3.client') as mock_boto_client:
+        mock_ssm_client = MagicMock()
+        mock_ssm_client.get_parameter.return_value = {
+            'Parameter': {'Value': 'test-token'}
+        }
+        mock_boto_client.return_value = mock_ssm_client
+        yield mock_ssm_client
 
-        @pytest.fixture
-        def mock_sqs(self):
-            """Provide a mock SQS client."""
-            with patch('boto3.client') as mock_boto_client:
-                mock_sqs_client = MagicMock()
-                mock_boto_client.return_value = mock_sqs_client
-                yield mock_sqs_client
 
-        @pytest.fixture
-        def mock_dynamodb(self):
-            """Provide a mock DynamoDB client."""
-            with patch('boto3.client') as mock_boto_client:
-                mock_dynamodb_client = MagicMock()
-                mock_boto_client.return_value = mock_dynamodb_client
-                yield mock_dynamodb_client
+@pytest.fixture
+def mock_cloudwatch():
+    """Provide a mock CloudWatch client."""
+    with patch('boto3.client') as mock_boto_client:
+        mock_cw_client = MagicMock()
+        mock_boto_client.return_value = mock_cw_client
+        yield mock_cw_client
 
-        @pytest.fixture
-        def mock_ssm(self):
-            """Provide a mock SSM client with test parameter."""
-            with patch('boto3.client') as mock_boto_client:
-                mock_ssm_client = MagicMock()
-                mock_ssm_client.get_parameter.return_value = {
-                    'Parameter': {'Value': 'test-token'}
-                }
-                mock_boto_client.return_value = mock_ssm_client
-                yield mock_ssm_client
 
-        @pytest.fixture
-        def mock_cloudwatch(self):
-            """Provide a mock CloudWatch client."""
-            with patch('boto3.client') as mock_boto_client:
-                mock_cw_client = MagicMock()
-                mock_boto_client.return_value = mock_cw_client
-                yield mock_cw_client
+@pytest.fixture
+def workflow_job_event_factory():
+    """Factory for creating workflow job events."""
+    return create_workflow_job_event
 
-        @pytest.fixture
-        def workflow_job_event_factory(self):
-            """Factory for creating workflow job events."""
-            return create_workflow_job_event
 
-        @pytest.fixture
-        def sqs_event_factory(self):
-            """Factory for creating SQS events."""
-            return create_sqs_event
+@pytest.fixture
+def sqs_event_factory():
+    """Factory for creating SQS events."""
+    return create_sqs_event
 
-        @pytest.fixture
-        def dlq_message_factory(self):
-            """Factory for creating DLQ messages."""
-            return create_dlq_message
 
-        @pytest.fixture
-        def circuit_breaker_closed_state(self):
-            """Provide a closed circuit breaker state."""
-            return create_circuit_breaker_closed_state()
+@pytest.fixture
+def dlq_message_factory():
+    """Factory for creating DLQ messages."""
+    return create_dlq_message
 
-        @pytest.fixture
-        def circuit_breaker_open_state(self):
-            """Provide an open circuit breaker state."""
-            return create_circuit_breaker_open_state()
 
-        @pytest.fixture
-        def mock_urllib_response_factory(self):
-            """Factory for creating mock urllib responses."""
-            return create_mock_urllib_response
+@pytest.fixture
+def circuit_breaker_closed_state():
+    """Provide a closed circuit breaker state."""
+    return create_circuit_breaker_closed_state()
 
-    return UnitTestFixtures
+
+@pytest.fixture
+def circuit_breaker_open_state():
+    """Provide an open circuit breaker state."""
+    return create_circuit_breaker_open_state()
+
+
+@pytest.fixture
+def mock_urllib_response_factory():
+    """Factory for creating mock urllib responses."""
+    return create_mock_urllib_response

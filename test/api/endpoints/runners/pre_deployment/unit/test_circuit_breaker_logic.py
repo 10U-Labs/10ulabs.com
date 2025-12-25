@@ -5,12 +5,9 @@ from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
 
-from .conftest import (
-    parse_response_body,
-    assert_response_status,
-    assert_no_hardcoded_env_defaults,
-    get_lambda_path,
-)
+from lambda_response import parse_response_body, assert_response_status
+from test_fixtures.unit import assert_no_hardcoded_env_defaults
+from .conftest import get_lambda_path
 
 
 DLQ_ENV = {

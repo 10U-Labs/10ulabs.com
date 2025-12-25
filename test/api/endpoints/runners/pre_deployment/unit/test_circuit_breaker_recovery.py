@@ -7,14 +7,13 @@ from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
 
-from .conftest import (
-    parse_response_body,
-    assert_response_status,
+from boto_mocks import (
     create_mock_lambda_list_mappings_error,
     create_mock_lambda_put_concurrency_error,
     create_mock_sns_publish_error,
-    create_mock_lambda_with_mappings
+    create_mock_lambda_with_mappings,
 )
+from lambda_response import parse_response_body, assert_response_status
 
 
 RECOVERY_ENV = {'STATE_TABLE_NAME': 'test-table', 'WEBHOOK_FUNCTION_NAME': 'test-function'}

@@ -3,11 +3,13 @@
 This conftest.py sets up lib/python in sys.path so tests can import
 modules like repo_utils, terraform_config, and test_fixtures.
 
-AWS fixtures are in lib/python/test_fixtures/aws.py. Test directories
-that need them should declare: pytest_plugins = ['test_fixtures.aws']
+Shared fixtures are loaded via pytest_plugins.
 """
 import sys
 from pathlib import Path
+
+# Load shared fixtures for all tests - must be a module-level variable
+pytest_plugins = ['test_fixtures.unit']
 
 _REPO_ROOT = Path(__file__).parent.parent
 _LIB_DIR = _REPO_ROOT / "lib" / "python"
