@@ -173,8 +173,8 @@ def test_lambda_function_names_map_has_all_handlers():
         'image_for_ec2_runners',
         'image_for_ecs_runners',
         'rack_designer',
-        'runners',
-        'runners_health_check',
+        'jit_runner_requests',
+        'jit_runner_requests_health',
         'simulation_soc',
     ]
     for handler in required_handlers:
@@ -246,19 +246,19 @@ def test_health_handler_uses_shared_module():
     assert 'module.shared.lambda_handler_names.health' in content
 
 
-def test_runners_health_check_function_name_defined():
-    """Verify runners_health_check function name is defined."""
+def test_jit_runner_requests_health_function_name_defined():
+    """Verify jit_runner_requests_health function name is defined."""
     content = _read_apigateway_tf()
-    assert 'runners_health_check' in content
+    assert 'jit_runner_requests_health' in content
 
 
-def test_runners_health_check_arn_defined():
-    """Verify runners_health_check_arn local is defined."""
+def test_jit_runner_requests_health_arn_defined():
+    """Verify jit_runner_requests_health_arn local is defined."""
     content = _read_apigateway_tf()
-    assert 'runners_health_check_arn' in content
+    assert 'jit_runner_requests_health_arn' in content
 
 
-def test_runners_health_check_arn_passed_to_openapi():
-    """Verify RunnersHealthCheckArn is passed to OpenAPI template."""
+def test_jit_runner_requests_health_arn_passed_to_openapi():
+    """Verify JitRunnerRequestsHealthArn is passed to OpenAPI template."""
     content = _read_apigateway_tf()
-    assert 'RunnersHealthCheckArn' in content
+    assert 'JitRunnerRequestsHealthArn' in content

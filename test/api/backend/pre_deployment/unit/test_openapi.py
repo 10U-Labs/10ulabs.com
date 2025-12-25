@@ -73,24 +73,24 @@ def test_openapi_spec_diagnostics_echo_has_post_method(openapi_spec):
     assert 'post' in openapi_spec['paths']['/diagnostics/echo']
 
 
-def test_openapi_spec_has_runners_post_endpoint(openapi_spec):
-    """Verify spec has /v1/runners endpoint."""
-    assert '/v1/runners' in openapi_spec['paths']
+def test_openapi_spec_has_jit_runner_requests_post_endpoint(openapi_spec):
+    """Verify spec has /v1/webhooks/github/jit-runner-requests endpoint."""
+    assert '/v1/webhooks/github/jit-runner-requests' in openapi_spec['paths']
 
 
-def test_openapi_spec_runners_has_post_method(openapi_spec):
-    """Verify /v1/runners has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/runners']
+def test_openapi_spec_jit_runner_requests_has_post_method(openapi_spec):
+    """Verify /v1/webhooks/github/jit-runner-requests has POST method."""
+    assert 'post' in openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']
 
 
-def test_openapi_spec_has_runners_health_endpoint(openapi_spec):
-    """Verify spec has /v1/runners/health endpoint."""
-    assert '/v1/runners/health' in openapi_spec['paths']
+def test_openapi_spec_has_jit_runner_requests_health_endpoint(openapi_spec):
+    """Verify spec has /v1/webhooks/github/jit-runner-requests/health endpoint."""
+    assert '/v1/webhooks/github/jit-runner-requests/health' in openapi_spec['paths']
 
 
-def test_openapi_spec_runners_health_has_get_method(openapi_spec):
-    """Verify /v1/runners/health has GET method."""
-    assert 'get' in openapi_spec['paths']['/v1/runners/health']
+def test_openapi_spec_jit_runner_requests_health_has_get_method(openapi_spec):
+    """Verify /v1/webhooks/github/jit-runner-requests/health has GET method."""
+    assert 'get' in openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests/health']
 
 
 def test_openapi_spec_has_ec2_ami_base_endpoint(openapi_spec):
@@ -355,14 +355,14 @@ def test_openapi_spec_diagnostics_echo_has_options_method(openapi_spec):
     assert 'options' in openapi_spec['paths']['/diagnostics/echo']
 
 
-def test_openapi_spec_runners_has_options_method(openapi_spec):
-    """Verify /v1/runners has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/runners']
+def test_openapi_spec_jit_runner_requests_has_options_method(openapi_spec):
+    """Verify /v1/webhooks/github/jit-runner-requests has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']
 
 
-def test_openapi_spec_runners_health_has_options_method(openapi_spec):
-    """Verify /v1/runners/health has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/runners/health']
+def test_openapi_spec_jit_runner_requests_health_has_options_method(openapi_spec):
+    """Verify /v1/webhooks/github/jit-runner-requests/health has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests/health']
 
 
 def test_openapi_spec_ec2_ami_base_has_options_method(openapi_spec):
@@ -402,35 +402,35 @@ def test_openapi_spec_validate_headers_validates_parameters(openapi_spec):
     assert validators['validate-headers']['validateRequestParameters'] is True
 
 
-def test_openapi_spec_runners_post_has_request_validator(openapi_spec):
-    """Verify /v1/runners POST has request validator reference."""
-    post = openapi_spec['paths']['/v1/runners']['post']
+def test_openapi_spec_jit_runner_requests_post_has_request_validator(openapi_spec):
+    """Verify /v1/webhooks/github/jit-runner-requests POST has request validator reference."""
+    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
     assert 'x-amazon-apigateway-request-validator' in post
 
 
-def test_openapi_spec_runners_post_uses_validate_headers(openapi_spec):
-    """Verify /v1/runners POST uses validate-headers validator."""
-    post = openapi_spec['paths']['/v1/runners']['post']
+def test_openapi_spec_jit_runner_requests_post_uses_validate_headers(openapi_spec):
+    """Verify /v1/webhooks/github/jit-runner-requests POST uses validate-headers validator."""
+    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
     assert post['x-amazon-apigateway-request-validator'] == 'validate-headers'
 
 
-def test_openapi_spec_runners_post_has_parameters(openapi_spec):
-    """Verify /v1/runners POST has parameters defined."""
-    post = openapi_spec['paths']['/v1/runners']['post']
+def test_openapi_spec_jit_runner_requests_post_has_parameters(openapi_spec):
+    """Verify /v1/webhooks/github/jit-runner-requests POST has parameters defined."""
+    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
     assert 'parameters' in post
 
 
-def test_openapi_spec_runners_post_has_github_event_parameter(openapi_spec):
-    """Verify /v1/runners POST has x-github-event parameter."""
-    post = openapi_spec['paths']['/v1/runners']['post']
+def test_openapi_spec_jit_runner_requests_post_has_github_event_parameter(openapi_spec):
+    """Verify /v1/webhooks/github/jit-runner-requests POST has x-github-event parameter."""
+    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
     parameters = post['parameters']
     param_names = [p.get('name') for p in parameters]
     assert 'x-github-event' in param_names
 
 
-def test_openapi_spec_runners_post_github_event_is_header(openapi_spec):
+def test_openapi_spec_jit_runner_requests_post_github_event_is_header(openapi_spec):
     """Verify x-github-event parameter is a header parameter."""
-    post = openapi_spec['paths']['/v1/runners']['post']
+    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
     parameters = post['parameters']
     github_event_param = next(
         (p for p in parameters if p.get('name') == 'x-github-event'),
@@ -439,9 +439,9 @@ def test_openapi_spec_runners_post_github_event_is_header(openapi_spec):
     assert github_event_param['in'] == 'header'
 
 
-def test_openapi_spec_runners_post_github_event_is_required(openapi_spec):
+def test_openapi_spec_jit_runner_requests_post_github_event_is_required(openapi_spec):
     """Verify x-github-event header is required."""
-    post = openapi_spec['paths']['/v1/runners']['post']
+    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
     parameters = post['parameters']
     github_event_param = next(
         (p for p in parameters if p.get('name') == 'x-github-event'),
