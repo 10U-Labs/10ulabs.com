@@ -7,7 +7,7 @@ jobs:
     if: >-
       github.ref == 'refs/heads/main' &&
       github.event.inputs.dry_run != 'true'
-    name: Deploy API Shared Docker Repository Infrastructure
+    name: Deploy API shared Docker repository
     runs-on: >-
       ${{
         (vars.USE_GITHUB_HOSTED == 'true' ||
@@ -184,7 +184,8 @@ jobs:
             $TRIGGER_FLAG \
             --workflow api_shared_docker_repository \
             --repo ${{ github.repository }}
-name: Ensuring API shared Docker repository infrastructure exists
+name: >-
+  Ensuring API shared Docker repository exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
