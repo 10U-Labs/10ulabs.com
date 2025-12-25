@@ -22,8 +22,6 @@ pytestmark = pytest.mark.layer(6)
 class TestIAMCapabilities(Layer6IAMCapabilityTests):
     """Layer 6: Verify we can perform required IAM operations."""
 
-    pass  # All tests inherited from base class
-
 
 class TestS3Capabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTests):
     """Layer 6: Verify we can read/write to the terraform state bucket."""
@@ -49,5 +47,3 @@ class TestS3Capabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTests):
 
 class TestECRCapabilities(Layer6ECRCapabilityTests):
     """Layer 6: Verify we can perform ECR operations."""
-
-    pass  # All tests inherited from base class

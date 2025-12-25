@@ -15,5 +15,3 @@ pytestmark = pytest.mark.layer(5)
 
 class TestPrerequisiteResourcesConfiguration(Layer5PrerequisiteConfigurationTests):
     """Layer 5: Verify prerequisite resources are configured correctly."""
-
-    pass  # All tests inherited from base class

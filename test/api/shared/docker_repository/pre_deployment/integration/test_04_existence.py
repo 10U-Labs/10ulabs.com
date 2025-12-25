@@ -15,5 +15,3 @@ pytestmark = pytest.mark.layer(4)
 
 class TestPrerequisiteResourcesExist(Layer4PrerequisiteExistenceTests):
     """Layer 4: Verify prerequisite resources exist."""
-
-    pass  # All tests inherited from base class
