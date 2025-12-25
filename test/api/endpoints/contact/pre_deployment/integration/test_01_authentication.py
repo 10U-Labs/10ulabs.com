@@ -14,6 +14,7 @@ pytestmark = pytest.mark.layer(1)
 
 
 class TestAWSAuthentication(Layer1EndpointAuthenticationTests):
-    """Layer 1: Verify AWS credentials are valid."""
+    """Layer 1: Verify AWS credentials are valid.
 
-    pass  # All tests inherited from base class
+    All tests inherited from base class.
+    """
