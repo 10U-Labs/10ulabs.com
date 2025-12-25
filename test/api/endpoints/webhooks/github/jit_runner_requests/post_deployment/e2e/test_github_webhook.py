@@ -32,8 +32,8 @@ def test_github_webhook_for_jit_runner_requests_endpoint_exists(github_pat, conf
     assert webhook is not None
 
 
-def test_github_webhook_for_jit_runner_requests_endpoint_listens_for_workflow_job_events(github_pat, config):
-    """Test github webhook for jit-runner-requests endpoint listens for workflow job events."""
+def test_github_webhook_jit_runner_requests_listens_for_workflow_job_events(github_pat, config):
+    """Test github webhook for jit-runner-requests endpoint listens for workflow_job."""
     hooks = _fetch_github_hooks(github_pat, config['github_repo'])
     webhook = _get_jit_runner_requests_webhook(hooks, config['api_fqdn'])
     assert "workflow_job" in webhook["events"]

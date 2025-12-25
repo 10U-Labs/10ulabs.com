@@ -64,7 +64,9 @@ def cb_dynamodb_reset_mock():
             yield mock_db
 
 
-RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
+RUNNERS_SRC_PATH = (
+    REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
+)
 RUNNERS_LAMBDAS_PATH = RUNNERS_SRC_PATH / "lambdas"
 
 

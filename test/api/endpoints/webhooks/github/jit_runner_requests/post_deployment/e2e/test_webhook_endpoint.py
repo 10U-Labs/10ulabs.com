@@ -30,9 +30,8 @@ def _create_workflow_job_headers(with_signature=False):
 
 def _post_webhook(api_url, payload, headers):
     """Make a POST request to the webhook endpoint."""
-    return requests.post(
-        f"{api_url}/v1/webhooks/github/jit-runner-requests", json=payload, headers=headers, timeout=10
-    )
+    url = f"{api_url}/v1/webhooks/github/jit-runner-requests"
+    return requests.post(url, json=payload, headers=headers, timeout=10)
 
 
 def test_v1_runners_health_get_requires_auth(api_url):
@@ -73,9 +72,8 @@ def test_v1_runners_post_rejects_missing_github_event_header(api_url):
     """
     skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests", "POST")
     payload = {"action": "queued"}
-    response = requests.post(
-        f"{api_url}/v1/webhooks/github/jit-runner-requests", json=payload, headers=TEST_HEADERS, timeout=10
-    )
+    url = f"{api_url}/v1/webhooks/github/jit-runner-requests"
+    response = requests.post(url, json=payload, headers=TEST_HEADERS, timeout=10)
     assert response.status_code == 400
 
 

@@ -17,6 +17,8 @@ from .conftest import circuit_breaker_utils
 
 
 CB_ENV = {'WEBHOOK_FUNCTION_NAME': 'test-function', 'STATE_TABLE_NAME': 'test-table'}
+CB_PATH = '/v1/webhooks/github/jit-runner-requests/circuit-breaker'
+CB_RESET_PATH = f'{CB_PATH}/reset'
 
 
 @contextmanager
@@ -266,7 +268,7 @@ class TestLambdaHandlerGetStatus:
         self, circuit_breaker_reset, lambda_context, cb_status_mock_factory
     ):
         """Test lambda handler returns 200 when circuit breaker is healthy."""
-        event = {'httpMethod': 'GET', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker'}
+        event = {'httpMethod': 'GET', 'path': CB_PATH}
         mock_dynamodb, mock_lambda = cb_status_mock_factory(db_state='closed')
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
@@ -277,7 +279,7 @@ class TestLambdaHandlerGetStatus:
         self, circuit_breaker_reset, lambda_context, cb_status_mock_factory
     ):
         """Test lambda handler returns 503 when circuit breaker is unhealthy."""
-        event = {'httpMethod': 'GET', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker'}
+        event = {'httpMethod': 'GET', 'path': CB_PATH}
         mock_dynamodb, mock_lambda = cb_status_mock_factory(
             db_state='open', sqs_state='Disabled', concurrency=0
         )
@@ -290,7 +292,7 @@ class TestLambdaHandlerGetStatus:
         self, circuit_breaker_reset, lambda_context, cb_status_mock_factory
     ):
         """Test lambda handler includes CORS headers."""
-        event = {'httpMethod': 'GET', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker'}
+        event = {'httpMethod': 'GET', 'path': CB_PATH}
         mock_dynamodb, mock_lambda = cb_status_mock_factory(db_state='closed')
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
@@ -305,7 +307,7 @@ class TestLambdaHandlerPostReset:
         self, circuit_breaker_reset, lambda_context
     ):
         """Test lambda handler returns 200 on successful reset."""
-        event = {'httpMethod': 'POST', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker/reset'}
+        event = {'httpMethod': 'POST', 'path': CB_RESET_PATH}
         mock_dynamodb, mock_lambda = _create_post_reset_mocks()
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
@@ -314,7 +316,7 @@ class TestLambdaHandlerPostReset:
 
     def test_02_returns_success_true(self, circuit_breaker_reset, lambda_context):
         """Test lambda handler returns success true on reset."""
-        event = {'httpMethod': 'POST', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker/reset'}
+        event = {'httpMethod': 'POST', 'path': CB_RESET_PATH}
         mock_dynamodb, mock_lambda = _create_post_reset_mocks()
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
@@ -324,7 +326,7 @@ class TestLambdaHandlerPostReset:
 
     def test_03_includes_details(self, circuit_breaker_reset, lambda_context):
         """Test lambda handler includes details in reset response."""
-        event = {'httpMethod': 'POST', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker/reset'}
+        event = {'httpMethod': 'POST', 'path': CB_RESET_PATH}
         mock_dynamodb, mock_lambda = _create_post_reset_mocks()
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
@@ -336,7 +338,7 @@ class TestLambdaHandlerPostReset:
         self, circuit_breaker_reset, lambda_context
     ):
         """Test lambda handler returns 500 on partial failure."""
-        event = {'httpMethod': 'POST', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker/reset'}
+        event = {'httpMethod': 'POST', 'path': CB_RESET_PATH}
         mock_dynamodb = MagicMock()
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.side_effect = ClientError(
@@ -349,13 +351,13 @@ class TestLambdaHandlerPostReset:
 
 
 class TestLambdaHandlerPostDirectPath:
-    """Tests for POST /v1/webhooks/github/jit-runner-requests/circuit-breaker (without /reset suffix)."""
+    """Tests for POST on CB_PATH directly (without /reset suffix)."""
 
     def test_01_accepts_post_on_circuit_breaker_path(
         self, circuit_breaker_reset, lambda_context
     ):
-        """Test POST works on /v1/webhooks/github/jit-runner-requests/circuit-breaker directly."""
-        event = {'httpMethod': 'POST', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker'}
+        """Test POST works on CB_PATH directly."""
+        event = {'httpMethod': 'POST', 'path': CB_PATH}
         mock_dynamodb, mock_lambda = _create_post_reset_mocks()
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
@@ -366,7 +368,7 @@ class TestLambdaHandlerPostDirectPath:
         self, circuit_breaker_reset, lambda_context
     ):
         """Test POST on /circuit-breaker returns success."""
-        event = {'httpMethod': 'POST', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker'}
+        event = {'httpMethod': 'POST', 'path': CB_PATH}
         mock_dynamodb, mock_lambda = _create_post_reset_mocks()
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
@@ -378,7 +380,7 @@ class TestLambdaHandlerPostDirectPath:
         self, circuit_breaker_reset, lambda_context
     ):
         """Test POST on /circuit-breaker includes details."""
-        event = {'httpMethod': 'POST', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker'}
+        event = {'httpMethod': 'POST', 'path': CB_PATH}
         mock_dynamodb, mock_lambda = _create_post_reset_mocks()
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
@@ -394,7 +396,7 @@ class TestLambdaHandlerMethodNotAllowed:
         self, circuit_breaker_reset, lambda_context
     ):
         """Test lambda handler returns 405 for unsupported methods."""
-        event = {'httpMethod': 'DELETE', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker'}
+        event = {'httpMethod': 'DELETE', 'path': CB_PATH}
         with patch.dict(os.environ, {
             'WEBHOOK_FUNCTION_NAME': 'test-function',
             'STATE_TABLE_NAME': 'test-table'
@@ -404,7 +406,7 @@ class TestLambdaHandlerMethodNotAllowed:
 
     def test_02_includes_error_message(self, circuit_breaker_reset, lambda_context):
         """Test lambda handler includes error message for 405."""
-        event = {'httpMethod': 'PUT', 'path': '/v1/webhooks/github/jit-runner-requests/circuit-breaker'}
+        event = {'httpMethod': 'PUT', 'path': CB_PATH}
         with patch.dict(os.environ, {
             'WEBHOOK_FUNCTION_NAME': 'test-function',
             'STATE_TABLE_NAME': 'test-table'

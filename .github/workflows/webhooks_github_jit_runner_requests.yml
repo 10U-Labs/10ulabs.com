@@ -76,11 +76,15 @@ jobs:
           cd src/api/endpoints/webhooks/github/jit_runner_requests
           terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform init
+        run: |
+          cd src/api/endpoints/webhooks/github/jit_runner_requests
+          terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/api/endpoints/webhooks/github/jit_runner_requests && tflint --init && tflint
+        run: |
+          cd src/api/endpoints/webhooks/github/jit_runner_requests
+          tflint --init && tflint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -106,14 +110,14 @@ jobs:
         run: python3 -m pip install pylint
       - name: Run pylint on source
         run: |
-          python3 -m pylint lib/python/ src/api/endpoints/webhooks/github/jit_runner_requests/lambdas/ \
-            --fail-under=10.0
+          SRC=src/api/endpoints/webhooks/github/jit_runner_requests
+          python3 -m pylint lib/python/ $SRC/lambdas/ --fail-under=10.0
       - name: Run pylint on tests
         run: |
+          TEST=test/api/endpoints/webhooks/github/jit_runner_requests
           PYTHONPATH=lib/python python3 -m pylint \
             lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py test/api/endpoints/webhooks/github/jit_runner_requests/ \
-            --fail-under=10.0
+            test/api/endpoints/conftest.py $TEST/ --fail-under=10.0
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -121,12 +125,15 @@ jobs:
         name: Install mypy
         run: python3 -m pip install mypy boto3-stubs types-requests types-PyYAML
       - name: Run mypy on source
-        run: python3 -m mypy lib/python/ src/api/endpoints/webhooks/github/jit_runner_requests/lambdas/
+        run: |
+          SRC=src/api/endpoints/webhooks/github/jit_runner_requests
+          python3 -m mypy lib/python/ $SRC/lambdas/
       - name: Run mypy on tests
         run: |
+          TEST=test/api/endpoints/webhooks/github/jit_runner_requests
           MYPYPATH=lib/python python3 -m mypy \
             lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py test/api/endpoints/webhooks/github/jit_runner_requests/
+            test/api/endpoints/conftest.py $TEST/
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -135,8 +142,9 @@ jobs:
         run: npm install -g jscpd
       - name: Check for duplicate code in source Python files
         run: |
+          SRC=src/api/endpoints/webhooks/github/jit_runner_requests
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/api/endpoints/webhooks/github/jit_runner_requests/lambdas/
+            lib/python/ $SRC/lambdas/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -149,27 +157,31 @@ jobs:
         run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Run unit tests
         run: |
+          TEST=test/api/endpoints/webhooks/github/jit_runner_requests
           PYTHONPATH=lib/python python3 -m pytest \
-            test/api/endpoints/webhooks/github/jit_runner_requests/pre_deployment/unit/ \
+            $TEST/pre_deployment/unit/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          TEST=test/api/endpoints/webhooks/github/jit_runner_requests/pre_deployment/integration
+          BASE=test/api/endpoints/webhooks/github/jit_runner_requests
           PYTHONPATH=lib/python python3 -m pytest \
-            $TEST/ \
+            $BASE/pre_deployment/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Apply
-        run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply -auto-approve
+        run: |
+          cd src/api/endpoints/webhooks/github/jit_runner_requests
+          terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          TEST=test/api/endpoints/webhooks/github/jit_runner_requests/post_deployment/integration
+          BASE=test/api/endpoints/webhooks/github/jit_runner_requests
           PYTHONPATH=lib/python python3 -m pytest \
-            $TEST/ \
+            $BASE/post_deployment/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Run E2E tests
         run: |
+          BASE=test/api/endpoints/webhooks/github/jit_runner_requests
           PYTHONPATH=lib/python python3 -m pytest \
-            test/api/endpoints/webhooks/github/jit_runner_requests/post_deployment/e2e/ \
+            $BASE/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -198,7 +210,9 @@ jobs:
             $TRIGGER_FLAG \
             --workflow webhooks_github_jit_runner_requests \
             --repo ${{ github.repository }}
-name: Ensuring the /v1/webhooks/github/jit-runner-requests API endpoint exists and is properly configured
+name: >-
+  Ensuring the /v1/webhooks/github/jit-runner-requests API endpoint
+  exists and is properly configured
 on:
   workflow_dispatch:
     inputs:

@@ -8,7 +8,9 @@ import pytest
 from repo_utils import REPO_ROOT
 from test_fixtures import get_shared_config, get_tfvars_values, get_endpoint_local_values
 
-RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
+RUNNERS_SRC_PATH = (
+    REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
+)
 ECS_RUNNER_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
 
 # Use shared AWS fixtures (provides ssm_client, etc.)

@@ -23,7 +23,10 @@ from test_fixtures.integration import create_security_group_existence_test
 pytestmark = pytest.mark.layer(4)
 
 
-RUNNERS_SRC = Path(__file__).parents[8] / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
+RUNNERS_SRC = (
+    Path(__file__).parents[8] / "src" / "api" / "endpoints" / "webhooks"
+    / "github" / "jit_runner_requests"
+)
 SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"
 
 

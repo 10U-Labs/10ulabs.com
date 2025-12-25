@@ -135,7 +135,8 @@ def test_circuit_breaker_status_contains_sqs_event_source_field(api_url, api_key
     assert "sqs_event_source" in data
 
 
-# NOTE: POST /v1/webhooks/github/jit-runner-requests/circuit-breaker (reset) is not tested here because
-# calling it would reset a legitimately open circuit breaker, potentially
+# NOTE: POST /v1/webhooks/github/jit-runner-requests/circuit-breaker (reset)
+# is not tested here because calling it would reset a legitimately open
+# circuit breaker, potentially
 # causing damage. The reset endpoint should only be tested manually or in
 # isolated environments.
