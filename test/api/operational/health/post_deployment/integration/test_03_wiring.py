@@ -46,3 +46,20 @@ class TestHealthSpecificIAMWiring:
         assert len(inline_policies) > 0, (
             f"IAM role '{role_name}' has no inline policies for EC2 describe"
         )
+
+    def test_health_handler_role_has_lambda_trust_relationship(self, iam_client, config):
+        """Verify IAM role trusts Lambda service."""
+        function_name = config.get(
+            'health_handler_function_name', 'TenULabsHealthHandler'
+        )
+        role_name = f"{function_name}ServiceRole"
+        response = iam_client.get_role(RoleName=role_name)
+        assume_role_policy = response['Role']['AssumeRolePolicyDocument']
+        statements = assume_role_policy.get('Statement', [])
+        lambda_trusted = any(
+            stmt.get('Principal', {}).get('Service') == 'lambda.amazonaws.com'
+            for stmt in statements
+        )
+        assert lambda_trusted, (
+            f"IAM role '{role_name}' does not trust lambda.amazonaws.com"
+        )

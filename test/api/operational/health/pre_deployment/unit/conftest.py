@@ -1,5 +1,4 @@
 """Pytest fixtures for health endpoint pre-deployment tests."""
-import importlib.util
 from types import ModuleType
 from typing import Dict
 from unittest.mock import MagicMock, patch
@@ -9,32 +8,14 @@ from test.api.operational.health.conftest import HEALTH_SRC
 import pytest
 from botocore.exceptions import ClientError
 
-from lambda_response import (
-    parse_response_body,
-    assert_response_status,
-    assert_json_content_type,
-    assert_cors_headers,
-)
 from boto_mocks import setup_mock_ec2_vpc_responses
-
-# Re-export for backward compatibility
-__all__ = [
-    'parse_response_body',
-    'assert_response_status',
-    'assert_json_content_type',
-    'assert_cors_headers',
-]
+from module_utils import create_lambda_loader
 
 
 def load_health_handler_module() -> ModuleType:
     """Load the health handler module dynamically."""
-    handler_path = HEALTH_SRC / "lambda" / "handler.py"
-    spec = importlib.util.spec_from_file_location("health_handler", handler_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    loader = create_lambda_loader(HEALTH_SRC / "lambda")
+    return loader("handler.py", "health_handler")
 
 
 @pytest.fixture

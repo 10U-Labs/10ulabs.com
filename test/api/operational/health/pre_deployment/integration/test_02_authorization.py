@@ -18,12 +18,14 @@ pytestmark = pytest.mark.layer(2)
 
 
 class TestAPIGatewayAuthorization(Layer2APIGatewayAuthorizationTests):
-    """Layer 2: Verify permission to inspect API Gateway resources."""
+    """Layer 2: Verify permission to inspect API Gateway resources.
 
-    pass  # All tests inherited from base class
+    All tests inherited from Layer2APIGatewayAuthorizationTests base class.
+    """
 
 
 class TestLambdaAndIAMAuthorization(Layer2LambdaAndIAMAuthorizationTests):
-    """Layer 2: Verify permission to inspect Lambda and IAM resources."""
+    """Layer 2: Verify permission to inspect Lambda and IAM resources.
 
-    pass  # All tests inherited from base class
+    All tests inherited from Layer2LambdaAndIAMAuthorizationTests base class.
+    """

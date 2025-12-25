@@ -1,5 +1,5 @@
 """Unit tests for health endpoint handler."""
-from .conftest import (
+from lambda_response import (
     parse_response_body,
     assert_response_status,
     assert_json_content_type,

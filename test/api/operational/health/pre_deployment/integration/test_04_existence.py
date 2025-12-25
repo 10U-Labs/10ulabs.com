@@ -16,6 +16,7 @@ pytestmark = pytest.mark.layer(4)
 
 
 class TestAPIBackendPrerequisites(Layer4APIBackendPrerequisiteTests):
-    """Layer 4: Verify api_backend prerequisites exist."""
+    """Layer 4: Verify api_backend prerequisites exist.
 
-    pass  # All tests inherited from base class
+    All tests inherited from Layer4APIBackendPrerequisiteTests base class.
+    """

@@ -15,6 +15,7 @@ pytestmark = pytest.mark.layer(6)
 
 
 class TestDeploymentCapabilities(Layer6DeploymentCapabilityTests):
-    """Layer 6: Verify capabilities to deploy Lambda, CloudWatch, and IAM."""
+    """Layer 6: Verify capabilities to deploy Lambda, CloudWatch, and IAM.
 
-    pass  # All tests inherited from base class
+    All tests inherited from Layer6DeploymentCapabilityTests base class.
+    """
