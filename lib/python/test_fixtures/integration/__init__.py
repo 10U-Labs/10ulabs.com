@@ -55,6 +55,7 @@ from test_fixtures.integration.factories import (
     handle_ecr_error,
 )
 from test_fixtures.integration.helpers import (
+    check_service_can_assume_role,
     get_aws_account_id_via_cli,
     handle_ecr_authorization_error,
 )
@@ -98,6 +99,7 @@ __all__ = [
     "create_www_shared_s3_existence_tests",
     "handle_ecr_error",
     # Helper functions
+    "check_service_can_assume_role",
     "get_aws_account_id_via_cli",
     "handle_ecr_authorization_error",
 ]

@@ -1,21 +1,15 @@
 """Pytest fixtures for image_for_ecs_runners post (Docker build) tests."""
 import os
 import re
-import sys
 from typing import Any, Dict
 
 import pytest
 from repo_utils import REPO_ROOT
-
+from test_fixtures.integration import get_aws_account_id_via_cli
 
 POST_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ecs_runners" / "post"
 CONFIG_PATH = POST_DIR / "config.json"
 DOCKERFILE_PATH = POST_DIR / "Dockerfile"
-
-# Add lib/python to path for imports
-LIB_DIR = REPO_ROOT / "lib" / "python"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
 
 
 def _get_terraform_output_value(output_name: str) -> str:
@@ -51,7 +45,6 @@ def get_aws_region() -> str:
 
 def get_aws_account_id() -> str:
     """Get AWS account ID using the AWS CLI."""
-    from test_fixtures.integration import get_aws_account_id_via_cli
     return get_aws_account_id_via_cli()
 
 

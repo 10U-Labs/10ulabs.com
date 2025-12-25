@@ -13,26 +13,14 @@ Six-layer testing model:
 """
 from botocore.exceptions import ClientError
 import pytest
+from test_fixtures.integration import Layer2IAMAuthorizationTests
 
 
 pytestmark = pytest.mark.layer(2)
 
 
-def test_can_call_iam_get_role_api(iam_client, current_role_name):
-    """Verify we have permission to call iam:GetRole."""
-    if not current_role_name:
-        pytest.skip("Could not determine current role name")
-    try:
-        iam_client.get_role(RoleName=current_role_name)
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "AccessDenied":
-            pytest.fail(
-                f"No permission to call iam:GetRole on '{current_role_name}'. "
-                "The role may lack iam:GetRole permission for itself."
-            )
-        if e.response["Error"]["Code"] == "NoSuchEntity":
-            pytest.fail(f"IAM role '{current_role_name}' does not exist.")
-        raise
+class TestIAMAuthorization(Layer2IAMAuthorizationTests):
+    """Inherit IAM authorization tests."""
 
 
 def test_can_call_dynamodb_list_tables_api(dynamodb_client):

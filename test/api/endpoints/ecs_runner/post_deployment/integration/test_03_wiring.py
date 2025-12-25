@@ -4,24 +4,12 @@ Verify components are connected properly.
 """
 from botocore.exceptions import ClientError
 import pytest
-from test_fixtures.integration import create_lambda_execution_role_wiring_tests
+from test_fixtures.integration import (
+    check_service_can_assume_role,
+    create_lambda_execution_role_wiring_tests,
+)
 
 pytestmark = pytest.mark.layer(3)
-
-
-def _check_service_can_assume_role(trust_policy, service_name):
-    """Check if a service can assume a role based on trust policy."""
-    statements = trust_policy.get("Statement", [])
-    for statement in statements:
-        if statement.get("Effect") != "Allow":
-            continue
-        principals = statement.get("Principal", {})
-        service = principals.get("Service", [])
-        if isinstance(service, str):
-            service = [service]
-        if service_name in service:
-            return True
-    return False
 
 
 # Create Lambda execution role wiring tests using lambda_function fixture
@@ -55,7 +43,7 @@ class TestECSTaskRole:
         try:
             response = iam_client.get_role(RoleName=ecs_task_role_name)
             trust_policy = response["Role"].get("AssumeRolePolicyDocument", {})
-            can_assume = _check_service_can_assume_role(
+            can_assume = check_service_can_assume_role(
                 trust_policy, "ecs-tasks.amazonaws.com"
             )
 
