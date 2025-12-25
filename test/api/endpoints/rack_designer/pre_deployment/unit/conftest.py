@@ -1,25 +1,15 @@
 """Pytest fixtures for rack designer pre-deployment unit tests."""
-import importlib.util
 import os
-from types import ModuleType
 from unittest.mock import patch, MagicMock
 
 import pytest
+from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
 
 RACK_DESIGNER_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "rack_designer"
 RACK_DESIGNER_LAMBDAS_PATH = RACK_DESIGNER_SRC_PATH / "lambdas"
 
-
-def load_lambda_module(filename: str, module_name: str) -> ModuleType:
-    """Load a Lambda module from the rack designer lambdas directory."""
-    handler_path = RACK_DESIGNER_LAMBDAS_PATH / filename
-    spec = importlib.util.spec_from_file_location(module_name, handler_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+load_lambda_module = create_lambda_loader(RACK_DESIGNER_LAMBDAS_PATH)
 
 
 @pytest.fixture(name="handler")
