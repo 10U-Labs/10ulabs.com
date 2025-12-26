@@ -14,7 +14,7 @@
   },
   "api_shared_docker_repository": {
     "depends_on": [
-      "api_endpoint_v1_runners_ec2_images"
+      "api_endpoint_v1_runners_ec2"
     ],
     "name": "Deploying API Shared Docker Repository Infrastructure",
     "paths": [
@@ -58,7 +58,7 @@
   },
   "api_endpoint_v1_runners_ec2": {
     "depends_on": [
-      "api_shared_networking"
+      "api_endpoint_v1_runners_ec2_images"
     ],
     "name": "Ensuring the /v1/runners/ec2 API endpoint exists and is properly configured",
     "paths": [
@@ -96,7 +96,7 @@
   },
   "api_endpoint_v1_runners_ecs": {
     "depends_on": [
-      "api_shared_docker_repository"
+      "api_endpoint_v1_runners_ecs_images"
     ],
     "name": "Ensuring the /v1/runners/ecs API endpoint exists and is properly configured",
     "paths": [
@@ -108,7 +108,7 @@
   },
   "api_endpoint_v1_runners_ec2_images": {
     "depends_on": [
-      "api_endpoint_v1_runners_ec2"
+      "api_shared_networking"
     ],
     "name": "Ensuring /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [
@@ -130,7 +130,7 @@
   },
   "api_endpoint_v1_runners_ecs_images": {
     "depends_on": [
-      "api_endpoint_v1_runners_ecs"
+      "api_shared_docker_repository"
     ],
     "name": "Ensuring /v1/runners/ecs/images API endpoint exists and is properly configured",
     "paths": [
@@ -163,7 +163,7 @@
   },
   "webhooks_github_jit_runner_requests": {
     "depends_on": [
-      "api_endpoint_v1_runners_ecs_images"
+      "api_endpoint_v1_runners_ecs"
     ],
     "name": "Ensuring the /v1/webhooks/github/jit-runner-requests API endpoint exists and is properly configured",
     "paths": [
