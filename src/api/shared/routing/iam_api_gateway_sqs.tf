@@ -37,8 +37,7 @@ resource "aws_iam_role_policy" "api_gateway_sqs" {
       ]
       Resource = [
         "arn:aws:sqs:${local.aws_region}:${local.aws_account_id}:${local.webhook_ingress_queue_name}",
-        "arn:aws:sqs:${local.aws_region}:${local.aws_account_id}:${local.agent_webhook_queue_name}",
-        "arn:aws:sqs:${local.aws_region}:${local.aws_account_id}:${local.agent_invoker_queue_name}"
+        "arn:aws:sqs:${local.aws_region}:${local.aws_account_id}:${local.runners_queue_name}"
       ]
     }]
   })
