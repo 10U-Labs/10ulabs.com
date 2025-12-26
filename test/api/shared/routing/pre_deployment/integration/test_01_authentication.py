@@ -1,4 +1,4 @@
-"""Layer 1: Authentication tests for api_backend pre-deployment validation.
+"""Layer 1: Authentication tests for api_shared_routing pre-deployment validation.
 
 Verify AWS credentials are valid before testing authorization or state.
 """

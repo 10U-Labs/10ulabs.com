@@ -163,7 +163,7 @@ jobs:
           fi
           python3 src/workflowctl/workflowctl.py dispatch \
             $TRIGGER_FLAG \
-            --workflow operational_diagnostics \
+            --workflow api_operational_diagnostics \
             --repo ${{ github.repository }}
 name: >-
   Ensuring the /diagnostics/echo API endpoint exists and is properly configured

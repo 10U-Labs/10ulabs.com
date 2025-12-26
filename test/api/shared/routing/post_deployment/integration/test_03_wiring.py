@@ -1,4 +1,4 @@
-"""Layer 3: Wiring tests for api_backend post-deployment.
+"""Layer 3: Wiring tests for api_shared_routing post-deployment.
 
 These tests verify that components are connected properly.
 Tests assume Layer 1 existence and Layer 2 configuration tests have passed.
@@ -31,7 +31,7 @@ def test_api_gateway_has_permission_to_invoke_health_lambda(lambda_client, confi
         assert "Policy" in response
     except ClientError as err:
         if err.response["Error"]["Code"] == "ResourceNotFoundException":
-            pytest.skip("Health Lambda not deployed (managed by operational_health.yml)")
+            pytest.skip("Health Lambda not deployed (managed by api_operational_health.yml)")
         raise
 
 

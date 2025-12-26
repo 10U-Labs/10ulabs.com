@@ -1,4 +1,4 @@
-"""Layer 1: Existence tests for api_backend post-deployment.
+"""Layer 1: Existence tests for api_shared_routing post-deployment.
 
 These tests verify that resources were created by Terraform.
 Tests are organized by resource domain for readability.

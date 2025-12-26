@@ -1,4 +1,4 @@
-"""Layer 2: Authorization tests for api_backend pre-deployment validation.
+"""Layer 2: Authorization tests for api_shared_routing pre-deployment validation.
 
 Verify permission to inspect prerequisite resources (not existence, not capability).
 """

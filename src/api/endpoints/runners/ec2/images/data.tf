@@ -1,4 +1,4 @@
-data "terraform_remote_state" "api_backend" {
+data "terraform_remote_state" "api_shared_routing" {
   backend = "s3"
 
   config = {

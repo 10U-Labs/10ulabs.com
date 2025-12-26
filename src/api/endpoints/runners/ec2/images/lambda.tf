@@ -24,8 +24,8 @@ resource "aws_lambda_function" "handler" {
       GITHUB_REPO               = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME  = module.shared.ssm_github_pat_name
       SSM_EC2_RUNNER_AMI_LATEST = module.shared.ssm_ec2_runner_ami_latest
-      SUBNETS                   = data.terraform_remote_state.api_backend.outputs.vpc_public_subnet_ids
-      VPC_ID                    = data.terraform_remote_state.api_backend.outputs.vpc_id
+      SUBNETS                   = data.terraform_remote_state.api_shared_routing.outputs.vpc_public_subnet_ids
+      VPC_ID                    = data.terraform_remote_state.api_shared_routing.outputs.vpc_id
     }
   }
 
@@ -58,5 +58,5 @@ resource "aws_lambda_permission" "api_gateway" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.handler.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api_backend.outputs.api_gateway_rest_api_id}/*"
+  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api_shared_routing.outputs.api_gateway_rest_api_id}/*"
 }

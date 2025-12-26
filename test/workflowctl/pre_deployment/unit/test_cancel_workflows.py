@@ -22,13 +22,13 @@ SAMPLE_GRAPH = {
         "name": "WWW Shared",
         "depends_on": ["bootstrap"],
     },
-    "api_backend": {
+    "api_shared_routing": {
         "name": "API Backend",
         "depends_on": ["www_shared"],
     },
-    "operational_health": {
+    "api_operational_health": {
         "name": "Health Endpoint",
-        "depends_on": ["api_backend"],
+        "depends_on": ["api_shared_routing"],
     },
 }
 
@@ -38,23 +38,23 @@ class TestGetAllDescendants:
 
     def test_leaf_has_no_descendants(self) -> None:
         """Test leaf workflow has no descendants."""
-        descendants = get_all_descendants("operational_health", SAMPLE_GRAPH)
+        descendants = get_all_descendants("api_operational_health", SAMPLE_GRAPH)
         assert descendants == set()
 
     def test_single_descendant(self) -> None:
         """Test workflow with single direct descendant."""
-        descendants = get_all_descendants("api_backend", SAMPLE_GRAPH)
-        assert descendants == {"operational_health"}
+        descendants = get_all_descendants("api_shared_routing", SAMPLE_GRAPH)
+        assert descendants == {"api_operational_health"}
 
     def test_transitive_descendants(self) -> None:
         """Test workflow with transitive descendants."""
         descendants = get_all_descendants("www_shared", SAMPLE_GRAPH)
-        assert descendants == {"api_backend", "operational_health"}
+        assert descendants == {"api_shared_routing", "api_operational_health"}
 
     def test_root_has_all_descendants(self) -> None:
         """Test root workflow has all others as descendants."""
         descendants = get_all_descendants("bootstrap", SAMPLE_GRAPH)
-        assert descendants == {"www_shared", "api_backend", "operational_health"}
+        assert descendants == {"www_shared", "api_shared_routing", "api_operational_health"}
 
     def test_caching_stores_www_shared(self) -> None:
         """Test that caching stores www_shared."""
@@ -62,17 +62,17 @@ class TestGetAllDescendants:
         get_all_descendants("www_shared", SAMPLE_GRAPH, cache)
         assert "www_shared" in cache
 
-    def test_caching_stores_api_backend(self) -> None:
-        """Test that caching stores api_backend transitively."""
+    def test_caching_stores_api_shared_routing(self) -> None:
+        """Test that caching stores api_shared_routing transitively."""
         cache: dict[str, set[str]] = {}
         get_all_descendants("www_shared", SAMPLE_GRAPH, cache)
-        assert "api_backend" in cache
+        assert "api_shared_routing" in cache
 
-    def test_caching_stores_operational_health(self) -> None:
-        """Test that caching stores operational_health transitively."""
+    def test_caching_stores_api_operational_health(self) -> None:
+        """Test that caching stores api_operational_health transitively."""
         cache: dict[str, set[str]] = {}
         get_all_descendants("www_shared", SAMPLE_GRAPH, cache)
-        assert "operational_health" in cache
+        assert "api_operational_health" in cache
 
 
 class TestGetWorkflowsToCancel:
@@ -81,13 +81,13 @@ class TestGetWorkflowsToCancel:
     def test_single_root_includes_descendants(self) -> None:
         """Test single merge root includes all descendants."""
         to_cancel = get_workflows_to_cancel(["www_shared"], SAMPLE_GRAPH)
-        expected = {"www_shared", "api_backend", "operational_health"}
+        expected = {"www_shared", "api_shared_routing", "api_operational_health"}
         assert to_cancel == expected
 
     def test_leaf_root_includes_only_itself(self) -> None:
         """Test leaf merge root includes only itself."""
-        to_cancel = get_workflows_to_cancel(["operational_health"], SAMPLE_GRAPH)
-        assert to_cancel == {"operational_health"}
+        to_cancel = get_workflows_to_cancel(["api_operational_health"], SAMPLE_GRAPH)
+        assert to_cancel == {"api_operational_health"}
 
     def test_multiple_roots_combine_descendants(self) -> None:
         """Test multiple merge roots combine their descendants."""
@@ -112,8 +112,8 @@ class TestBuildNameToKeyMap:
         expected = {
             "Bootstrap": "bootstrap",
             "WWW Shared": "www_shared",
-            "API Backend": "api_backend",
-            "Health Endpoint": "operational_health",
+            "API Backend": "api_shared_routing",
+            "Health Endpoint": "api_operational_health",
         }
         assert name_to_key == expected
 

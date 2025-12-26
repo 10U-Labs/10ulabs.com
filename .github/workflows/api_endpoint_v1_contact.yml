@@ -140,7 +140,7 @@ jobs:
           fi
           python3 src/workflowctl/workflowctl.py dispatch \
             $TRIGGER_FLAG \
-            --workflow endpoint_v1_contact \
+            --workflow api_endpoint_v1_contact \
             --repo ${{ github.repository }}
 name: Ensuring the /v1/contact API endpoint exists and is properly configured
 on:

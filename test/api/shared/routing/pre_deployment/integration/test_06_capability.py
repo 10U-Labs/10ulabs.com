@@ -1,4 +1,4 @@
-"""Layer 6: Capability tests for api_backend pre-deployment validation.
+"""Layer 6: Capability tests for api_shared_routing pre-deployment validation.
 
 Verify we can perform required operations (assumes configuration passed).
 """
@@ -26,7 +26,7 @@ class TestS3StateCapabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTe
     """Layer 6: Verify we can read/write to the terraform state bucket."""
 
     def test_can_read_state_file(self, s3_client, state_bucket_name):
-        """Verify we can read the api_backend state file."""
+        """Verify we can read the api_shared_routing state file."""
         state_key = "api/terraform.tfstate"
         try:
             s3_client.head_object(Bucket=state_bucket_name, Key=state_key)

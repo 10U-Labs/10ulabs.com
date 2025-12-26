@@ -1,4 +1,4 @@
-"""Layer 2: Configuration tests for api_backend post-deployment.
+"""Layer 2: Configuration tests for api_shared_routing post-deployment.
 
 These tests verify that resources are configured correctly.
 Tests assume Layer 1 existence tests have passed.

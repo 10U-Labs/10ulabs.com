@@ -36,14 +36,14 @@ SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"
 
 
 class TestApiBackendFirehoseResources:
-    """Layer 4: Verify api_backend Firehose resources exist in AWS."""
+    """Layer 4: Verify api_shared_routing Firehose resources exist in AWS."""
 
     def test_firehose_delivery_stream_exists(
         self, firehose_client, firehose_delivery_stream_name
     ):
         """Verify Firehose delivery stream exists.
 
-        This resource is created by api_backend and required for runners
+        This resource is created by api_shared_routing and required for runners
         subscription filters to route logs to S3.
         """
         response = firehose_client.describe_delivery_stream(
@@ -61,7 +61,7 @@ class TestApiBackendFirehoseResources:
     ):
         """Verify CloudWatch Logs Firehose IAM role exists.
 
-        This role is created by api_backend and required for subscription
+        This role is created by api_shared_routing and required for subscription
         filters to write to Firehose.
         """
         response = iam_client.get_role(RoleName=cloudwatch_logs_firehose_role_name)

@@ -18,7 +18,7 @@ SAMPLE_GRAPH = {
         "depends_on": ["bootstrap"],
         "paths": ["src/www/shared/**"],
     },
-    "api_backend": {
+    "api_shared_routing": {
         "name": "Ensuring API backend exists and is properly configured",
         "depends_on": ["www_shared"],
         "paths": ["src/api/backend/**"],
@@ -35,7 +35,7 @@ class TestBuildNameToKeyMap:
         expected = {
             "Ensuring bootstrap infrastructure exists and is properly configured": "bootstrap",
             "WWW Shared": "www_shared",
-            "Ensuring API backend exists and is properly configured": "api_backend",
+            "Ensuring API backend exists and is properly configured": "api_shared_routing",
         }
         assert name_to_key == expected
 

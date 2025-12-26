@@ -22,7 +22,7 @@ from test_fixtures.terraform import terraform_init, terraform_output
 pytest_plugins = ['test_fixtures.aws']
 
 # Common directory constants
-API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
+API_SHARED_ROUTING_DIR = REPO_ROOT / "src" / "api" / "shared" / "routing"
 ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
 
 
@@ -45,22 +45,22 @@ def get_runners_outputs(directory: Path) -> Dict[str, str]:
 
 
 @pytest.fixture(scope="session")
-def api_backend_terraform_initialized():
-    """Initialize terraform for api_backend state access."""
-    return terraform_init(API_BACKEND_DIR)
+def api_shared_routing_terraform_initialized():
+    """Initialize terraform for api_shared_routing state access."""
+    return terraform_init(API_SHARED_ROUTING_DIR)
 
 
 @pytest.fixture(scope="session")
-def api_backend_outputs(request):
-    """Get api_backend terraform outputs.
+def api_shared_routing_outputs(request):
+    """Get api_shared_routing terraform outputs.
 
-    Single source of truth for api_backend output names.
+    Single source of truth for api_shared_routing output names.
     """
-    if not request.getfixturevalue("api_backend_terraform_initialized"):
-        pytest.skip("Terraform init failed for api_backend")
+    if not request.getfixturevalue("api_shared_routing_terraform_initialized"):
+        pytest.skip("Terraform init failed for api_shared_routing")
     return {
         "api_gateway_rest_api_id": terraform_output(
-            API_BACKEND_DIR, "api_gateway_rest_api_id"
+            API_SHARED_ROUTING_DIR, "api_gateway_rest_api_id"
         ),
     }
 

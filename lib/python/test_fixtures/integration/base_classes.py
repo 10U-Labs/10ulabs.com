@@ -586,21 +586,21 @@ class Layer2LambdaAndIAMAuthorizationTests:
 
 
 class Layer4APIBackendPrerequisiteTests:
-    """Layer 4: Verify api_backend prerequisites exist.
+    """Layer 4: Verify api_shared_routing prerequisites exist.
 
-    Requires `api_backend_outputs` and `apigateway_client` fixtures.
+    Requires `api_shared_routing_outputs` and `apigateway_client` fixtures.
     """
 
-    def test_api_gateway_rest_api_id_output_exists(self, api_backend_outputs):
-        """Verify api_gateway_rest_api_id output is available from api_backend."""
-        assert api_backend_outputs.get("api_gateway_rest_api_id"), (
-            "api_gateway_rest_api_id output not found in api_backend. "
+    def test_api_gateway_rest_api_id_output_exists(self, api_shared_routing_outputs):
+        """Verify api_gateway_rest_api_id output is available from api_shared_routing."""
+        assert api_shared_routing_outputs.get("api_gateway_rest_api_id"), (
+            "api_gateway_rest_api_id output not found in api_shared_routing. "
             "Run terraform apply in src/api/backend/"
         )
 
-    def test_api_gateway_exists_in_aws(self, apigateway_client, api_backend_outputs):
+    def test_api_gateway_exists_in_aws(self, apigateway_client, api_shared_routing_outputs):
         """Verify the API Gateway exists in AWS."""
-        api_id = api_backend_outputs.get("api_gateway_rest_api_id")
+        api_id = api_shared_routing_outputs.get("api_gateway_rest_api_id")
         if not api_id:
             pytest.skip("api_gateway_rest_api_id output not available")
         try:

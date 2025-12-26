@@ -1,4 +1,4 @@
-"""Pytest fixtures for api_backend pre-deployment integration tests."""
+"""Pytest fixtures for api_shared_routing pre-deployment integration tests."""
 
 import re
 

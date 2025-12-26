@@ -9,7 +9,7 @@ Usage:
     python3 src/workflowctl/workflowctl.py get-running --repo owner/repo
 
 Output:
-    JSON array of workflow keys, e.g., ["api_backend", "www_shared"]
+    JSON array of workflow keys, e.g., ["api_shared_routing", "www_shared"]
 """
 import argparse
 import json

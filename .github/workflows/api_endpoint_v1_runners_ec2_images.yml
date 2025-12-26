@@ -5,7 +5,7 @@ concurrency:
 jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
-    name: Deploy /v1/runners/ecs/images endpoint
+    name: Deploy /v1/runners/ec2/images endpoint
     permissions:
       actions: write
       contents: read
@@ -47,14 +47,12 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.14.1"
       - name: Terraform Format Check
         run: |
-          cd src/api/endpoints/runners/ecs/images
+          cd src/api/endpoints/runners/ec2/images
           terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/api/endpoints/runners/ecs/images && terraform init
+        run: cd src/api/endpoints/runners/ec2/images && terraform init
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -67,7 +65,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/api/endpoints/runners/ecs/images && \
+          cd src/api/endpoints/runners/ec2/images && \
             tflint --init && \
             tflint
       - if: >-
@@ -94,7 +92,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/endpoint_v1_runners_ecs_images.yml
+            .github/workflows/endpoint_v1_runners_ec2_images.yml
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -103,7 +101,7 @@ jobs:
         run: python3 -m pip install pylint
       - name: Run pylint on source
         run: |
-          SRC=src/api/endpoints/runners/ecs/images/lambda/handler.py
+          SRC=src/api/endpoints/runners/ec2/images/lambda/handler.py
           python3 -m pylint lib/python/ $SRC \
             --fail-on=C,R,W --fail-under=10.0
       - name: Run pylint on tests
@@ -111,7 +109,7 @@ jobs:
           PYTHONPATH=lib/python python3 -m pylint \
             lib/python/ test/conftest.py test/api/conftest.py \
             test/api/endpoints/conftest.py \
-            test/api/endpoints/runners/ecs/images/endpoint/ \
+            test/api/endpoints/runners/ec2/images/endpoint/ \
             --fail-on=C,R,W --fail-under=10.0
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
@@ -121,14 +119,14 @@ jobs:
         run: python3 -m pip install mypy boto3-stubs types-requests
       - name: Run mypy on source
         run: |
-          SRC=src/api/endpoints/runners/ecs/images/lambda/handler.py
+          SRC=src/api/endpoints/runners/ec2/images/lambda/handler.py
           python3 -m mypy lib/python/ $SRC
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy \
             lib/python/ test/conftest.py test/api/conftest.py \
             test/api/endpoints/conftest.py \
-            test/api/endpoints/runners/ecs/images/endpoint/
+            test/api/endpoints/runners/ec2/images/endpoint/
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -138,7 +136,7 @@ jobs:
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/api/endpoints/runners/ecs/images/lambda/
+            lib/python/ src/api/endpoints/runners/ec2/images/lambda/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -148,34 +146,36 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pytest dependencies
-        run: python3 -m pip install pytest boto3 boto3-stubs requests
+        run: |
+          python3 -m pip install \
+            pytest boto3 boto3-stubs requests paramiko PyYAML
       - name: Run unit tests
         run: |
-          ENDPOINT="test/api/endpoints/runners/ecs/images/endpoint"
+          TEST_DIR=test/api/endpoints/runners/ec2/images/endpoint
           python3 -m pytest \
-            $ENDPOINT/pre_deployment/unit/ --confcutdir=test \
+            $TEST_DIR/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          ENDPOINT="test/api/endpoints/runners/ecs/images/endpoint"
+          TEST_DIR=test/api/endpoints/runners/ec2/images/endpoint
           python3 -m pytest \
-            $ENDPOINT/pre_deployment/integration/ \
-            --capture=no --confcutdir=test --verbose --pythonwarnings=error
+            $TEST_DIR/pre_deployment/integration/ \
+            --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: |
-          cd src/api/endpoints/runners/ecs/images
+          cd src/api/endpoints/runners/ec2/images
           terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          ENDPOINT="test/api/endpoints/runners/ecs/images/endpoint"
+          TEST_DIR=test/api/endpoints/runners/ec2/images/endpoint
           python3 -m pytest \
-            $ENDPOINT/post_deployment/integration/ \
-            --confcutdir=test --verbose --pythonwarnings=error
-      - name: Run E2E tests
+            $TEST_DIR/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
+      - name: Run e2e tests
         run: |
-          ENDPOINT="test/api/endpoints/runners/ecs/images/endpoint"
+          TEST_DIR=test/api/endpoints/runners/ec2/images/endpoint
           python3 -m pytest \
-            $ENDPOINT/post_deployment/e2e/ --confcutdir=test \
+            $TEST_DIR/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -194,10 +194,10 @@ jobs:
           fi
           python3 src/workflowctl/workflowctl.py dispatch \
             $TRIGGER_FLAG \
-            --workflow endpoint_v1_runners_ecs_images \
+            --workflow api_endpoint_v1_runners_ec2_images \
             --repo ${{ github.repository }}
 name: >-
-  Ensuring /v1/runners/ecs/images API endpoint exists and is properly
+  Ensuring the /v1/runners/ec2/images API endpoint exists and is properly
   configured
 on:
   workflow_dispatch:

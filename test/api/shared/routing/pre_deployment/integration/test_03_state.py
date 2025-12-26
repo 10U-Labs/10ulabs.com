@@ -1,4 +1,4 @@
-"""Layer 3: State validation tests for api_backend pre-deployment.
+"""Layer 3: State validation tests for api_shared_routing pre-deployment.
 
 Verifies Terraform state matches AWS reality. Skips in cold state (no prior state).
 """

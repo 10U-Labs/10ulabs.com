@@ -264,7 +264,7 @@ jobs:
           fi
           python3 src/workflowctl/workflowctl.py dispatch \
             $TRIGGER_FLAG \
-            --workflow api_backend \
+            --workflow api_shared_routing \
             --repo ${{ github.repository }}
 name: Ensuring API backend exists and is properly configured
 on:

@@ -11,7 +11,7 @@ Six-layer testing model:
 - Layer 5: Configuration - Are resources configured correctly?
 - Layer 6: Capability - Can we perform required operations? (THIS FILE)
 
-Note: The endpoint_v1_runners deployment relies on prerequisites from other
+Note: The api_endpoint_v1_runners deployment relies on prerequisites from other
 workflows (api_shared_networking, api_shared_docker_repository, ec2_runner, ecs_runner).
 Capability tests here verify we can perform operations on those prerequisites.
 """

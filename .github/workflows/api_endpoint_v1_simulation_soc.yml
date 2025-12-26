@@ -7,7 +7,7 @@ jobs:
     if: >-
       github.ref == 'refs/heads/main' &&
       github.event.inputs.dry_run != 'true'
-    name: Deploy Rack Designer endpoint
+    name: Deploy simulation-soc endpoint
     runs-on:
       - ecs
       - fargate
@@ -23,22 +23,25 @@ jobs:
         name: Extract configuration values
         run: |
           TF_SHARED_LOCALS="lib/terraform/modules/shared/locals.tf"
-          LOCALS="src/bootstrap/locals.tf"
-          BACKEND="src/api/endpoints/rack_designer/backend.tf"
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
           AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
-          ROLE_SUFFIX=$(grep 'name_for_github_actions_role' $LOCALS \
-            | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
+            src/bootstrap/locals.tf | \
+            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
-          TF_VER=$(grep 'required_version' $BACKEND \
-            | cut -d'"' -f2 | sed 's/>= //')
-          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${ROLE_SUFFIX}"
+          TERRAFORM_VERSION=$(grep 'required_version' \
+            src/api/endpoints/simulation_soc/backend.tf | \
+            cut -d'"' -f2 | sed 's/>= //')
+          ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
+          ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
-          echo "terraform_version=$TF_VER" >> $GITHUB_OUTPUT
+          GH_ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
+          echo "$GH_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -54,78 +57,76 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/endpoint_v1_rack_designer.yml
+            .github/workflows/endpoint_v1_simulation_soc.yml
       - name: Run pylint on source
         run: |
           python3 -m pylint \
-            lib/python/ src/api/endpoints/rack_designer/lambdas/ \
+            src/api/endpoints/simulation_soc/lambda/handler.py \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py test/api/endpoints/rack_designer/ \
+            test/api/endpoints/simulation_soc/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy on source
         run: |
           python3 -m mypy \
-            lib/python/ src/api/endpoints/rack_designer/lambdas/
+            src/api/endpoints/simulation_soc/lambda/handler.py
       - name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python python3 -m mypy \
-            lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py test/api/endpoints/rack_designer/
+          MYPYPATH=lib/python python3 -m mypy test/api/endpoints/simulation_soc/
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/api/endpoints/rack_designer/lambdas/
+            lib/python/ src/api/endpoints/simulation_soc/lambda/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
       - name: Terraform Format Check
         run: |
-          cd src/api/endpoints/rack_designer
-          terraform fmt -diff -check -recursive
+          cd src/api/endpoints/simulation_soc && \
+            terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: |
-          cd src/api/endpoints/rack_designer
-          terraform init
+        run: cd src/api/endpoints/simulation_soc && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/api/endpoints/rack_designer && \
+          cd src/api/endpoints/simulation_soc && \
             tflint --init && \
             tflint
-      - name: Terraform Plan
-        run: cd src/api/endpoints/rack_designer && terraform plan
       - name: Run unit tests
         run: |
-          TESTS="test/api/endpoints/rack_designer/pre_deployment/unit/"
           python3 -m pytest \
-            $TESTS --verbose --pythonwarnings=error
+            test/api/endpoints/simulation_soc/pre_deployment/unit/ \
+            --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          TESTS="test/api/endpoints/rack_designer/pre_deployment/integration/"
           python3 -m pytest \
-            $TESTS --capture=no --verbose --pythonwarnings=error
+            test/api/endpoints/simulation_soc/pre_deployment/integration/ \
+            --verbose --capture=no --pythonwarnings=error
       - name: Terraform Apply
-        run: cd src/api/endpoints/rack_designer && terraform apply -auto-approve
+        run: |
+          cd src/api/endpoints/simulation_soc
+          terraform apply -auto-approve
       - name: Get website bucket name
         run: |
-          WWW="-chdir=src/www/shared"
-          terraform $WWW init -backend=true -input=false > /dev/null
-          BUCKET_NAME=$(terraform $WWW output -raw bucket_name)
+          terraform -chdir=src/www/shared init \
+            -backend=true -input=false > /dev/null
+          BUCKET_NAME=$(terraform -chdir=src/www/shared output \
+            -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
       - name: Sync frontend to S3
         run: |
-          SRC="src/www/paths/rack_designer/"
-          DEST="s3://${{ env.BUCKET_NAME }}/rack-designer/"
-          aws s3 sync $SRC $DEST --delete --cache-control no-cache \
-            --storage-class ONEZONE_IA --exclude ".gitkeep"
+          aws s3 sync src/www/paths/simulations/soc/ \
+            s3://${{ env.BUCKET_NAME }}/simulations/soc/ \
+            --delete \
+            --cache-control no-cache \
+            --storage-class ONEZONE_IA \
+            --exclude ".gitkeep"
       - id: check_files
         name: Check if frontend files changed
         run: |
@@ -137,7 +138,7 @@ jobs:
             BASE_COMMIT="HEAD^"
           fi
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/www/paths/rack_designer/'; then
+            if grep -qE 'src/www/paths/simulations/soc/'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT
@@ -145,26 +146,27 @@ jobs:
       - if: >-
           github.event.inputs.invalidate_cloudfront == 'true' ||
           contains(github.event.head_commit.message,
-            '[invalidate cloudfront]') ||
+          '[invalidate cloudfront]') ||
           steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
-          WWW="-chdir=src/www/shared"
-          FQDN=$(terraform $WWW output -raw website_domain_name)
+          WEBSITE_FQDN=$(terraform -chdir=src/www/shared output \
+            -raw website_domain_name)
+          REGION=${{ steps.config.outputs.aws_region }}
           python3 scripts/invalidate_cloudfront.py \
-            --fqdn "$FQDN" \
-            --region ${{ steps.config.outputs.aws_region }} \
-            --paths "/rack-designer/*"
+            --fqdn "$WEBSITE_FQDN" \
+            --region "$REGION" \
+            --paths "/simulations/soc/*"
       - name: Run post-deployment integration tests
         run: |
-          TESTS="test/api/endpoints/rack_designer/post_deployment/integration/"
           python3 -m pytest \
-            $TESTS --verbose --pythonwarnings=error
-      - name: Run e2e tests
+            test/api/endpoints/simulation_soc/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
+      - name: Run E2E tests
         run: |
-          TESTS="test/api/endpoints/rack_designer/post_deployment/e2e/"
           python3 -m pytest \
-            $TESTS --verbose --pythonwarnings=error
+            test/api/endpoints/simulation_soc/post_deployment/e2e/ \
+            --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
@@ -182,10 +184,10 @@ jobs:
           fi
           python3 src/workflowctl/workflowctl.py dispatch \
             $TRIGGER_FLAG \
-            --workflow endpoint_v1_rack_designer \
+            --workflow api_endpoint_v1_simulation_soc \
             --repo ${{ github.repository }}
 name: >-
-  Ensuring /v1/rack-designer API endpoint exists and is properly configured
+  Ensuring the /v1/simulation-soc API endpoint exists and is properly configured
 on:
   workflow_dispatch:
     inputs:

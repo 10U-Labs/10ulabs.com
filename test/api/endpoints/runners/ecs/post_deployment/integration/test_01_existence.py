@@ -49,7 +49,7 @@ class TestECSTaskDefinitionExistence:
         if task_definition is None:
             pytest.skip(
                 "ECS task definitions not deployed "
-                "(managed by endpoint_v1_ecs_runner.yml workflow)"
+                "(managed by api_endpoint_v1_runners_ecs.yml workflow)"
             )
         assert task_definition is not None
 

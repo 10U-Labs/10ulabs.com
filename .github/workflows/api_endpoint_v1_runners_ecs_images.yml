@@ -5,7 +5,11 @@ concurrency:
 jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
-    name: Deploy /health endpoint
+    name: Deploy /v1/runners/ecs/images endpoint
+    permissions:
+      actions: write
+      contents: read
+      id-token: write
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -19,27 +23,24 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          TF_SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
-          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
+          TF_SHARED_LOCALS="lib/terraform/modules/shared/locals.tf"
           AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
-            src/bootstrap/locals.tf | \
-            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          RESOURCE_PREFIX=$(grep 'resource_prefix' \
-            lib/terraform/modules/shared/locals.tf | \
-            grep -v '\$' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' \
-            src/api/operational/health/backend.tf | \
-            cut -d'"' -f2 | sed 's/>= //')
-          ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
-          ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
-          GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          LOCALS="src/bootstrap/locals.tf"
+          ROLE_SUFFIX=$(grep 'name_for_github_actions_role' $LOCALS \
+            | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${ROLE_SUFFIX}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
-            >> $GITHUB_OUTPUT
-          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: ${{ steps.config.outputs.role_arn }}
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -47,33 +48,13 @@ jobs:
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ steps.config.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.aws_region }}
-          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
-      - id: bootstrap
-        name: Get bootstrap outputs
-        run: |
-          terraform -chdir=src/bootstrap init \
-            -backend=true -input=false > /dev/null
-          GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap \
-            output -raw arn_for_github_actions_role)
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
-            >> $GITHUB_OUTPUT
-      - name: Re-configure AWS credentials with bootstrap role
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.aws_region }}
-          role-to-assume: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
+          terraform_version: "1.14.1"
       - name: Terraform Format Check
         run: |
-          cd src/api/operational/health
+          cd src/api/endpoints/runners/ecs/images
           terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/api/operational/health && terraform init
+        run: cd src/api/endpoints/runners/ecs/images && terraform init
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -85,7 +66,10 @@ jobs:
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/api/operational/health && tflint --init && tflint
+        run: |
+          cd src/api/endpoints/runners/ecs/images && \
+            tflint --init && \
+            tflint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -110,7 +94,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/operational_health.yml
+            .github/workflows/endpoint_v1_runners_ecs_images.yml
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -119,16 +103,16 @@ jobs:
         run: python3 -m pip install pylint
       - name: Run pylint on source
         run: |
-          python3 -m pylint \
-            lib/python/ src/api/operational/health/lambda/handler.py \
-            --fail-on=C,R,W \
-            --fail-under=10.0
+          SRC=src/api/endpoints/runners/ecs/images/lambda/handler.py
+          python3 -m pylint lib/python/ $SRC \
+            --fail-on=C,R,W --fail-under=10.0
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/api/operational/health/ \
-            --fail-on=C,R,W \
-            --fail-under=10.0
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py \
+            test/api/endpoints/runners/ecs/images/endpoint/ \
+            --fail-on=C,R,W --fail-under=10.0
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -137,12 +121,14 @@ jobs:
         run: python3 -m pip install mypy boto3-stubs types-requests
       - name: Run mypy on source
         run: |
-          python3 -m mypy \
-            lib/python/ src/api/operational/health/lambda/handler.py
+          SRC=src/api/endpoints/runners/ecs/images/lambda/handler.py
+          python3 -m mypy lib/python/ $SRC
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy \
-            lib/python/ test/api/operational/health/
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py \
+            test/api/endpoints/runners/ecs/images/endpoint/
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -152,7 +138,7 @@ jobs:
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/api/operational/health/lambda/
+            lib/python/ src/api/endpoints/runners/ecs/images/lambda/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -162,28 +148,34 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pytest dependencies
-        run: python3 -m pip install pytest requests PyYAML boto3 botocore
+        run: python3 -m pip install pytest boto3 boto3-stubs requests
       - name: Run unit tests
         run: |
+          ENDPOINT="test/api/endpoints/runners/ecs/images/endpoint"
           python3 -m pytest \
-            test/api/operational/health/pre_deployment/unit/ \
+            $ENDPOINT/pre_deployment/unit/ --confcutdir=test \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
+          ENDPOINT="test/api/endpoints/runners/ecs/images/endpoint"
           python3 -m pytest \
-            test/api/operational/health/pre_deployment/integration/ \
-            --capture=no --verbose --pythonwarnings=error
+            $ENDPOINT/pre_deployment/integration/ \
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Apply
-        run: cd src/api/operational/health && terraform apply -auto-approve
+        run: |
+          cd src/api/endpoints/runners/ecs/images
+          terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
+          ENDPOINT="test/api/endpoints/runners/ecs/images/endpoint"
           python3 -m pytest \
-            test/api/operational/health/post_deployment/integration/ \
-            --verbose --pythonwarnings=error
+            $ENDPOINT/post_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - name: Run E2E tests
         run: |
+          ENDPOINT="test/api/endpoints/runners/ecs/images/endpoint"
           python3 -m pytest \
-            test/api/operational/health/post_deployment/e2e/ \
+            $ENDPOINT/post_deployment/e2e/ --confcutdir=test \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -202,9 +194,11 @@ jobs:
           fi
           python3 src/workflowctl/workflowctl.py dispatch \
             $TRIGGER_FLAG \
-            --workflow operational_health \
+            --workflow api_endpoint_v1_runners_ecs_images \
             --repo ${{ github.repository }}
-name: Ensuring the /health API endpoint exists and is properly configured
+name: >-
+  Ensuring /v1/runners/ecs/images API endpoint exists and is properly
+  configured
 on:
   workflow_dispatch:
     inputs:

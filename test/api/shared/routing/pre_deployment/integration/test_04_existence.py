@@ -1,4 +1,4 @@
-"""Layer 4: Existence tests for api_backend pre-deployment validation.
+"""Layer 4: Existence tests for api_shared_routing pre-deployment validation.
 
 Verify prerequisite resources exist (assumes authorization passed).
 """

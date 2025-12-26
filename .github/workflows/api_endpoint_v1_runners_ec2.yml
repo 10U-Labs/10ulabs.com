@@ -5,7 +5,7 @@ concurrency:
 jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
-    name: Deploy /v1/runners/ec2/images endpoint
+    name: Deploy /v1/runners/ec2 endpoint
     permissions:
       actions: write
       contents: read
@@ -23,19 +23,33 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          TF_SHARED_LOCALS="lib/terraform/modules/shared/locals.tf"
+          TF_SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
+          LOCALS=src/bootstrap/locals.tf
+          BACKEND=src/api/endpoints/runners/ec2/backend.tf
           AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
           RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
-          LOCALS="src/bootstrap/locals.tf"
           ROLE_SUFFIX=$(grep 'name_for_github_actions_role' $LOCALS \
             | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${ROLE_SUFFIX}"
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/"
+          ROLE_ARN="${ROLE_ARN}${RESOURCE_PREFIX}${ROLE_SUFFIX}"
+          TF_VERSION=$(grep 'required_version' $BACKEND \
+            | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TF_VERSION" >> $GITHUB_OUTPUT
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.config.outputs.terraform_version }}
+          terraform_wrapper: false
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -45,29 +59,10 @@ jobs:
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
-        name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-      - name: Terraform Format Check
-        run: |
-          cd src/api/endpoints/runners/ec2/images
-          terraform fmt -diff -check -recursive
-      - name: Terraform Init
-        run: cd src/api/endpoints/runners/ec2/images && terraform init
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - env:
-          GITHUB_TOKEN: ${{ github.token }}
-        name: Run tflint
-        run: |
-          cd src/api/endpoints/runners/ec2/images && \
-            tflint --init && \
-            tflint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -76,6 +71,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Terraform Format Check
+        run: |
+          cd src/api/endpoints/runners/ec2
+          terraform fmt -diff -check -recursive
+      - name: Terraform Init
+        run: cd src/api/endpoints/runners/ec2 && terraform init
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
+        run: cd src/api/endpoints/runners/ec2 && tflint --init && tflint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -90,9 +95,9 @@ jobs:
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
           RULES="$EMPTY_LINES, $KEY_ORDERING"
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
-          python3 -m yamllint --strict \
+          yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/endpoint_v1_runners_ec2_images.yml
+            .github/workflows/endpoint_v1_runners_ec2.yml
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -101,16 +106,18 @@ jobs:
         run: python3 -m pip install pylint
       - name: Run pylint on source
         run: |
-          SRC=src/api/endpoints/runners/ec2/images/lambda/handler.py
-          python3 -m pylint lib/python/ $SRC \
-            --fail-on=C,R,W --fail-under=10.0
+          python3 -m pylint \
+            lib/python/ src/api/endpoints/runners/ec2/lambda/handler.py \
+            --fail-on=C,R,W \
+            --fail-under=10.0
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
             lib/python/ test/conftest.py test/api/conftest.py \
             test/api/endpoints/conftest.py \
-            test/api/endpoints/runners/ec2/images/endpoint/ \
-            --fail-on=C,R,W --fail-under=10.0
+            test/api/endpoints/runners/ec2/ \
+            --fail-on=C,R,W \
+            --fail-under=10.0
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -119,14 +126,14 @@ jobs:
         run: python3 -m pip install mypy boto3-stubs types-requests
       - name: Run mypy on source
         run: |
-          SRC=src/api/endpoints/runners/ec2/images/lambda/handler.py
-          python3 -m mypy lib/python/ $SRC
+          python3 -m mypy \
+            lib/python/ src/api/endpoints/runners/ec2/lambda/handler.py
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy \
             lib/python/ test/conftest.py test/api/conftest.py \
             test/api/endpoints/conftest.py \
-            test/api/endpoints/runners/ec2/images/endpoint/
+            test/api/endpoints/runners/ec2/
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -136,7 +143,7 @@ jobs:
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/api/endpoints/runners/ec2/images/lambda/
+            lib/python/ src/api/endpoints/runners/ec2/lambda/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -147,35 +154,37 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pytest dependencies
         run: |
-          python3 -m pip install \
-            pytest boto3 boto3-stubs requests paramiko PyYAML
+          python3 -m pip install pytest boto3 PyYAML types-PyYAML \
+            requests botocore
       - name: Run unit tests
         run: |
-          TEST_DIR=test/api/endpoints/runners/ec2/images/endpoint
           python3 -m pytest \
-            $TEST_DIR/pre_deployment/unit/ \
+            test/api/endpoints/runners/ec2/pre_deployment/unit/ \
+            --confcutdir=test \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          TEST_DIR=test/api/endpoints/runners/ec2/images/endpoint
+          TEST=test/api/endpoints/runners/ec2/pre_deployment/integration/
           python3 -m pytest \
-            $TEST_DIR/pre_deployment/integration/ \
-            --capture=no --verbose --pythonwarnings=error
+            $TEST \
+            --capture=no --confcutdir=test \
+            --verbose --pythonwarnings=error
       - name: Terraform Apply
-        run: |
-          cd src/api/endpoints/runners/ec2/images
-          terraform apply -auto-approve
+        run: cd src/api/endpoints/runners/ec2 && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          TEST_DIR=test/api/endpoints/runners/ec2/images/endpoint
+          TEST=test/api/endpoints/runners/ec2/post_deployment/integration/
           python3 -m pytest \
-            $TEST_DIR/post_deployment/integration/ \
+            $TEST \
+            --confcutdir=test \
             --verbose --pythonwarnings=error
-      - name: Run e2e tests
+      - env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        name: Run E2E tests
         run: |
-          TEST_DIR=test/api/endpoints/runners/ec2/images/endpoint
           python3 -m pytest \
-            $TEST_DIR/post_deployment/e2e/ \
+            test/api/endpoints/runners/ec2/post_deployment/e2e/ \
+            --confcutdir=test \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -194,11 +203,9 @@ jobs:
           fi
           python3 src/workflowctl/workflowctl.py dispatch \
             $TRIGGER_FLAG \
-            --workflow endpoint_v1_runners_ec2_images \
+            --workflow api_endpoint_v1_runners_ec2 \
             --repo ${{ github.repository }}
-name: >-
-  Ensuring the /v1/runners/ec2/images API endpoint exists and is properly
-  configured
+name: Ensuring the /v1/runners/ec2 API endpoint exists and is properly configured
 on:
   workflow_dispatch:
     inputs:

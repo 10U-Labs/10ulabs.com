@@ -98,7 +98,7 @@ def firehose_client(aws_region):
 def firehose_delivery_stream_name(shared_config):
     """Get the Firehose delivery stream name for CloudWatch Logs.
 
-    This is a prerequisite resource created by api_backend that runners
+    This is a prerequisite resource created by api_shared_routing that runners
     depends on for subscription filters.
     """
     prefix = shared_config.get('resource_prefix', 'TenULabs')
@@ -109,7 +109,7 @@ def firehose_delivery_stream_name(shared_config):
 def cloudwatch_logs_firehose_role_name(shared_config):
     """Get the CloudWatch Logs Firehose role name.
 
-    This is a prerequisite resource created by api_backend that runners
+    This is a prerequisite resource created by api_shared_routing that runners
     depends on for subscription filters.
     """
     prefix = shared_config.get('resource_prefix', 'TenULabs')

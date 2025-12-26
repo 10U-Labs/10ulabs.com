@@ -146,7 +146,7 @@ class TestTriggerEcsImageBuild:
             handler.trigger_ecs_image_build({})
 
         with github_workflow_trigger_context(trigger) as request:
-            assert 'endpoint_v1_runners_ecs_images_post.yml' in request.full_url
+            assert 'api_endpoint_v1_runners_ecs_images_post.yml' in request.full_url
 
     def test_uses_main_branch(self, github_workflow_trigger_context):
         """Test that main branch is used."""

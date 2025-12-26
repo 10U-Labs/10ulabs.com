@@ -278,17 +278,17 @@ def compute_merge_roots(
     3. Find workflows with no affected ancestors (these are the merge roots)
 
     Examples:
-    - Running: [api_backend], New: [operational_health]
-      operational_health is downstream of api_backend
-      Merge roots: [api_backend] (let it finish, it will trigger operational_health)
+    - Running: [api_shared_routing], New: [api_operational_health]
+      api_operational_health is downstream of api_shared_routing
+      Merge roots: [api_shared_routing] (let it finish, it will trigger api_operational_health)
 
-    - Running: [api_backend], New: [www_shared]
-      www_shared is upstream of api_backend
+    - Running: [api_shared_routing], New: [www_shared]
+      www_shared is upstream of api_shared_routing
       Merge roots: [www_shared] (need to restart from here)
 
-    - Running: [api_backend], New: [bootstrap]
+    - Running: [api_shared_routing], New: [bootstrap]
       Different branches of dependency tree
-      Merge roots: [bootstrap, ...] (depends on api_backend's original root)
+      Merge roots: [bootstrap, ...] (depends on api_shared_routing's original root)
 
     - Running: [www_shared], New: []
       No new changes, let running workflow finish

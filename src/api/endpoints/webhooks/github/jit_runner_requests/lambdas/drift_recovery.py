@@ -78,7 +78,7 @@ def _get_github_token() -> str:
 
 
 def _trigger_api_workflow(github_token: str) -> dict[str, Any]:
-    """Trigger the api_backend.yml workflow via GitHub API.
+    """Trigger the api_shared_routing.yml workflow via GitHub API.
 
     Args:
         github_token: GitHub personal access token
@@ -87,7 +87,7 @@ def _trigger_api_workflow(github_token: str) -> dict[str, Any]:
         Result dictionary with success status
     """
     github_repo = os.environ.get("GITHUB_REPO", "")
-    workflow_file = "api_backend.yml"
+    workflow_file = "api_shared_routing.yml"
     url = f"https://api.github.com/repos/{github_repo}/actions/workflows/{workflow_file}/dispatches"
 
     payload = {"ref": "main", "inputs": {"github_hosted": "true"}}
@@ -221,13 +221,13 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     result = _trigger_api_workflow(github_token)
 
     if result.get("success"):
-        logger.info("Successfully triggered api_backend.yml workflow for drift recovery")
+        logger.info("Successfully triggered api_shared_routing.yml workflow for drift recovery")
         _send_notification(
             f"Drift Recovery Triggered: {drift['rule_name']}",
             f"Infrastructure drift was detected.\n\n"
             f"Resource: {drift['summary']}\n"
             f"Rule: {drift['rule_name']}\n\n"
-            f"Automatically triggered api_backend.yml workflow "
+            f"Automatically triggered api_shared_routing.yml workflow "
             f"to recover infrastructure.\n\n"
             f"Monitor the workflow at: https://github.com/{github_repo}/actions",
         )

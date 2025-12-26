@@ -38,12 +38,12 @@ SAMPLE_GRAPH = {
     "api": {
         "name": "API",
         "depends_on": ["www_shared"],
-        "paths": [".github/workflows/api_backend.yml", "src/api/backend/**"],
+        "paths": [".github/workflows/api_shared_routing.yml", "src/api/shared/routing/**"],
     },
     "health": {
         "name": "Health",
         "depends_on": ["api"],
-        "paths": [".github/workflows/operational_health.yml", "src/api/operational/health/**"],
+        "paths": [".github/workflows/api_operational_health.yml", "src/api/operational/health/**"],
     },
     "ecr": {
         "name": "ECR",
@@ -54,7 +54,7 @@ SAMPLE_GRAPH = {
         "name": "Image for ECS Runners",
         "depends_on": ["ecr"],
         "paths": [
-            ".github/workflows/endpoint_v1_runners_ecs_images.yml",
+            ".github/workflows/api_endpoint_v1_runners_ecs_images.yml",
             "src/api/endpoints/runners/ecs/images/**",
         ],
     },
@@ -62,14 +62,14 @@ SAMPLE_GRAPH = {
         "name": "ECS Runner",
         "depends_on": ["ecs_images"],
         "paths": [
-            ".github/workflows/endpoint_v1_runners_ecs.yml",
+            ".github/workflows/api_endpoint_v1_runners_ecs.yml",
             "src/api/endpoints/runners/ecs/**",
         ],
     },
     "contact": {
         "name": "Contact",
         "depends_on": ["ecs_runner"],
-        "paths": [".github/workflows/endpoint_v1_contact.yml", "src/api/endpoints/contact/**"],
+        "paths": [".github/workflows/api_endpoint_v1_contact.yml", "src/api/endpoints/contact/**"],
     },
 }
 
@@ -85,7 +85,7 @@ class TestFileMatchesPatterns:
     def test_exact_match_returns_false_for_different_file(self) -> None:
         """Test exact file path matching returns false for different file."""
         patterns = [".github/workflows/bootstrap.yml"]
-        assert not file_matches_patterns(".github/workflows/api_backend.yml", patterns)
+        assert not file_matches_patterns(".github/workflows/api_shared_routing.yml", patterns)
 
     def test_glob_star_match_direct_child(self) -> None:
         """Test single * glob pattern matches direct child."""
@@ -199,7 +199,7 @@ class TestGetAffectedWorkflows:
 
     def test_single_file_workflow_file(self) -> None:
         """Test changing a workflow file itself."""
-        changed = [".github/workflows/api_backend.yml"]
+        changed = [".github/workflows/api_shared_routing.yml"]
         affected = get_affected_workflows(changed, SAMPLE_GRAPH)
         assert affected == {"api"}
 
