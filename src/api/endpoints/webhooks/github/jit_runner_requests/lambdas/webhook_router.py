@@ -1,4 +1,11 @@
-"""Webhook router Lambda handler - routes GitHub webhooks to queues."""
+"""Webhook router Lambda handler - routes GitHub webhooks to /v1/runners API.
+
+This is a "dumb forwarder" that:
+1. Validates GitHub webhook signature
+2. Checks idempotency (prevents duplicate processing)
+3. Filters for workflow_job events with action=queued
+4. HTTP POSTs to /v1/runners for routing to appropriate runner endpoint
+"""
 
 import asyncio
 import base64
@@ -8,6 +15,8 @@ import json
 import logging
 import os
 import time
+import urllib.request
+import urllib.error
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import unquote
@@ -17,7 +26,6 @@ from botocore.exceptions import ClientError
 from common.aws_clients import get_dynamodb_client, get_sqs_client, get_ssm_client
 from common.cloudwatch import publish_metric as _common_publish_metric
 from common.webhook_ingress import IngressHandler
-from runner_labels import get_runner_type_from_labels
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -26,6 +34,7 @@ METRICS_NAMESPACE = "WebhookRouter"
 
 _cache: dict[str, Any] = {
     "webhook_secret": None,
+    "api_key": None,
     "test_mode": False,
 }
 
@@ -40,6 +49,70 @@ def _publish_metric(metric_name: str, value: float, unit: str = "None") -> None:
     if _cache["test_mode"]:
         return
     _common_publish_metric(METRICS_NAMESPACE, metric_name, value, unit)
+
+
+def _get_api_key() -> str:
+    """Get API key from SSM Parameter Store (cached)."""
+    if _cache["api_key"]:
+        return _cache["api_key"]
+
+    parameter_name = os.environ.get("API_KEY_PARAMETER_NAME")
+    if not parameter_name:
+        raise RuntimeError("API_KEY_PARAMETER_NAME environment variable not set")
+
+    try:
+        response = get_ssm_client().get_parameter(
+            Name=parameter_name, WithDecryption=True
+        )
+        api_key = response.get("Parameter", {}).get("Value", "")
+        _cache["api_key"] = api_key
+        return api_key
+    except ClientError as err:
+        logger.error("Failed to retrieve API key: %s", str(err))
+        raise RuntimeError(f"Cannot retrieve API key: {err}") from err
+
+
+async def _post_to_runners(job_data: dict[str, Any]) -> dict[str, Any]:
+    """POST job data to /v1/runners endpoint.
+
+    Returns:
+        Result dictionary with success status
+    """
+    api_base_url = os.environ.get("API_BASE_URL", "")
+    if not api_base_url:
+        logger.error("API_BASE_URL not set, cannot forward to runners")
+        return {"success": False, "error": "API base URL not configured"}
+
+    try:
+        api_key = _get_api_key()
+    except RuntimeError as err:
+        return {"success": False, "error": str(err)}
+
+    url = f"{api_base_url}/v1/runners"
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+    }
+
+    try:
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(job_data).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=30) as response:
+            logger.info(
+                "Successfully forwarded to /v1/runners: status=%s",
+                response.status,
+            )
+            return {"success": True, "status_code": response.status}
+    except urllib.error.HTTPError as err:
+        logger.error("HTTP error forwarding to /v1/runners: %s", err)
+        return {"success": False, "error": f"HTTP {err.code}", "status_code": err.code}
+    except urllib.error.URLError as err:
+        logger.error("URL error forwarding to /v1/runners: %s", err)
+        return {"success": False, "error": str(err.reason)}
 
 
 async def _check_and_record_idempotency(request_id: str) -> bool:
@@ -248,7 +321,11 @@ def _verify_signature(payload_body: str, signature_header: str, secret: str) -> 
 
 
 async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
-    """Handle a workflow_job event."""
+    """Handle a workflow_job event.
+
+    This is a dumb forwarder - it does NOT parse labels or determine runner type.
+    It simply forwards the job to /v1/runners which handles routing.
+    """
     action = event_data.get("action")
     job = event_data.get("workflow_job", {})
     job_id = job.get("id")
@@ -274,22 +351,11 @@ async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
             "body": json.dumps({"message": f"Ignored action: {action}"}),
         }
 
-    runner_type, _ = get_runner_type_from_labels(job_labels)
-    if not runner_type:
-        logger.info(
-            "Job labels %s don't contain EC2 or Fargate runner type labels",
-            json.dumps(job_labels),
-        )
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"message": "No matching runner type, ignoring"}),
-        }
-
+    # Forward to /v1/runners - let it determine runner type from labels
     logger.info(
-        "Enqueueing runner request for job %s (%s), runner_type=%s",
+        "Forwarding job %s (%s) to /v1/runners",
         job_id,
         job_name,
-        runner_type,
     )
 
     job_data = {
@@ -297,16 +363,15 @@ async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
         "job_labels": job_labels,
         "github_repo": repo_full_name,
         "run_id": run_id,
-        "runner_type": runner_type,
     }
 
     if _cache["test_mode"]:
-        logger.info("Test mode enabled - skipping SQS enqueue")
+        logger.info("Test mode enabled - skipping forward to /v1/runners")
         return {
             "statusCode": 200,
             "body": json.dumps(
                 {
-                    "message": "Test mode - job not enqueued",
+                    "message": "Test mode - job not forwarded",
                     "job_id": job_id,
                     "run_id": run_id,
                     "test_mode": True,
@@ -314,17 +379,16 @@ async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
             ),
         }
 
-    result = await _enqueue_job(job_data)
+    result = await _post_to_runners(job_data)
 
     if result.get("success"):
         return {
             "statusCode": 200,
             "body": json.dumps(
                 {
-                    "message": "Job enqueued successfully",
+                    "message": "Job forwarded to /v1/runners",
                     "job_id": job_id,
                     "run_id": run_id,
-                    "message_id": result.get("message_id"),
                 }
             ),
         }
@@ -333,7 +397,7 @@ async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
         "statusCode": 500,
         "body": json.dumps(
             {
-                "message": "Failed to enqueue job",
+                "message": "Failed to forward job to /v1/runners",
                 "error": result.get("error"),
                 "job_id": job_id,
             }
@@ -504,13 +568,18 @@ def _get_ingress_handler() -> IngressHandler:
             """Check if delivery is duplicate."""
             return await _check_and_record_idempotency(delivery_id)
 
-        def get_runner_type(self, labels: list[str]) -> tuple[str | None, str | None]:
-            """Get runner type from labels."""
-            return get_runner_type_from_labels(labels)
+        def get_runner_type(self, _labels: list[str]) -> tuple[str | None, str | None]:
+            """No longer determines runner type - always returns placeholder.
+
+            The /v1/runners endpoint now handles runner type determination.
+            This method returns a placeholder so jobs are forwarded.
+            """
+            # Return a placeholder - actual routing is done by /v1/runners
+            return ("forwarded", "runners")
 
         async def enqueue_job(self, job_data: dict[str, Any]) -> dict[str, bool]:
-            """Enqueue job to SQS."""
-            result = await _enqueue_job(job_data)
+            """Forward job to /v1/runners via HTTP POST."""
+            result = await _post_to_runners(job_data)
             return {"success": result.get("success", False)}
 
         async def enqueue_cancellation(
@@ -538,8 +607,7 @@ async def _async_handler(event: dict[str, Any]) -> dict[str, Any]:
     )
 
     if is_sqs:
-        # This Lambda only handles webhook_ingress queue
-        # job_queue is handled by runner_starter Lambda
+        # This Lambda handles webhook_ingress queue and forwards to /v1/runners
         # cancellation_queue is handled by runner_terminator Lambda
         logger.info("Processing SQS event from webhook_ingress queue")
 

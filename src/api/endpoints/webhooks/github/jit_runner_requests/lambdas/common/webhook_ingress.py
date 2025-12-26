@@ -155,7 +155,7 @@ class IngressHandler:
             "runner_type": runner_type,
         }
         result = await self._deps.enqueue_job(job_data)
-        return {"success": result.get("success", False), "routed": "job_queue"}
+        return {"success": result.get("success", False), "routed": "/v1/runners"}
 
     def _route_workflow_run(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Handle a workflow_run event."""

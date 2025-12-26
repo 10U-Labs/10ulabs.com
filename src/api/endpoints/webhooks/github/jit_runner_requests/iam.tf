@@ -72,7 +72,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_sqs" {
           "sqs:GetQueueAttributes"
         ]
         Resource = [
-          aws_sqs_queue.job_queue.arn,
+          # Note: job_queue removed - routing logic moved to /v1/runners
           aws_sqs_queue.cancellation.arn,
           aws_sqs_queue.webhook_dlq.arn,
           aws_sqs_queue.ignored_events.arn,
@@ -131,81 +131,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_ssm_github_pat" {
   })
 }
 
-# Runner Starter IAM
-resource "aws_iam_role" "runner_starter" {
-  name = local.runner_starter_role_name
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Service = "lambda.amazonaws.com"
-      }
-      Action = "sts:AssumeRole"
-    }]
-  })
-
-  tags = merge(local.common_tags, {
-    Name = local.runner_starter_role_name
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "runner_starter_basic" {
-  role       = aws_iam_role.runner_starter.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-resource "aws_iam_role_policy_attachment" "runner_starter_xray" {
-  role       = aws_iam_role.runner_starter.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-}
-
-resource "aws_iam_role_policy" "runner_starter_ssm" {
-  name = "SSMParameterAccess"
-  role = aws_iam_role.runner_starter.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["ssm:GetParameter"]
-      Resource = [data.terraform_remote_state.api.outputs.api_key_ssm_parameter_arn]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "runner_starter_cloudwatch" {
-  name = "CloudWatchMetrics"
-  role = aws_iam_role.runner_starter.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["cloudwatch:PutMetricData"]
-      Resource = ["*"]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "runner_starter_sqs" {
-  name = "SQSAccess"
-  role = aws_iam_role.runner_starter.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "sqs:ReceiveMessage",
-        "sqs:DeleteMessage",
-        "sqs:GetQueueAttributes"
-      ]
-      Resource = [aws_sqs_queue.job_queue.arn]
-    }]
-  })
-}
+# Note: runner_starter IAM removed - routing logic moved to /v1/runners endpoint
 
 # Runner Terminator IAM
 resource "aws_iam_role" "runner_terminator" {
@@ -554,17 +480,10 @@ resource "aws_iam_role_policy" "dlq_reprocessor_permissions" {
         ]
         Resource = [
           aws_sqs_queue.webhook_dlq.arn,
-          aws_sqs_queue.job_queue_dlq.arn
+          # Note: job_queue_dlq removed - routing logic moved to /v1/runners
         ]
       },
-      {
-        Effect = "Allow"
-        Action = [
-          "sqs:SendMessage",
-          "sqs:GetQueueUrl"
-        ]
-        Resource = [aws_sqs_queue.job_queue.arn]
-      },
+      # Note: job_queue SendMessage removed - routing logic moved to /v1/runners
       {
         Effect = "Allow"
         Action = [

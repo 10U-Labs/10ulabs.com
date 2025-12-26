@@ -1490,6 +1490,146 @@
         }
       }
     },
+    "/v1/runners": {
+      "post": {
+        "summary": "Route Runner Request",
+        "description": "Routes runner requests to the appropriate endpoint (/v1/runners/ec2 or /v1/runners/ecs) based on job labels. Uses API Gateway -> SQS direct integration.",
+        "operationId": "routeRunnerRequest",
+        "tags": [
+          "/v1/runners"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "job_id",
+                  "job_labels",
+                  "github_repo",
+                  "run_id"
+                ],
+                "properties": {
+                  "job_id": {
+                    "type": "integer",
+                    "description": "GitHub job ID"
+                  },
+                  "job_labels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "GitHub job labels"
+                  },
+                  "github_repo": {
+                    "type": "string",
+                    "description": "GitHub repository (org/repo)"
+                  },
+                  "run_id": {
+                    "type": "integer",
+                    "description": "GitHub workflow run ID"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Runner request accepted and queued for routing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "accepted"
+                    },
+                    "messageId": {
+                      "type": "string",
+                      "description": "SQS message ID for tracking"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "aws",
+          "httpMethod": "POST",
+          "uri": "${RunnersSqsUri}",
+          "credentials": "${ApiGatewaySqsRoleArn}",
+          "requestParameters": {
+            "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
+          },
+          "requestTemplates": {
+            "application/json": "Action=SendMessage&MessageBody=$util.urlEncode($input.body)"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseTemplates": {
+                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.json('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for runners endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "runnersOptions",
+        "tags": [
+          "/v1/runners"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/runners/ec2": {
       "post": {
         "summary": "Create EC2 Runner",
@@ -2550,6 +2690,10 @@
       "description": "Contact form endpoints"
     },
     {
+      "name": "/v1/runners",
+      "description": "Runner request routing endpoints"
+    },
+    {
       "name": "/v1/runners/ec2",
       "description": "EC2 runner management endpoints"
     },
@@ -2590,6 +2734,7 @@
       "name": "/v1/",
       "tags": [
         "/v1/contact",
+        "/v1/runners",
         "/v1/runners/ec2",
         "/v1/runners/ecs",
         "/v1/runners/ec2/images",

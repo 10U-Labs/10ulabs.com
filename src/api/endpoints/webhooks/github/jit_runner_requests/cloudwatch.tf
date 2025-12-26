@@ -87,26 +87,4 @@ resource "aws_cloudwatch_metric_alarm" "webhook_handler_errors" {
   })
 }
 
-resource "aws_cloudwatch_metric_alarm" "job_queue_dlq_messages" {
-  alarm_name          = "${local.resource_prefix}-job-queue-dlq-messages"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "ApproximateNumberOfMessagesVisible"
-  namespace           = "AWS/SQS"
-  period              = 300
-  statistic           = "Average"
-  threshold           = 10
-  datapoints_to_alarm = 1
-  treat_missing_data  = "notBreaching"
-
-  dimensions = {
-    QueueName = aws_sqs_queue.job_queue_dlq.name
-  }
-
-  alarm_description = "Job queue DLQ has accumulated messages"
-  alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-job-queue-dlq-messages"
-  })
-}
+# Note: job_queue_dlq_messages alarm removed - job_queue moved to /v1/runners endpoint

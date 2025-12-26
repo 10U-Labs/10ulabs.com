@@ -94,6 +94,15 @@ resource "aws_iam_role_policy" "lambda_execution" {
           aws_iam_role.ecs_execution_role.arn,
           aws_iam_role.ecs_task_role.arn
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = [aws_sqs_queue.main.arn]
       }
     ]
   })

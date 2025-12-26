@@ -42,14 +42,7 @@ data "archive_file" "runners_handler" {
     content  = file("${path.module}/lambdas/common/webhook_ingress.py")
     filename = "common/webhook_ingress.py"
   }
-  source {
-    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
-    filename = "runner_labels.py"
-  }
-  source {
-    content  = file("${local.etc_dir}/runners.json")
-    filename = "etc/runners.json"
-  }
+  # Note: runner_labels no longer needed - routing logic moved to /v1/runners endpoint
 }
 
 resource "aws_lambda_function" "runners_handler" {
@@ -67,13 +60,14 @@ resource "aws_lambda_function" "runners_handler" {
 
   environment {
     variables = {
+      API_BASE_URL               = "https://${local.api_fqdn}"
+      API_KEY_PARAMETER_NAME     = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
       CANCELLATION_QUEUE_URL     = aws_sqs_queue.cancellation.url
       CIRCUIT_BREAKER_TABLE_NAME = aws_dynamodb_table.circuit_breaker_state.name
       GITHUB_REPO                = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME   = module.shared.ssm_github_pat_name
       IDEMPOTENCY_TABLE_NAME     = aws_dynamodb_table.idempotency.name
       IGNORED_EVENTS_QUEUE_URL   = aws_sqs_queue.ignored_events.url
-      JOB_QUEUE_URL              = aws_sqs_queue.job_queue.url
       WEBHOOK_SECRET_NAME        = aws_ssm_parameter.webhook_secret.name
     }
   }
@@ -129,122 +123,7 @@ resource "aws_lambda_event_source_mapping" "runners_handler_webhook_ingress" {
   maximum_batching_window_in_seconds = 0
 }
 
-# Runner Starter Lambda - processes job_queue messages and starts runners
-data "archive_file" "runner_starter" {
-  type        = "zip"
-  output_path = "${path.module}/.terraform/lambda_packages/runner_starter.zip"
-
-  source {
-    content  = file("${path.module}/lambdas/runner_starter.py")
-    filename = "runner_starter.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/__init__.py")
-    filename = "common/__init__.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/aws_clients.py")
-    filename = "common/aws_clients.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
-    filename = "common/circuit_breaker_utils.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/cloudwatch.py")
-    filename = "common/cloudwatch.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/ec2_utils.py")
-    filename = "common/ec2_utils.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/ecs_utils.py")
-    filename = "common/ecs_utils.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/github_api.py")
-    filename = "common/github_api.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/lambda_utils.py")
-    filename = "common/lambda_utils.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
-    filename = "common/webhook_ingress.py"
-  }
-  source {
-    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
-    filename = "runner_labels.py"
-  }
-  source {
-    content  = file("${local.etc_dir}/runners.json")
-    filename = "etc/runners.json"
-  }
-}
-
-resource "aws_lambda_function" "runner_starter" {
-  filename                       = data.archive_file.runner_starter.output_path
-  function_name                  = local.runner_starter_function_name
-  role                           = aws_iam_role.runner_starter.arn
-  handler                        = "runner_starter.lambda_handler"
-  source_code_hash               = data.archive_file.runner_starter.output_base64sha256
-  runtime                        = "python3.13"
-  architectures                  = ["arm64"]
-  timeout                        = local.lambda_timeout_seconds
-  memory_size                    = local.lambda_memory_mb
-  reserved_concurrent_executions = -1
-  description                    = "Processes job queue messages and starts GitHub runners"
-
-  environment {
-    variables = {
-      API_BASE_URL           = "https://${local.api_fqdn}"
-      API_KEY_PARAMETER_NAME = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
-    }
-  }
-
-  tracing_config {
-    mode = "Active"
-  }
-
-  logging_config {
-    log_format = "Text"
-    log_group  = aws_cloudwatch_log_group.runner_starter.name
-  }
-
-  tags = merge(local.common_tags, {
-    Name = local.runner_starter_function_name
-  })
-
-  depends_on = [
-    aws_iam_role_policy.runner_starter_ssm,
-    aws_iam_role_policy.runner_starter_cloudwatch,
-    aws_iam_role_policy.runner_starter_sqs,
-    aws_iam_role_policy_attachment.runner_starter_basic,
-    aws_iam_role_policy_attachment.runner_starter_xray,
-  ]
-
-  lifecycle {
-    replace_triggered_by = [aws_iam_role.runner_starter.id]
-  }
-}
-
-resource "aws_cloudwatch_log_group" "runner_starter" {
-  name              = "/aws/lambda/${local.runner_starter_function_name}"
-  retention_in_days = 7
-
-  tags = merge(local.common_tags, {
-    Name = "${local.runner_starter_function_name}Logs"
-  })
-}
-
-resource "aws_lambda_event_source_mapping" "runner_starter_sqs" {
-  event_source_arn                   = aws_sqs_queue.job_queue.arn
-  function_name                      = aws_lambda_function.runner_starter.arn
-  batch_size                         = 1
-  maximum_batching_window_in_seconds = 0
-}
+# Note: runner_starter Lambda removed - routing logic moved to /v1/runners endpoint
 
 # Runner Terminator Lambda - processes cancellation_queue and stops runners
 data "archive_file" "runner_terminator" {
@@ -718,8 +597,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
   environment {
     variables = {
       WEBHOOK_DLQ_URL             = aws_sqs_queue.webhook_dlq.url
-      JOB_DLQ_URL                 = aws_sqs_queue.job_queue_dlq.url
-      JOB_QUEUE_URL               = aws_sqs_queue.job_queue.url
+      # Note: JOB_DLQ_URL and JOB_QUEUE_URL removed - routing logic moved to /v1/runners
       SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
       GITHUB_TOKEN_PARAMETER_NAME = module.shared.ssm_github_pat_name
     }

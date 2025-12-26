@@ -961,10 +961,72 @@ TEST_MODE_MOCK_PATHS = {
 }
 
 
-def lambda_handler(event, _context):
-    """AWS Lambda handler for EC2 runner API requests."""
-    logger.info("Received API request: %s", json.dumps(event))
+def _handle_sqs_event(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle SQS event containing runner request(s) from /v1/runners endpoint."""
+    records = event.get('Records', [])
+    results = []
 
+    for record in records:
+        try:
+            body = json.loads(record.get('body', '{}'))
+            job_id = body.get('job_id')
+            job_labels = body.get('job_labels', [])
+            github_repo = body.get('github_repo')
+            run_id = body.get('run_id')
+            runner_type = body.get('runner_type', 'ec2')
+
+            logger.info(
+                "Processing SQS runner request: job_id=%s, labels=%s, repo=%s",
+                job_id, job_labels, github_repo
+            )
+
+            if not job_id or not github_repo:
+                logger.error("Missing required fields in SQS message: job_id=%s, github_repo=%s",
+                             job_id, github_repo)
+                results.append({
+                    'messageId': record.get('messageId'),
+                    'error': 'Missing required fields'
+                })
+                continue
+
+            result = launch_ec2_runner(job_id, job_labels, github_repo, run_id, runner_type)
+            results.append({
+                'messageId': record.get('messageId'),
+                'result': result
+            })
+        except (json.JSONDecodeError, KeyError) as exc:
+            logger.error("Error processing SQS record: %s", exc)
+            results.append({
+                'messageId': record.get('messageId'),
+                'error': str(exc)
+            })
+
+    # Check if any failures should cause message to be retried
+    failures = [r for r in results if r.get('error') or not r.get('result', {}).get('success')]
+    if failures:
+        logger.warning("Some SQS messages failed: %s", failures)
+        # Don't raise - let messages succeed even if EC2 launch failed
+        # The result is already logged
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps({
+            'message': 'Processed SQS records',
+            'results': results
+        })
+    }
+
+
+def lambda_handler(event, _context):
+    """AWS Lambda handler for EC2 runner API requests (HTTP or SQS)."""
+    logger.info("Received event: %s", json.dumps(event))
+
+    # Check if this is an SQS event
+    records = event.get('Records', [])
+    if records and records[0].get('eventSource') == 'aws:sqs':
+        return _handle_sqs_event(event)
+
+    # HTTP request handling
     headers = event.get('headers', {})
     test_mode_header = get_header_case_insensitive(headers, 'x-test-mode')
     set_test_mode(test_mode_header == 'true')

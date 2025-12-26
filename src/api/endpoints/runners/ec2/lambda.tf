@@ -77,3 +77,11 @@ resource "aws_lambda_permission" "api_gateway" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api.outputs.api_gateway_rest_api_id}/*"
 }
+
+# SQS event source mapping for requests from /v1/runners endpoint
+resource "aws_lambda_event_source_mapping" "sqs" {
+  event_source_arn                   = aws_sqs_queue.main.arn
+  function_name                      = aws_lambda_function.handler.arn
+  batch_size                         = 1
+  maximum_batching_window_in_seconds = 0
+}

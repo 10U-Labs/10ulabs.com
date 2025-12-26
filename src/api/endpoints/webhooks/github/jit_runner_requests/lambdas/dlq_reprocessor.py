@@ -226,14 +226,9 @@ def handler(event, context):
     """Main Lambda handler for DLQ reprocessing."""
     del event, context
     webhook_dlq_url = os.environ.get('WEBHOOK_DLQ_URL')
-    job_dlq_url = os.environ.get('JOB_DLQ_URL')
-    job_queue_url = os.environ.get('JOB_QUEUE_URL')
+    # Note: job_queue handling removed - routing logic moved to /v1/runners
 
     results = {}
-
-    if job_dlq_url and job_queue_url:
-        logger.info("Processing job queue DLQ")
-        results['job_dlq'] = reprocess_dlq_messages(job_dlq_url, job_queue_url)
 
     if webhook_dlq_url:
         logger.info("Webhook DLQ messages cannot be auto-reprocessed")

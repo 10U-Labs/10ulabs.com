@@ -18,8 +18,7 @@ locals {
   idempotency_table_name      = "${module.shared.lambda_handler_names.webhook}-idempotency"
   webhook_ingress_queue_name  = "${module.shared.lambda_handler_names.webhook}Ingress"
   webhook_ingress_dlq_name    = "${module.shared.lambda_handler_names.webhook}IngressDlq"
-  job_queue_name              = "${module.shared.lambda_handler_names.webhook}Jobs"
-  job_queue_dlq_name          = "${module.shared.lambda_handler_names.webhook}JobDlq"
+  # Note: job_queue removed - routing logic moved to /v1/runners endpoint
   ignored_events_queue_name   = "${module.shared.lambda_handler_names.webhook}IgnoredEvents"
   ignored_events_dlq_name     = "${module.shared.lambda_handler_names.webhook}IgnoredEventsDlq"
   cancellation_queue_name     = "${module.shared.lambda_handler_names.webhook}Cancellations"
@@ -41,7 +40,7 @@ locals {
   drift_recovery_function_name              = "${module.shared.resource_prefix}DriftRecovery"
   spot_interruption_handler_function_name   = "${module.shared.resource_prefix}SpotInterruptionHandler"
   stale_runner_cleanup_function_name        = "${module.shared.resource_prefix}StaleRunnerCleanup"
-  runner_starter_function_name              = "${module.shared.resource_prefix}RunnerStarter"
+  # Note: runner_starter removed - routing logic moved to /v1/runners endpoint
   runner_terminator_function_name           = "${module.shared.resource_prefix}RunnerTerminator"
   ignored_events_archiver_function_name     = "${module.shared.resource_prefix}IgnoredEventsArchiver"
   health_check_function_name                = "${module.shared.resource_prefix}JitRunnerRequestsHealth"
@@ -55,7 +54,7 @@ locals {
   drift_recovery_role_name              = "${module.shared.resource_prefix}DriftRecoveryRole"
   spot_interruption_handler_role_name   = "${module.shared.resource_prefix}SpotInterruptionHandlerRole"
   stale_runner_cleanup_role_name        = "${module.shared.resource_prefix}StaleRunnerCleanupRole"
-  runner_starter_role_name              = "${module.shared.resource_prefix}RunnerStarterRole"
+  # Note: runner_starter_role removed - routing logic moved to /v1/runners endpoint
   runner_terminator_role_name           = "${module.shared.resource_prefix}RunnerTerminatorRole"
   ignored_events_archiver_role_name     = "${module.shared.resource_prefix}IgnoredEventsArchiverRole"
   config_recorder_role_name             = "${module.shared.resource_prefix}ConfigRecorderRole"

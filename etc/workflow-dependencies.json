@@ -14,7 +14,7 @@
   },
   "api_shared_docker_repository": {
     "depends_on": [
-      "endpoint_v1_runners_ec2"
+      "endpoint_v1_runners_ec2_images"
     ],
     "name": "Deploying API Shared Docker Repository Infrastructure",
     "paths": [
@@ -25,7 +25,7 @@
   },
   "api_shared_networking": {
     "depends_on": [
-      "operational_diagnostics"
+      "endpoints_v1_runners"
     ],
     "name": "Ensuring API shared networking infrastructure exists and is properly configured",
     "paths": [
@@ -58,7 +58,7 @@
   },
   "endpoint_v1_runners_ec2": {
     "depends_on": [
-      "endpoint_v1_runners_ec2_images"
+      "api_shared_networking"
     ],
     "name": "Ensuring the /v1/runners/ec2 API endpoint exists and is properly configured",
     "paths": [
@@ -66,6 +66,21 @@
       "src/api/endpoints/runners/ec2/**",
       "test/api/conftest.py",
       "test/api/endpoints/runners/ec2/**"
+    ]
+  },
+  "endpoints_v1_runners": {
+    "depends_on": [
+      "operational_diagnostics"
+    ],
+    "name": "Ensuring /v1/runners API endpoint exists and is properly configured",
+    "paths": [
+      ".github/workflows/endpoints_v1_runners.yml",
+      "src/api/endpoints/runners/*.tf",
+      "src/api/endpoints/runners/lambda/**",
+      "lib/python/runner_labels/**",
+      "etc/runners.json",
+      "test/api/endpoints/runners/pre_deployment/**",
+      "test/api/endpoints/runners/post_deployment/**"
     ]
   },
   "operational_diagnostics": {
@@ -81,7 +96,7 @@
   },
   "endpoint_v1_runners_ecs": {
     "depends_on": [
-      "endpoint_v1_runners_ecs_images"
+      "api_shared_docker_repository"
     ],
     "name": "Ensuring the /v1/runners/ecs API endpoint exists and is properly configured",
     "paths": [
@@ -93,7 +108,7 @@
   },
   "endpoint_v1_runners_ec2_images": {
     "depends_on": [
-      "api_shared_networking"
+      "endpoint_v1_runners_ec2"
     ],
     "name": "Ensuring /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [
@@ -115,7 +130,7 @@
   },
   "endpoint_v1_runners_ecs_images": {
     "depends_on": [
-      "api_shared_docker_repository"
+      "endpoint_v1_runners_ecs"
     ],
     "name": "Ensuring /v1/runners/ecs/images API endpoint exists and is properly configured",
     "paths": [
@@ -148,13 +163,11 @@
   },
   "webhooks_github_jit_runner_requests": {
     "depends_on": [
-      "endpoint_v1_runners_ecs"
+      "endpoint_v1_runners_ecs_images"
     ],
     "name": "Ensuring the /v1/webhooks/github/jit-runner-requests API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/webhooks_github_jit_runner_requests.yml",
-      "etc/runners.json",
-      "lib/python/runner_labels/**",
       "src/api/endpoints/webhooks/github/jit_runner_requests/**",
       "test/api/conftest.py",
       "test/api/endpoints/webhooks/github/jit_runner_requests/**"

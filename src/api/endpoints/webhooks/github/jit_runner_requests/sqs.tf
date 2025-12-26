@@ -80,28 +80,7 @@ resource "aws_sqs_queue" "webhook_dlq" {
   })
 }
 
-resource "aws_sqs_queue" "job_queue_dlq" {
-  name                      = local.job_queue_dlq_name
-  message_retention_seconds = 1209600
-
-  tags = merge(local.common_tags, {
-    Name = local.job_queue_dlq_name
-  })
-}
-
-resource "aws_sqs_queue" "job_queue" {
-  name                       = local.job_queue_name
-  visibility_timeout_seconds = local.lambda_timeout_seconds * 6
-
-  redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.job_queue_dlq.arn
-    maxReceiveCount     = 3
-  })
-
-  tags = merge(local.common_tags, {
-    Name = local.job_queue_name
-  })
-}
+# Note: job_queue and job_queue_dlq removed - routing logic moved to /v1/runners endpoint
 
 # Cancellation queue - receives cancelled/completed workflow events for runner termination
 resource "aws_sqs_queue" "cancellation_dlq" {
