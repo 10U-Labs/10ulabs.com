@@ -87,7 +87,7 @@ resource "aws_ecs_task_definition" "runner" {
       environment = [
         {
           name  = "CW_CONFIG_CONTENT"
-          value = file("${path.module}/../image_for_ecs_runners/post/cloudwatch-agent-config.json")
+          value = file("${path.module}/images/post/cloudwatch-agent-config.json")
         }
       ]
 

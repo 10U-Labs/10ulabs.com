@@ -39,11 +39,11 @@ data "archive_file" "lambda" {
     filename = "handler.py"
   }
   source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    content  = file("${path.module}/../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   source {
-    content  = file("${path.module}/../../../../etc/runners.json")
+    content  = file("${path.module}/../../../../../etc/runners.json")
     filename = "etc/runners.json"
   }
   output_path = "${path.module}/.terraform/lambda.zip"
