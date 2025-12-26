@@ -37,9 +37,7 @@ Pylint must run in two separate steps:
 - name: Run pylint on tests
   run: |
     PYTHONPATH=lib/python python3 -m pylint \
-      lib/python/ test/conftest.py test/api/conftest.py \
-      test/api/endpoints/conftest.py \
-      test/path/to/tests/ \
+      lib/python/ test/ \
       --fail-on=C,R,W --fail-under=10.0
 ```
 
@@ -48,7 +46,7 @@ Key points:
 - Source step runs without `PYTHONPATH` prefix
 - Test step requires `PYTHONPATH=lib/python` prefix
 - Both include `lib/python/` in the targets
-- Test step includes all relevant conftest.py files in the path hierarchy
+- Test step includes the full `test/` directory
 - Both use `--fail-on=C,R,W --fail-under=10.0`
 
 ## 3. Mypy Separation: Source vs Tests
@@ -63,9 +61,7 @@ Mypy must run in two separate steps:
 - name: Run mypy on tests
   run: |
     MYPYPATH=lib/python python3 -m mypy \
-      lib/python/ test/conftest.py test/api/conftest.py \
-      test/api/endpoints/conftest.py \
-      test/path/to/tests/
+      lib/python/ test/
 ```
 
 Key points:
@@ -73,7 +69,7 @@ Key points:
 - Source step runs without `MYPYPATH` prefix
 - Test step requires `MYPYPATH=lib/python` prefix
 - Both include `lib/python/` in the targets
-- Test step includes all relevant conftest.py files in the path hierarchy
+- Test step includes the full `test/` directory
 
 ## 4. Duplicate Code Checking (jscpd)
 
