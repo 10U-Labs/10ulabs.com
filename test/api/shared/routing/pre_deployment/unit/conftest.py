@@ -10,7 +10,7 @@ from event_factories import create_ecs_runner_post_event
 from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
 
-BACKEND_LAMBDAS_PATH = REPO_ROOT / "src" / "api" / "backend" / "lambdas"
+BACKEND_LAMBDAS_PATH = REPO_ROOT / "src" / "api" / "shared" / "routing" / "lambdas"
 
 # Create lambda loader for backend lambdas
 load_lambda_module = create_lambda_loader(BACKEND_LAMBDAS_PATH)
@@ -19,7 +19,7 @@ load_lambda_module = create_lambda_loader(BACKEND_LAMBDAS_PATH)
 @pytest.fixture
 def openapi_spec() -> Dict[str, Any]:
     """Load and return the OpenAPI specification."""
-    base = Path(__file__).parent.parent.parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent.parent.parent
     openapi_path = base / "src" / "www" / "api" / "openapi.json"
     with open(openapi_path, 'r', encoding='utf-8') as f:
         return json.load(f)

@@ -11,7 +11,7 @@ from test_fixtures.config import parse_tfvars_file, parse_locals_file
 
 def parse_bootstrap_tfvar(var_name: str) -> str:
     """Parse a variable from bootstrap terraform.tfvars file."""
-    base = Path(__file__).parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent
     tfvars_path = base / "src" / "bootstrap" / "terraform.tfvars"
     config = parse_tfvars_file(tfvars_path)
     return config.get(var_name, "")
@@ -19,15 +19,15 @@ def parse_bootstrap_tfvar(var_name: str) -> str:
 
 def parse_health_tfvars() -> Dict[str, str]:
     """Parse health endpoint terraform.tfvars configuration."""
-    base = Path(__file__).parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent
     tfvars_path = base / "src" / "api" / "operational" / "health" / "terraform.tfvars"
     return parse_tfvars_file(tfvars_path)
 
 
 def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     """Parse API backend locals.tf file for configuration values."""
-    base = Path(__file__).parent.parent.parent.parent
-    locals_path = base / "src" / "api" / "backend" / "locals.tf"
+    base = Path(__file__).parent.parent.parent.parent.parent
+    locals_path = base / "src" / "api" / "shared" / "routing" / "locals.tf"
     config = parse_locals_file(locals_path, shared_config)
     config['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
     github_org = shared_config.get('github_org', '')
@@ -52,8 +52,8 @@ def _add_derived_config(result: Dict[str, str]) -> None:
 @pytest.fixture(name="config", scope="module")
 def config_fixture(shared_config) -> Dict[str, Any]:
     """Provide merged configuration from terraform files."""
-    base = Path(__file__).parent.parent.parent.parent
-    tfvars_path = base / "src" / "api" / "backend" / "terraform.tfvars"
+    base = Path(__file__).parent.parent.parent.parent.parent
+    tfvars_path = base / "src" / "api" / "shared" / "routing" / "terraform.tfvars"
     result: Dict[str, Any] = dict(parse_tfvars_file(tfvars_path))
     api_locals = _parse_api_locals(shared_config)
     result['aws_region'] = shared_config['aws_region']

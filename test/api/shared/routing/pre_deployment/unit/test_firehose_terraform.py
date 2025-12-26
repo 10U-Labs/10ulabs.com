@@ -5,8 +5,8 @@ from pathlib import Path
 
 def _get_terraform_path() -> Path:
     """Get the path to firehose.tf file."""
-    base = Path(__file__).parent.parent.parent.parent.parent.parent
-    return base / "src" / "api" / "backend" / "firehose.tf"
+    base = Path(__file__).parent.parent.parent.parent.parent.parent.parent
+    return base / "src" / "api" / "shared" / "routing" / "firehose.tf"
 
 
 def test_firehose_terraform_file_exists():

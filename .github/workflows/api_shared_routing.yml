@@ -33,7 +33,7 @@ jobs:
             lib/terraform/modules/shared/locals.tf | \
             grep -v '\$' | cut -d'"' -f2)
           TERRAFORM_VERSION=$(grep 'required_version' \
-            src/api/backend/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+            src/api/shared/routing/backend.tf | cut -d'"' -f2 | sed 's/>= //')
           ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
@@ -74,9 +74,9 @@ jobs:
           aws-region: ${{ steps.config.outputs.aws_region }}
           role-to-assume: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
       - name: Terraform Format Check
-        run: cd src/api/backend && terraform fmt -diff -check -recursive
+        run: cd src/api/shared/routing && terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/api/backend && terraform init
+        run: cd src/api/shared/routing && terraform init
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -88,7 +88,7 @@ jobs:
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/api/backend && tflint --init && tflint
+        run: cd src/api/shared/routing && tflint --init && tflint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -122,14 +122,14 @@ jobs:
         run: python3 -m pip install pylint
       - name: Run pylint on source code
         run: |
-          for file in src/api/backend/lambdas/*.py; do
+          for file in src/api/shared/routing/lambdas/*.py; do
             python3 -m pylint "$file" \
               --fail-on=C,R,W \
               --fail-under=10.0
           done
       - name: Run pylint on test code
         run: |
-          PYTHONPATH=lib/python python3 -m pylint test/api/backend/ \
+          PYTHONPATH=lib/python python3 -m pylint test/api/shared/routing/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - if: >-
@@ -140,11 +140,11 @@ jobs:
         run: python3 -m pip install mypy boto3-stubs types-requests types-PyYAML
       - name: Run mypy on source code
         run: |
-          for file in src/api/backend/lambdas/*.py; do
+          for file in src/api/shared/routing/lambdas/*.py; do
             python3 -m mypy "$file"
           done
       - name: Run mypy on test code
-        run: MYPYPATH=lib/python python3 -m mypy test/api/backend/
+        run: MYPYPATH=lib/python python3 -m mypy test/api/shared/routing/
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -154,7 +154,7 @@ jobs:
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/api/backend/lambdas/
+            lib/python/ src/api/shared/routing/lambdas/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -173,17 +173,17 @@ jobs:
         name: Run unit tests
         run: |
           python3 -m pytest \
-            test/api/backend/pre_deployment/unit/ \
+            test/api/shared/routing/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
-            test/api/backend/pre_deployment/integration/ \
+            test/api/shared/routing/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
       - env:
           TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
         name: Terraform Apply
-        run: cd src/api/backend && terraform apply -auto-approve
+        run: cd src/api/shared/routing && terraform apply -auto-approve
       - id: check_files
         name: Check if static files changed
         run: |
@@ -208,7 +208,7 @@ jobs:
           steps.check_files.outputs.changed == 'true'
         name: Get API domain from Terraform output
         run: |
-          API_FQDN=$(cd src/api/backend && \
+          API_FQDN=$(cd src/api/shared/routing && \
             terraform output -raw api_domain_name)
           echo "API_FQDN=$API_FQDN" >> "$GITHUB_ENV"
       - if: >-
@@ -240,12 +240,12 @@ jobs:
         name: Run post-deployment integration tests
         run: |
           python3 -m pytest \
-            test/api/backend/post_deployment/integration/ \
+            test/api/shared/routing/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - name: Run E2E tests
         run: |
           python3 -m pytest \
-            test/api/backend/post_deployment/e2e/ \
+            test/api/shared/routing/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

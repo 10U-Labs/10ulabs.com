@@ -4,8 +4,8 @@ from pathlib import Path
 
 def _get_cloudfront_s3_tf_path() -> Path:
     """Get the path to cloudfront_s3.tf file."""
-    base = Path(__file__).parent.parent.parent.parent.parent.parent
-    return base / "src" / "api" / "backend" / "cloudfront_s3.tf"
+    base = Path(__file__).parent.parent.parent.parent.parent.parent.parent
+    return base / "src" / "api" / "shared" / "routing" / "cloudfront_s3.tf"
 
 
 def _read_cloudfront_s3_tf() -> str:
@@ -28,7 +28,7 @@ def test_docs_bucket_module_exists():
 def test_docs_bucket_module_uses_s3_bucket_source():
     """Verify docs_bucket module uses s3_bucket module source."""
     content = _read_cloudfront_s3_tf()
-    assert 'source = "../../../lib/terraform/modules/s3_bucket"' in content
+    assert 'source = "../../../../lib/terraform/modules/s3_bucket"' in content
 
 
 def test_docs_bucket_module_versioning_disabled():
@@ -160,7 +160,7 @@ def test_cloudfront_logging_bucket_uses_s3_domain():
 def test_api_waf_module_uses_cloudfront_waf_source():
     """Verify api_waf module uses cloudfront_waf module source."""
     content = _read_cloudfront_s3_tf()
-    assert 'source = "../../../lib/terraform/modules/cloudfront_waf"' in content
+    assert 'source = "../../../../lib/terraform/modules/cloudfront_waf"' in content
 
 
 def test_api_waf_module_uses_us_east_1_provider():

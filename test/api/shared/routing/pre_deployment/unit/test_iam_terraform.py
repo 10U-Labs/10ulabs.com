@@ -5,8 +5,8 @@ from pathlib import Path
 
 def _get_terraform_path() -> Path:
     """Get the path to iam.tf file."""
-    base = Path(__file__).parent.parent.parent.parent.parent.parent
-    return base / "src" / "api" / "backend" / "iam.tf"
+    base = Path(__file__).parent.parent.parent.parent.parent.parent.parent
+    return base / "src" / "api" / "shared" / "routing" / "iam.tf"
 
 
 def test_iam_terraform_file_exists():

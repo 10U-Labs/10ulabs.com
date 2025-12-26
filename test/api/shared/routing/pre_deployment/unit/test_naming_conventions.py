@@ -10,7 +10,7 @@ from naming_conventions import validate_name
 from terraform_config import extract_iam_role_names, extract_lambda_function_names
 from repo_utils import REPO_ROOT
 
-BACKEND_SRC = REPO_ROOT / "src" / "api" / "backend"
+BACKEND_SRC = REPO_ROOT / "src" / "api" / "shared" / "routing"
 IAM_FILE = BACKEND_SRC / "iam.tf"
 LAMBDA_FILE = BACKEND_SRC / "lambda.tf"
 

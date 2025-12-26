@@ -5,8 +5,8 @@ from pathlib import Path
 
 def _get_terraform_path() -> Path:
     """Get the path to lambda.tf file."""
-    base = Path(__file__).parent.parent.parent.parent.parent.parent
-    return base / "src" / "api" / "backend" / "lambda.tf"
+    base = Path(__file__).parent.parent.parent.parent.parent.parent.parent
+    return base / "src" / "api" / "shared" / "routing" / "lambda.tf"
 
 
 def test_lambda_terraform_file_exists():

@@ -1,5 +1,5 @@
 module "docs_bucket" {
-  source = "../../../lib/terraform/modules/s3_bucket"
+  source = "../../../../lib/terraform/modules/s3_bucket"
 
   bucket_name         = local.api_fqdn
   force_destroy       = true
@@ -15,25 +15,25 @@ module "docs_bucket" {
 resource "aws_s3_object" "index_html" {
   bucket       = module.docs_bucket.bucket_id
   key          = "index.html"
-  source       = "${path.module}/../../www/api/index.html"
+  source       = "${path.module}/../../../www/api/index.html"
   content_type = "text/html"
-  etag         = filemd5("${path.module}/../../www/api/index.html")
+  etag         = filemd5("${path.module}/../../../www/api/index.html")
 }
 
 resource "aws_s3_object" "not_found_html" {
   bucket       = module.docs_bucket.bucket_id
   key          = "404.html"
-  source       = "${path.module}/../../www/api/404.html"
+  source       = "${path.module}/../../../www/api/404.html"
   content_type = "text/html"
-  etag         = filemd5("${path.module}/../../www/api/404.html")
+  etag         = filemd5("${path.module}/../../../www/api/404.html")
 }
 
 resource "aws_s3_object" "openapi_json" {
   bucket       = module.docs_bucket.bucket_id
   key          = "openapi.json"
-  source       = "${path.module}/../../www/api/openapi.json"
+  source       = "${path.module}/../../../www/api/openapi.json"
   content_type = "application/json"
-  etag         = filemd5("${path.module}/../../www/api/openapi.json")
+  etag         = filemd5("${path.module}/../../../www/api/openapi.json")
 }
 
 resource "aws_cloudfront_origin_access_control" "s3" {
@@ -75,7 +75,7 @@ resource "aws_s3_bucket_policy" "docs" {
 }
 
 module "api_waf" {
-  source = "../../../lib/terraform/modules/cloudfront_waf"
+  source = "../../../../lib/terraform/modules/cloudfront_waf"
 
   providers = {
     aws.us-east-1 = aws.us-east-1

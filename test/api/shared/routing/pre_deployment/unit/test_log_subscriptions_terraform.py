@@ -5,8 +5,8 @@ from pathlib import Path
 
 def _get_terraform_path() -> Path:
     """Get the path to log_subscriptions.tf file."""
-    base = Path(__file__).parent.parent.parent.parent.parent.parent
-    return base / "src" / "api" / "backend" / "log_subscriptions.tf"
+    base = Path(__file__).parent.parent.parent.parent.parent.parent.parent
+    return base / "src" / "api" / "shared" / "routing" / "log_subscriptions.tf"
 
 
 def test_log_subscriptions_terraform_file_exists():
