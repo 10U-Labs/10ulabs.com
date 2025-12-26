@@ -25,7 +25,7 @@
   },
   "api_shared_networking": {
     "depends_on": [
-      "api_endpoint_v1_runners"
+      "api_operational_diagnostics"
     ],
     "name": "Ensuring API shared networking infrastructure exists and is properly configured",
     "paths": [
@@ -70,7 +70,7 @@
   },
   "api_endpoint_v1_runners": {
     "depends_on": [
-      "api_operational_diagnostics"
+      "api_endpoint_v1_runners_ecs"
     ],
     "name": "Ensuring /v1/runners API endpoint exists and is properly configured",
     "paths": [
@@ -163,7 +163,7 @@
   },
   "webhooks_github_jit_runner_requests": {
     "depends_on": [
-      "api_endpoint_v1_runners_ecs"
+      "api_endpoint_v1_runners"
     ],
     "name": "Ensuring the /v1/webhooks/github/jit-runner-requests API endpoint exists and is properly configured",
     "paths": [
