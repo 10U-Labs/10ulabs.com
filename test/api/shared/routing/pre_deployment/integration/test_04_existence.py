@@ -1,4 +1,4 @@
-"""Layer 5: Existence tests for api_shared_routing pre-deployment validation.
+"""Layer 4: Existence tests for api_shared_routing pre-deployment validation.
 
 Verify prerequisite resources exist (assumes authorization passed).
 """
@@ -9,20 +9,20 @@ from test_fixtures.integration import (
     Layer4TerraformStateExistenceTests,
 )
 
-pytestmark = pytest.mark.layer(5)
+pytestmark = pytest.mark.layer(4)
 
 
 class TestIAMAndStateExistence(
     Layer4IAMRoleExistenceTests, Layer4TerraformStateExistenceTests
 ):
-    """Layer 5: Verify IAM role and state bucket exist.
+    """Layer 4: Verify IAM role and state bucket exist.
 
     All tests inherited from base classes.
     """
 
 
 class TestBootstrapPrerequisites:
-    """Layer 5: Verify bootstrap prerequisites exist."""
+    """Layer 4: Verify bootstrap prerequisites exist."""
 
     def test_bootstrap_terraform_initialized(self, bootstrap_initialized):
         """Verify terraform init succeeds for bootstrap."""
