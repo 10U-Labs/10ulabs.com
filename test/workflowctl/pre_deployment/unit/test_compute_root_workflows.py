@@ -211,7 +211,7 @@ class TestGetAffectedWorkflows:
 
     def test_multiple_files_multiple_workflows(self) -> None:
         """Test files affecting multiple workflows."""
-        changed = ["src/bootstrap/main.tf", "src/api/backend/main.tf"]
+        changed = ["src/bootstrap/main.tf", "src/api/shared/routing/main.tf"]
         affected = get_affected_workflows(changed, SAMPLE_GRAPH)
         assert affected == {"bootstrap", "api"}
 
@@ -243,7 +243,7 @@ class TestComputeRootWorkflows:
         changed = [
             "src/bootstrap/main.tf",
             "src/www/shared/main.tf",
-            "src/api/backend/main.tf",
+            "src/api/shared/routing/main.tf",
             "src/api/operational/health/main.tf",
         ]
         roots = compute_root_workflows(changed, SAMPLE_GRAPH)
@@ -264,7 +264,7 @@ class TestComputeRootWorkflows:
 
     def test_middle_of_chain(self) -> None:
         """Test changing middle of chain returns that workflow as root."""
-        changed = ["src/api/backend/main.tf"]
+        changed = ["src/api/shared/routing/main.tf"]
         roots = compute_root_workflows(changed, SAMPLE_GRAPH)
         assert roots == ["api"]
 
