@@ -11,16 +11,6 @@ import pytest
 pytestmark = pytest.mark.layer(1)
 
 
-def _get_project_root() -> Path:
-    """Find the project root by traversing up from the test file."""
-    current = Path(__file__).resolve()
-    while current != current.parent:
-        if (current / "src").exists() and (current / "test").exists():
-            return current
-        current = current.parent
-    raise RuntimeError("Could not find project root")
-
-
 def _extract_openapi_template_vars(openapi_path: Path) -> set[str]:
     """Extract all ${VarName} template variables from openapi.json."""
     content = openapi_path.read_text()
@@ -47,24 +37,6 @@ def _extract_templatefile_vars(apigateway_path: Path) -> set[str]:
     # Extract variable names (left side of = in key = value pairs)
     var_pattern = r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*="
     return set(re.findall(var_pattern, vars_block, re.MULTILINE))
-
-
-@pytest.fixture
-def project_root() -> Path:
-    """Get the project root directory."""
-    return _get_project_root()
-
-
-@pytest.fixture
-def openapi_path(project_root: Path) -> Path:
-    """Get the openapi.json path."""
-    return project_root / "src" / "www" / "api" / "openapi.json"
-
-
-@pytest.fixture
-def apigateway_path(project_root: Path) -> Path:
-    """Get the apigateway.tf path."""
-    return project_root / "src" / "api" / "shared" / "routing" / "apigateway.tf"
 
 
 def test_openapi_json_exists(openapi_path: Path):

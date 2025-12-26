@@ -1,6 +1,7 @@
 """Pytest fixtures for api_shared_routing pre-deployment integration tests."""
 
 import re
+from pathlib import Path
 
 from test.api.conftest import REPO_ROOT, terraform_init, terraform_output
 
@@ -11,6 +12,18 @@ pytest_plugins = ['test_fixtures.aws', 'pytest_layers']
 
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
+
+
+@pytest.fixture(name="openapi_path")
+def openapi_path_fixture() -> Path:
+    """Get the openapi.json path."""
+    return REPO_ROOT / "src" / "www" / "api" / "openapi.json"
+
+
+@pytest.fixture(name="apigateway_path")
+def apigateway_path_fixture() -> Path:
+    """Get the apigateway.tf path."""
+    return REPO_ROOT / "src" / "api" / "shared" / "routing" / "apigateway.tf"
 
 
 @pytest.fixture(scope="session", name="bootstrap_initialized")

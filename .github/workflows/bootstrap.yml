@@ -109,20 +109,21 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pylint
         run: python3 -m pip install pylint
-      - name: Run pylint
+      - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/bootstrap/ \
-            --fail-on=C,R,W \
-            --fail-under=10.0
+            lib/python/ test/conftest.py test/bootstrap/ \
+            --fail-on=C,R,W --fail-under=10.0
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install mypy
         run: python3 -m pip install mypy boto3-stubs
-      - name: Run mypy
-        run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/bootstrap/
+      - name: Run mypy on tests
+        run: |
+          MYPYPATH=lib/python python3 -m mypy \
+            lib/python/ test/conftest.py test/bootstrap/
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -158,7 +159,7 @@ jobs:
             -auto-approve \
             -var="github_pat=${{ secrets.GH_PAT }}" \
             -var="github_app_private_key=${{ secrets.GH_APP_PRIVATE_KEY }}"
-      - name: Run integration tests
+      - name: Run post-deployment integration tests
         run: |
           python3 -m pytest \
             test/bootstrap/post_deployment/integration/ \
