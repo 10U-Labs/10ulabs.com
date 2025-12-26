@@ -786,13 +786,13 @@
         }
       }
     },
-    "/v1/image-for-ec2-runners": {
+    "/v1/runners/ec2/images": {
       "post": {
         "summary": "Build Image for EC2 Runners",
         "description": "Triggers a build of a new EC2 runner AMI",
         "operationId": "buildEC2RunnerAMI",
         "tags": [
-          "/v1/image-for-ec2-runners"
+          "/v1/runners/ec2/images"
         ],
         "security": [
           {
@@ -815,7 +815,7 @@
         "description": "Lists all available EC2 runner AMIs",
         "operationId": "listEC2RunnerAMIs",
         "tags": [
-          "/v1/image-for-ec2-runners"
+          "/v1/runners/ec2/images"
         ],
         "security": [
           {
@@ -838,7 +838,7 @@
         "description": "Handles CORS preflight requests",
         "operationId": "imageForEc2RunnersOptions",
         "tags": [
-          "/v1/image-for-ec2-runners"
+          "/v1/runners/ec2/images"
         ],
         "responses": {
           "200": {
@@ -880,13 +880,13 @@
         }
       }
     },
-    "/v1/image-for-ec2-runners/latest": {
+    "/v1/runners/ec2/images/latest": {
       "get": {
         "summary": "Get Latest Image for EC2 Runners",
         "description": "Returns the latest EC2 runner AMI",
         "operationId": "getLatestEC2RunnerAMI",
         "tags": [
-          "/v1/image-for-ec2-runners"
+          "/v1/runners/ec2/images"
         ],
         "security": [
           {
@@ -909,7 +909,7 @@
         "description": "Handles CORS preflight requests",
         "operationId": "imageForEc2RunnersLatestOptions",
         "tags": [
-          "/v1/image-for-ec2-runners"
+          "/v1/runners/ec2/images"
         ],
         "responses": {
           "200": {
@@ -951,13 +951,13 @@
         }
       }
     },
-    "/v1/image-for-ec2-runners/{ami_id}": {
+    "/v1/runners/ec2/images/{ami_id}": {
       "delete": {
         "summary": "Delete Image for EC2 Runners",
         "description": "Deletes a specific EC2 runner AMI",
         "operationId": "deleteEC2RunnerAMI",
         "tags": [
-          "/v1/image-for-ec2-runners"
+          "/v1/runners/ec2/images"
         ],
         "security": [
           {
@@ -990,7 +990,7 @@
         "description": "Handles CORS preflight requests",
         "operationId": "imageForEc2RunnersAmiIdOptions",
         "tags": [
-          "/v1/image-for-ec2-runners"
+          "/v1/runners/ec2/images"
         ],
         "parameters": [
           {
@@ -1042,13 +1042,13 @@
         }
       }
     },
-    "/v1/image-for-ecs-runners": {
+    "/v1/runners/ecs/images": {
       "post": {
         "summary": "Build Image for ECS Runners",
         "description": "Triggers a build of a new ECS runner image",
         "operationId": "buildEcsRunnerImage",
         "tags": [
-          "/v1/image-for-ecs-runners"
+          "/v1/runners/ecs/images"
         ],
         "security": [
           {
@@ -1071,7 +1071,7 @@
         "description": "Lists all available ECS runner images",
         "operationId": "listEcsRunnerImages",
         "tags": [
-          "/v1/image-for-ecs-runners"
+          "/v1/runners/ecs/images"
         ],
         "security": [
           {
@@ -1094,7 +1094,7 @@
         "description": "Handles CORS preflight requests",
         "operationId": "imageForEcsRunnersOptions",
         "tags": [
-          "/v1/image-for-ecs-runners"
+          "/v1/runners/ecs/images"
         ],
         "responses": {
           "200": {
@@ -1136,13 +1136,13 @@
         }
       }
     },
-    "/v1/image-for-ecs-runners/latest": {
+    "/v1/runners/ecs/images/latest": {
       "get": {
         "summary": "Get Latest Image for ECS Runners",
         "description": "Returns the latest ECS runner image",
         "operationId": "getLatestEcsRunnerImage",
         "tags": [
-          "/v1/image-for-ecs-runners"
+          "/v1/runners/ecs/images"
         ],
         "security": [
           {
@@ -1165,7 +1165,7 @@
         "description": "Handles CORS preflight requests",
         "operationId": "imageForEcsRunnersLatestOptions",
         "tags": [
-          "/v1/image-for-ecs-runners"
+          "/v1/runners/ecs/images"
         ],
         "responses": {
           "200": {
@@ -1207,13 +1207,13 @@
         }
       }
     },
-    "/v1/image-for-ecs-runners/{digest}": {
+    "/v1/runners/ecs/images/{digest}": {
       "get": {
         "summary": "Get Image for ECS Runners by Digest",
         "description": "Returns a specific ECS runner image by digest",
         "operationId": "getEcsRunnerImageByDigest",
         "tags": [
-          "/v1/image-for-ecs-runners"
+          "/v1/runners/ecs/images"
         ],
         "security": [
           {
@@ -1246,7 +1246,7 @@
         "description": "Deletes a specific ECS runner image by digest",
         "operationId": "deleteEcsRunnerImage",
         "tags": [
-          "/v1/image-for-ecs-runners"
+          "/v1/runners/ecs/images"
         ],
         "security": [
           {
@@ -1279,7 +1279,7 @@
         "description": "Handles CORS preflight requests",
         "operationId": "imageForEcsRunnersDigestOptions",
         "tags": [
-          "/v1/image-for-ecs-runners"
+          "/v1/runners/ecs/images"
         ],
         "parameters": [
           {
@@ -1331,13 +1331,13 @@
         }
       }
     },
-    "/v1/ecs-runner": {
+    "/v1/runners/ecs": {
       "post": {
         "summary": "Create ECS Runner",
         "description": "Creates a new ECS runner instance",
         "operationId": "createEcsRunner",
         "tags": [
-          "/v1/ecs-runner"
+          "/v1/runners/ecs"
         ],
         "security": [
           {
@@ -1360,7 +1360,7 @@
         "description": "Returns the status of currently running ECS (Fargate) runner instances",
         "operationId": "getEcsRunnerStatus",
         "tags": [
-          "/v1/ecs-runner"
+          "/v1/runners/ecs"
         ],
         "security": [
           {
@@ -1448,7 +1448,7 @@
         "description": "Handles CORS preflight requests",
         "operationId": "ecsRunnerOptions",
         "tags": [
-          "/v1/ecs-runner"
+          "/v1/runners/ecs"
         ],
         "responses": {
           "200": {
@@ -1490,13 +1490,13 @@
         }
       }
     },
-    "/v1/ec2-runner": {
+    "/v1/runners/ec2": {
       "post": {
         "summary": "Create EC2 Runner",
         "description": "Creates a new EC2 runner instance",
         "operationId": "createEC2Runner",
         "tags": [
-          "/v1/ec2-runner"
+          "/v1/runners/ec2"
         ],
         "security": [
           {
@@ -1519,7 +1519,7 @@
         "description": "Returns the status of currently running EC2 runner instances",
         "operationId": "getEC2RunnerStatus",
         "tags": [
-          "/v1/ec2-runner"
+          "/v1/runners/ec2"
         ],
         "security": [
           {
@@ -1600,7 +1600,7 @@
         "description": "Handles CORS preflight requests",
         "operationId": "ec2RunnerOptions",
         "tags": [
-          "/v1/ec2-runner"
+          "/v1/runners/ec2"
         ],
         "responses": {
           "200": {
@@ -2550,19 +2550,19 @@
       "description": "Contact form endpoints"
     },
     {
-      "name": "/v1/ec2-runner",
+      "name": "/v1/runners/ec2",
       "description": "EC2 runner management endpoints"
     },
     {
-      "name": "/v1/ecs-runner",
+      "name": "/v1/runners/ecs",
       "description": "ECS runner management endpoints"
     },
     {
-      "name": "/v1/image-for-ec2-runners",
+      "name": "/v1/runners/ec2/images",
       "description": "EC2 runner AMI management endpoints"
     },
     {
-      "name": "/v1/image-for-ecs-runners",
+      "name": "/v1/runners/ecs/images",
       "description": "ECS runner image management endpoints"
     },
     {
@@ -2590,10 +2590,10 @@
       "name": "/v1/",
       "tags": [
         "/v1/contact",
-        "/v1/ec2-runner",
-        "/v1/ecs-runner",
-        "/v1/image-for-ec2-runners",
-        "/v1/image-for-ecs-runners",
+        "/v1/runners/ec2",
+        "/v1/runners/ecs",
+        "/v1/runners/ec2/images",
+        "/v1/runners/ecs/images",
         "/v1/rack-designer",
         "/v1/simulation-soc",
         "/v1/webhooks"

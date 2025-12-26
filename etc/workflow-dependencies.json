@@ -14,7 +14,7 @@
   },
   "api_shared_docker_repository": {
     "depends_on": [
-      "endpoint_v1_ec2_runner"
+      "endpoint_v1_runners_ec2"
     ],
     "name": "Deploying API Shared Docker Repository Infrastructure",
     "paths": [
@@ -56,16 +56,16 @@
       "test/api/endpoints/contact/**"
     ]
   },
-  "endpoint_v1_ec2_runner": {
+  "endpoint_v1_runners_ec2": {
     "depends_on": [
-      "endpoint_v1_image_for_ec2_runners"
+      "endpoint_v1_runners_ec2_images"
     ],
-    "name": "Ensuring the /v1/ec2-runner API endpoint exists and is properly configured",
+    "name": "Ensuring the /v1/runners/ec2 API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/endpoint_v1_ec2_runner.yml",
-      "src/api/endpoints/ec2_runner/**",
+      ".github/workflows/endpoint_v1_runners_ec2.yml",
+      "src/api/endpoints/runners/ec2/**",
       "test/api/conftest.py",
-      "test/api/endpoints/ec2_runner/**"
+      "test/api/endpoints/runners/ec2/**"
     ]
   },
   "operational_diagnostics": {
@@ -79,59 +79,59 @@
       "test/api/operational/diagnostics/**"
     ]
   },
-  "endpoint_v1_ecs_runner": {
+  "endpoint_v1_runners_ecs": {
     "depends_on": [
-      "endpoint_v1_image_for_ecs_runners"
+      "endpoint_v1_runners_ecs_images"
     ],
-    "name": "Ensuring the /v1/ecs-runner API endpoint exists and is properly configured",
+    "name": "Ensuring the /v1/runners/ecs API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/endpoint_v1_ecs_runner.yml",
-      "src/api/endpoints/ecs_runner/**",
+      ".github/workflows/endpoint_v1_runners_ecs.yml",
+      "src/api/endpoints/runners/ecs/**",
       "test/api/conftest.py",
-      "test/api/endpoints/ecs_runner/**"
+      "test/api/endpoints/runners/ecs/**"
     ]
   },
-  "endpoint_v1_image_for_ec2_runners": {
+  "endpoint_v1_runners_ec2_images": {
     "depends_on": [
       "api_shared_networking"
     ],
-    "name": "Ensuring /v1/image-for-ec2-runners API endpoint exists and is properly configured",
+    "name": "Ensuring /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/endpoint_v1_image_for_ec2_runners.yml",
-      "src/api/endpoints/image_for_ec2_runners/*.tf",
-      "src/api/endpoints/image_for_ec2_runners/lambda/**",
-      "test/api/endpoints/image_for_ec2_runners/endpoint/**"
+      ".github/workflows/endpoint_v1_runners_ec2_images.yml",
+      "src/api/endpoints/image_for_runners/ec2s/*.tf",
+      "src/api/endpoints/image_for_runners/ec2s/lambda/**",
+      "test/api/endpoints/image_for_runners/ec2s/endpoint/**"
     ]
   },
-  "endpoint_v1_image_for_ec2_runners_post": {
+  "endpoint_v1_runners_ec2_images_post": {
     "depends_on": [],
     "name": "Building AMI for EC2 self-hosted runners",
     "paths": [
-      ".github/workflows/endpoint_v1_image_for_ec2_runners_post.yml",
+      ".github/workflows/endpoint_v1_runners_ec2_images_post.yml",
       "lib/python/ec2_fleet/**",
-      "src/api/endpoints/image_for_ec2_runners/post/**",
-      "test/api/endpoints/image_for_ec2_runners/post/**"
+      "src/api/endpoints/image_for_runners/ec2s/post/**",
+      "test/api/endpoints/image_for_runners/ec2s/post/**"
     ]
   },
-  "endpoint_v1_image_for_ecs_runners": {
+  "endpoint_v1_runners_ecs_images": {
     "depends_on": [
       "api_shared_docker_repository"
     ],
-    "name": "Ensuring /v1/image-for-ecs-runners API endpoint exists and is properly configured",
+    "name": "Ensuring /v1/runners/ecs/images API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/endpoint_v1_image_for_ecs_runners.yml",
-      "src/api/endpoints/image_for_ecs_runners/lambda/**",
-      "src/api/endpoints/image_for_ecs_runners/*.tf",
-      "test/api/endpoints/image_for_ecs_runners/endpoint/**"
+      ".github/workflows/endpoint_v1_runners_ecs_images.yml",
+      "src/api/endpoints/image_for_runners/ecss/lambda/**",
+      "src/api/endpoints/image_for_runners/ecss/*.tf",
+      "test/api/endpoints/image_for_runners/ecss/endpoint/**"
     ]
   },
-  "endpoint_v1_image_for_ecs_runners_post": {
+  "endpoint_v1_runners_ecs_images_post": {
     "depends_on": [],
     "name": "Building Docker image for ECS runners",
     "paths": [
-      ".github/workflows/endpoint_v1_image_for_ecs_runners_post.yml",
-      "src/api/endpoints/image_for_ecs_runners/post/**",
-      "test/api/endpoints/image_for_ecs_runners/post/**"
+      ".github/workflows/endpoint_v1_runners_ecs_images_post.yml",
+      "src/api/endpoints/image_for_runners/ecss/post/**",
+      "test/api/endpoints/image_for_runners/ecss/post/**"
     ]
   },
   "endpoint_v1_rack_designer": {
@@ -148,7 +148,7 @@
   },
   "webhooks_github_jit_runner_requests": {
     "depends_on": [
-      "endpoint_v1_ecs_runner"
+      "endpoint_v1_runners_ecs"
     ],
     "name": "Ensuring the /v1/webhooks/github/jit-runner-requests API endpoint exists and is properly configured",
     "paths": [

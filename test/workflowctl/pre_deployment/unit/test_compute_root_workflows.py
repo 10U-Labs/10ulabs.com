@@ -50,20 +50,20 @@ SAMPLE_GRAPH = {
         "depends_on": ["health"],
         "paths": [".github/workflows/api_shared_ecr.yml", "src/api/shared/ecr/**"],
     },
-    "image_for_ecs_runners": {
+    "ecs_images": {
         "name": "Image for ECS Runners",
         "depends_on": ["ecr"],
         "paths": [
-            ".github/workflows/endpoint_v1_image_for_ecs_runners.yml",
-            "src/api/endpoints/image_for_ecs_runners/**",
+            ".github/workflows/endpoint_v1_runners_ecs_images.yml",
+            "src/api/endpoints/runners/ecs/images/**",
         ],
     },
     "ecs_runner": {
         "name": "ECS Runner",
-        "depends_on": ["image_for_ecs_runners"],
+        "depends_on": ["ecs_images"],
         "paths": [
-            ".github/workflows/endpoint_v1_ecs_runner.yml",
-            "src/api/endpoints/ecs_runner/**",
+            ".github/workflows/endpoint_v1_runners_ecs.yml",
+            "src/api/endpoints/runners/ecs/**",
         ],
     },
     "contact": {
@@ -164,7 +164,7 @@ class TestGetAllAncestors:
             "api",
             "health",
             "ecr",
-            "image_for_ecs_runners",
+            "ecs_images",
             "ecs_runner",
         }
         assert ancestors == expected
@@ -346,7 +346,7 @@ class TestGetAllDescendants:
     def test_transitive_descendants(self) -> None:
         """Test workflow with transitive dependents."""
         descendants = get_all_descendants("ecr", SAMPLE_GRAPH)
-        assert descendants == {"image_for_ecs_runners", "ecs_runner", "contact"}
+        assert descendants == {"ecs_images", "ecs_runner", "contact"}
 
     def test_root_descendants(self) -> None:
         """Test root workflow has all others as descendants."""
@@ -356,7 +356,7 @@ class TestGetAllDescendants:
             "api",
             "health",
             "ecr",
-            "image_for_ecs_runners",
+            "ecs_images",
             "ecs_runner",
             "contact",
         }
@@ -372,7 +372,7 @@ class TestGetAllDescendants:
         """Test that descendant computation caches direct descendant."""
         cache: dict[str, set[str]] = {}
         get_all_descendants("ecr", SAMPLE_GRAPH, cache)
-        assert "image_for_ecs_runners" in cache
+        assert "ecs_images" in cache
 
     def test_caching_stores_second_level_descendant(self) -> None:
         """Test that descendant computation caches second level descendant."""
@@ -525,7 +525,7 @@ class TestComputeExecutionPlan:
             "api",
             "health",
             "ecr",
-            "image_for_ecs_runners",
+            "ecs_images",
             "ecs_runner",
             "contact",
         ]
@@ -534,7 +534,7 @@ class TestComputeExecutionPlan:
     def test_middle_root(self) -> None:
         """Test starting from middle of chain."""
         plan = compute_execution_plan(["ecr"], SAMPLE_GRAPH)
-        expected = ["ecr", "image_for_ecs_runners", "ecs_runner", "contact"]
+        expected = ["ecr", "ecs_images", "ecs_runner", "contact"]
         assert plan == expected
 
     def test_multiple_roots_execution_order(self) -> None:

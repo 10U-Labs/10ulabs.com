@@ -1,0 +1,356 @@
+---
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    name: Build and deploy AMI for EC2 self-hosted runners
+    permissions:
+      actions: write
+      contents: read
+      id-token: write
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "arm", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: shared
+        name: Extract shared configuration values
+        run: |
+          TF_SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
+          AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          LOCALS=src/bootstrap/locals.tf
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep \
+            'name_for_github_actions_role' $LOCALS | \
+            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/"
+          ROLE_ARN="${ROLE_ARN}${RESOURCE_PREFIX}"
+          ROLE_ARN="${ROLE_ARN}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          PROVIDERS=src/api/backend/providers.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $PROVIDERS \
+            | cut -d'"' -f2 | sed 's/>= //')
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.shared.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.shared.outputs.aws_region }}
+          role-to-assume: ${{ steps.shared.outputs.github_actions_role_arn }}
+      - id: api
+        name: Get API terraform outputs
+        run: |
+          cd src/api/backend
+          terraform init -backend=true -input=false
+          INSTANCE_TYPES=$(terraform output -json \
+            ec2_instance_types | tr -d '[]" ')
+          AMI_PURPOSE_VALUE=$(terraform output -raw \
+            ec2_runner_ami_purpose_value)
+          AMI_STABLE_TAG=$(terraform output -raw \
+            ec2_runner_ami_stable_tag)
+          SECURITY_GROUP_ID=$(terraform output -raw \
+            runner_security_group_id)
+          SUBNET_IDS=$(terraform output -raw \
+            vpc_public_subnet_ids)
+          SSM_PARAM=$(terraform output -raw \
+            ssm_parameter_name_for_latest_ami)
+          echo "instance_types=$INSTANCE_TYPES" >> $GITHUB_OUTPUT
+          echo "ami_purpose_value=$AMI_PURPOSE_VALUE" >> $GITHUB_OUTPUT
+          echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
+          echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
+          echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
+          echo "ssm_param=$SSM_PARAM" >> $GITHUB_OUTPUT
+      - id: config
+        name: Extract configuration values
+        run: |
+          CONF=src/api/endpoints/runners/ec2/images/post
+          CONF="${CONF}/config.json"
+          RUNNER_USER=$(jq -r '.runner_user' "$CONF")
+          RUNNER_VERSION=$(jq -r '.runner_version' "$CONF")
+          SOURCE_AMI=$(jq -r '.source_ami' "$CONF")
+          TERRAFORM_VERSION=$(jq -r '.terraform_version' "$CONF")
+          YQ_VERSION=$(jq -r '.yq_version' "$CONF")
+          OS_FAMILY=$(echo "$SOURCE_AMI" | cut -d'-' -f1)
+          OS_VERSION=$(echo "$SOURCE_AMI" | cut -d'-' -f2)
+          OS_ARCH=$(echo "$SOURCE_AMI" | cut -d'-' -f3)
+          echo "os_architecture=$OS_ARCH" >> $GITHUB_OUTPUT
+          echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
+          echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
+          echo "runner_user=$RUNNER_USER" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
+          echo "source_ami=$SOURCE_AMI" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+          echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
+        run: |
+          python3 -m pip install boto3 boto3-stubs mypy paramiko \
+            pylint pytest pyyaml types-paramiko types-PyYAML botocore
+      - name: Linting config files
+        run: |
+          WF=.github/workflows/endpoint_v1_runners_ec2_images_post.yml
+          CONF=src/api/endpoints/runners/ec2/images/post/config.json
+          EMPTY='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY='key-ordering: enable'
+          EOF='new-line-at-end-of-file: enable'
+          TRUTH='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY, $KEY, $EOF, $TRUTH"
+          yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            $WF
+          jsonlint -q $CONF
+      - env:
+          PYTHONPATH: >-
+            lib/python:test/api/endpoints/runners/ec2/images/post/post_deployment
+        name: Linting Python files
+        run: |
+          pylint \
+            lib/python/ec2_fleet/*.py \
+            src/api/endpoints/runners/ec2/images/post/*.py \
+            test/api/endpoints/runners/ec2/images/post/ \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - name: Static type checking Python files with mypy
+        run: |
+          SRC=src/api/endpoints/runners/ec2/images/post
+          TEST=test/api/endpoints/runners/ec2/images/post
+          MYPYPATH=lib/python python3 -m mypy $SRC/*.py
+          MYPYPATH=lib/python:$TEST/post_deployment python3 -m mypy \
+            --explicit-package-bases lib/python/ec2_fleet/ $TEST/
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/api/endpoints/runners/ec2/images/post/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/
+      - name: Run unit tests
+        run: |
+          TEST=test/api/endpoints/runners/ec2/images/post/pre_deployment
+          python3 -m pytest \
+            $TEST/unit/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+      - name: Run pre-deployment integration tests
+        run: |
+          TEST=test/api/endpoints/runners/ec2/images/post/pre_deployment
+          python3 -m pytest \
+            $TEST/integration/ \
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
+      - env:
+          OS_ARCH: ${{ steps.config.outputs.os_architecture }}
+          OS_FAMILY: ${{ steps.config.outputs.os_family }}
+          OS_VERSION: ${{ steps.config.outputs.os_version }}
+          PYTHONPATH: lib/python
+        id: build
+        name: Build AMI with EC2 Fleet
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          BASE="ami-github-ec2-runner"
+          AMI_NAME="${BASE}-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}"
+          AMI_NAME="${AMI_NAME}-${TIMESTAMP}"
+          DIR=src/api/endpoints/runners/ec2/images/post
+          SCRIPT="${DIR}/build_ami.py"
+          SETUP="${DIR}/setup.py"
+          INST="${{ steps.api.outputs.instance_types }}"
+          REG="${{ steps.shared.outputs.aws_region }}"
+          USR="${{ steps.config.outputs.runner_user }}"
+          RVER="${{ steps.config.outputs.runner_version }}"
+          SAMI="${{ steps.config.outputs.source_ami }}"
+          SNET="${{ steps.api.outputs.subnet_ids }}"
+          TFVER="${{ steps.config.outputs.terraform_version }}"
+          YQVER="${{ steps.config.outputs.yq_version }}"
+          TAG="${{ steps.api.outputs.ami_stable_tag }}"
+          PURP="${{ steps.api.outputs.ami_purpose_value }}"
+          python3 $SCRIPT \
+            --ami-name "$AMI_NAME" \
+            --instance-types "$INST" \
+            --region "$REG" \
+            --runner-user "$USR" \
+            --runner-version "$RVER" \
+            --setup-script "$SETUP" \
+            --source-ami "$SAMI" \
+            --subnet-ids "$SNET" \
+            --terraform-version "$TFVER" \
+            --yq-version "$YQVER" \
+            --tag "${TAG}=false" \
+            --tag "BuildDate=${TIMESTAMP}" \
+            --tag "ManagedBy=GitHubActions" \
+            --tag "Name=${AMI_NAME}" \
+            --tag "OSArchitecture=${OS_ARCH}" \
+            --tag "OSFamily=${OS_FAMILY^}" \
+            --tag "OSVersion=${OS_VERSION}" \
+            --tag "Purpose=${PURP}" \
+            --tag "Repository=${{ github.repository }}" \
+            --tag "RunId=${{ github.run_id }}" \
+            --tag "Workflow=${{ github.workflow }}" \
+            | tee build.log
+          BUILD_EXIT_CODE=${PIPESTATUS[0]}
+          if [ $BUILD_EXIT_CODE -ne 0 ]; then
+            exit $BUILD_EXIT_CODE
+          fi
+          AMI_ID=$(grep '^AMI_ID=' build.log | cut -d= -f2)
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+      - env:
+          INSTANCE_TYPES: ${{ steps.api.outputs.instance_types }}
+          PYTHONPATH: >-
+            lib/python:test/api/endpoints/runners/ec2/images/post/post_deployment
+          TEST_AMI_ID: ${{ steps.build.outputs.ami_id }}
+          TEST_SECURITY_GROUP_ID: ${{ steps.api.outputs.security_group_id }}
+          TEST_SUBNET_IDS: ${{ steps.api.outputs.subnet_ids }}
+        name: Run post-deployment integration tests
+        run: |
+          TEST=test/api/endpoints/runners/ec2/images/post/post_deployment
+          python3 -m pytest \
+            $TEST/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+      - name: Get GitHub PAT from Parameter Store
+        run: |
+          terraform -chdir=src/bootstrap init -backend=true \
+            -input=false > /dev/null
+          GITHUB_TOKEN_SECRET_NAME=$(terraform \
+            -chdir=src/bootstrap output -raw \
+            ssm_parameter_name_for_github_pat)
+          GITHUB_PAT=$(aws ssm get-parameter \
+            --name "$GITHUB_TOKEN_SECRET_NAME" \
+            --with-decryption --query 'Parameter.Value' \
+            --output text)
+          echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
+      - env:
+          INSTANCE_TYPES: ${{ steps.api.outputs.instance_types }}
+          PYTHONPATH: >-
+            lib/python:test/api/endpoints/runners/ec2/images/post/post_deployment
+          TEST_AMI_ID: ${{ steps.build.outputs.ami_id }}
+          TEST_SECURITY_GROUP_ID: ${{ steps.api.outputs.security_group_id }}
+          TEST_SUBNET_IDS: ${{ steps.api.outputs.subnet_ids }}
+        name: Run E2E tests
+        run: |
+          TEST=test/api/endpoints/runners/ec2/images/post/post_deployment
+          python3 -m pytest \
+            $TEST/e2e/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+      - name: Promote AMI
+        run: |
+          SCRIPT=src/api/endpoints/runners/ec2/images/post
+          SCRIPT="${SCRIPT}/promote_ami.py"
+          AMI_ID="${{ steps.build.outputs.ami_id }}"
+          REGION="${{ steps.shared.outputs.aws_region }}"
+          RUN_ID="${{ github.run_id }}"
+          SSM="${{ steps.api.outputs.ssm_param }}"
+          TAG="${{ steps.api.outputs.ami_stable_tag }}"
+          python3 $SCRIPT \
+            --ami-id "$AMI_ID" \
+            --region "$REGION" \
+            --run-id "$RUN_ID" \
+            --ssm-parameter-name "$SSM" \
+            --tag-key "$TAG"
+      - name: Clean up old AMIs
+        run: |
+          BASE=src/api/endpoints/runners/ec2/images/post
+          REGION="${{ steps.shared.outputs.aws_region }}"
+          SSM="${{ steps.api.outputs.ssm_param }}"
+          python3 $BASE/cleanup.py \
+            --config $BASE/config.json \
+            --region "$REGION" \
+            --ssm-parameter-name "$SSM"
+      - if: cancelled()
+        name: Clean up on cancellation
+        run: |
+          REGION="${{ steps.shared.outputs.aws_region }}"
+          RUN_ID="${{ github.run_id }}"
+          echo "Cleaning up resources for cancelled run $RUN_ID..."
+          INSTANCES=$(aws ec2 describe-instances \
+            --region "$REGION" \
+            --filters "Name=tag:RunId,Values=$RUN_ID" \
+                      "Name=instance-state-name,Values=pending,running" \
+            --query 'Reservations[*].Instances[*].InstanceId' \
+            --output text)
+          if [ -n "$INSTANCES" ]; then
+            echo "Terminating instances: $INSTANCES"
+            aws ec2 terminate-instances \
+              --region "$REGION" \
+              --instance-ids $INSTANCES
+          fi
+          for LT in $(aws ec2 describe-launch-templates \
+            --region "$REGION" \
+            --filters "Name=tag:RunId,Values=$RUN_ID" \
+            --query 'LaunchTemplates[*].LaunchTemplateId' \
+            --output text); do
+            echo "Deleting launch template: $LT"
+            aws ec2 delete-launch-template \
+              --region "$REGION" \
+              --launch-template-id "$LT" || true
+          done
+          for SG in $(aws ec2 describe-security-groups \
+            --region "$REGION" \
+            --filters "Name=tag:RunId,Values=$RUN_ID" \
+            --query 'SecurityGroups[*].GroupId' \
+            --output text); do
+            echo "Deleting security group: $SG"
+            aws ec2 delete-security-group \
+              --region "$REGION" \
+              --group-id "$SG" || true
+          done
+          for KP in $(aws ec2 describe-key-pairs \
+            --region "$REGION" \
+            --filters "Name=tag:RunId,Values=$RUN_ID" \
+            --query 'KeyPairs[*].KeyPairId' \
+            --output text); do
+            echo "Deleting key pair: $KP"
+            aws ec2 delete-key-pair \
+              --region "$REGION" \
+              --key-pair-id "$KP" || true
+          done
+          echo "Cleanup complete."
+name: Building AMI for EC2 self-hosted runners
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
+      spot_recovery_reason:
+        description: Spot recovery trigger reason
+        required: false
+        type: string
+permissions:
+  actions: write
+  contents: read
+  id-token: write

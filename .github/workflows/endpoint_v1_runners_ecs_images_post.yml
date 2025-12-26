@@ -1,0 +1,349 @@
+---
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    name: Build and deploy Docker image for ECS runners
+    permissions:
+      actions: write
+      contents: read
+      id-token: write
+    runs-on: >-
+      ${{
+        (vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]'))
+        && 'ubuntu-latest'
+        || fromJSON(format(
+          '["ec2", "general-purpose", "arm", "spot", "runner-{0}"]',
+          github.run_id))
+      }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Extract configuration values
+        run: |
+          TF_SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
+          AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          ECR_REPOSITORY_NAME=$( \
+            grep -A1 'output "ecr_repository_name_runners"' \
+            lib/terraform/modules/shared/outputs.tf | \
+            grep 'value' | cut -d'"' -f2)
+          FARGATE_CPU_ARCHITECTURE=$(grep 'fargate_cpu_architecture' \
+            src/api/endpoints/runners/ecs/terraform.tfvars | \
+            cut -d'"' -f2 | tr '[:upper:]' '[:lower:]')
+          RESOURCE_PREFIX=$(grep 'resource_prefix' \
+            lib/terraform/modules/shared/locals.tf | \
+            grep -v '\$' | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep \
+            'name_for_github_actions_role' src/bootstrap/locals.tf | \
+            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          ROLE_PATH="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
+          ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          GITHUB_ACTIONS_ROLE_ARN="${ROLE_PATH}/${ROLE_NAME}"
+          TERRAFORM_VERSION=$(grep 'required_version' \
+            src/api/shared/runners/ecs/providers.tf | \
+            cut -d'"' -f2 | sed 's/>= //')
+          echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "ecr_repository_name=$ECR_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          echo "fargate_cpu_architecture=$FARGATE_CPU_ARCHITECTURE" \
+            >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
+            >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
+        run: |
+          pip install pylint mypy yamllint pytest boto3 \
+            boto3-stubs[ecr] botocore dockerfile-parse pyyaml \
+            requests types-dockerfile-parse types-PyYAML types-requests
+      - name: Lint workflow file
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
+          yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/endpoint_v1_runners_ecs_images_post.yml
+      - name: Lint JSON config
+        run: |
+          for file in \
+            src/api/endpoints/runners/ecs/images/post/config.json \
+            src/api/endpoints/runners/ecs/images/post/cloudwatch-agent-config.json
+          do
+            echo "Validating $file"
+            jsonlint -q "$file"
+          done
+      - name: Pylint source files
+        run: |
+          POST_DIR=src/api/endpoints/runners/ecs/images/post
+          for file in $POST_DIR/*.py; do
+            pylint "$file" --fail-on=C,R,W --fail-under=10.0
+          done
+      - name: Pylint test files
+        run: |
+          BASE_DIR=src/api/endpoints/runners/ecs/images
+          TEST_DIR=test/api/endpoints/runners/ecs/images/post/
+          UNIT_DIR=$TEST_DIR/pre_deployment/unit
+          PYTHONPATH=lib/python:$BASE_DIR:$BASE_DIR/post:$UNIT_DIR pylint \
+            $TEST_DIR --fail-on=C,R,W --fail-under=10.0
+      - name: Mypy source files
+        run: |
+          POST_DIR=src/api/endpoints/runners/ecs/images/post
+          for file in $POST_DIR/*.py; do
+            python3 -m mypy "$file"
+          done
+      - name: Mypy test files
+        run: |
+          BASE_DIR=src/api/endpoints/runners/ecs/images
+          TEST_DIR=test/api/endpoints/runners/ecs/images/post/
+          UNIT_DIR=$TEST_DIR/pre_deployment/unit
+          MYPYPATH=lib/python:$BASE_DIR:$BASE_DIR/post:$UNIT_DIR \
+            python3 -m mypy --explicit-package-bases $TEST_DIR
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/api/endpoints/runners/ecs/images/post/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install hadolint
+        run: |
+          HADOLINT_VERSION=$(curl -fsSL \
+            https://api.github.com/repos/hadolint/hadolint/releases/latest | \
+            jq -r '.tag_name')
+          HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64"
+          sudo curl -fsSL -o /usr/local/bin/hadolint "$HADOLINT_URL"
+          sudo chmod +x /usr/local/bin/hadolint
+      - name: Validate Dockerfile
+        run: |
+          DOCKERFILE=src/api/endpoints/runners/ecs/images/post/Dockerfile
+          hadolint --ignore DL3008 --ignore DL3013 \
+            --ignore DL3015 --ignore DL3016 $DOCKERFILE
+      - name: Run unit tests
+        run: |
+          TEST=test/api/endpoints/runners/ecs/images/post/pre_deployment/unit/
+          pytest \
+            $TEST --confcutdir=test --verbose --pythonwarnings=error
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.config.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Run pre-deployment integration tests
+        run: |
+          TEST=test/api/endpoints/runners/ecs/images/post/pre_deployment
+          pytest \
+            $TEST/integration/ \
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+      - id: docker_config
+        name: Load Docker build configuration
+        run: |
+          CONFIG_FILE=src/api/endpoints/runners/ecs/images/post/config.json
+          GH_VER=$(jq -r '.gh_version' $CONFIG_FILE)
+          HADOLINT_VER=$(jq -r '.hadolint_version' $CONFIG_FILE)
+          NODE_VER=$(jq -r '.node_version' $CONFIG_FILE)
+          RUNNER_VER=$(jq -r '.runner_version' $CONFIG_FILE)
+          TERRAFORM_VER=$(jq -r '.terraform_version' $CONFIG_FILE)
+          TFLINT_VER=$(jq -r '.tflint_version' $CONFIG_FILE)
+          YQ_VER=$(jq -r '.yq_version' $CONFIG_FILE)
+          echo "gh_version=$GH_VER" >> $GITHUB_OUTPUT
+          echo "hadolint_version=$HADOLINT_VER" >> $GITHUB_OUTPUT
+          echo "node_version=$NODE_VER" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VER" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VER" >> $GITHUB_OUTPUT
+          echo "tflint_version=$TFLINT_VER" >> $GITHUB_OUTPUT
+          echo "yq_version=$YQ_VER" >> $GITHUB_OUTPUT
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - id: build
+        if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Build and push Docker image (QEMU)
+        run: |
+          cd src/api/endpoints/runners/ecs/images/post
+          BUILD_TAG=$(date -u +%Y-%m-%d-%H-%M-%S-%3N)
+          ACCT_ID='${{ steps.config.outputs.aws_account_id }}'
+          REGION='${{ steps.config.outputs.aws_region }}'
+          REPO='${{ steps.config.outputs.ecr_repository_name }}'
+          CPU='${{ steps.config.outputs.fargate_cpu_architecture }}'
+          ECR_URL="${ACCT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPO}"
+          CACHE_URL="${ECR_URL}:buildcache"
+          GH_VER='${{ steps.docker_config.outputs.gh_version }}'
+          HADOLINT_VER='${{ steps.docker_config.outputs.hadolint_version }}'
+          NODE_VER='${{ steps.docker_config.outputs.node_version }}'
+          RUNNER_VER='${{ steps.docker_config.outputs.runner_version }}'
+          TERRAFORM_VER='${{ steps.docker_config.outputs.terraform_version }}'
+          TFLINT_VER='${{ steps.docker_config.outputs.tflint_version }}'
+          YQ_VER='${{ steps.docker_config.outputs.yq_version }}'
+          docker buildx build \
+            --platform linux/$CPU \
+            --cache-from type=registry,ref=${CACHE_URL} \
+            --cache-to type=registry,ref=${CACHE_URL},mode=max \
+            --build-arg GH_VERSION=$GH_VER \
+            --build-arg HADOLINT_VERSION=$HADOLINT_VER \
+            --build-arg NODE_VERSION=$NODE_VER \
+            --build-arg RUNNER_ARCH=$CPU \
+            --build-arg RUNNER_VERSION=$RUNNER_VER \
+            --build-arg TERRAFORM_VERSION=$TERRAFORM_VER \
+            --build-arg TFLINT_VERSION=$TFLINT_VER \
+            --build-arg YQ_VERSION=$YQ_VER \
+            -t $ECR_URL:available \
+            -t $ECR_URL:$BUILD_TAG \
+            --push \
+            .
+          echo "image_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
+          echo "ecr_repository=$REPO" >> $GITHUB_OUTPUT
+      - id: build-ec2
+        if: >-
+          vars.USE_GITHUB_HOSTED != 'true' &&
+          github.event.inputs.github_hosted != 'true' &&
+          !contains(github.event.head_commit.message, '[github-hosted]')
+        name: Build and push Docker image (EC2)
+        run: |
+          cd src/api/endpoints/runners/ecs/images/post
+          BUILD_TAG=$(date -u +%Y-%m-%d-%H-%M-%S-%3N)
+          ACCT_ID='${{ steps.config.outputs.aws_account_id }}'
+          REGION='${{ steps.config.outputs.aws_region }}'
+          REPO='${{ steps.config.outputs.ecr_repository_name }}'
+          CPU='${{ steps.config.outputs.fargate_cpu_architecture }}'
+          ECR_URL="${ACCT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPO}"
+          CACHE_URL="${ECR_URL}:buildcache"
+          GH_VER='${{ steps.docker_config.outputs.gh_version }}'
+          HADOLINT_VER='${{ steps.docker_config.outputs.hadolint_version }}'
+          NODE_VER='${{ steps.docker_config.outputs.node_version }}'
+          RUNNER_VER='${{ steps.docker_config.outputs.runner_version }}'
+          TERRAFORM_VER='${{ steps.docker_config.outputs.terraform_version }}'
+          TFLINT_VER='${{ steps.docker_config.outputs.tflint_version }}'
+          YQ_VER='${{ steps.docker_config.outputs.yq_version }}'
+          docker buildx build \
+            --platform linux/$CPU \
+            --cache-from type=registry,ref=${CACHE_URL} \
+            --cache-to type=registry,ref=${CACHE_URL},mode=max \
+            --build-arg GH_VERSION=$GH_VER \
+            --build-arg HADOLINT_VERSION=$HADOLINT_VER \
+            --build-arg NODE_VERSION=$NODE_VER \
+            --build-arg RUNNER_ARCH=$CPU \
+            --build-arg RUNNER_VERSION=$RUNNER_VER \
+            --build-arg TERRAFORM_VERSION=$TERRAFORM_VER \
+            --build-arg TFLINT_VERSION=$TFLINT_VER \
+            --build-arg YQ_VERSION=$YQ_VER \
+            -t $ECR_URL:available \
+            -t $ECR_URL:$BUILD_TAG \
+            --push \
+            .
+          echo "image_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
+          echo "ecr_repository=$REPO" >> $GITHUB_OUTPUT
+      - name: Run post-deployment integration tests
+        run: |
+          TEST=test/api/endpoints/runners/ecs/images/post/post_deployment
+          pytest \
+            $TEST/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+      - name: Get GitHub PAT from Parameter Store
+        run: |
+          terraform -chdir=src/bootstrap init -backend=true \
+            -input=false > /dev/null
+          GITHUB_TOKEN_SECRET_NAME=$(terraform -chdir=src/bootstrap \
+            output -raw ssm_parameter_name_for_github_pat)
+          GITHUB_PAT=$(aws ssm get-parameter \
+            --name "$GITHUB_TOKEN_SECRET_NAME" --with-decryption \
+            --query 'Parameter.Value' --output text)
+          echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
+      - name: Run E2E tests
+        run: |
+          TEST=test/api/endpoints/runners/ecs/images/post/post_deployment
+          pytest \
+            $TEST/e2e/ --confcutdir=test --verbose --pythonwarnings=error
+      - name: Promote image
+        run: |
+          POST_DIR=src/api/endpoints/runners/ecs/images/post
+          SCRIPT=$POST_DIR/promote_docker_image.py
+          REPO='${{ steps.config.outputs.ecr_repository_name }}'
+          BUILD_TAG='${{ steps.build.outputs.image_tag }}'
+          EC2_TAG='${{ steps.build-ec2.outputs.image_tag }}'
+          TAG="${BUILD_TAG:-$EC2_TAG}"
+          REGION='${{ steps.config.outputs.aws_region }}'
+          python3 $SCRIPT \
+            --repository "$REPO" \
+            --image-tag "$TAG" \
+            --region "$REGION"
+name: Building Docker image for ECS runners
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
+      spot_recovery_reason:
+        description: Spot recovery trigger reason
+        required: false
+        type: string
+permissions:
+  actions: write
+  contents: read
+  id-token: write

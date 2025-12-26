@@ -1,0 +1,47 @@
+"""Pytest fixtures for pre-deployment unit tests."""
+import importlib.util
+import json
+import pytest
+from repo_utils import REPO_ROOT
+
+
+POST_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2" / "images" / "post"
+
+
+@pytest.fixture
+def config_path():
+    """Config path."""
+    return POST_DIR / "config.json"
+
+
+@pytest.fixture
+def loaded_config():
+    """Loaded config."""
+    return json.loads((POST_DIR / "config.json").read_text())
+
+
+@pytest.fixture
+def post_dir():
+    """Post dir."""
+    return POST_DIR
+
+
+@pytest.fixture
+def setup_script_content():
+    """Setup script content."""
+    return (POST_DIR / "setup.py").read_text()
+
+
+@pytest.fixture
+def setup_script_path():
+    """Setup script path."""
+    return POST_DIR / "setup.py"
+
+
+@pytest.fixture
+def setup_module():
+    """Load the setup module dynamically."""
+    spec = importlib.util.spec_from_file_location("setup", POST_DIR / "setup.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module

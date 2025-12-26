@@ -167,7 +167,7 @@ def create_ecs_runner_post_event(
     if job_labels is None:
         job_labels = ['fargate', 'self-hosted']
     return {
-        'path': '/v1/ecs-runner',
+        'path': '/v1/runners/ecs',
         'httpMethod': 'POST',
         'body': json.dumps({
             'job_id': job_id,
