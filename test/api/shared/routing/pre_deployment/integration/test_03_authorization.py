@@ -1,4 +1,4 @@
-"""Layer 2: Authorization tests for api_shared_routing pre-deployment validation.
+"""Layer 3: Authorization tests for api_shared_routing pre-deployment validation.
 
 Verify permission to inspect prerequisite resources (not existence, not capability).
 """
@@ -6,7 +6,7 @@ import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration import Layer2S3AuthorizationTests
 
-pytestmark = pytest.mark.layer(2)
+pytestmark = pytest.mark.layer(3)
 
 
 class TestS3Authorization(Layer2S3AuthorizationTests):

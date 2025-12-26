@@ -42,21 +42,3 @@ data "terraform_remote_state" "health" {
   }
 }
 
-data "terraform_remote_state" "ec2_runner" {
-  backend = "s3"
-
-  config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "ec2_runner/terraform.tfstate"
-    region = "us-east-2"
-  }
-
-  defaults = {
-    ec2_instance_types           = []
-    ec2_runner_ami_purpose_value = ""
-    ec2_runner_ami_stable_tag    = ""
-    lambda_function_arn          = ""
-    lambda_function_name         = ""
-  }
-}
-

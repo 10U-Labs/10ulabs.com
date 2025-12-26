@@ -1,12 +1,16 @@
-"""Shared base classes and factories for 6-layer pre-deployment integration tests.
+"""Shared base classes and factories for 7-layer pre-deployment integration tests.
 
-The 6-layer testing model:
-- Layer 1: Authentication - Valid credentials exist
-- Layer 2: Authorization - Permission to inspect resources
-- Layer 3: State - Terraform state matches AWS reality
-- Layer 4: Existence - Required resources exist
-- Layer 5: Configuration - Resources configured correctly
-- Layer 6: Capability - Can perform required operations
+The 7-layer testing model:
+- Layer 1: Contracts - Local file compatibility (openapi.json + templatefile vars)
+- Layer 2: Authentication - Valid credentials exist
+- Layer 3: Authorization - Permission to inspect resources
+- Layer 4: State - Terraform state matches AWS reality
+- Layer 5: Existence - Required resources exist
+- Layer 6: Configuration - Resources configured correctly
+- Layer 7: Capability - Can perform required operations
+
+Note: Base classes are named Layer1-Layer6 for backward compatibility with existing
+tests. New tests should use the 7-layer pytestmark numbering (Layer 1 = Contracts).
 
 Usage:
     # In your test file:

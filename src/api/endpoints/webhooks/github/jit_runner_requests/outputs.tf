@@ -50,38 +50,6 @@ output "ecr_repository_uri" {
   value = data.terraform_remote_state.api_shared_docker_repository.outputs.ecr_repository_url
 }
 
-output "ec2_instance_profile_name" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_instance_profile_name
-}
-
-output "ec2_runner_ami_purpose_tag" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_ami_purpose_tag
-}
-
-output "ec2_runner_ami_purpose_value" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_ami_purpose_value
-}
-
-output "ec2_runner_ami_stable_tag" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_ami_stable_tag
-}
-
-output "ec2_runner_role_name" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_role_name
-}
-
-output "ec2_instance_types" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_instance_types
-}
-
-output "ec2_runner_managed_by_tag" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag
-}
-
-output "ec2_runner_role_arn" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_role_arn
-}
-
 output "ssm_parameter_name_for_latest_ami" {
   value = aws_ssm_parameter.latest_ami.name
 }
