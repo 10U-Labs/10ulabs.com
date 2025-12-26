@@ -1,4 +1,4 @@
-"""Layer 2: Authorization tests for bootstrap pre-deployment validation.
+"""Layer 3: Authorization tests for bootstrap pre-deployment validation.
 
 Verify permission to inspect the state bucket (not existence, not capability).
 """
@@ -6,7 +6,7 @@ import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration import create_layer2_s3_authorization_tests
 
-pytestmark = pytest.mark.layer(2)
+pytestmark = pytest.mark.layer(3)
 
 
 TestS3Authorization = create_layer2_s3_authorization_tests()

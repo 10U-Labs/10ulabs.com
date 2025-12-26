@@ -1,4 +1,4 @@
-"""Layer 3: State validation tests for bootstrap pre-deployment.
+"""Layer 4: State validation tests for bootstrap pre-deployment.
 
 Verifies Terraform state matches AWS reality. Skips in cold state (no prior state).
 """
@@ -10,7 +10,7 @@ from repo_utils import REPO_ROOT
 from terraform_config import TEST_AWS_REGION
 from terraform_drift import check_resource_exists, get_planned_creates
 
-pytestmark = pytest.mark.layer(3)
+pytestmark = pytest.mark.layer(4)
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 
