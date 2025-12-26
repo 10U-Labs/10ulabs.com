@@ -5,7 +5,7 @@ concurrency:
 jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
-    name: Deploy API backend
+    name: Deploy API shared routing
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -113,7 +113,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/api_backend.yml
+            .github/workflows/api_shared_routing.yml
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -266,7 +266,7 @@ jobs:
             $TRIGGER_FLAG \
             --workflow api_shared_routing \
             --repo ${{ github.repository }}
-name: Ensuring API backend exists and is properly configured
+name: Ensuring API shared routing exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
