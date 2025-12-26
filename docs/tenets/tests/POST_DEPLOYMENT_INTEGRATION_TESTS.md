@@ -2,6 +2,18 @@
 
 These are the non-negotiable rules for post-deployment integration tests.
 
+## Table of Contents
+
+- [1. Only Test This Deployment's Resources](#1-only-test-this-deployments-resources)
+- [2. Three-Layer Testing Model](#2-three-layer-testing-model)
+- [3. Fail Fast with Granular Diagnostics](#3-fail-fast-with-granular-diagnostics)
+- [4. Test File Organization](#4-test-file-organization)
+- [5. Boundary with E2E Tests](#5-boundary-with-e2e-tests)
+- [6. No Cleanup Required](#6-no-cleanup-required)
+- [7. Fixture Usage](#7-fixture-usage)
+- [Quick Reference](#quick-reference)
+- [8. Layer Marker Implementation](#8-layer-marker-implementation)
+
 ## 1. Only Test This Deployment's Resources
 
 **Post-deployment tests ONLY test resources created by THIS workflow.**

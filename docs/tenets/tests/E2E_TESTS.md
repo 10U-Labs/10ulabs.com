@@ -2,6 +2,21 @@
 
 These are the non-negotiable rules for end-to-end tests.
 
+## Table of Contents
+
+- [1. Top of the Pyramid](#1-top-of-the-pyramid)
+- [2. Production-Safe](#2-production-safe)
+- [3. Test the Full Path](#3-test-the-full-path)
+- [4. Last Line of Defense, Not First](#4-last-line-of-defense-not-first)
+- [5. Run During CI/CD](#5-run-during-cicd)
+- [6. Fail Fast](#6-fail-fast)
+- [7. Clear Ownership](#7-clear-ownership)
+- [8. Test File Organization](#8-test-file-organization)
+- [9. Fixture Requirements](#9-fixture-requirements)
+- [Quick Reference](#quick-reference)
+- [Boundary with Post-Deployment Integration](#boundary-with-post-deployment-integration)
+- [10. AWS Configuration vs Real-World Verification](#10-aws-configuration-vs-real-world-verification)
+
 ## 1. Top of the Pyramid
 
 **E2E tests are few in number. Only test critical user journeys.**

@@ -2,6 +2,20 @@
 
 These are the non-negotiable rules for unit tests.
 
+## Table of Contents
+
+- [1. Unit Tests Are the Primary Line of Defense](#1-unit-tests-are-the-primary-line-of-defense)
+- [2. Extreme Atomicity](#2-extreme-atomicity)
+- [3. Test File Organization](#3-test-file-organization)
+- [4. Complete Isolation](#4-complete-isolation)
+- [5. Test Every Code Path](#5-test-every-code-path)
+- [6. Descriptive Test Names](#6-descriptive-test-names)
+- [7. Test Error Messages](#7-test-error-messages)
+- [8. No Test Interdependence](#8-no-test-interdependence)
+- [9. Fast Execution](#9-fast-execution)
+- [10. Pre-Deployment Coverage Requirements](#10-pre-deployment-coverage-requirements)
+- [Quick Reference](#quick-reference)
+
 ## 1. Unit Tests Are the Primary Line of Defense
 
 **Almost everything wrong should be caught by unit tests.**

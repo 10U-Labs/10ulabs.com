@@ -2,6 +2,22 @@
 
 This document explains the test infrastructure, where to put common code, and what reusable utilities exist.
 
+## Table of Contents
+
+- [Test Hierarchy](#test-hierarchy)
+- [Reusable Utilities in lib/python/](#reusable-utilities-in-libpython)
+  - [test_fixtures/](#test_fixtures)
+  - [terraform_config/](#terraform_config)
+  - [terraform_drift/](#terraform_drift)
+  - [naming_conventions/](#naming_conventions)
+  - [boto_mocks/](#boto_mocks)
+  - [event_factories/](#event_factories)
+  - [lambda_response/](#lambda_response)
+  - [module_utils/](#module_utils)
+- [Check Before You Create](#check-before-you-create)
+- [Layer Marker System](#layer-marker-system)
+- [Static Analysis in Workflows](#static-analysis-in-workflows)
+
 ## Test Hierarchy
 
 Tests follow a cascading conftest.py pattern. Each level inherits from parents and adds specifics.

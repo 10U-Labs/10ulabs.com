@@ -2,6 +2,20 @@
 
 These are the non-negotiable rules for pre-deployment integration tests.
 
+## Table of Contents
+
+- [1. Integration Tests Verify Components Work Together](#1-integration-tests-verify-components-work-together)
+- [2. Seven-Layer Testing Model](#2-seven-layer-testing-model)
+- [3. Fail Fast with Granular Diagnostics](#3-fail-fast-with-granular-diagnostics)
+- [4. Test File Organization](#4-test-file-organization)
+- [5. Cleanup After Capability Tests](#5-cleanup-after-capability-tests)
+- [6. Fixture Usage](#6-fixture-usage)
+- [Quick Reference](#quick-reference)
+- [Workflow Reference](#workflow-reference)
+- [8. Layer Marker Implementation](#8-layer-marker-implementation)
+- [9. Why Terraform Plan is Not a Workflow Step](#9-why-terraform-plan-is-not-a-workflow-step)
+- [10. Workflow Step Ordering](#10-workflow-step-ordering)
+
 ## 1. Integration Tests Verify Components Work Together
 
 **Integration tests verify that multiple components integrate correctly.**
