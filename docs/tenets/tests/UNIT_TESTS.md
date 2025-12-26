@@ -4,19 +4,19 @@ These are the non-negotiable rules for unit tests.
 
 ## Table of Contents
 
-- [1. Unit Tests Are the Primary Line of Defense](#1-unit-tests-are-the-primary-line-of-defense)
-- [2. Extreme Atomicity](#2-extreme-atomicity)
-- [3. Test File Organization](#3-test-file-organization)
-- [4. Complete Isolation](#4-complete-isolation)
-- [5. Test Every Code Path](#5-test-every-code-path)
-- [6. Descriptive Test Names](#6-descriptive-test-names)
-- [7. Test Error Messages](#7-test-error-messages)
-- [8. No Test Interdependence](#8-no-test-interdependence)
-- [9. Fast Execution](#9-fast-execution)
-- [10. Pre-Deployment Coverage Requirements](#10-pre-deployment-coverage-requirements)
+- [Unit Tests Are the Primary Line of Defense](#unit-tests-are-the-primary-line-of-defense)
+- [Extreme Atomicity](#extreme-atomicity)
+- [Test File Organization](#test-file-organization)
+- [Complete Isolation](#complete-isolation)
+- [Test Every Code Path](#test-every-code-path)
+- [Descriptive Test Names](#descriptive-test-names)
+- [Test Error Messages](#test-error-messages)
+- [No Test Interdependence](#no-test-interdependence)
+- [Fast Execution](#fast-execution)
+- [Pre-Deployment Coverage Requirements](#pre-deployment-coverage-requirements)
 - [Quick Reference](#quick-reference)
 
-## 1. Unit Tests Are the Primary Line of Defense
+## Unit Tests Are the Primary Line of Defense
 
 **Almost everything wrong should be caught by unit tests.**
 
@@ -39,7 +39,7 @@ The testing pyramid dictates that unit tests form the base - the number of unit 
 
 **Rule of thumb**: If you're testing a single component with all dependencies mocked, it's a unit test. If you're testing how two or more components interact, it's an integration test - regardless of whether network calls are involved.
 
-## 2. Extreme Atomicity
+## Extreme Atomicity
 
 **One logical assertion per test. No exceptions.**
 
@@ -96,7 +96,7 @@ test('parseLabels handles valid and invalid input', () => {
 });
 ```
 
-## 3. Test File Organization
+## Test File Organization
 
 **One test file per source file. 1:1 mapping.**
 
@@ -120,7 +120,7 @@ test/api/endpoints/runners/pre_deployment/unit/
 Do NOT organize tests by behavior (test_happy_path.js, test_error_cases.js).
 Do NOT put multiple source files' tests in one test file.
 
-## 4. Complete Isolation
+## Complete Isolation
 
 **Unit tests must have zero external dependencies.**
 
@@ -161,7 +161,7 @@ test('enqueues message to job queue', async () => {
 });
 ```
 
-## 5. Test Every Code Path
+## Test Every Code Path
 
 **100% branch coverage is the goal.**
 
@@ -201,7 +201,7 @@ test('returns runner type', () => {
 });
 ```
 
-## 6. Descriptive Test Names
+## Descriptive Test Names
 
 **Test names must describe the specific behavior being tested.**
 
@@ -224,7 +224,7 @@ test('error handling', () => {...});
 test('should work correctly', () => {...});
 ```
 
-## 7. Test Error Messages
+## Test Error Messages
 
 **When tests fail, the error message must explain the problem.**
 
@@ -253,7 +253,7 @@ test('verifySignature works', () => {
 });
 ```
 
-## 8. No Test Interdependence
+## No Test Interdependence
 
 **Each test must be completely independent.**
 
@@ -312,7 +312,7 @@ describe('CircuitBreaker', () => {
 });
 ```
 
-## 9. Fast Execution
+## Fast Execution
 
 **Unit tests must be fast. Milliseconds, not seconds.**
 
@@ -340,7 +340,7 @@ test('fetches GitHub token', async () => {
 });
 ```
 
-## 10. Pre-Deployment Coverage Requirements
+## Pre-Deployment Coverage Requirements
 
 **Unit tests must catch these issues before deployment:**
 

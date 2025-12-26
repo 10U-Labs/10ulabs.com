@@ -4,17 +4,17 @@ These are the non-negotiable rules for post-deployment integration tests.
 
 ## Table of Contents
 
-- [1. Only Test This Deployment's Resources](#1-only-test-this-deployments-resources)
-- [2. Three-Layer Testing Model](#2-three-layer-testing-model)
-- [3. Fail Fast with Granular Diagnostics](#3-fail-fast-with-granular-diagnostics)
-- [4. Test File Organization](#4-test-file-organization)
-- [5. Boundary with E2E Tests](#5-boundary-with-e2e-tests)
-- [6. No Cleanup Required](#6-no-cleanup-required)
-- [7. Fixture Usage](#7-fixture-usage)
+- [Only Test This Deployment's Resources](#only-test-this-deployments-resources)
+- [Three-Layer Testing Model](#three-layer-testing-model)
+- [Test File Organization](#test-file-organization)
+- [Layer Marker Implementation](#layer-marker-implementation)
+- [Fail Fast with Granular Diagnostics](#fail-fast-with-granular-diagnostics)
+- [Boundary with E2E Tests](#boundary-with-e2e-tests)
+- [No Cleanup Required](#no-cleanup-required)
+- [Fixture Usage](#fixture-usage)
 - [Quick Reference](#quick-reference)
-- [8. Layer Marker Implementation](#8-layer-marker-implementation)
 
-## 1. Only Test This Deployment's Resources
+## Only Test This Deployment's Resources
 
 **Post-deployment tests ONLY test resources created by THIS workflow.**
 
@@ -28,7 +28,7 @@ These are the non-negotiable rules for post-deployment integration tests.
 Post-deployment tests answer: "Did my deployment succeed?"
 E2E tests answer: "Does the user journey work?"
 
-## 2. Three-Layer Testing Model
+## Three-Layer Testing Model
 
 Every deployed resource must be tested through three layers, in order:
 
@@ -43,16 +43,7 @@ Each layer catches different failure modes:
 - Layer 2 fails → resource exists but misconfigured
 - Layer 3 fails → resources exist and configured, but not connected
 
-## 3. Fail Fast with Granular Diagnostics
-
-Cryptic errors like "Lambda invocation failed" are unacceptable.
-
-- Each test must be atomic: one assertion per test
-- Tests must run in layer order (existence before configuration before wiring)
-- When a test fails, the developer must know exactly what's wrong
-- Failure messages must include resource names and expected values
-
-## 4. Test File Organization
+## Test File Organization
 
 Tests MUST be organized into exactly three files by layer:
 
@@ -176,89 +167,7 @@ def test_webhook_handler_processes_events(lambda_client):
     assert response["StatusCode"] == 200
 ```
 
-## 5. Boundary with E2E Tests
-
-Post-deployment integration tests verify the deployment. E2E tests verify user journeys.
-
-### This belongs in post-deployment integration:
-- Lambda exists
-- Lambda has correct timeout
-- Lambda has Layer attached
-- SQS queue exists
-- SQS queue has correct retention
-- Lambda has SQS trigger configured
-- Layer contains expected files
-
-### This belongs in e2e tests:
-- Webhook receives HTTP request and returns 200
-- Message flows through SQS to Lambda
-- Label routing correctly identifies runner type
-- Circuit breaker opens after failures
-- Full runner provisioning workflow
-
-**Rule of thumb**: If the test invokes a Lambda, sends an HTTP request, or sends a message to SQS, it's an e2e test.
-
-## 6. No Cleanup Required
-
-Post-deployment tests MUST NOT create test artifacts. They only inspect what terraform created.
-
-- Do: Read resource configuration (get_function, describe_table, get_queue_attributes)
-- Do: Verify resource exists (get_function, describe_table, get_queue_url)
-- Do: Check component connections (list_event_source_mappings, get Layers)
-- Do NOT: Write test data to DynamoDB
-- Do NOT: Send test messages to SQS
-- Do NOT: Invoke Lambdas with test payloads
-
-If a test needs cleanup, it's probably an e2e test.
-
-## 7. Fixture Usage
-
-Use fixtures to:
-1. Create AWS clients once per module
-2. Cache resource identifiers (queue URLs, ARNs)
-3. Download and cache layer contents for inspection
-
-```python
-# conftest.py
-@pytest.fixture(scope="module")
-def lambda_client(config):
-    return boto3.client("lambda", region_name=config["aws_region"])
-
-@pytest.fixture(scope="module")
-def job_queue_url(sqs_client):
-    response = sqs_client.get_queue_url(QueueName="TenULabsRunnersJobQueue")
-    return response["QueueUrl"]
-
-@pytest.fixture(scope="module")
-def layer_contents(lambda_client):
-    """Download layer and return file list for inspection."""
-    # Get latest layer version
-    response = lambda_client.list_layer_versions(LayerName="TenULabsRunnersLayer")
-    layer_arn = response["LayerVersions"][0]["LayerVersionArn"]
-    # Download and extract...
-    return file_list
-```
-
-## Quick Reference
-
-| If you want to test... | Layer | File |
-|------------------------|-------|------|
-| Lambda exists | 1. Existence | test_01_existence.py |
-| SQS queue exists | 1. Existence | test_01_existence.py |
-| DynamoDB table exists | 1. Existence | test_01_existence.py |
-| Layer exists | 1. Existence | test_01_existence.py |
-| Lambda timeout is 30s | 2. Configuration | test_02_configuration.py |
-| Queue retention is 14 days | 2. Configuration | test_02_configuration.py |
-| Table has TTL enabled | 2. Configuration | test_02_configuration.py |
-| Layer contains file X | 2. Configuration | test_02_configuration.py |
-| Lambda has Layer attached | 3. Wiring | test_03_wiring.py |
-| Lambda has SQS trigger | 3. Wiring | test_03_wiring.py |
-| IAM allows cross-service | 3. Wiring | test_03_wiring.py |
-| HTTP request works | N/A | e2e tests |
-| Message flow works | N/A | e2e tests |
-| Full workflow works | N/A | e2e tests |
-
-## 8. Layer Marker Implementation
+## Layer Marker Implementation
 
 Tests use `pytest.mark.layer(N)` to enforce execution order. Layer N tests automatically skip if any test in layers 1 through N-1 failed.
 
@@ -325,3 +234,94 @@ With layer markers:
 - If existence tests fail, later layers are skipped
 - Failure message clearly indicates which layer broke
 - Developer sees exactly where the chain failed
+
+## Fail Fast with Granular Diagnostics
+
+Cryptic errors like "Lambda invocation failed" are unacceptable.
+
+- Each test must be atomic: one assertion per test
+- Tests must run in layer order (existence before configuration before wiring)
+- When a test fails, the developer must know exactly what's wrong
+- Failure messages must include resource names and expected values
+
+## Boundary with E2E Tests
+
+Post-deployment integration tests verify the deployment. E2E tests verify user journeys.
+
+### This belongs in post-deployment integration:
+- Lambda exists
+- Lambda has correct timeout
+- Lambda has Layer attached
+- SQS queue exists
+- SQS queue has correct retention
+- Lambda has SQS trigger configured
+- Layer contains expected files
+
+### This belongs in e2e tests:
+- Webhook receives HTTP request and returns 200
+- Message flows through SQS to Lambda
+- Label routing correctly identifies runner type
+- Circuit breaker opens after failures
+- Full runner provisioning workflow
+
+**Rule of thumb**: If the test invokes a Lambda, sends an HTTP request, or sends a message to SQS, it's an e2e test.
+
+## No Cleanup Required
+
+Post-deployment tests MUST NOT create test artifacts. They only inspect what terraform created.
+
+- Do: Read resource configuration (get_function, describe_table, get_queue_attributes)
+- Do: Verify resource exists (get_function, describe_table, get_queue_url)
+- Do: Check component connections (list_event_source_mappings, get Layers)
+- Do NOT: Write test data to DynamoDB
+- Do NOT: Send test messages to SQS
+- Do NOT: Invoke Lambdas with test payloads
+
+If a test needs cleanup, it's probably an e2e test.
+
+## Fixture Usage
+
+Use fixtures to:
+1. Create AWS clients once per module
+2. Cache resource identifiers (queue URLs, ARNs)
+3. Download and cache layer contents for inspection
+
+```python
+# conftest.py
+@pytest.fixture(scope="module")
+def lambda_client(config):
+    return boto3.client("lambda", region_name=config["aws_region"])
+
+@pytest.fixture(scope="module")
+def job_queue_url(sqs_client):
+    response = sqs_client.get_queue_url(QueueName="TenULabsRunnersJobQueue")
+    return response["QueueUrl"]
+
+@pytest.fixture(scope="module")
+def layer_contents(lambda_client):
+    """Download layer and return file list for inspection."""
+    # Get latest layer version
+    response = lambda_client.list_layer_versions(LayerName="TenULabsRunnersLayer")
+    layer_arn = response["LayerVersions"][0]["LayerVersionArn"]
+    # Download and extract...
+    return file_list
+```
+
+## Quick Reference
+
+| If you want to test... | Layer | File |
+|------------------------|-------|------|
+| Lambda exists | 1. Existence | test_01_existence.py |
+| SQS queue exists | 1. Existence | test_01_existence.py |
+| DynamoDB table exists | 1. Existence | test_01_existence.py |
+| Layer exists | 1. Existence | test_01_existence.py |
+| Lambda timeout is 30s | 2. Configuration | test_02_configuration.py |
+| Queue retention is 14 days | 2. Configuration | test_02_configuration.py |
+| Table has TTL enabled | 2. Configuration | test_02_configuration.py |
+| Layer contains file X | 2. Configuration | test_02_configuration.py |
+| Lambda has Layer attached | 3. Wiring | test_03_wiring.py |
+| Lambda has SQS trigger | 3. Wiring | test_03_wiring.py |
+| IAM allows cross-service | 3. Wiring | test_03_wiring.py |
+| HTTP request works | N/A | e2e tests |
+| Message flow works | N/A | e2e tests |
+| Full workflow works | N/A | e2e tests |

@@ -4,19 +4,19 @@ These are the non-negotiable rules for pre-deployment integration tests.
 
 ## Table of Contents
 
-- [1. Integration Tests Verify Components Work Together](#1-integration-tests-verify-components-work-together)
-- [2. Seven-Layer Testing Model](#2-seven-layer-testing-model)
-- [3. Fail Fast with Granular Diagnostics](#3-fail-fast-with-granular-diagnostics)
-- [4. Test File Organization](#4-test-file-organization)
-- [5. Cleanup After Capability Tests](#5-cleanup-after-capability-tests)
-- [6. Fixture Usage](#6-fixture-usage)
+- [Integration Tests Verify Components Work Together](#integration-tests-verify-components-work-together)
+- [Seven-Layer Testing Model](#seven-layer-testing-model)
+- [Test File Organization](#test-file-organization)
+- [Layer Marker Implementation](#layer-marker-implementation)
+- [Fail Fast with Granular Diagnostics](#fail-fast-with-granular-diagnostics)
+- [Cleanup After Capability Tests](#cleanup-after-capability-tests)
+- [Fixture Usage](#fixture-usage)
+- [Why Terraform Plan is Not a Workflow Step](#why-terraform-plan-is-not-a-workflow-step)
+- [Workflow Step Ordering](#workflow-step-ordering)
 - [Quick Reference](#quick-reference)
 - [Workflow Reference](#workflow-reference)
-- [8. Layer Marker Implementation](#8-layer-marker-implementation)
-- [9. Why Terraform Plan is Not a Workflow Step](#9-why-terraform-plan-is-not-a-workflow-step)
-- [10. Workflow Step Ordering](#10-workflow-step-ordering)
 
-## 1. Integration Tests Verify Components Work Together
+## Integration Tests Verify Components Work Together
 
 **Integration tests verify that multiple components integrate correctly.**
 
@@ -47,7 +47,7 @@ Resources created by the workflow don't exist yet when pre-deployment tests run.
 Pre-deployment tests answer: "Can I deploy?"
 Post-deployment tests answer: "Did deployment succeed?"
 
-## 2. Seven-Layer Testing Model
+## Seven-Layer Testing Model
 
 Every deployment must pass through seven layers, in order:
 
@@ -70,16 +70,7 @@ Each layer catches different failure modes:
 - Layer 6 fails → resource exists but misconfigured
 - Layer 7 fails → resource exists and configured, but can't perform operations
 
-## 3. Fail Fast with Granular Diagnostics
-
-Cryptic errors like "AccessDenied: Access Denied" are unacceptable.
-
-- Each test must be atomic: one assertion per test
-- Tests must run in layer order (authentication before authorization before state before existence)
-- When a test fails, the developer must know exactly where the chain broke
-- Failure messages must include resource names and expected values
-
-## 4. Test File Organization
+## Test File Organization
 
 Tests MUST be organized into exactly seven files by layer:
 
@@ -348,81 +339,7 @@ def test_can_write_to_dynamodb(dynamodb_client, config):
 
 **Always clean up in `finally` blocks.**
 
-## 5. Cleanup After Capability Tests
-
-If testing write operations, delete test artifacts in `finally` blocks.
-
-```python
-def test_can_write(client, resource_id):
-    test_id = f"test-{uuid.uuid4()}"
-    try:
-        client.put_item(Id=test_id, Data="test")
-    finally:
-        try:
-            client.delete_item(Id=test_id)
-        except ClientError:
-            pass
-```
-
-No test artifacts should remain after test execution.
-
-## 6. Fixture Usage
-
-Use fixtures to:
-1. Create AWS clients once per module
-2. Load configuration from shared config files
-3. Cache resource identifiers discovered in earlier layers
-
-```python
-# conftest.py
-@pytest.fixture(scope="module")
-def sts_client(config):
-    return boto3.client("sts", region_name=config["aws_region"])
-
-@pytest.fixture(scope="module")
-def iam_client(config):
-    return boto3.client("iam", region_name=config["aws_region"])
-
-@pytest.fixture(scope="module")
-def config():
-    """Load configuration from shared config file."""
-    with open("etc/config.json") as f:
-        return json.load(f)
-```
-
-## Quick Reference
-
-| If you want to test... | Layer | File |
-|------------------------|-------|------|
-| Template vars match between files | 1. Contracts | test_01_contracts.py |
-| Cross-file configuration consistency | 1. Contracts | test_01_contracts.py |
-| Lambda exports match Terraform refs | 1. Contracts | test_01_contracts.py |
-| AWS credentials valid | 2. Authentication | test_02_authentication.py |
-| Can call sts:GetCallerIdentity | 2. Authentication | test_02_authentication.py |
-| Can describe IAM role | 3. Authorization | test_03_authorization.py |
-| Can head S3 bucket | 3. Authorization | test_03_authorization.py |
-| Terraform state matches reality | 4. State | test_04_state.py |
-| No orphaned resources | 4. State | test_04_state.py |
-| IAM role exists | 5. Existence | test_05_existence.py |
-| S3 bucket exists | 5. Existence | test_05_existence.py |
-| API Gateway exists | 5. Existence | test_05_existence.py |
-| Role has policy attached | 6. Configuration | test_06_configuration.py |
-| Bucket has versioning | 6. Configuration | test_06_configuration.py |
-| API has required resource | 6. Configuration | test_06_configuration.py |
-| Can write to S3 | 7. Capability | test_07_capability.py |
-| Can assume role | 7. Capability | test_07_capability.py |
-| Can invoke Lambda | 7. Capability | test_07_capability.py |
-
-## Workflow Reference
-
-| Workflow | Prerequisites to Test | NOT Test (created by this workflow) |
-|----------|----------------------|-------------------------------------|
-| `webhooks_github_jit_runner_requests` | IAM role from bootstrap, API Gateway from api_shared_routing | SQS queues, DynamoDB tables, Lambda functions |
-| `api_shared_routing` | S3 buckets from bootstrap, Route53 zone | API Gateway, Lambda functions |
-| `api_operational_health` | API Gateway from api_shared_routing | Lambda function |
-| `image_for_ecs_runners` | ECR repository from bootstrap | Docker image |
-
-## 8. Layer Marker Implementation
+## Layer Marker Implementation
 
 Tests use `pytest.mark.layer(N)` to enforce execution order. Layer N tests automatically skip if any test in layers 1 through N-1 failed.
 
@@ -480,7 +397,58 @@ def pytest_runtest_setup(item):
                 pytest.skip(f"Skipped: layer {prev_layer} had failures")
 ```
 
-## 9. Why Terraform Plan is Not a Workflow Step
+## Fail Fast with Granular Diagnostics
+
+Cryptic errors like "AccessDenied: Access Denied" are unacceptable.
+
+- Each test must be atomic: one assertion per test
+- Tests must run in layer order (authentication before authorization before state before existence)
+- When a test fails, the developer must know exactly where the chain broke
+- Failure messages must include resource names and expected values
+
+## Cleanup After Capability Tests
+
+If testing write operations, delete test artifacts in `finally` blocks.
+
+```python
+def test_can_write(client, resource_id):
+    test_id = f"test-{uuid.uuid4()}"
+    try:
+        client.put_item(Id=test_id, Data="test")
+    finally:
+        try:
+            client.delete_item(Id=test_id)
+        except ClientError:
+            pass
+```
+
+No test artifacts should remain after test execution.
+
+## Fixture Usage
+
+Use fixtures to:
+1. Create AWS clients once per module
+2. Load configuration from shared config files
+3. Cache resource identifiers discovered in earlier layers
+
+```python
+# conftest.py
+@pytest.fixture(scope="module")
+def sts_client(config):
+    return boto3.client("sts", region_name=config["aws_region"])
+
+@pytest.fixture(scope="module")
+def iam_client(config):
+    return boto3.client("iam", region_name=config["aws_region"])
+
+@pytest.fixture(scope="module")
+def config():
+    """Load configuration from shared config file."""
+    with open("etc/config.json") as f:
+        return json.load(f)
+```
+
+## Why Terraform Plan is Not a Workflow Step
 
 Layer 4 (State) tests replace the need for a separate `terraform plan` step in workflows.
 
@@ -500,7 +468,7 @@ Layer 4 (State) tests replace the need for a separate `terraform plan` step in w
 
 If layer 4 passes, `terraform apply` will succeed (no unexpected resource conflicts).
 
-## 10. Workflow Step Ordering
+## Workflow Step Ordering
 
 Pre-deployment integration tests require a specific position in the workflow:
 
@@ -530,3 +498,35 @@ Pre-deployment integration tests require a specific position in the workflow:
 - Layer 4 requires `terraform init` but NOT `terraform apply`
 - If pre-deployment fails, skip apply (fail fast)
 - Post-deployment and E2E tests run AFTER successful apply
+
+## Quick Reference
+
+| If you want to test... | Layer | File |
+|------------------------|-------|------|
+| Template vars match between files | 1. Contracts | test_01_contracts.py |
+| Cross-file configuration consistency | 1. Contracts | test_01_contracts.py |
+| Lambda exports match Terraform refs | 1. Contracts | test_01_contracts.py |
+| AWS credentials valid | 2. Authentication | test_02_authentication.py |
+| Can call sts:GetCallerIdentity | 2. Authentication | test_02_authentication.py |
+| Can describe IAM role | 3. Authorization | test_03_authorization.py |
+| Can head S3 bucket | 3. Authorization | test_03_authorization.py |
+| Terraform state matches reality | 4. State | test_04_state.py |
+| No orphaned resources | 4. State | test_04_state.py |
+| IAM role exists | 5. Existence | test_05_existence.py |
+| S3 bucket exists | 5. Existence | test_05_existence.py |
+| API Gateway exists | 5. Existence | test_05_existence.py |
+| Role has policy attached | 6. Configuration | test_06_configuration.py |
+| Bucket has versioning | 6. Configuration | test_06_configuration.py |
+| API has required resource | 6. Configuration | test_06_configuration.py |
+| Can write to S3 | 7. Capability | test_07_capability.py |
+| Can assume role | 7. Capability | test_07_capability.py |
+| Can invoke Lambda | 7. Capability | test_07_capability.py |
+
+## Workflow Reference
+
+| Workflow | Prerequisites to Test | NOT Test (created by this workflow) |
+|----------|----------------------|-------------------------------------|
+| `webhooks_github_jit_runner_requests` | IAM role from bootstrap, API Gateway from api_shared_routing | SQS queues, DynamoDB tables, Lambda functions |
+| `api_shared_routing` | S3 buckets from bootstrap, Route53 zone | API Gateway, Lambda functions |
+| `api_operational_health` | API Gateway from api_shared_routing | Lambda function |
+| `image_for_ecs_runners` | ECR repository from bootstrap | Docker image |

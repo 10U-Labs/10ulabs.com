@@ -4,20 +4,20 @@ These are the non-negotiable rules for end-to-end tests.
 
 ## Table of Contents
 
-- [1. Top of the Pyramid](#1-top-of-the-pyramid)
-- [2. Production-Safe](#2-production-safe)
-- [3. Test the Full Path](#3-test-the-full-path)
-- [4. Last Line of Defense, Not First](#4-last-line-of-defense-not-first)
-- [5. Run During CI/CD](#5-run-during-cicd)
-- [6. Fail Fast](#6-fail-fast)
-- [7. Clear Ownership](#7-clear-ownership)
-- [8. Test File Organization](#8-test-file-organization)
-- [9. Fixture Requirements](#9-fixture-requirements)
-- [Quick Reference](#quick-reference)
+- [Top of the Pyramid](#top-of-the-pyramid)
+- [Production-Safe](#production-safe)
+- [Test the Full Path](#test-the-full-path)
+- [Last Line of Defense, Not First](#last-line-of-defense-not-first)
+- [Run During CI/CD](#run-during-cicd)
+- [Fail Fast](#fail-fast)
+- [Clear Ownership](#clear-ownership)
+- [Test File Organization](#test-file-organization)
+- [Fixture Requirements](#fixture-requirements)
+- [AWS Configuration vs Real-World Verification](#aws-configuration-vs-real-world-verification)
 - [Boundary with Post-Deployment Integration](#boundary-with-post-deployment-integration)
-- [10. AWS Configuration vs Real-World Verification](#10-aws-configuration-vs-real-world-verification)
+- [Quick Reference](#quick-reference)
 
-## 1. Top of the Pyramid
+## Top of the Pyramid
 
 **E2E tests are few in number. Only test critical user journeys.**
 
@@ -63,7 +63,7 @@ def test_webhook_with_invalid_json():
     ...
 ```
 
-## 2. Production-Safe
+## Production-Safe
 
 **E2E tests run in production. They must be non-destructive or use test flags.**
 
@@ -132,7 +132,7 @@ def test_runner_provisioning():
     # No cleanup! Runner keeps running, costing money
 ```
 
-## 3. Test the Full Path
+## Test the Full Path
 
 **E2E tests verify end-to-end behavior that unit and integration tests cannot catch.**
 
@@ -170,7 +170,7 @@ def test_lambda_processes_sqs_message(lambda_client):
     assert response["StatusCode"] == 200
 ```
 
-## 4. Last Line of Defense, Not First
+## Last Line of Defense, Not First
 
 **If an e2e test catches a bug that a unit test should have caught, that's a unit test gap.**
 
@@ -208,7 +208,7 @@ def test_labels_parsed_correctly():
     assert "ecs" in response.json()["runner_type"]
 ```
 
-## 5. Run During CI/CD
+## Run During CI/CD
 
 **E2E tests run as workflow steps, not on schedule.**
 
@@ -239,7 +239,7 @@ on:
     - cron: '0 0 * * *'  # We don't run tests on schedule
 ```
 
-## 6. Fail Fast
+## Fail Fast
 
 **E2E tests should fail quickly when something is wrong.**
 
@@ -276,7 +276,7 @@ def test_webhook_eventually_works(api_endpoint, payload):
     pytest.fail("Webhook never worked")
 ```
 
-## 7. Clear Ownership
+## Clear Ownership
 
 **Each e2e test must document the user journey it validates.**
 
@@ -302,7 +302,7 @@ def test_webhook():
     ...
 ```
 
-## 8. Test File Organization
+## Test File Organization
 
 ```
 test/api/endpoints/{endpoint}/e2e/
@@ -313,7 +313,7 @@ test/api/endpoints/{endpoint}/e2e/
 
 E2E tests are organized by journey type, not by component.
 
-## 9. Fixture Requirements
+## Fixture Requirements
 
 E2E fixtures must:
 1. Create properly signed payloads (real GitHub signature format)
@@ -346,32 +346,7 @@ def signed_webhook(config):
     }
 ```
 
-## Quick Reference
-
-| If you want to test... | Test Type | Why |
-|------------------------|-----------|-----|
-| Label parsing logic | Unit | Pure function, no I/O |
-| Error message format | Unit | Pure function, no I/O |
-| Lambda timeout is 30s | Post-deployment integration | Resource configuration |
-| SQS has Lambda trigger | Post-deployment integration | Component wiring |
-| HTTP request reaches Lambda | E2E | Full path verification |
-| Webhook signature verified | E2E | Security-critical path |
-| Runner actually starts | E2E | End-to-end user journey |
-
-## Boundary with Post-Deployment Integration
-
-Post-deployment integration tests answer: "Did my deployment succeed?"
-E2E tests answer: "Does the user journey work?"
-
-| Post-Deployment Integration | E2E |
-|----------------------------|-----|
-| Lambda exists | Lambda responds to HTTP |
-| SQS queue exists | Messages flow through queue |
-| Lambda has SQS trigger | Trigger actually fires |
-| IAM policy attached | IAM policy works in practice |
-| Configuration is correct | System behaves correctly |
-
-## 10. AWS Configuration vs Real-World Verification
+## AWS Configuration vs Real-World Verification
 
 **Integration tests verify what AWS says. E2E tests verify what the real world experiences.**
 
@@ -420,3 +395,28 @@ def test_mx_record_returns_correct_priority_via_dns(zone_nameservers):
 ```
 
 Both tests are necessary. The integration test catches deployment failures. The E2E test catches propagation, delegation, and resolution failures that the integration test cannot detect.
+
+## Boundary with Post-Deployment Integration
+
+Post-deployment integration tests answer: "Did my deployment succeed?"
+E2E tests answer: "Does the user journey work?"
+
+| Post-Deployment Integration | E2E |
+|----------------------------|-----|
+| Lambda exists | Lambda responds to HTTP |
+| SQS queue exists | Messages flow through queue |
+| Lambda has SQS trigger | Trigger actually fires |
+| IAM policy attached | IAM policy works in practice |
+| Configuration is correct | System behaves correctly |
+
+## Quick Reference
+
+| If you want to test... | Test Type | Why |
+|------------------------|-----------|-----|
+| Label parsing logic | Unit | Pure function, no I/O |
+| Error message format | Unit | Pure function, no I/O |
+| Lambda timeout is 30s | Post-deployment integration | Resource configuration |
+| SQS has Lambda trigger | Post-deployment integration | Component wiring |
+| HTTP request reaches Lambda | E2E | Full path verification |
+| Webhook signature verified | E2E | Security-critical path |
+| Runner actually starts | E2E | End-to-end user journey |
