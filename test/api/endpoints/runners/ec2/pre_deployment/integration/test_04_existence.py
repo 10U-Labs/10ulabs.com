@@ -15,23 +15,23 @@ pytestmark = pytest.mark.layer(4)
 class TestImageForEC2RunnersOutputs:
     """Verify runners/ec2/images terraform outputs exist."""
 
-    def test_lambda_function_arn_exists(self, runners/ec2/images_outputs):
+    def test_lambda_function_arn_exists(self, ec2_images_outputs):
         """Verify lambda_function_arn output exists."""
-        assert runners/ec2/images_outputs.get("lambda_function_arn"), (
+        assert ec2_images_outputs.get("lambda_function_arn"), (
             "lambda_function_arn output not found. "
             "Run: cd src/api/endpoints/runners/ec2/images && terraform apply"
         )
 
-    def test_lambda_function_name_exists(self, runners/ec2/images_outputs):
+    def test_lambda_function_name_exists(self, ec2_images_outputs):
         """Verify lambda_function_name output exists."""
-        assert runners/ec2/images_outputs.get("lambda_function_name"), (
+        assert ec2_images_outputs.get("lambda_function_name"), (
             "lambda_function_name output not found. "
             "Run: cd src/api/endpoints/runners/ec2/images && terraform apply"
         )
 
-    def test_lambda_invoke_arn_exists(self, runners/ec2/images_outputs):
+    def test_lambda_invoke_arn_exists(self, ec2_images_outputs):
         """Verify lambda_invoke_arn output exists."""
-        assert runners/ec2/images_outputs.get("lambda_invoke_arn"), (
+        assert ec2_images_outputs.get("lambda_invoke_arn"), (
             "lambda_invoke_arn output not found. "
             "Run: cd src/api/endpoints/runners/ec2/images && terraform apply"
         )

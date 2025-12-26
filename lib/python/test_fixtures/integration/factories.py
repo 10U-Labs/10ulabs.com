@@ -784,3 +784,71 @@ def create_security_group_existence_test(
                 )
             raise
     return test_security_group_exists
+
+
+def create_lambda_existence_tests(
+    function_name_config_key: str,
+    default_function_name: str,
+    terraform_path: str,
+    log_group_fixture: str | None = None,
+):
+    """Create Lambda/IAM existence tests for an endpoint.
+
+    Creates a test class that verifies Lambda function and IAM role exist.
+
+    Args:
+        function_name_config_key: Config key for function name
+        default_function_name: Default function name if not in config
+        terraform_path: Path to terraform directory for error messages
+        log_group_fixture: Optional fixture name for log group test
+
+    Returns:
+        Test class with Lambda existence tests
+    """
+
+    class TestDeployedResourcesExist:
+        """Layer 1: Verify Lambda, IAM role exist."""
+
+        def test_handler_lambda_exists(self, lambda_client, config):
+            """Verify Lambda function exists."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            try:
+                response = lambda_client.get_function(FunctionName=function_name)
+                assert response["Configuration"]["FunctionName"] == function_name
+            except ClientError as e:
+                if e.response["Error"]["Code"] == "ResourceNotFoundException":
+                    pytest.fail(
+                        f"Lambda function '{function_name}' does not exist. "
+                        f"Run terraform apply in {terraform_path}"
+                    )
+                raise
+
+        def test_handler_iam_role_exists(self, iam_client, config):
+            """Verify IAM role exists."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            role_name = f"{function_name}ServiceRole"
+            try:
+                response = iam_client.get_role(RoleName=role_name)
+                assert response["Role"]["RoleName"] == role_name
+            except iam_client.exceptions.NoSuchEntityException:
+                pytest.fail(
+                    f"IAM role '{role_name}' does not exist. "
+                    f"Run terraform apply in {terraform_path}"
+                )
+
+    if log_group_fixture:
+
+        def test_handler_log_group_exists(_self, request):
+            """Verify CloudWatch log group exists."""
+            log_group = request.getfixturevalue(log_group_fixture)
+            assert log_group["exists"], (
+                f"CloudWatch log group '{log_group['name']}' does not exist"
+            )
+
+        setattr(
+            TestDeployedResourcesExist,
+            "test_handler_log_group_exists",
+            test_handler_log_group_exists,
+        )
+
+    return TestDeployedResourcesExist

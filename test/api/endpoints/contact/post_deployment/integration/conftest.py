@@ -20,6 +20,15 @@ def contact_handler_function_name(shared_config):
 
 
 @pytest.fixture(scope="module")
+def config(contact_handler_function_name, shared_config):
+    """Provide config for factory-generated tests."""
+    return {
+        "contact_handler_function_name": contact_handler_function_name,
+        "resource_prefix": shared_config.get("resource_prefix", "TenULabs"),
+    }
+
+
+@pytest.fixture(scope="module")
 def contact_handler_log_group(request, logs_client):
     """Get the contact handler log group info from CloudWatch."""
     function_name = request.getfixturevalue("contact_handler_function_name")

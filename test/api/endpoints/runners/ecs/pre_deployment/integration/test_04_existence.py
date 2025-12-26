@@ -11,23 +11,23 @@ pytestmark = pytest.mark.layer(4)
 class TestImageForECSRunnersOutputs:
     """Verify runners/ecs/images terraform outputs are accessible."""
 
-    def test_lambda_function_arn_output_exists(self, runners/ecs/images_outputs):
+    def test_lambda_function_arn_output_exists(self, ecs_images_outputs):
         """Verify lambda_function_arn output is available."""
-        assert runners/ecs/images_outputs.get("lambda_function_arn"), (
+        assert ecs_images_outputs.get("lambda_function_arn"), (
             "lambda_function_arn output not found in runners/ecs/images. "
             "Run terraform apply in src/api/endpoints/runners/ecs/images/"
         )
 
-    def test_lambda_function_name_output_exists(self, runners/ecs/images_outputs):
+    def test_lambda_function_name_output_exists(self, ecs_images_outputs):
         """Verify lambda_function_name output is available."""
-        assert runners/ecs/images_outputs.get("lambda_function_name"), (
+        assert ecs_images_outputs.get("lambda_function_name"), (
             "lambda_function_name output not found in runners/ecs/images. "
             "Run terraform apply in src/api/endpoints/runners/ecs/images/"
         )
 
-    def test_lambda_invoke_arn_output_exists(self, runners/ecs/images_outputs):
+    def test_lambda_invoke_arn_output_exists(self, ecs_images_outputs):
         """Verify lambda_invoke_arn output is available."""
-        assert runners/ecs/images_outputs.get("lambda_invoke_arn"), (
+        assert ecs_images_outputs.get("lambda_invoke_arn"), (
             "lambda_invoke_arn output not found in runners/ecs/images. "
             "Run terraform apply in src/api/endpoints/runners/ecs/images/"
         )

@@ -299,3 +299,135 @@ def create_naming_conventions_tests(
             )
 
     return TestIAMRoleNamingConventions, TestLambdaFunctionNamingConventions
+
+
+def create_lambda_terraform_tests(
+    lambda_file: Path,
+    handler_name: str,
+    description: str,
+    runtime: str = "python3.13",
+    timeout: int = 10,
+):
+    """Create test class for Lambda terraform configuration.
+
+    Args:
+        lambda_file: Path to the lambda.tf file
+        handler_name: Name of the handler (e.g., "diagnostics_handler")
+        description: Expected Lambda description
+        runtime: Expected Python runtime (default: "python3.13")
+        timeout: Expected timeout in seconds (default: 10)
+
+    Returns:
+        Test class with Lambda terraform configuration tests
+    """
+
+    class TestLambdaTerraform:
+        """Tests for Lambda Terraform configuration."""
+
+        def test_lambda_terraform_file_exists(self):
+            """Verify lambda.tf file exists."""
+            assert lambda_file.exists()
+
+        def test_handler_archive_file_exists(self):
+            """Verify archive_file data source is defined."""
+            with open(lambda_file, encoding="utf-8") as f:
+                content = f.read()
+            assert f'data "archive_file" "{handler_name}"' in content
+
+        def test_handler_lambda_function_exists(self):
+            """Verify Lambda function resource is defined."""
+            with open(lambda_file, encoding="utf-8") as f:
+                content = f.read()
+            assert f'resource "aws_lambda_function" "{handler_name}"' in content
+
+        def test_handler_cloudwatch_log_group_exists(self):
+            """Verify CloudWatch log group is defined."""
+            with open(lambda_file, encoding="utf-8") as f:
+                content = f.read()
+            assert f'resource "aws_cloudwatch_log_group" "{handler_name}"' in content
+
+        def test_handler_api_gateway_permission_exists(self):
+            """Verify API Gateway Lambda permission is defined."""
+            with open(lambda_file, encoding="utf-8") as f:
+                content = f.read()
+            assert 'resource "aws_lambda_permission" "api_gateway"' in content
+
+        def test_handler_uses_correct_runtime(self):
+            """Verify correct Python runtime is used."""
+            with open(lambda_file, encoding="utf-8") as f:
+                content = f.read()
+            assert f'runtime          = "{runtime}"' in content
+
+        def test_handler_has_timeout(self):
+            """Verify Lambda timeout is set."""
+            with open(lambda_file, encoding="utf-8") as f:
+                content = f.read()
+            assert f'timeout          = {timeout}' in content
+
+        def test_handler_has_description(self):
+            """Verify Lambda description is set."""
+            with open(lambda_file, encoding="utf-8") as f:
+                content = f.read()
+            assert f'description      = "{description}"' in content
+
+        def test_handler_source_file_path(self):
+            """Verify correct source file path."""
+            with open(lambda_file, encoding="utf-8") as f:
+                content = f.read()
+            assert 'source_file = "${path.module}/lambda/handler.py"' in content
+
+        def test_handler_py_file_exists(self):
+            """Verify handler.py file exists."""
+            handler_py = lambda_file.parent / "lambda" / "handler.py"
+            assert handler_py.exists()
+
+    return TestLambdaTerraform
+
+
+def create_iam_terraform_tests(
+    iam_file: Path,
+    handler_name: str,
+):
+    """Create test class for IAM terraform configuration.
+
+    Args:
+        iam_file: Path to the iam.tf file
+        handler_name: Name of the handler (e.g., "diagnostics_handler")
+
+    Returns:
+        Test class with IAM terraform configuration tests
+    """
+
+    class TestIAMTerraform:
+        """Tests for IAM Terraform configuration."""
+
+        def test_iam_terraform_file_exists(self):
+            """Verify iam.tf file exists."""
+            assert iam_file.exists()
+
+        def test_handler_iam_role_exists(self):
+            """Verify IAM role resource is defined."""
+            with open(iam_file, encoding="utf-8") as f:
+                content = f.read()
+            assert f'resource "aws_iam_role" "lambda_{handler_name}"' in content
+
+        def test_handler_iam_role_has_lambda_assume_role(self):
+            """Verify IAM role allows Lambda assume role."""
+            with open(iam_file, encoding="utf-8") as f:
+                content = f.read()
+            assert 'lambda.amazonaws.com' in content
+
+        def test_handler_has_basic_execution_role_attachment(self):
+            """Verify basic execution role attachment exists."""
+            with open(iam_file, encoding="utf-8") as f:
+                content = f.read()
+            attachment = f'resource "aws_iam_role_policy_attachment" "lambda_{handler_name}_basic"'
+            assert attachment in content
+
+        def test_handler_uses_basic_execution_policy(self):
+            """Verify basic execution policy is used."""
+            with open(iam_file, encoding="utf-8") as f:
+                content = f.read()
+            assert 'AWSLambdaBasicExecutionRole' in content
+
+    return TestIAMTerraform

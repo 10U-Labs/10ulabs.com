@@ -430,12 +430,16 @@ class TestGetEcsConfig:
         """get_ecs_config returns correct CPU for Fargate."""
         parsed = ParsedLabels("ecs", "fargate", "spot", "runner-1", "arm")
         config = get_ecs_config(parsed)
+        if config is None:
+            pytest.fail("Expected config to be returned for ECS Fargate")
         assert config["cpu"] == "4096"
 
     def test_returns_correct_memory_for_fargate(self) -> None:
         """get_ecs_config returns correct memory for Fargate."""
         parsed = ParsedLabels("ecs", "fargate", "spot", "runner-1", "x86")
         config = get_ecs_config(parsed)
+        if config is None:
+            pytest.fail("Expected config to be returned for ECS Fargate")
         assert config["memory"] == "16384"
 
     def test_returns_none_for_ec2(self) -> None:
@@ -447,6 +451,8 @@ class TestGetEcsConfig:
         """get_ecs_config returns a copy, not the original dict."""
         parsed = ParsedLabels("ecs", "fargate", "spot", "runner-1", "x86")
         config = get_ecs_config(parsed)
+        if config is None:
+            pytest.fail("Expected config to be returned for ECS Fargate")
         config["cpu"] = "modified"
         assert ECS_FARGATE_CONFIG["cpu"] == "4096"
 
