@@ -49,7 +49,7 @@ locals {
   agent_webhook_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.agent_webhook_queue_name}"
   agent_invoker_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.agent_invoker_queue_name}"
 
-  openapi_spec = templatefile("${path.module}/../../www/api/openapi.json", {
+  openapi_spec = templatefile("${path.module}/../../../www/api/openapi.json", {
     CatchAllHandlerArn           = local.catchall_integration_arn
     CircuitBreakerResetArn       = local.circuit_breaker_reset_arn
     ContactHandlerArn            = local.contact_arn
