@@ -7,8 +7,18 @@ locals {
   # SSM parameter names for EC2 runner AMIs
   ssm_ec2_runner_ami_latest = "/ami/ec2-runner/latest"
 
+  # EC2 runner AMI tagging constants
+  ec2_runner_ami_purpose_value = "GitHub self-hosted EC2 runner"
+  ec2_runner_ami_stable_tag    = "Stable"
+
   # Runner configuration for self-hosted GitHub Actions runners
   runners_config = jsondecode(file("${path.module}/../../../../etc/runners.json"))
+
+  # EC2 instance types derived from runners.json
+  ec2_instance_types = distinct(flatten([
+    for compute, arch_map in local.runners_config.labels.instance_type_map :
+    can(tostring(arch_map)) ? [arch_map] : values(arch_map)
+  ]))
 
   # AgentCore shared infrastructure
   agentcore = {

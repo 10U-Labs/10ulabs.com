@@ -1,11 +1,11 @@
-"""Layer 1: Authentication tests for api_shared_routing pre-deployment validation.
+"""Layer 2: Authentication tests for api_shared_routing pre-deployment validation.
 
 Verify AWS credentials are valid before testing authorization or state.
 """
 import pytest
 from botocore.exceptions import NoCredentialsError
 
-pytestmark = pytest.mark.layer(1)
+pytestmark = pytest.mark.layer(2)
 
 
 def test_aws_credentials_available(sts_client):

@@ -1,4 +1,4 @@
-"""Layer 6: Capability tests for api_shared_routing pre-deployment validation.
+"""Layer 7: Capability tests for api_shared_routing pre-deployment validation.
 
 Verify we can perform required operations (assumes configuration passed).
 """
@@ -12,18 +12,18 @@ from test_fixtures.integration import (
     Layer6S3WriteCapabilityTests,
 )
 
-pytestmark = pytest.mark.layer(6)
+pytestmark = pytest.mark.layer(7)
 
 
 class TestIAMCapabilities(Layer6IAMCapabilityTests):
-    """Layer 6: Verify IAM and S3 listing capabilities.
+    """Layer 7: Verify IAM and S3 listing capabilities.
 
     All tests inherited from base class.
     """
 
 
 class TestS3StateCapabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTests):
-    """Layer 6: Verify we can read/write to the terraform state bucket."""
+    """Layer 7: Verify we can read/write to the terraform state bucket."""
 
     def test_can_read_state_file(self, s3_client, state_bucket_name):
         """Verify we can read the api_shared_routing state file."""
@@ -43,7 +43,7 @@ class TestS3StateCapabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTe
 
 
 class TestCentralLogsBucketCapabilities:
-    """Layer 6: Verify we can write to the central logs bucket."""
+    """Layer 7: Verify we can write to the central logs bucket."""
 
     def test_can_write_to_central_logs_bucket(self, s3_client, central_logs_bucket_name):
         """Verify we can write to the central logs bucket (needed for Firehose)."""

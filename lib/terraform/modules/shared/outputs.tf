@@ -54,6 +54,18 @@ output "ssm_ec2_runner_ami_latest" {
   value = local.ssm_ec2_runner_ami_latest
 }
 
+output "ec2_runner_ami_purpose_value" {
+  value = local.ec2_runner_ami_purpose_value
+}
+
+output "ec2_runner_ami_stable_tag" {
+  value = local.ec2_runner_ami_stable_tag
+}
+
+output "ec2_instance_types" {
+  value = local.ec2_instance_types
+}
+
 output "ssm_github_pat_arn" {
   value = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.ssm_github_pat_name}"
 }
