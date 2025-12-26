@@ -19,11 +19,11 @@ The testing pyramid dictates that unit tests form the base - the number of unit 
  /______________\
 ```
 
-- Unit tests: Test individual functions, classes, and modules in isolation
-- Integration tests: Test AWS resources exist and are configured correctly
+- Unit tests: Test a single component (function, class, module) in isolation
+- Integration tests: Test how multiple components work together
 - E2E tests: Test full user journeys
 
-**Rule of thumb**: If you can test it without AWS credentials or network calls, it's a unit test.
+**Rule of thumb**: If you're testing a single component with all dependencies mocked, it's a unit test. If you're testing how two or more components interact, it's an integration test - regardless of whether network calls are involved.
 
 ## 2. Extreme Atomicity
 
@@ -339,9 +339,10 @@ test('fetches GitHub token', async () => {
 | Business logic errors | Unit tests |
 | Error handling paths | Unit tests |
 | Input validation | Unit tests |
-| Configuration parsing | Unit tests |
-| AWS resource misconfiguration | Integration tests |
-| Missing IAM permissions | Integration tests |
+| Single-file configuration parsing | Unit tests |
+| Cross-file contract mismatches | Integration tests (local) |
+| AWS resource misconfiguration | Integration tests (AWS) |
+| Missing IAM permissions | Integration tests (AWS) |
 | Network connectivity | E2E tests |
 | Full workflow behavior | E2E tests |
 
