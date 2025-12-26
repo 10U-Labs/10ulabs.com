@@ -11,17 +11,19 @@ operational_health
     ↓
 operational_diagnostics
     ↓
-api_shared_networking
+endpoints_v1_runners
     ↓
-endpoint_v1_runners_ec2_images
+api_shared_networking
     ↓
 endpoint_v1_runners_ec2
     ↓
+endpoint_v1_runners_ec2_images
+    ↓
 api_shared_docker_repository
     ↓
-endpoint_v1_runners_ecs_images
-    ↓
 endpoint_v1_runners_ecs
+    ↓
+endpoint_v1_runners_ecs_images
     ↓
 webhooks_github_jit_runner_requests
     ↓
