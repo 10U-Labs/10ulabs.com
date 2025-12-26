@@ -397,3 +397,25 @@ def _delete_ecr_image_error_result():
 def _delete_image_error_result_fixture():
     """Return result of delete_ecr_image with ClientError."""
     return _delete_ecr_image_error_result()
+
+
+def _handle_ecs_image_get_by_digest_result():
+    """Set up image and call handle_ecs_image_get_by_digest."""
+    from test.api.endpoints.runners.ecs.images.endpoint.test_data import (
+        make_ecr_describe_response,
+        make_ecr_image_detail,
+    )
+    ecr_client = MagicMock()
+    ecr_client.describe_images.return_value = make_ecr_describe_response(
+        [make_ecr_image_detail(digest='sha256:abc123')]
+    )
+    handler.set_client('ecr', ecr_client)
+    event = {'pathParameters': {'digest': 'sha256:abc123'}}
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        return handler.handle_ecs_image_get_by_digest(event)
+
+
+@pytest.fixture(name="existing_digest_result")
+def _existing_digest_result_fixture():
+    """Return result of handle_ecs_image_get_by_digest for existing image."""
+    return _handle_ecs_image_get_by_digest_result()

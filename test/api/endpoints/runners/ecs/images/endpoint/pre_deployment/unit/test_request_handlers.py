@@ -150,31 +150,13 @@ class TestHandleEcsImageGetByDigest:
 
         assert result['statusCode'] == 400
 
-    def test_returns_200_for_existing_digest(self, mock_ecr_client):
+    def test_returns_200_for_existing_digest(self, existing_digest_result):
         """Test that 200 is returned for existing digest."""
-        mock_ecr_client.describe_images.return_value = make_ecr_describe_response(
-            [make_ecr_image_detail(digest='sha256:abc123')]
-        )
-        handler.set_client('ecr', mock_ecr_client)
-        event = {'pathParameters': {'digest': 'sha256:abc123'}}
+        assert existing_digest_result['statusCode'] == 200
 
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.handle_ecs_image_get_by_digest(event)
-
-        assert result['statusCode'] == 200
-
-    def test_returns_correct_digest_in_response(self, mock_ecr_client):
+    def test_returns_correct_digest_in_response(self, existing_digest_result):
         """Test that correct digest is returned in response."""
-        mock_ecr_client.describe_images.return_value = make_ecr_describe_response(
-            [make_ecr_image_detail(digest='sha256:abc123')]
-        )
-        handler.set_client('ecr', mock_ecr_client)
-        event = {'pathParameters': {'digest': 'sha256:abc123'}}
-
-        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
-            result = handler.handle_ecs_image_get_by_digest(event)
-
-        body = json.loads(result['body'])
+        body = json.loads(existing_digest_result['body'])
         assert body['digest'] == 'sha256:abc123'
 
     def test_returns_404_for_not_found(self, mock_ecr_client):
