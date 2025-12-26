@@ -4,6 +4,7 @@ These functions dynamically create test classes with specific configurations.
 """
 from botocore.exceptions import ClientError
 import pytest
+from naming_conventions import validate_name
 from repo_utils import REPO_ROOT
 from test_fixtures.integration.helpers import (
     check_s3_head_bucket_permission,
@@ -920,7 +921,6 @@ def create_naming_convention_tests(
     Returns:
         Test class with naming convention tests
     """
-    from naming_conventions import validate_name
 
     class TestNamingConventions:
         """Layer 2: Verify resources follow naming conventions."""
