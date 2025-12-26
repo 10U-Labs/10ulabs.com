@@ -20,10 +20,11 @@ def contact_handler_function_name(shared_config):
 
 
 @pytest.fixture(scope="module")
-def config(contact_handler_function_name, shared_config):
+def config(request, shared_config):
     """Provide config for factory-generated tests."""
+    function_name = request.getfixturevalue("contact_handler_function_name")
     return {
-        "contact_handler_function_name": contact_handler_function_name,
+        "contact_handler_function_name": function_name,
         "resource_prefix": shared_config.get("resource_prefix", "TenULabs"),
     }
 

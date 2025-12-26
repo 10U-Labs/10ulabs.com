@@ -852,3 +852,133 @@ def create_lambda_existence_tests(
         )
 
     return TestDeployedResourcesExist
+
+
+def create_lambda_configuration_tests(
+    function_name_config_key: str,
+    default_function_name: str,
+    expected_runtime: str = "python3.13",
+    expected_handler: str = "handler.handler",
+    expected_architecture: str = "arm64",
+):
+    """Create Lambda configuration tests for an endpoint.
+
+    Args:
+        function_name_config_key: Config key for function name
+        default_function_name: Default function name if not in config
+        expected_runtime: Expected Python runtime
+        expected_handler: Expected handler path
+        expected_architecture: Expected architecture
+
+    Returns:
+        Test class with Lambda configuration tests
+    """
+
+    class TestLambdaConfiguration:
+        """Layer 2: Verify Lambda function is configured correctly."""
+
+        def test_handler_uses_python_runtime(self, lambda_client, config):
+            """Verify Lambda uses expected Python runtime."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            response = lambda_client.get_function(FunctionName=function_name)
+            runtime = response["Configuration"]["Runtime"]
+            assert runtime == expected_runtime, (
+                f"Lambda runtime should be {expected_runtime}, got: {runtime}"
+            )
+
+        def test_handler_uses_expected_architecture(self, lambda_client, config):
+            """Verify Lambda uses expected architecture."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            response = lambda_client.get_function(FunctionName=function_name)
+            architectures = response["Configuration"].get("Architectures", [])
+            assert expected_architecture in architectures, (
+                f"Lambda should use {expected_architecture} architecture, got: {architectures}"
+            )
+
+        def test_handler_has_handler_configured(self, lambda_client, config):
+            """Verify Lambda has correct handler configured."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            response = lambda_client.get_function(FunctionName=function_name)
+            handler = response["Configuration"]["Handler"]
+            assert handler == expected_handler, (
+                f"Lambda handler should be {expected_handler}, got: {handler}"
+            )
+
+    return TestLambdaConfiguration
+
+
+def create_naming_convention_tests(
+    function_name_config_key: str,
+    default_function_name: str,
+):
+    """Create naming convention tests for Lambda and IAM resources.
+
+    Args:
+        function_name_config_key: Config key for function name
+        default_function_name: Default function name if not in config
+
+    Returns:
+        Test class with naming convention tests
+    """
+    from naming_conventions import validate_name
+
+    class TestNamingConventions:
+        """Layer 2: Verify resources follow naming conventions."""
+
+        def test_handler_lambda_name_is_pascalcase(self, lambda_client, config):
+            """Verify Lambda function name uses PascalCase."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            response = lambda_client.get_function(FunctionName=function_name)
+            actual_name = response["Configuration"]["FunctionName"]
+            error = validate_name(actual_name)
+            assert error is None, (
+                f"Lambda function has invalid name '{actual_name}': {error}"
+            )
+
+        def test_handler_role_name_is_pascalcase(self, iam_client, config):
+            """Verify IAM role name uses PascalCase."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            role_name = f"{function_name}ServiceRole"
+            response = iam_client.get_role(RoleName=role_name)
+            actual_name = response["Role"]["RoleName"]
+            error = validate_name(actual_name)
+            assert error is None, (
+                f"IAM role has invalid name '{actual_name}': {error}"
+            )
+
+    return TestNamingConventions
+
+
+def create_log_group_configuration_tests(
+    log_group_fixture: str,
+    expected_retention: int = 7,
+):
+    """Create CloudWatch log group configuration tests.
+
+    Args:
+        log_group_fixture: Name of the log group fixture
+        expected_retention: Expected retention period in days
+
+    Returns:
+        Test class with log group configuration tests
+    """
+
+    class TestCloudWatchLogsConfiguration:
+        """Layer 2: Verify CloudWatch log group is configured correctly."""
+
+        def test_handler_log_group_has_retention_set(self, request):
+            """Verify log group has retention period set."""
+            log_group = request.getfixturevalue(log_group_fixture)
+            assert log_group["retention"] is not None, (
+                f"Log group '{log_group['name']}' should have retention set"
+            )
+
+        def test_handler_log_group_retention_is_expected(self, request):
+            """Verify log group retention is expected value."""
+            log_group = request.getfixturevalue(log_group_fixture)
+            retention = log_group["retention"]
+            assert retention == expected_retention, (
+                f"Log group retention should be {expected_retention} days, got: {retention}"
+            )
+
+    return TestCloudWatchLogsConfiguration
