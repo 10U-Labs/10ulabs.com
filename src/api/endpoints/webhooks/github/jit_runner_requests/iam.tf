@@ -792,28 +792,3 @@ resource "aws_iam_role_policy" "stale_runner_cleanup_permissions" {
     )
   })
 }
-
-# Health Check IAM (minimal - only needs CloudWatch Logs)
-resource "aws_iam_role" "health_check" {
-  name = local.health_check_role_name
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Service = "lambda.amazonaws.com"
-      }
-      Action = "sts:AssumeRole"
-    }]
-  })
-
-  tags = merge(local.common_tags, {
-    Name = local.health_check_role_name
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "health_check_basic" {
-  role       = aws_iam_role.health_check.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}

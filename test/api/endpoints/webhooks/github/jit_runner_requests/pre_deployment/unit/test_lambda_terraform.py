@@ -503,25 +503,3 @@ def test_circuit_breaker_recovery_archive_includes_runners_config(runners_src_pa
     )
 
 
-# =============================================================================
-# Health Check Lambda Tests
-#
-# The health_check Lambda is a simple liveness probe with no dependencies.
-# It doesn't import from common, so it only needs the main Lambda file.
-# =============================================================================
-
-
-def test_health_check_lambda_exists(runners_src_path):
-    """Test health_check Lambda resource exists in lambda.tf."""
-    lambda_file = runners_src_path / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_lambda_function" "health_check"' in content
-
-
-def test_health_check_archive_file_exists(runners_src_path):
-    """Test health_check archive_file data source exists."""
-    lambda_file = runners_src_path / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'data "archive_file" "health_check"' in content

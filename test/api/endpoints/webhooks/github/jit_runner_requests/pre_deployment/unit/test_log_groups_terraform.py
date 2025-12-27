@@ -171,13 +171,6 @@ def test_runner_terminator_subscription_filter_exists(runners_src_path):
     assert 'resource "aws_cloudwatch_log_subscription_filter" "runner_terminator"' in content
 
 
-def test_health_check_subscription_filter_exists(runners_src_path):
-    """Verify health_check subscription filter exists."""
-    with open(runners_src_path / "log_subscriptions.tf", encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_cloudwatch_log_subscription_filter" "health_check"' in content
-
-
 def test_ignored_events_archiver_subscription_filter_exists(runners_src_path):
     """Verify ignored_events_archiver subscription filter exists."""
     with open(runners_src_path / "log_subscriptions.tf", encoding="utf-8") as f:

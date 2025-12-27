@@ -152,9 +152,3 @@ def circuit_breaker_recovery(config):
 def lambda_context():
     """Provide a mock Lambda context object."""
     return Mock()
-
-
-@pytest.fixture
-def health_check_module():
-    """Load health_check module for testing."""
-    return load_lambda_module("health_check.py", "health_check")

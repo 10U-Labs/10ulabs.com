@@ -1,11 +1,7 @@
 """Tests for webhook endpoints."""
 import requests
 
-from .conftest import (
-    assert_health_status_in_response,
-    make_health_check_request,
-    skip_if_endpoint_not_deployed,
-)
+from .conftest import skip_if_endpoint_not_deployed
 
 
 TEST_HEADERS = {"x-test-mode": "true"}
@@ -32,36 +28,6 @@ def _post_webhook(api_url, payload, headers):
     """Make a POST request to the webhook endpoint."""
     url = f"{api_url}/v1/webhooks/github/jit-runner-requests"
     return requests.post(url, json=payload, headers=headers, timeout=10)
-
-
-def test_v1_runners_health_get_requires_auth(api_url):
-    """Verify that health endpoint requires authentication."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests/health")
-    response = requests.get(
-        f"{api_url}/v1/webhooks/github/jit-runner-requests/health", headers=TEST_HEADERS, timeout=10
-    )
-    assert response.status_code == 403
-
-
-def test_v1_runners_health_get_with_valid_api_key(api_url, api_key):
-    """Verify that health endpoint works with valid API key."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests/health")
-    response = make_health_check_request(api_url, api_key)
-    assert response.status_code == 200
-
-
-def test_v1_runners_health_returns_json(api_url, api_key):
-    """Verify that health endpoint returns JSON."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests/health")
-    response = make_health_check_request(api_url, api_key)
-    assert response.headers["Content-Type"] == "application/json"
-
-
-def test_v1_runners_health_returns_status_healthy(api_url, api_key):
-    """Verify that health endpoint returns healthy status."""
-    skip_if_endpoint_not_deployed(api_url, "/v1/webhooks/github/jit-runner-requests/health")
-    response = make_health_check_request(api_url, api_key)
-    assert_health_status_in_response(response)
 
 
 def test_v1_runners_post_rejects_missing_github_event_header(api_url):

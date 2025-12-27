@@ -82,15 +82,6 @@ resource "aws_cloudwatch_log_subscription_filter" "drift_recovery" {
   role_arn        = local.firehose_role_arn
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "health_check" {
-  count           = local.create_subscriptions ? 1 : 0
-  name            = "health-check-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.health_check.name
-  filter_pattern  = ""
-  destination_arn = local.firehose_arn
-  role_arn        = local.firehose_role_arn
-}
-
 resource "aws_cloudwatch_log_subscription_filter" "ignored_events_archiver" {
   count           = local.create_subscriptions ? 1 : 0
   name            = "ignored-events-archiver-to-firehose"

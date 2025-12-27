@@ -83,16 +83,6 @@ def test_openapi_spec_jit_runner_requests_has_post_method(openapi_spec):
     assert 'post' in openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']
 
 
-def test_openapi_spec_has_jit_runner_requests_health_endpoint(openapi_spec):
-    """Verify spec has /v1/webhooks/github/jit-runner-requests/health endpoint."""
-    assert '/v1/webhooks/github/jit-runner-requests/health' in openapi_spec['paths']
-
-
-def test_openapi_spec_jit_runner_requests_health_has_get_method(openapi_spec):
-    """Verify /v1/webhooks/github/jit-runner-requests/health has GET method."""
-    assert 'get' in openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests/health']
-
-
 def test_openapi_spec_has_ec2_ami_base_endpoint(openapi_spec):
     """Verify spec has /v1/runners/ec2/images endpoint."""
     assert '/v1/runners/ec2/images' in openapi_spec['paths']
@@ -358,11 +348,6 @@ def test_openapi_spec_diagnostics_echo_has_options_method(openapi_spec):
 def test_openapi_spec_jit_runner_requests_has_options_method(openapi_spec):
     """Verify /v1/webhooks/github/jit-runner-requests has OPTIONS method."""
     assert 'options' in openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']
-
-
-def test_openapi_spec_jit_runner_requests_health_has_options_method(openapi_spec):
-    """Verify /v1/webhooks/github/jit-runner-requests/health has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests/health']
 
 
 def test_openapi_spec_ec2_ami_base_has_options_method(openapi_spec):
