@@ -2,16 +2,6 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 .claude/hooks/bash_command_blocker.py",
-            "timeout": 300
-          }
-        ]
-      },
-      {
         "matcher": "Write",
         "hooks": [
           {
