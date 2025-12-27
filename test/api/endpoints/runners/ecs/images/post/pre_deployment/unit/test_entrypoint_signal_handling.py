@@ -1,6 +1,6 @@
 """Tests for entrypoint signal handling."""
+import signal
 from unittest.mock import Mock, patch
-import entrypoint
 import pytest
 
 
@@ -20,13 +20,13 @@ def setup_popen_mock(mock_popen, returncode=0):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_sigterm_signal_registered(mock_run, mock_signal, mock_popen):
+def test_sigterm_signal_registered(mock_run, mock_signal, mock_popen, entrypoint):
     """Test that SIGTERM signal is registered."""
     mock_run.return_value = Mock(returncode=0)
     setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_signal.call_args_list[0][0][0] == entrypoint.signal.SIGTERM
+    assert mock_signal.call_args_list[0][0][0] == signal.SIGTERM
 
 
 @patch('entrypoint.subprocess.Popen')
@@ -36,13 +36,13 @@ def test_sigterm_signal_registered(mock_run, mock_signal, mock_popen):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_sigint_signal_registered(mock_run, mock_signal, mock_popen):
+def test_sigint_signal_registered(mock_run, mock_signal, mock_popen, entrypoint):
     """Test that SIGINT signal is registered."""
     mock_run.return_value = Mock(returncode=0)
     setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_signal.call_args_list[1][0][0] == entrypoint.signal.SIGINT
+    assert mock_signal.call_args_list[1][0][0] == signal.SIGINT
 
 
 @patch('entrypoint.subprocess.Popen')
@@ -51,7 +51,7 @@ def test_sigint_signal_registered(mock_run, mock_signal, mock_popen):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_signal_handler_exits_with_code_zero(mock_run, mock_popen):
+def test_signal_handler_exits_with_code_zero(mock_run, mock_popen, entrypoint):
     """Test that signal handler exits with code zero."""
     mock_run.return_value = Mock(returncode=0)
     setup_popen_mock(mock_popen)
@@ -67,7 +67,7 @@ def test_signal_handler_exits_with_code_zero(mock_run, mock_popen):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_signal_handler_function_registered(mock_run, mock_signal, mock_popen):
+def test_signal_handler_function_registered(mock_run, mock_signal, mock_popen, entrypoint):
     """Test that signal handler function is registered."""
     mock_run.return_value = Mock(returncode=0)
     setup_popen_mock(mock_popen)
@@ -83,7 +83,7 @@ def test_signal_handler_function_registered(mock_run, mock_signal, mock_popen):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_signal_handler_terminates_runner_process(mock_run, mock_signal, mock_popen):
+def test_signal_handler_terminates_runner_process(mock_run, mock_signal, mock_popen, entrypoint):
     """Test that signal handler terminates the runner process."""
     mock_run.return_value = Mock(returncode=0)
     mock_process = setup_popen_mock(mock_popen)

@@ -3,62 +3,59 @@ import json
 
 from unittest.mock import MagicMock, patch
 
-from get_changed_files import (
-    ZERO_SHA,
-    commit_exists,
-    filter_files_by_commits,
-    get_changed_files,
-    get_changed_files_diff,
-    get_changed_files_show,
-    get_files_for_commit,
-    has_skip_ci,
-)
-
 
 class TestCommitExists:
     """Tests for commit_exists function."""
 
     @patch("get_changed_files.run_subprocess")
-    def test_returns_true_when_commit_exists(self, mock_run: MagicMock) -> None:
+    def test_returns_true_when_commit_exists(
+        self, mock_run: MagicMock, get_changed_files
+    ) -> None:
         """Test that commit_exists returns True when commit exists."""
         mock_run.return_value = MagicMock(returncode=0)
-        assert commit_exists("abc123") is True
+        assert get_changed_files.commit_exists("abc123") is True
 
     @patch("get_changed_files.run_subprocess")
-    def test_returns_false_when_commit_missing(self, mock_run: MagicMock) -> None:
+    def test_returns_false_when_commit_missing(
+        self, mock_run: MagicMock, get_changed_files
+    ) -> None:
         """Test that commit_exists returns False when commit is missing."""
         mock_run.return_value = MagicMock(returncode=1)
-        assert commit_exists("abc123") is False
+        assert get_changed_files.commit_exists("abc123") is False
 
 
 class TestGetChangedFilesDiff:
     """Tests for get_changed_files_diff function."""
 
     @patch("get_changed_files.run_subprocess")
-    def test_returns_files_on_success(self, mock_run: MagicMock) -> None:
+    def test_returns_files_on_success(
+        self, mock_run: MagicMock, get_changed_files
+    ) -> None:
         """Test successful git diff returns file list."""
         mock_run.return_value = MagicMock(
             returncode=0,
             stdout="file1.py\nfile2.py\nfile3.py\n"
         )
-        result = get_changed_files_diff("base", "head")
+        result = get_changed_files.get_changed_files_diff("base", "head")
         assert result == ["file1.py", "file2.py", "file3.py"]
 
     @patch("get_changed_files.run_subprocess")
-    def test_returns_empty_on_failure(self, mock_run: MagicMock) -> None:
+    def test_returns_empty_on_failure(
+        self, mock_run: MagicMock, get_changed_files
+    ) -> None:
         """Test failed git diff returns empty list."""
         mock_run.return_value = MagicMock(returncode=1, stdout="")
-        result = get_changed_files_diff("base", "head")
+        result = get_changed_files.get_changed_files_diff("base", "head")
         assert result == []
 
     @patch("get_changed_files.run_subprocess")
-    def test_filters_empty_lines(self, mock_run: MagicMock) -> None:
+    def test_filters_empty_lines(self, mock_run: MagicMock, get_changed_files) -> None:
         """Test that empty lines are filtered out."""
         mock_run.return_value = MagicMock(
             returncode=0,
             stdout="file1.py\n\nfile2.py\n"
         )
-        result = get_changed_files_diff("base", "head")
+        result = get_changed_files.get_changed_files_diff("base", "head")
         assert result == ["file1.py", "file2.py"]
 
 
@@ -66,20 +63,24 @@ class TestGetChangedFilesShow:
     """Tests for get_changed_files_show function."""
 
     @patch("get_changed_files.run_subprocess")
-    def test_returns_files_on_success(self, mock_run: MagicMock) -> None:
+    def test_returns_files_on_success(
+        self, mock_run: MagicMock, get_changed_files
+    ) -> None:
         """Test successful git show returns file list."""
         mock_run.return_value = MagicMock(
             returncode=0,
             stdout="file1.py\nfile2.py\n"
         )
-        result = get_changed_files_show("head")
+        result = get_changed_files.get_changed_files_show("head")
         assert result == ["file1.py", "file2.py"]
 
     @patch("get_changed_files.run_subprocess")
-    def test_returns_empty_on_failure(self, mock_run: MagicMock) -> None:
+    def test_returns_empty_on_failure(
+        self, mock_run: MagicMock, get_changed_files
+    ) -> None:
         """Test failed git show returns empty list."""
         mock_run.return_value = MagicMock(returncode=1, stdout="")
-        result = get_changed_files_show("head")
+        result = get_changed_files.get_changed_files_show("head")
         assert result == []
 
 
@@ -91,11 +92,12 @@ class TestGetChangedFiles:
     def test_uses_head_minus_one_for_zero_sha(
         self,
         _mock_exists: MagicMock,
-        mock_diff: MagicMock
+        mock_diff: MagicMock,
+        get_changed_files
     ) -> None:
         """Test that ZERO_SHA triggers HEAD~1 fallback."""
         mock_diff.return_value = ["file.py"]
-        get_changed_files(ZERO_SHA, "head123")
+        get_changed_files.get_changed_files(get_changed_files.ZERO_SHA, "head123")
         mock_diff.assert_called_once_with("HEAD~1", "head123")
 
     @patch("get_changed_files.get_changed_files_diff")
@@ -103,12 +105,13 @@ class TestGetChangedFiles:
     def test_uses_base_when_commit_exists(
         self,
         mock_exists: MagicMock,
-        mock_diff: MagicMock
+        mock_diff: MagicMock,
+        get_changed_files
     ) -> None:
         """Test that existing base commit is used directly."""
         mock_exists.return_value = True
         mock_diff.return_value = ["file.py"]
-        get_changed_files("base123", "head123")
+        get_changed_files.get_changed_files("base123", "head123")
         mock_diff.assert_called_once_with("base123", "head123")
 
     @patch("get_changed_files.get_changed_files_diff")
@@ -116,12 +119,13 @@ class TestGetChangedFiles:
     def test_uses_head_minus_one_when_base_missing(
         self,
         mock_exists: MagicMock,
-        mock_diff: MagicMock
+        mock_diff: MagicMock,
+        get_changed_files
     ) -> None:
         """Test shallow clone fallback to HEAD~1."""
         mock_exists.return_value = False
         mock_diff.return_value = ["file.py"]
-        get_changed_files("missing123", "head123")
+        get_changed_files.get_changed_files("missing123", "head123")
         mock_diff.assert_called_once_with("HEAD~1", "head123")
 
     @patch("get_changed_files.get_changed_files_show")
@@ -131,13 +135,14 @@ class TestGetChangedFiles:
         self,
         mock_exists: MagicMock,
         mock_diff: MagicMock,
-        mock_show: MagicMock
+        mock_show: MagicMock,
+        get_changed_files
     ) -> None:
         """Test fallback to git show when diff returns empty."""
         mock_exists.return_value = True
         mock_diff.return_value = []
         mock_show.return_value = ["file.py"]
-        result = get_changed_files("base123", "head123")
+        result = get_changed_files.get_changed_files("base123", "head123")
         assert result == ["file.py"]
 
     @patch("get_changed_files.get_changed_files_show")
@@ -147,128 +152,137 @@ class TestGetChangedFiles:
         self,
         mock_exists: MagicMock,
         mock_diff: MagicMock,
-        mock_show: MagicMock
+        mock_show: MagicMock,
+        get_changed_files
     ) -> None:
         """Test fallback calls git show with head commit."""
         mock_exists.return_value = True
         mock_diff.return_value = []
         mock_show.return_value = ["file.py"]
-        get_changed_files("base123", "head123")
+        get_changed_files.get_changed_files("base123", "head123")
         mock_show.assert_called_once_with("head123")
 
 
 class TestHasSkipCi:
     """Tests for has_skip_ci function."""
 
-    def test_detects_skip_ci_lowercase(self) -> None:
+    def test_detects_skip_ci_lowercase(self, get_changed_files) -> None:
         """Test detection of [skip ci] marker."""
-        assert has_skip_ci("Fix bug [skip ci]") is True
+        assert get_changed_files.has_skip_ci("Fix bug [skip ci]") is True
 
-    def test_detects_skip_ci_uppercase(self) -> None:
+    def test_detects_skip_ci_uppercase(self, get_changed_files) -> None:
         """Test detection of [SKIP CI] marker (case insensitive)."""
-        assert has_skip_ci("Fix bug [SKIP CI]") is True
+        assert get_changed_files.has_skip_ci("Fix bug [SKIP CI]") is True
 
-    def test_detects_ci_skip(self) -> None:
+    def test_detects_ci_skip(self, get_changed_files) -> None:
         """Test detection of [ci skip] marker."""
-        assert has_skip_ci("Fix bug [ci skip]") is True
+        assert get_changed_files.has_skip_ci("Fix bug [ci skip]") is True
 
-    def test_detects_no_ci(self) -> None:
+    def test_detects_no_ci(self, get_changed_files) -> None:
         """Test detection of [no ci] marker."""
-        assert has_skip_ci("Update docs [no ci]") is True
+        assert get_changed_files.has_skip_ci("Update docs [no ci]") is True
 
-    def test_detects_skip_actions(self) -> None:
+    def test_detects_skip_actions(self, get_changed_files) -> None:
         """Test detection of [skip actions] marker."""
-        assert has_skip_ci("Minor change [skip actions]") is True
+        assert get_changed_files.has_skip_ci("Minor change [skip actions]") is True
 
-    def test_returns_false_for_normal_message(self) -> None:
+    def test_returns_false_for_normal_message(self, get_changed_files) -> None:
         """Test that normal messages return False."""
-        assert has_skip_ci("Fix critical bug in API") is False
+        assert get_changed_files.has_skip_ci("Fix critical bug in API") is False
 
-    def test_returns_false_for_empty_message(self) -> None:
+    def test_returns_false_for_empty_message(self, get_changed_files) -> None:
         """Test that empty messages return False."""
-        assert has_skip_ci("") is False
+        assert get_changed_files.has_skip_ci("") is False
 
 
 class TestGetFilesForCommit:
     """Tests for get_files_for_commit function."""
 
     @patch("get_changed_files.run_subprocess")
-    def test_returns_files_on_success(self, mock_run: MagicMock) -> None:
+    def test_returns_files_on_success(
+        self, mock_run: MagicMock, get_changed_files
+    ) -> None:
         """Test successful git show returns file list."""
         mock_run.return_value = MagicMock(
             returncode=0,
             stdout="file1.py\nfile2.py\n"
         )
-        result = get_files_for_commit("abc123")
+        result = get_changed_files.get_files_for_commit("abc123")
         assert result == ["file1.py", "file2.py"]
 
     @patch("get_changed_files.run_subprocess")
-    def test_returns_empty_on_failure(self, mock_run: MagicMock) -> None:
+    def test_returns_empty_on_failure(
+        self, mock_run: MagicMock, get_changed_files
+    ) -> None:
         """Test failed git show returns empty list."""
         mock_run.return_value = MagicMock(returncode=1, stdout="")
-        result = get_files_for_commit("abc123")
+        result = get_changed_files.get_files_for_commit("abc123")
         assert result == []
 
 
 class TestFilterFilesByCommits:
     """Tests for filter_files_by_commits function."""
 
-    def test_returns_empty_for_empty_json(self) -> None:
+    def test_returns_empty_for_empty_json(self, get_changed_files) -> None:
         """Test that empty JSON returns empty set."""
-        assert filter_files_by_commits("") == set()
+        assert get_changed_files.filter_files_by_commits("") == set()
 
-    def test_returns_empty_for_invalid_json(self) -> None:
+    def test_returns_empty_for_invalid_json(self, get_changed_files) -> None:
         """Test that invalid JSON returns empty set."""
-        assert filter_files_by_commits("not valid json") == set()
+        assert get_changed_files.filter_files_by_commits("not valid json") == set()
 
-    def test_returns_empty_for_null_json(self) -> None:
+    def test_returns_empty_for_null_json(self, get_changed_files) -> None:
         """Test that JSON null returns empty set."""
-        assert filter_files_by_commits("null") == set()
+        assert get_changed_files.filter_files_by_commits("null") == set()
 
-    def test_returns_empty_for_object_json(self) -> None:
+    def test_returns_empty_for_object_json(self, get_changed_files) -> None:
         """Test that JSON object returns empty set."""
-        assert filter_files_by_commits("{}") == set()
+        assert get_changed_files.filter_files_by_commits("{}") == set()
 
-    def test_returns_empty_for_string_json(self) -> None:
+    def test_returns_empty_for_string_json(self, get_changed_files) -> None:
         """Test that JSON string returns empty set."""
-        assert filter_files_by_commits('"hello"') == set()
+        assert get_changed_files.filter_files_by_commits('"hello"') == set()
 
-    def test_returns_empty_for_number_json(self) -> None:
+    def test_returns_empty_for_number_json(self, get_changed_files) -> None:
         """Test that JSON number returns empty set."""
-        assert filter_files_by_commits("123") == set()
+        assert get_changed_files.filter_files_by_commits("123") == set()
 
-    def test_returns_empty_for_boolean_json(self) -> None:
+    def test_returns_empty_for_boolean_json(self, get_changed_files) -> None:
         """Test that JSON boolean returns empty set."""
-        assert filter_files_by_commits("true") == set()
+        assert get_changed_files.filter_files_by_commits("true") == set()
 
     @patch("get_changed_files.get_files_for_commit")
     def test_excludes_files_from_skip_ci_commits(
         self,
-        mock_get_files: MagicMock
+        mock_get_files: MagicMock,
+        get_changed_files
     ) -> None:
         """Test that files from [skip ci] commits are excluded."""
         mock_get_files.return_value = ["docs/readme.md"]
         commits = [
             {"id": "abc123", "message": "Update docs [skip ci]"}
         ]
-        result = filter_files_by_commits(json.dumps(commits))
+        result = get_changed_files.filter_files_by_commits(json.dumps(commits))
         assert result == {"docs/readme.md"}
 
     @patch("get_changed_files.get_files_for_commit")
     def test_does_not_exclude_files_from_normal_commits(
         self,
-        mock_get_files: MagicMock
+        mock_get_files: MagicMock,
+        get_changed_files
     ) -> None:
         """Test that files from normal commits are not excluded."""
         commits = [
             {"id": "abc123", "message": "Fix important bug"}
         ]
-        result = filter_files_by_commits(json.dumps(commits))
+        result = get_changed_files.filter_files_by_commits(json.dumps(commits))
         assert result == set()
         mock_get_files.assert_not_called()
 
     @patch("get_changed_files.get_files_for_commit")
-    def test_handles_mixed_commits(self, mock_get_files: MagicMock) -> None:
+    def test_handles_mixed_commits(
+        self, mock_get_files: MagicMock, get_changed_files
+    ) -> None:
         """Test handling of mixed [skip ci] and normal commits."""
         def get_files_side_effect(sha: str) -> list[str]:
             if sha == "skip1":
@@ -283,13 +297,13 @@ class TestFilterFilesByCommits:
             {"id": "normal", "message": "Fix bug"},
             {"id": "skip2", "message": "More docs [ci skip]"},
         ]
-        result = filter_files_by_commits(json.dumps(commits))
+        result = get_changed_files.filter_files_by_commits(json.dumps(commits))
         assert result == {"docs/a.md", "docs/b.md"}
 
-    def test_handles_commits_without_id(self) -> None:
+    def test_handles_commits_without_id(self, get_changed_files) -> None:
         """Test that commits without id are handled gracefully."""
         commits = [
             {"message": "No id commit [skip ci]"}
         ]
-        result = filter_files_by_commits(json.dumps(commits))
+        result = get_changed_files.filter_files_by_commits(json.dumps(commits))
         assert result == set()

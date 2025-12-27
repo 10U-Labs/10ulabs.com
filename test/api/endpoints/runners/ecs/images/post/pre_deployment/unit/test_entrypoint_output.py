@@ -1,6 +1,5 @@
 """Tests for entrypoint output functionality."""
 from unittest.mock import Mock, patch
-import entrypoint
 import pytest
 
 
@@ -20,7 +19,7 @@ def _setup_popen_mock(mock_popen, returncode=0):
     'entrypoint.py', '--repo', 'my-org/my-repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_registration_prints_repository_name(mock_run, mock_print, mock_popen):
+def test_registration_prints_repository_name(mock_run, mock_print, mock_popen, entrypoint):
     """Test that registration prints the repository name correctly."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen)
@@ -36,7 +35,7 @@ def test_registration_prints_repository_name(mock_run, mock_print, mock_popen):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'test-runner-name',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_registration_prints_runner_name(mock_run, mock_print, mock_popen):
+def test_registration_prints_runner_name(mock_run, mock_print, mock_popen, entrypoint):
     """Test that registration prints the runner name correctly."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen)
@@ -52,7 +51,7 @@ def test_registration_prints_runner_name(mock_run, mock_print, mock_popen):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'test-labels', '--token', 'tok'
 ])
-def test_registration_prints_labels(mock_run, mock_print, mock_popen):
+def test_registration_prints_labels(mock_run, mock_print, mock_popen, entrypoint):
     """Test that registration prints the labels correctly."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen)
@@ -67,7 +66,7 @@ def test_registration_prints_labels(mock_run, mock_print, mock_popen):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_error_message_prints_when_config_fails(mock_run, mock_print):
+def test_error_message_prints_when_config_fails(mock_run, mock_print, entrypoint):
     """Test that error message is printed when config.sh fails."""
     mock_run.return_value = Mock(returncode=5)
     with pytest.raises(SystemExit):
@@ -86,7 +85,7 @@ def test_error_message_prints_when_config_fails(mock_run, mock_print):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_runner_exit_code_is_printed(mock_run, mock_print, mock_popen):
+def test_runner_exit_code_is_printed(mock_run, mock_print, mock_popen, entrypoint):
     """Test that runner exit code is printed."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen, returncode=3)

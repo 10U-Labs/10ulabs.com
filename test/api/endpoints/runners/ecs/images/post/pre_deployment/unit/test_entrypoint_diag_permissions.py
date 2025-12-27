@@ -5,7 +5,6 @@ before configuring the runner, enabling CloudWatch sidecar to read logs.
 """
 from unittest.mock import Mock
 import pytest
-import entrypoint
 
 
 def _find_mkdir_call(mock_run):
@@ -72,7 +71,7 @@ def test_main_calls_mkdir_before_chown(entrypoint_result):
     assert mkdir_index is not None and chown_index is not None and mkdir_index < chown_index
 
 
-def test_main_continues_if_permission_fix_fails(monkeypatch, entrypoint_mocks):
+def test_main_continues_if_permission_fix_fails(monkeypatch, entrypoint_mocks, entrypoint):
     """Test that main continues even if permission fix commands fail."""
     mock_run, _ = entrypoint_mocks
     mock_run.side_effect = [

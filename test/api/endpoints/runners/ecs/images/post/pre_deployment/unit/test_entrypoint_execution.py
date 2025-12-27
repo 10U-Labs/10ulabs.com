@@ -1,6 +1,5 @@
 """Tests for entrypoint execution."""
 from unittest.mock import Mock, patch
-import entrypoint
 import pytest
 
 
@@ -19,7 +18,7 @@ def _setup_popen_mock(mock_popen, returncode=0):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_main_exits_with_code_1_when_config_fails(mock_run, config_returncode):
+def test_main_exits_with_code_1_when_config_fails(mock_run, config_returncode, entrypoint):
     """Test that main exits with code 1 when config fails with any non-zero code."""
     mock_run.return_value = Mock(returncode=config_returncode)
     with pytest.raises(SystemExit) as exc_info:
@@ -33,7 +32,7 @@ def test_main_exits_with_code_1_when_config_fails(mock_run, config_returncode):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_run_sh_called_after_successful_configuration(mock_run, mock_popen):
+def test_run_sh_called_after_successful_configuration(mock_run, mock_popen, entrypoint):
     """Test that run.sh is called after successful configuration."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen)
@@ -50,7 +49,7 @@ def test_run_sh_called_after_successful_configuration(mock_run, mock_popen):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_main_exits_with_run_sh_return_code(mock_run, mock_popen):
+def test_main_exits_with_run_sh_return_code(mock_run, mock_popen, entrypoint):
     """Test that main exits with run.sh return code."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen, returncode=42)
@@ -65,7 +64,7 @@ def test_main_exits_with_run_sh_return_code(mock_run, mock_popen):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_run_sh_uses_popen(mock_run, mock_popen):
+def test_run_sh_uses_popen(mock_run, mock_popen, entrypoint):
     """Test that run.sh uses Popen for execution."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen)
@@ -81,7 +80,7 @@ def test_run_sh_uses_popen(mock_run, mock_popen):
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_run_sh_not_called_when_config_fails(mock_run, mock_popen):
+def test_run_sh_not_called_when_config_fails(mock_run, mock_popen, entrypoint):
     """Test that run.sh is not called when config fails."""
     mock_run.return_value = Mock(returncode=1)
     with pytest.raises(SystemExit):

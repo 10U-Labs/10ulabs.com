@@ -20,16 +20,22 @@ entrypoint_path = os.path.join(FILES_DIR, 'entrypoint.py')
 entrypoint_spec = importlib.util.spec_from_file_location("entrypoint", entrypoint_path)
 if entrypoint_spec is None or entrypoint_spec.loader is None:
     raise ImportError("Could not load entrypoint module")
-entrypoint = importlib.util.module_from_spec(entrypoint_spec)
-sys.modules['entrypoint'] = entrypoint
-entrypoint_spec.loader.exec_module(entrypoint)
+_entrypoint_module = importlib.util.module_from_spec(entrypoint_spec)
+sys.modules['entrypoint'] = _entrypoint_module
+entrypoint_spec.loader.exec_module(_entrypoint_module)
+
+
+@pytest.fixture
+def entrypoint():
+    """Provide access to the entrypoint module."""
+    return _entrypoint_module
 
 
 @pytest.fixture(autouse=True)
 def reset_monitor_state():
     """Reset entrypoint monitor_state before each test to ensure test isolation."""
-    entrypoint.monitor_state["should_terminate"] = False
-    entrypoint.monitor_state["stop_event"] = None
+    _entrypoint_module.monitor_state["should_terminate"] = False
+    _entrypoint_module.monitor_state["stop_event"] = None
     yield
 
 
@@ -178,7 +184,7 @@ def entrypoint_result(request, monkeypatch, entrypoint_mocks):
     argv = request.param
     monkeypatch.setattr('sys.argv', argv)
     with pytest.raises(SystemExit):
-        entrypoint.main()
+        _entrypoint_module.main()
     return entrypoint_mocks
 
 
@@ -191,7 +197,7 @@ def config_args(request, monkeypatch, entrypoint_mocks):
     argv = request.param
     monkeypatch.setattr('sys.argv', argv)
     with pytest.raises(SystemExit):
-        entrypoint.main()
+        _entrypoint_module.main()
 
     mock_run, _ = entrypoint_mocks
     for call in mock_run.call_args_list:

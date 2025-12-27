@@ -3,25 +3,23 @@
 import sys
 from unittest.mock import patch, MagicMock
 
-import workflowctl
-
 
 class TestWorkflowctlCLI:
     """Tests for the workflowctl CLI subcommand routing."""
 
-    def test_no_command_shows_usage_and_returns_error(self) -> None:
+    def test_no_command_shows_usage_and_returns_error(self, workflowctl) -> None:
         """Test that running without a command shows usage and returns 1."""
         with patch.object(sys, "argv", ["workflowctl.py"]):
             result = workflowctl.main()
         assert result == 1
 
-    def test_unknown_command_returns_error(self) -> None:
+    def test_unknown_command_returns_error(self, workflowctl) -> None:
         """Test that an unknown command returns 1."""
         with patch.object(sys, "argv", ["workflowctl.py", "unknown-command"]):
             result = workflowctl.main()
         assert result == 1
 
-    def test_compute_roots_subcommand_routes_correctly(self) -> None:
+    def test_compute_roots_subcommand_routes_correctly(self, workflowctl) -> None:
         """Test that compute-roots subcommand routes to compute_roots.main."""
         mock_main = MagicMock(return_value=None)
         original = workflowctl.COMMANDS["compute-roots"]
@@ -33,7 +31,7 @@ class TestWorkflowctlCLI:
         finally:
             workflowctl.COMMANDS["compute-roots"] = original
 
-    def test_get_running_subcommand_routes_correctly(self) -> None:
+    def test_get_running_subcommand_routes_correctly(self, workflowctl) -> None:
         """Test that get-running subcommand routes to get_running.main."""
         mock_main = MagicMock(return_value=0)
         original = workflowctl.COMMANDS["get-running"]
@@ -47,7 +45,7 @@ class TestWorkflowctlCLI:
         finally:
             workflowctl.COMMANDS["get-running"] = original
 
-    def test_cancel_subcommand_routes_correctly(self) -> None:
+    def test_cancel_subcommand_routes_correctly(self, workflowctl) -> None:
         """Test that cancel subcommand routes to cancel.main."""
         mock_main = MagicMock(return_value=0)
         original = workflowctl.COMMANDS["cancel"]
@@ -62,7 +60,7 @@ class TestWorkflowctlCLI:
         finally:
             workflowctl.COMMANDS["cancel"] = original
 
-    def test_dispatch_subcommand_routes_correctly(self) -> None:
+    def test_dispatch_subcommand_routes_correctly(self, workflowctl) -> None:
         """Test that dispatch subcommand routes to dispatch.main."""
         mock_main = MagicMock(return_value=0)
         original = workflowctl.COMMANDS["dispatch"]
