@@ -18,29 +18,30 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - id: oidc-check
+      - id: oidc
         name: Check OIDC availability
         run: |
           if [ -n "${{ vars.AWS_REGION }}" ] && \
              [ -n "${{ vars.OIDC_ROLE_ARN }}" ]; then
-            echo "available=true" >> $GITHUB_OUTPUT
+            echo "is_available=true" >> $GITHUB_OUTPUT
           else
-            echo "available=false" >> $GITHUB_OUTPUT
+            echo "is_available=false" >> $GITHUB_OUTPUT
           fi
-      - if: steps.oidc-check.outputs.available == 'true'
+      - if: steps.oidc.outputs.is_available == 'true'
         name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
-      - if: steps.oidc-check.outputs.available != 'true'
-        name: Configure AWS credentials via static keys (cold start)
+      - if: steps.oidc.outputs.is_available != 'true'
+        name: Extract AWS region (cold start)
         run: |
           AWS_REGION=$(grep 'aws_region' \
             lib/terraform/modules/shared/locals.tf \
             | grep -v '\$' | cut -d'"' -f2)
           echo "aws_region=$AWS_REGION" >> $GITHUB_ENV
-      - if: steps.oidc-check.outputs.available != 'true'
+      - if: steps.oidc.outputs.is_available != 'true'
+        name: Configure AWS credentials via static keys (cold start)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
