@@ -70,7 +70,7 @@ def get_all_ancestors(
     return ancestors
 
 
-def _insert_sorted(queue: list[str], item: str) -> None:
+def insert_sorted(queue: list[str], item: str) -> None:
     """Insert an item into a sorted list maintaining sort order."""
     for i, existing in enumerate(queue):
         if item < existing:
@@ -111,7 +111,7 @@ def topological_sort(workflows: set[str], graph: dict[str, Any]) -> list[str]:
             if current in graph.get(wf, {}).get("depends_on", []):
                 in_degree[wf] -= 1
                 if in_degree[wf] == 0:
-                    _insert_sorted(queue, wf)
+                    insert_sorted(queue, wf)
 
     return result
 
@@ -381,7 +381,7 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _output_slots(output: list[str], num_slots: int) -> None:
+def output_slots(output: list[str], num_slots: int) -> None:
     """Output slot variables for GitHub Actions."""
     print(f"count={len(output)}")
     for i in range(1, num_slots + 1):
@@ -389,7 +389,7 @@ def _output_slots(output: list[str], num_slots: int) -> None:
         print(f"key_{i:02d}={key}")
 
 
-def _output_results(
+def output_results(
     output: list[str], output_format: str, indexed: bool = False
 ) -> None:
     """Output results in the specified format."""
@@ -406,7 +406,7 @@ def _output_results(
             print(item)
 
 
-def _output_levels_indexed(levels: list[list[str]]) -> None:
+def output_levels_indexed(levels: list[list[str]]) -> None:
     """Output levels as indexed objects for GitHub Actions matrix visualization."""
     indexed_output = []
     idx = 1
@@ -460,18 +460,18 @@ def main() -> None:
         levels = compute_execution_plan_levels(roots, graph)
         if args.indexed:
             # Output as indexed objects for matrix visualization
-            _output_levels_indexed(levels)
+            output_levels_indexed(levels)
         else:
             # Output as array of arrays for parallel execution
             print(json.dumps(levels))
     elif args.slots > 0:
         output = compute_execution_plan(roots, graph)
-        _output_slots(output, args.slots)
+        output_slots(output, args.slots)
     elif args.execution_plan:
         output = compute_execution_plan(roots, graph)
-        _output_results(output, args.output_format, args.indexed)
+        output_results(output, args.output_format, args.indexed)
     else:
-        _output_results(roots, args.output_format, args.indexed)
+        output_results(roots, args.output_format, args.indexed)
 
 
 if __name__ == "__main__":

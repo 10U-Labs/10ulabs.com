@@ -373,38 +373,36 @@ class TestGetAllDescendants:
 
 
 class TestInsertSorted:
-    """Tests for _insert_sorted function."""
-
-    # pylint: disable=protected-access
+    """Tests for insert_sorted function."""
 
     def test_insert_into_empty_list(self, compute_roots) -> None:
         """Test inserting into empty list."""
         queue: list[str] = []
-        compute_roots._insert_sorted(queue, "b")
+        compute_roots.insert_sorted(queue, "b")
         assert queue == ["b"]
 
     def test_insert_at_beginning(self, compute_roots) -> None:
         """Test inserting at beginning of list."""
         queue = ["c", "d", "e"]
-        compute_roots._insert_sorted(queue, "a")
+        compute_roots.insert_sorted(queue, "a")
         assert queue == ["a", "c", "d", "e"]
 
     def test_insert_at_end(self, compute_roots) -> None:
         """Test inserting at end of list."""
         queue = ["a", "b", "c"]
-        compute_roots._insert_sorted(queue, "z")
+        compute_roots.insert_sorted(queue, "z")
         assert queue == ["a", "b", "c", "z"]
 
     def test_insert_in_middle(self, compute_roots) -> None:
         """Test inserting in middle of list."""
         queue = ["a", "c", "e"]
-        compute_roots._insert_sorted(queue, "b")
+        compute_roots.insert_sorted(queue, "b")
         assert queue == ["a", "b", "c", "e"]
 
     def test_insert_duplicate(self, compute_roots) -> None:
         """Test inserting duplicate value."""
         queue = ["a", "c", "e"]
-        compute_roots._insert_sorted(queue, "c")
+        compute_roots.insert_sorted(queue, "c")
         assert queue == ["a", "c", "c", "e"]
 
 
@@ -577,118 +575,114 @@ class TestComputeExecutionPlanLevels:
 
 
 class TestOutputSlots:
-    """Tests for _output_slots function."""
-
-    # pylint: disable=protected-access
+    """Tests for output_slots function."""
 
     def test_exact_slots_outputs_count(self, compute_roots) -> None:
         """Test outputting exact number of slots shows correct count."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots(["a", "b", "c"], 3)
+            compute_roots.output_slots(["a", "b", "c"], 3)
             output = mock_stdout.getvalue()
         assert "count=3" in output
 
     def test_exact_slots_outputs_first_key(self, compute_roots) -> None:
         """Test outputting exact number of slots shows first key."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots(["a", "b", "c"], 3)
+            compute_roots.output_slots(["a", "b", "c"], 3)
             output = mock_stdout.getvalue()
         assert "key_01=a" in output
 
     def test_exact_slots_outputs_second_key(self, compute_roots) -> None:
         """Test outputting exact number of slots shows second key."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots(["a", "b", "c"], 3)
+            compute_roots.output_slots(["a", "b", "c"], 3)
             output = mock_stdout.getvalue()
         assert "key_02=b" in output
 
     def test_exact_slots_outputs_third_key(self, compute_roots) -> None:
         """Test outputting exact number of slots shows third key."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots(["a", "b", "c"], 3)
+            compute_roots.output_slots(["a", "b", "c"], 3)
             output = mock_stdout.getvalue()
         assert "key_03=c" in output
 
     def test_more_slots_outputs_count(self, compute_roots) -> None:
         """Test more slots than items shows correct count."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots(["a", "b"], 4)
+            compute_roots.output_slots(["a", "b"], 4)
             output = mock_stdout.getvalue()
         assert "count=2" in output
 
     def test_more_slots_outputs_first_key(self, compute_roots) -> None:
         """Test more slots than items shows first key."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots(["a", "b"], 4)
+            compute_roots.output_slots(["a", "b"], 4)
             output = mock_stdout.getvalue()
         assert "key_01=a" in output
 
     def test_more_slots_outputs_second_key(self, compute_roots) -> None:
         """Test more slots than items shows second key."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots(["a", "b"], 4)
+            compute_roots.output_slots(["a", "b"], 4)
             output = mock_stdout.getvalue()
         assert "key_02=b" in output
 
     def test_more_slots_outputs_empty_third_key(self, compute_roots) -> None:
         """Test more slots than items shows empty third key."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots(["a", "b"], 4)
+            compute_roots.output_slots(["a", "b"], 4)
             output = mock_stdout.getvalue()
         assert "key_03=" in output
 
     def test_more_slots_outputs_empty_fourth_key(self, compute_roots) -> None:
         """Test more slots than items shows empty fourth key."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots(["a", "b"], 4)
+            compute_roots.output_slots(["a", "b"], 4)
             output = mock_stdout.getvalue()
         assert "key_04=" in output
 
     def test_empty_list_outputs_count_zero(self, compute_roots) -> None:
         """Test outputting with no items shows count zero."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots([], 2)
+            compute_roots.output_slots([], 2)
             output = mock_stdout.getvalue()
         assert "count=0" in output
 
     def test_empty_list_outputs_empty_first_key(self, compute_roots) -> None:
         """Test outputting with no items shows empty first key."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots([], 2)
+            compute_roots.output_slots([], 2)
             output = mock_stdout.getvalue()
         assert "key_01=" in output
 
     def test_empty_list_outputs_empty_second_key(self, compute_roots) -> None:
         """Test outputting with no items shows empty second key."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_slots([], 2)
+            compute_roots.output_slots([], 2)
             output = mock_stdout.getvalue()
         assert "key_02=" in output
 
 
 class TestOutputResults:
-    """Tests for _output_results function."""
-
-    # pylint: disable=protected-access
+    """Tests for output_results function."""
 
     def test_output_json(self, compute_roots) -> None:
         """Test JSON output format."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_results(["a", "b", "c"], "json")
+            compute_roots.output_results(["a", "b", "c"], "json")
             output = mock_stdout.getvalue().strip()
         assert output == '["a", "b", "c"]'
 
     def test_output_lines(self, compute_roots) -> None:
         """Test lines output format."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_results(["a", "b", "c"], "lines")
+            compute_roots.output_results(["a", "b", "c"], "lines")
             output = mock_stdout.getvalue()
         assert output == "a\nb\nc\n"
 
     def test_output_indexed(self, compute_roots) -> None:
         """Test indexed JSON output format."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_results(["a", "b"], "json", indexed=True)
+            compute_roots.output_results(["a", "b"], "json", indexed=True)
             output = mock_stdout.getvalue().strip()
         expected = '[{"idx": "01", "name": "a"}, {"idx": "02", "name": "b"}]'
         assert output == expected
@@ -696,20 +690,18 @@ class TestOutputResults:
     def test_output_empty(self, compute_roots) -> None:
         """Test output with empty list."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_results([], "json")
+            compute_roots.output_results([], "json")
             output = mock_stdout.getvalue().strip()
         assert output == "[]"
 
 
 class TestOutputLevelsIndexed:
-    """Tests for _output_levels_indexed function."""
-
-    # pylint: disable=protected-access
+    """Tests for output_levels_indexed function."""
 
     def test_single_level(self, compute_roots) -> None:
         """Test output with single level."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_levels_indexed([["a", "b"]])
+            compute_roots.output_levels_indexed([["a", "b"]])
             output = mock_stdout.getvalue().strip()
         expected = (
             '[{"idx": "01", "level": 1, "name": "a"}, '
@@ -720,7 +712,7 @@ class TestOutputLevelsIndexed:
     def test_multiple_levels(self, compute_roots) -> None:
         """Test output with multiple levels."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_levels_indexed([["a"], ["b", "c"], ["d"]])
+            compute_roots.output_levels_indexed([["a"], ["b", "c"], ["d"]])
             output = mock_stdout.getvalue().strip()
         expected = (
             '[{"idx": "01", "level": 1, "name": "a"}, '
@@ -733,7 +725,7 @@ class TestOutputLevelsIndexed:
     def test_empty_levels(self, compute_roots) -> None:
         """Test output with empty levels list."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots._output_levels_indexed([])
+            compute_roots.output_levels_indexed([])
             output = mock_stdout.getvalue().strip()
         assert output == "[]"
 
