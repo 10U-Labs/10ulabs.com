@@ -7,7 +7,7 @@ import pytest
 
 import boto3
 
-from naming_conventions import validate_name
+from test_fixtures.integration import create_deployed_naming_convention_tests
 
 pytestmark = pytest.mark.layer(2)
 
@@ -24,26 +24,16 @@ def test_lambda_catchall_handler_runtime_is_python313(lambda_client, shared_conf
     assert response["Configuration"]["Runtime"] == "python3.13"
 
 
-def test_catchall_handler_role_name_is_pascalcase(iam_client, shared_config):
-    """Verify CatchAllHandler IAM role name uses PascalCase."""
-    role_name = f"{shared_config['resource_prefix']}CatchAllHandlerServiceRole"
-    response = iam_client.get_role(RoleName=role_name)
-    actual_name = response['Role']['RoleName']
-    error = validate_name(actual_name)
-    assert error is None, (
-        f"Deployed IAM role has invalid name '{actual_name}': {error}"
-    )
-
-
-def test_catchall_handler_function_name_is_pascalcase(lambda_client, shared_config):
-    """Verify CatchAllHandler Lambda function name uses PascalCase."""
-    function_name = shared_config['lambda_handler_names']['catchall']
-    response = lambda_client.get_function(FunctionName=function_name)
-    actual_name = response['Configuration']['FunctionName']
-    error = validate_name(actual_name)
-    assert error is None, (
-        f"Deployed Lambda function has invalid name '{actual_name}': {error}"
-    )
+# Use factory for naming convention tests
+# pylint: disable=invalid-name
+(
+    TestCatchAllHandlerIAMRoleNamingConventions,
+    TestCatchAllHandlerLambdaFunctionNamingConventions,
+) = create_deployed_naming_convention_tests(
+    function_name_config_key='catchall_handler_function_name',
+    default_function_name='TenULabsCatchAllHandler',
+    handler_display_name='CatchAllHandler',
+)
 
 
 # =============================================================================

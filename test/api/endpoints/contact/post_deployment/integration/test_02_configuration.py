@@ -8,7 +8,7 @@ Three-layer testing model:
 """
 
 import pytest
-from naming_conventions import validate_name
+from test_fixtures.integration import create_naming_convention_tests
 
 
 pytestmark = pytest.mark.layer(2)
@@ -108,32 +108,8 @@ class TestCloudWatchLogsConfiguration:
         )
 
 
-class TestNamingConventions:
-    """Layer 2: Verify resources follow naming conventions."""
-
-    def test_contact_handler_lambda_name_is_pascalcase(
-        self, lambda_client, shared_config
-    ):
-        """Verify Lambda function name uses PascalCase."""
-        function_name = shared_config.get("lambda_handler_names", {}).get(
-            "contact", "TenULabsContactHandler"
-        )
-        response = lambda_client.get_function(FunctionName=function_name)
-        actual_name = response["Configuration"]["FunctionName"]
-        error = validate_name(actual_name)
-        assert error is None, (
-            f"Lambda function has invalid name '{actual_name}': {error}"
-        )
-
-    def test_contact_handler_role_name_is_pascalcase(
-        self, iam_client, shared_config
-    ):
-        """Verify IAM role name uses PascalCase."""
-        resource_prefix = shared_config.get("resource_prefix", "TenULabs")
-        role_name = f"{resource_prefix}ContactHandlerServiceRole"
-        response = iam_client.get_role(RoleName=role_name)
-        actual_name = response["Role"]["RoleName"]
-        error = validate_name(actual_name)
-        assert error is None, (
-            f"IAM role has invalid name '{actual_name}': {error}"
-        )
+# Use factory for naming convention tests
+TestNamingConventions = create_naming_convention_tests(
+    function_name_config_key="contact_handler_function_name",
+    default_function_name="TenULabsContactHandler",
+)

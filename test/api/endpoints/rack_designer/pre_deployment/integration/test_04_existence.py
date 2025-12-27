@@ -9,6 +9,7 @@ Six-layer testing model:
 
 import pytest
 from test_fixtures.integration import (
+    assert_api_gateway_exists,
     create_ecs_runner_outputs_tests,
     create_ecs_runner_lambda_existence_tests,
     create_www_shared_s3_existence_tests,
@@ -30,12 +31,7 @@ class TestAPIBackendPrerequisites:
 
     def test_api_gateway_rest_api_exists(self, api_gateway_info):
         """Verify the API Gateway REST API exists."""
-        if api_gateway_info["id"] is None:
-            pytest.skip("api_gateway_rest_api_id output not available")
-        assert api_gateway_info["exists"], (
-            f"API Gateway '{api_gateway_info['id']}' does not exist. "
-            "Run terraform apply in src/api/backend/"
-        )
+        assert_api_gateway_exists(api_gateway_info)
 
 
 TestECSRunnerOutputs = create_ecs_runner_outputs_tests()

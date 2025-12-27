@@ -1,26 +1,12 @@
 """Pytest fixtures for contact handler pre-deployment unit tests."""
-import importlib.util
 import json
 from types import ModuleType
 from unittest.mock import patch
 
 import pytest
 
-from lambda_response import (
-    parse_response_body,
-    assert_response_status,
-    assert_json_content_type,
-    assert_cors_headers,
-)
+from module_utils import load_module_from_path
 from repo_utils import REPO_ROOT
-
-# Re-export for backward compatibility
-__all__ = [
-    'parse_response_body',
-    'assert_response_status',
-    'assert_json_content_type',
-    'assert_cors_headers',
-]
 
 CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact"
 
@@ -28,12 +14,7 @@ CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact"
 def load_contact_handler_module() -> ModuleType:
     """Load the contact handler module dynamically."""
     handler_path = CONTACT_SRC / "lambda" / "handler.py"
-    spec = importlib.util.spec_from_file_location("contact_handler", handler_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_module_from_path("contact_handler", handler_path)
 
 
 @pytest.fixture

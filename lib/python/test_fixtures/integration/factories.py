@@ -2,11 +2,13 @@
 
 These functions dynamically create test classes with specific configurations.
 """
+# pylint: disable=too-many-lines
 from botocore.exceptions import ClientError
 import pytest
 from naming_conventions import validate_name
 from repo_utils import REPO_ROOT
 from test_fixtures.integration.helpers import (
+    assert_iam_role_name_is_pascalcase,
     check_s3_head_bucket_permission,
     check_service_can_assume_role,
     NO_CREDENTIALS_MESSAGE,
@@ -947,6 +949,82 @@ def create_naming_convention_tests(
             )
 
     return TestNamingConventions
+
+
+def create_deployed_naming_convention_tests(
+    function_name_config_key: str,
+    default_function_name: str,
+    handler_display_name: str,
+):
+    """Create post-deployment naming convention tests for Lambda and IAM resources.
+
+    These tests verify both existence and PascalCase naming of deployed resources.
+
+    Args:
+        function_name_config_key: Config key for function name
+        default_function_name: Default function name if not in config
+        handler_display_name: Display name for test docstrings (e.g., "EchoHandler")
+
+    Returns:
+        Tuple of (TestDeployedIAMRoleNamingConventions, TestDeployedLambdaFunctionNamingConventions)
+    """
+
+    class TestDeployedIAMRoleNamingConventions:
+        """Tests for deployed IAM role naming conventions."""
+
+        def test_handler_role_exists(self, iam_client, config):
+            """Verify IAM role exists."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            role_name = f"{function_name}ServiceRole"
+            try:
+                iam_client.get_role(RoleName=role_name)
+            except iam_client.exceptions.NoSuchEntityException:
+                pytest.fail(f"IAM role '{role_name}' does not exist")
+
+        def test_handler_role_name_is_pascalcase(self, iam_client, config):
+            """Verify IAM role name uses PascalCase."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            role_name = f"{function_name}ServiceRole"
+            assert_iam_role_name_is_pascalcase(iam_client, role_name, validate_name)
+
+    # Rename test methods to include handler name
+    TestDeployedIAMRoleNamingConventions.test_handler_role_exists.__doc__ = (
+        f"Verify {handler_display_name} IAM role exists."
+    )
+    TestDeployedIAMRoleNamingConventions.test_handler_role_name_is_pascalcase.__doc__ = (
+        f"Verify {handler_display_name} IAM role name uses PascalCase."
+    )
+
+    class TestDeployedLambdaFunctionNamingConventions:
+        """Tests for deployed Lambda function naming conventions."""
+
+        def test_handler_function_exists(self, lambda_client, config):
+            """Verify Lambda function exists."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            try:
+                lambda_client.get_function(FunctionName=function_name)
+            except lambda_client.exceptions.ResourceNotFoundException:
+                pytest.fail(f"Lambda function '{function_name}' does not exist")
+
+        def test_handler_function_name_is_pascalcase(self, lambda_client, config):
+            """Verify Lambda function name uses PascalCase."""
+            function_name = config.get(function_name_config_key, default_function_name)
+            response = lambda_client.get_function(FunctionName=function_name)
+            actual_name = response['Configuration']['FunctionName']
+            error = validate_name(actual_name)
+            assert error is None, (
+                f"Deployed Lambda function has invalid name '{actual_name}': {error}"
+            )
+
+    # Rename test methods to include handler name
+    TestDeployedLambdaFunctionNamingConventions.test_handler_function_exists.__doc__ = (
+        f"Verify {handler_display_name} Lambda function exists."
+    )
+    TestDeployedLambdaFunctionNamingConventions.test_handler_function_name_is_pascalcase.__doc__ = (
+        f"Verify {handler_display_name} Lambda function name uses PascalCase."
+    )
+
+    return TestDeployedIAMRoleNamingConventions, TestDeployedLambdaFunctionNamingConventions
 
 
 def create_log_group_configuration_tests(

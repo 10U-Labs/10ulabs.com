@@ -73,6 +73,10 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     health_config = parse_health_tfvars()
     result['health_handler_function_name'] = health_config.get('health_handler_function_name', '')
     result['health_handler_log_group_name'] = health_config.get('health_handler_log_group_name', '')
+    # Add catchall handler function name from shared_config
+    result['catchall_handler_function_name'] = shared_config.get(
+        'lambda_handler_names', {}
+    ).get('catchall', 'TenULabsCatchAllHandler')
     return result
 
 

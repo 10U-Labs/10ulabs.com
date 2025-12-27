@@ -8,6 +8,7 @@ Six-layer testing model:
 """
 
 import pytest
+from test_fixtures.integration import skip_if_api_gateway_unavailable
 
 
 pytestmark = pytest.mark.layer(5)
@@ -18,10 +19,7 @@ class TestAPIGatewayConfiguration:
 
     def test_api_gateway_is_regional(self, api_gateway_info):
         """Verify API Gateway is configured as regional endpoint."""
-        if api_gateway_info["id"] is None:
-            pytest.skip("api_gateway_rest_api_id output not available")
-        if not api_gateway_info["exists"]:
-            pytest.skip("API Gateway does not exist")
+        skip_if_api_gateway_unavailable(api_gateway_info)
         endpoint_types = api_gateway_info.get("endpoint_types", [])
         assert "REGIONAL" in endpoint_types, (
             f"API Gateway '{api_gateway_info['id']}' is not regional. "
@@ -30,10 +28,7 @@ class TestAPIGatewayConfiguration:
 
     def test_api_gateway_has_v1_resource(self, api_gateway_info):
         """Verify API Gateway has /v1 resource for versioned API."""
-        if api_gateway_info["id"] is None:
-            pytest.skip("api_gateway_rest_api_id output not available")
-        if not api_gateway_info["exists"]:
-            pytest.skip("API Gateway does not exist")
+        skip_if_api_gateway_unavailable(api_gateway_info)
         paths = api_gateway_info.get("paths", [])
         has_v1 = any(path.startswith("/v1") for path in paths)
         assert has_v1, (

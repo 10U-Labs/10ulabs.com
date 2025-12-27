@@ -8,6 +8,7 @@ Six-layer testing model:
 """
 
 import pytest
+from test_fixtures.integration import assert_api_gateway_exists
 
 
 pytestmark = pytest.mark.layer(4)
@@ -18,12 +19,7 @@ class TestPrerequisiteExistence:
 
     def test_api_gateway_rest_api_exists(self, api_gateway_info):
         """Verify API Gateway REST API exists."""
-        if api_gateway_info["id"] is None:
-            pytest.skip("api_gateway_rest_api_id output not available")
-        assert api_gateway_info["exists"], (
-            f"API Gateway '{api_gateway_info['id']}' does not exist. "
-            "Run terraform apply in src/api/backend/"
-        )
+        assert_api_gateway_exists(api_gateway_info)
 
     def test_ses_sending_is_enabled(self, ses_client):
         """Verify SES sending is enabled in the region."""

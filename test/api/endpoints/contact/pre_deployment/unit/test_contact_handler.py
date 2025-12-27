@@ -1,7 +1,7 @@
 """Unit tests for contact form Lambda handler."""
 import json
 from unittest.mock import patch, MagicMock
-from test.api.endpoints.contact.pre_deployment.unit.conftest import (
+from lambda_response import (
     parse_response_body,
     assert_response_status,
     assert_json_content_type,

@@ -9,51 +9,19 @@ Three-layer testing model:
 
 import pytest
 from botocore.exceptions import ClientError
+from test_fixtures.integration import create_lambda_existence_tests
 
 
 pytestmark = pytest.mark.layer(1)
 
 
-class TestLambdaAndIAMExistence:
-    """Layer 1: Verify Lambda function and IAM role exist."""
-
-    def test_contact_handler_lambda_exists(self, lambda_client, shared_config):
-        """Verify TenULabsContactHandler Lambda function exists."""
-        function_name = shared_config.get("lambda_handler_names", {}).get(
-            "contact", "TenULabsContactHandler"
-        )
-        try:
-            response = lambda_client.get_function(FunctionName=function_name)
-            assert response["Configuration"]["FunctionName"] == function_name
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                pytest.fail(
-                    f"Lambda function '{function_name}' does not exist. "
-                    "Run terraform apply in src/api/endpoints/contact/"
-                )
-            raise
-
-    def test_contact_handler_iam_role_exists(self, iam_client, shared_config):
-        """Verify ContactHandler IAM role exists."""
-        resource_prefix = shared_config.get("resource_prefix", "TenULabs")
-        role_name = f"{resource_prefix}ContactHandlerServiceRole"
-        try:
-            response = iam_client.get_role(RoleName=role_name)
-            assert response["Role"]["RoleName"] == role_name
-        except iam_client.exceptions.NoSuchEntityException:
-            pytest.fail(
-                f"IAM role '{role_name}' does not exist. "
-                "Run terraform apply in src/api/endpoints/contact/"
-            )
-
-    def test_contact_handler_log_group_exists(
-        self, contact_handler_log_group
-    ):
-        """Verify CloudWatch log group for ContactHandler exists."""
-        assert contact_handler_log_group["exists"], (
-            f"CloudWatch log group '{contact_handler_log_group['name']}' "
-            "does not exist"
-        )
+# Use factory for Lambda/IAM existence tests
+TestLambdaAndIAMExistence = create_lambda_existence_tests(
+    function_name_config_key="contact_handler_function_name",
+    default_function_name="TenULabsContactHandler",
+    terraform_path="src/api/endpoints/contact/",
+    log_group_fixture="contact_handler_log_group",
+)
 
 
 class TestSSMAndSESExistence:

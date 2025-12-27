@@ -1,25 +1,11 @@
 """Pytest fixtures for simulation-soc pre-deployment unit tests."""
-import importlib.util
 import json
 from types import ModuleType
 
 import pytest
 
-from lambda_response import (
-    parse_response_body,
-    assert_response_status,
-    assert_json_content_type,
-    assert_cors_headers,
-)
+from module_utils import load_module_from_path
 from repo_utils import REPO_ROOT
-
-# Re-export for backward compatibility
-__all__ = [
-    'parse_response_body',
-    'assert_response_status',
-    'assert_json_content_type',
-    'assert_cors_headers',
-]
 
 SIMULATION_SOC_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "simulation_soc"
 
@@ -27,12 +13,7 @@ SIMULATION_SOC_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "simulation_soc"
 def load_simulation_soc_handler_module() -> ModuleType:
     """Load the simulation-soc handler module dynamically."""
     handler_path = SIMULATION_SOC_SRC / "lambda" / "handler.py"
-    spec = importlib.util.spec_from_file_location("simulation_soc_handler", handler_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_module_from_path("simulation_soc_handler", handler_path)
 
 
 @pytest.fixture

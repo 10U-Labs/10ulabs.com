@@ -43,6 +43,7 @@ from test_fixtures.integration.base_classes import (
     Layer6S3WriteCapabilityTests,
 )
 from test_fixtures.integration.factories import (
+    create_deployed_naming_convention_tests,
     create_ecs_runner_lambda_existence_tests,
     create_ecs_runner_outputs_tests,
     create_lambda_api_gateway_wiring_tests,
@@ -63,9 +64,14 @@ from test_fixtures.integration.factories import (
     handle_ecr_error,
 )
 from test_fixtures.integration.helpers import (
+    assert_api_gateway_exists,
+    assert_iam_role_name_is_pascalcase,
+    check_s3_head_bucket_permission,
     check_service_can_assume_role,
+    check_state_file_readable,
     get_aws_account_id_via_cli,
     handle_ecr_authorization_error,
+    skip_if_api_gateway_unavailable,
 )
 
 __all__ = [
@@ -92,6 +98,7 @@ __all__ = [
     "Layer6S3CapabilityTests",
     "Layer6S3WriteCapabilityTests",
     # Factory functions
+    "create_deployed_naming_convention_tests",
     "create_ecs_runner_lambda_existence_tests",
     "create_ecs_runner_outputs_tests",
     "create_lambda_api_gateway_wiring_tests",
@@ -111,7 +118,12 @@ __all__ = [
     "create_www_shared_s3_existence_tests",
     "handle_ecr_error",
     # Helper functions
+    "assert_api_gateway_exists",
+    "assert_iam_role_name_is_pascalcase",
+    "check_s3_head_bucket_permission",
     "check_service_can_assume_role",
+    "check_state_file_readable",
     "get_aws_account_id_via_cli",
     "handle_ecr_authorization_error",
+    "skip_if_api_gateway_unavailable",
 ]

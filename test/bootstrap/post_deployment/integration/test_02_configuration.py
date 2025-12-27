@@ -7,6 +7,7 @@ import json
 import pytest
 
 from naming_conventions import validate_name
+from test_fixtures.integration import assert_iam_role_name_is_pascalcase
 
 pytestmark = pytest.mark.layer(2)
 
@@ -492,12 +493,7 @@ def test_iam_role_has_administrator_access_policy(iam_client, config):
 def test_github_actions_role_name_is_pascalcase(iam_client, config):
     """Verify GitHub Actions IAM role name uses PascalCase."""
     role_name = config.get('name_for_github_actions_role', 'TenULabsGitHubActionsRole')
-    response = iam_client.get_role(RoleName=role_name)
-    actual_name = response['Role']['RoleName']
-    error = validate_name(actual_name)
-    assert error is None, (
-        f"Deployed IAM role has invalid name '{actual_name}': {error}"
-    )
+    assert_iam_role_name_is_pascalcase(iam_client, role_name, validate_name)
 
 
 # =============================================================================
