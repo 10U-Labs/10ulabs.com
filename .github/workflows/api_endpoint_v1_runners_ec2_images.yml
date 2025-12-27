@@ -183,7 +183,7 @@ jobs:
           if [ "${{ github.event.inputs.invalidate_cloudfront }}" = "true" ]; then
             FLAGS="$FLAGS --invalidate-cloudfront"
           fi
-          python3 src/workflowctl/workflowctl.py dispatch-descendants \
+          python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
             --workflow api_endpoint_v1_runners_ec2_images \
             --repo ${{ github.repository }} \
             $FLAGS

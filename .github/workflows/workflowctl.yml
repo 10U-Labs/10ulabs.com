@@ -146,7 +146,7 @@ jobs:
         name: Get running workflows
         run: |
           echo "Getting currently running workflows..."
-          RUNNING=$(python3 src/workflowctl/workflowctl.py get-running \
+          RUNNING=$(python3 src/workflowctl/workflowctl.py get-running-workflows \
             --repo ${{ github.repository }} \
             --graph etc/workflow-dependencies.json)
           echo "Running workflows: $RUNNING"
@@ -171,7 +171,7 @@ jobs:
             # Get level-1 workflows (independent roots), merge with running
             JQ='[.[] | select(.level == 1) | .name] | join("\n")'
             ROOTS=$(echo "$CHANGED" | \
-              python3 src/workflowctl/workflowctl.py compute-roots \
+              python3 src/workflowctl/workflowctl.py compute-root-workflows \
               --graph $GRAPH --levels --indexed \
               --running "$RUNNING" | jq -r "$JQ" || echo "")
           fi
@@ -198,7 +198,7 @@ jobs:
           JQ_FILTER='split("\n") | map(select(length > 0))'
           ROOTS_JSON=$(echo "$ROOTS" | jq -R -s -c "$JQ_FILTER")
           echo "Merge roots: $ROOTS_JSON"
-          python3 src/workflowctl/workflowctl.py cancel \
+          python3 src/workflowctl/workflowctl.py cancel-workflows \
             --repo ${{ github.repository }} \
             --merge-roots "$ROOTS_JSON" \
             --graph etc/workflow-dependencies.json
@@ -214,7 +214,7 @@ jobs:
           if [ "${{ inputs.invalidate_cloudfront }}" = "true" ]; then
             FLAGS="$FLAGS --invalidate-cloudfront"
           fi
-          python3 src/workflowctl/workflowctl.py dispatch-roots \
+          python3 src/workflowctl/workflowctl.py dispatch-root-workflows \
             --repo "${{ github.repository }}" \
             --roots "${{ steps.plan.outputs.root_workflows }}" \
             --changed "${{ steps.files.outputs.changed }}" \

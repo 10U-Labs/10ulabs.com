@@ -6,12 +6,12 @@ for computing root workflows, getting running workflows, canceling workflows,
 and dispatching descendant workflows.
 
 Usage:
-    python3 src/workflowctl/workflowctl.py compute-roots <changed_files>
-    python3 src/workflowctl/workflowctl.py get-running --repo owner/repo
-    python3 src/workflowctl/workflowctl.py cancel --repo owner/repo --merge-roots '["x"]'
-    python3 src/workflowctl/workflowctl.py dispatch-descendants --workflow bootstrap --repo owner/repo
+    python3 src/workflowctl/workflowctl.py compute-root-workflows <changed_files>
+    python3 src/workflowctl/workflowctl.py get-running-workflows --repo owner/repo
+    python3 src/workflowctl/workflowctl.py cancel-workflows --repo owner/repo --merge-roots '["x"]'
+    python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows --workflow bootstrap --repo owner/repo
     python3 src/workflowctl/workflowctl.py get-changed-files --base SHA --head SHA
-    python3 src/workflowctl/workflowctl.py dispatch-roots --repo owner/repo --roots ROOTS
+    python3 src/workflowctl/workflowctl.py dispatch-root-workflows --repo owner/repo --roots ROOTS
 """
 import sys
 
@@ -24,12 +24,12 @@ import get_running
 
 
 COMMANDS = {
-    "compute-roots": ("Compute root workflows from changed files", compute_roots.main),
-    "get-running": ("Get currently running workflows", get_running.main),
-    "cancel": ("Cancel superseded workflow runs", cancel.main),
-    "dispatch-descendants": ("Dispatch descendant workflows", dispatch_descendants.main),
+    "cancel-workflows": ("Cancel superseded workflow runs", cancel.main),
+    "compute-root-workflows": ("Compute root workflows from changed files", compute_roots.main),
+    "dispatch-descendant-workflows": ("Dispatch descendant workflows", dispatch_descendants.main),
+    "dispatch-root-workflows": ("Dispatch root workflows", dispatch_roots.main),
     "get-changed-files": ("Get changed files between commits", get_changed_files.main),
-    "dispatch-roots": ("Dispatch root workflows", dispatch_roots.main),
+    "get-running-workflows": ("Get currently running workflows", get_running.main),
 }
 
 
@@ -39,7 +39,7 @@ def main() -> int:
         print("Usage: workflowctl.py <command> [options]")
         print("\nCommands:")
         for cmd, (desc, _) in COMMANDS.items():
-            print(f"  {cmd:20} {desc}")
+            print(f"  {cmd:30} {desc}")
         return 1
 
     command = sys.argv[1]
