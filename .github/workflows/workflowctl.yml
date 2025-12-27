@@ -207,11 +207,18 @@ jobs:
         if: steps.plan.outputs.root_workflows != ''
         name: Dispatch root workflows (fire-and-forget)
         run: |
+          FLAGS=""
+          if [ "${{ inputs.trigger_descendants }}" = "true" ]; then
+            FLAGS="$FLAGS --trigger-descendants"
+          fi
+          if [ "${{ inputs.invalidate_cloudfront }}" = "true" ]; then
+            FLAGS="$FLAGS --invalidate-cloudfront"
+          fi
           python3 src/workflowctl/workflowctl.py dispatch-roots \
             --repo "${{ github.repository }}" \
             --roots "${{ steps.plan.outputs.root_workflows }}" \
             --changed "${{ steps.files.outputs.changed }}" \
-            --trigger-descendants "${{ inputs.trigger_descendants }}"
+            $FLAGS
 name: Workflow Controller
 on:
   push:
@@ -226,6 +233,10 @@ on:
       github_hosted:
         default: false
         description: Use GitHub-hosted runners
+        type: boolean
+      invalidate_cloudfront:
+        default: false
+        description: Force CloudFront cache invalidation in descendant workflows
         type: boolean
       spot_recovery_reason:
         description: Spot recovery trigger reason

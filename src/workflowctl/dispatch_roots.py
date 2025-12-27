@@ -2,15 +2,15 @@
 """Dispatch root workflows to GitHub Actions.
 
 This module handles dispatching root workflows with proper trigger_descendants
-logic based on inputs, commit messages, and changed files.
+and invalidate_cloudfront logic based on inputs, commit messages, and changed files.
 
 Usage:
     python3 src/workflowctl/workflowctl.py dispatch-roots \
         --repo owner/repo \
         --roots "bootstrap\\nwww_shared" \
         --changed "file1.py" \
-        --commit-message "feat: add feature" \
-        --trigger-descendants false
+        --trigger-descendants \
+        --invalidate-cloudfront
 """
 import argparse
 import os
@@ -48,12 +48,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--commit-message",
         default=os.environ.get("COMMIT_MESSAGE", ""),
-        help="The commit message to check for [trigger descendants]"
+        help="The commit message to check for [trigger descendants] or [invalidate cloudfront]"
     )
     parser.add_argument(
         "--trigger-descendants",
-        default="false",
-        help="Input value for trigger_descendants (true/false)"
+        action="store_true",
+        help="Trigger descendant workflows after root workflows complete"
+    )
+    parser.add_argument(
+        "--invalidate-cloudfront",
+        action="store_true",
+        help="Force CloudFront cache invalidation in descendant workflows"
     )
     parser.add_argument(
         "--graph",
@@ -102,7 +107,7 @@ def _descendants_have_changes(
 
 
 def should_trigger_descendants(
-    trigger_input: str,
+    trigger_flag: bool,
     commit_message: str,
     changed_files: list[str],
     roots: list[str],
@@ -111,13 +116,12 @@ def should_trigger_descendants(
     """Determine if descendants should be triggered.
 
     Returns True if:
-    1. trigger_descendants input is "true", OR
+    1. trigger_flag is True (--trigger-descendants passed), OR
     2. Commit message contains [trigger descendants], OR
     3. etc/workflow-dependencies.json was changed, OR
     4. Any descendant workflow also has changed files
     """
-    # Check input
-    if trigger_input.lower() == "true":
+    if trigger_flag:
         return True
 
     # Check commit message
@@ -135,19 +139,38 @@ def should_trigger_descendants(
     return False
 
 
+def should_invalidate_cloudfront(
+    invalidate_flag: bool,
+    commit_message: str
+) -> bool:
+    """Determine if CloudFront cache should be invalidated.
+
+    Returns True if:
+    1. invalidate_flag is True (--invalidate-cloudfront passed), OR
+    2. Commit message contains [invalidate cloudfront]
+    """
+    if invalidate_flag:
+        return True
+
+    if re.search(r"\[invalidate cloudfront\]", commit_message, re.IGNORECASE):
+        return True
+
+    return False
+
+
 def workflow_file_exists(workflow: str) -> bool:
     """Check if the workflow file exists."""
     workflow_file = f".github/workflows/{workflow}.yml"
     return os.path.isfile(workflow_file)
 
 
-def workflow_accepts_trigger_descendants(workflow: str) -> bool:
-    """Check if a workflow accepts the trigger_descendants input."""
+def workflow_accepts_input(workflow: str, input_name: str) -> bool:
+    """Check if a workflow accepts a specific input."""
     workflow_file = f".github/workflows/{workflow}.yml"
     try:
         with open(workflow_file, encoding="utf-8") as f:
             content = f.read()
-            return "trigger_descendants:" in content
+            return f"{input_name}:" in content
     except (OSError, IOError):
         return False
 
@@ -156,24 +179,33 @@ def dispatch_workflow(
     workflow: str,
     repo: str,
     trigger_descendants: bool,
+    invalidate_cloudfront: bool,
     dry_run: bool
 ) -> bool:
     """Dispatch a single workflow. Returns True on success."""
     workflow_file = f".github/workflows/{workflow}.yml"
 
+    # Build list of flags to pass
+    flags: list[str] = []
+    if trigger_descendants:
+        if workflow_accepts_input(workflow, "trigger_descendants"):
+            flags.extend(["-f", "trigger_descendants=true"])
+        else:
+            print(f"    (workflow does not accept trigger_descendants)")
+    if invalidate_cloudfront:
+        if workflow_accepts_input(workflow, "invalidate_cloudfront"):
+            flags.extend(["-f", "invalidate_cloudfront=true"])
+        else:
+            print(f"    (workflow does not accept invalidate_cloudfront)")
+
     if dry_run:
-        flag_msg = " (with trigger_descendants=true)" if trigger_descendants else ""
+        flag_msg = f" (with {' '.join(flags)})" if flags else ""
         print(f"  [DRY RUN] Would dispatch: {workflow_file}{flag_msg}")
         return True
 
     print(f"  Dispatching: {workflow_file}")
 
-    extra_args = None
-    if trigger_descendants and workflow_accepts_trigger_descendants(workflow):
-        extra_args = ["-f", "trigger_descendants=true"]
-    elif trigger_descendants:
-        print("    (workflow does not accept trigger_descendants)")
-
+    extra_args = flags if flags else None
     success = dispatch_gh_workflow(workflow_file, repo, extra_args)
     if success:
         print(f"    Successfully dispatched {workflow}.yml")
@@ -208,10 +240,21 @@ def main() -> int:
         graph
     )
 
+    # Determine if we should invalidate CloudFront
+    invalidate = should_invalidate_cloudfront(
+        args.invalidate_cloudfront,
+        args.commit_message
+    )
+
     if trigger:
         print("Trigger descendants: enabled")
     else:
         print("Trigger descendants: disabled (default)")
+
+    if invalidate:
+        print("Invalidate CloudFront: enabled")
+    else:
+        print("Invalidate CloudFront: disabled (default)")
 
     print(f"Dispatching {len(roots)} root workflow(s)...")
 
@@ -224,7 +267,7 @@ def main() -> int:
             print(f"  Warning: {workflow}.yml not found, skipping")
             continue
 
-        if dispatch_workflow(workflow, args.repo, trigger, args.dry_run):
+        if dispatch_workflow(workflow, args.repo, trigger, invalidate, args.dry_run):
             dispatched += 1
         else:
             failed += 1
@@ -233,8 +276,8 @@ def main() -> int:
 
     if trigger:
         print("Note: Descendants will be triggered via trigger_descendants")
-    else:
-        print("Descendants NOT triggered (default behavior)")
+    if invalidate:
+        print("Note: CloudFront invalidation will be triggered via invalidate_cloudfront")
 
     return 1 if failed > 0 else 0
 

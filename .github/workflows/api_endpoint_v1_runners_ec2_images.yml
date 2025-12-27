@@ -176,15 +176,17 @@ jobs:
            '[trigger descendants]'))
         name: Dispatch descendant workflows
         run: |
-          TRIGGER_FLAG=""
-          TRIGGER_INPUT="${{ github.event.inputs.trigger_descendants }}"
-          if [ "$TRIGGER_INPUT" = "true" ]
-          then TRIGGER_FLAG="--trigger-descendants"
+          FLAGS=""
+          if [ "${{ github.event.inputs.trigger_descendants }}" = "true" ]; then
+            FLAGS="$FLAGS --trigger-descendants"
           fi
-          python3 src/workflowctl/workflowctl.py dispatch \
-            $TRIGGER_FLAG \
+          if [ "${{ github.event.inputs.invalidate_cloudfront }}" = "true" ]; then
+            FLAGS="$FLAGS --invalidate-cloudfront"
+          fi
+          python3 src/workflowctl/workflowctl.py dispatch-descendants \
             --workflow api_endpoint_v1_runners_ec2_images \
-            --repo ${{ github.repository }}
+            --repo ${{ github.repository }} \
+            $FLAGS
 name: >-
   Ensuring the /v1/runners/ec2/images API endpoint exists and is properly
   configured
@@ -194,6 +196,10 @@ on:
       github_hosted:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
+      invalidate_cloudfront:
+        default: false
+        description: Force CloudFront cache invalidation
         type: boolean
       spot_recovery_reason:
         description: Spot recovery trigger reason

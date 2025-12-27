@@ -7,7 +7,9 @@ dependencies, it checks that all other dependencies have completed successfully
 before dispatching (fan-in behavior).
 
 Usage:
-    python3 src/workflowctl/workflowctl.py dispatch --workflow bootstrap --repo owner/repo
+    python3 src/workflowctl/workflowctl.py dispatch-descendants \
+        --workflow bootstrap --repo owner/repo \
+        --trigger-descendants --invalidate-cloudfront
 """
 import argparse
 import subprocess
@@ -42,6 +44,11 @@ def parse_args() -> argparse.Namespace:
         "--trigger-descendants",
         action="store_true",
         help="Pass trigger_descendants=true to dispatched workflows"
+    )
+    parser.add_argument(
+        "--invalidate-cloudfront",
+        action="store_true",
+        help="Pass invalidate_cloudfront=true to dispatched workflows"
     )
     return parser.parse_args()
 
@@ -115,17 +122,26 @@ def dispatch_workflow(
     workflow: str,
     repo: str,
     dry_run: bool,
-    trigger_descendants: bool = False
+    trigger_descendants: bool = False,
+    invalidate_cloudfront: bool = False
 ) -> bool:
     """Dispatch a single workflow. Returns True on success."""
     workflow_file = f".github/workflows/{workflow}.yml"
+
+    # Build list of flags to pass
+    flags: list[str] = []
+    if trigger_descendants:
+        flags.extend(["-f", "trigger_descendants=true"])
+    if invalidate_cloudfront:
+        flags.extend(["-f", "invalidate_cloudfront=true"])
+
     if dry_run:
-        trigger_flag = " (with trigger_descendants=true)" if trigger_descendants else ""
-        print(f"  [DRY RUN] Would dispatch: {workflow_file}{trigger_flag}")
+        flag_msg = f" (with {' '.join(flags)})" if flags else ""
+        print(f"  [DRY RUN] Would dispatch: {workflow_file}{flag_msg}")
         return True
 
     print(f"  Dispatching: {workflow_file}")
-    extra_args = ["-f", "trigger_descendants=true"] if trigger_descendants else None
+    extra_args = flags if flags else None
     return dispatch_gh_workflow(workflow_file, repo, extra_args)
 
 
@@ -156,7 +172,8 @@ def main() -> int:
             # Single dependency - dispatch immediately
             print(f"{descendant}: single dependency, dispatching...")
             if dispatch_workflow(
-                descendant, args.repo, args.dry_run, args.trigger_descendants
+                descendant, args.repo, args.dry_run,
+                args.trigger_descendants, args.invalidate_cloudfront
             ):
                 dispatched += 1
         else:
@@ -168,7 +185,8 @@ def main() -> int:
             if all_met:
                 print("  All dependencies met, dispatching...")
                 if dispatch_workflow(
-                    descendant, args.repo, args.dry_run, args.trigger_descendants
+                    descendant, args.repo, args.dry_run,
+                    args.trigger_descendants, args.invalidate_cloudfront
                 ):
                     dispatched += 1
             else:

@@ -9,7 +9,7 @@ Usage:
     python3 src/workflowctl/workflowctl.py compute-roots <changed_files>
     python3 src/workflowctl/workflowctl.py get-running --repo owner/repo
     python3 src/workflowctl/workflowctl.py cancel --repo owner/repo --merge-roots '["x"]'
-    python3 src/workflowctl/workflowctl.py dispatch --workflow bootstrap --repo owner/repo
+    python3 src/workflowctl/workflowctl.py dispatch-descendants --workflow bootstrap --repo owner/repo
     python3 src/workflowctl/workflowctl.py get-changed-files --base SHA --head SHA
     python3 src/workflowctl/workflowctl.py dispatch-roots --repo owner/repo --roots ROOTS
 """
@@ -17,7 +17,7 @@ import sys
 
 import cancel
 import compute_roots
-import dispatch
+import dispatch_descendants
 import dispatch_roots
 import get_changed_files
 import get_running
@@ -27,7 +27,7 @@ COMMANDS = {
     "compute-roots": ("Compute root workflows from changed files", compute_roots.main),
     "get-running": ("Get currently running workflows", get_running.main),
     "cancel": ("Cancel superseded workflow runs", cancel.main),
-    "dispatch": ("Dispatch descendant workflows", dispatch.main),
+    "dispatch-descendants": ("Dispatch descendant workflows", dispatch_descendants.main),
     "get-changed-files": ("Get changed files between commits", get_changed_files.main),
     "dispatch-roots": ("Dispatch root workflows", dispatch_roots.main),
 }
