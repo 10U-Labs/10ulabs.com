@@ -20,27 +20,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - id: config
-        name: Extract configuration values
-        run: |
-          TF_SHARED_LOCALS="lib/terraform/modules/shared/locals.tf"
-          AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
-          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
-          RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
-          LOCALS="src/bootstrap/locals.tf"
-          ROLE_SUFFIX=$(grep 'name_for_github_actions_role' $LOCALS \
-            | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${ROLE_SUFFIX}"
-          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+      - name: Verify OIDC variables
+        uses: ./.github/actions/verify-oidc-vars
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ steps.config.outputs.aws_region }}
-          role-to-assume: ${{ steps.config.outputs.role_arn }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||

@@ -18,28 +18,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Verify OIDC variables
+        uses: ./.github/actions/verify-oidc-vars
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
       - id: config
         name: Extract configuration values
         run: |
-          TF_SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
-          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
-          AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
-            src/bootstrap/locals.tf | \
-            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          RESOURCE_PREFIX=$(grep 'resource_prefix' \
-            lib/terraform/modules/shared/locals.tf | \
-            grep -v '\$' | cut -d'"' -f2)
           TERRAFORM_VERSION=$(grep 'required_version' \
             src/api/shared/routing/backend.tf | cut -d'"' -f2 | sed 's/>= //')
-          ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
-          ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
-          GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
-          echo "aws_region=$AWS_REGION" >> "$GITHUB_OUTPUT"
-          ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
-          echo "$ROLE_ARN" >> "$GITHUB_OUTPUT"
           echo "terraform_version=$TERRAFORM_VERSION" >> "$GITHUB_OUTPUT"
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
@@ -53,26 +41,8 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ steps.config.outputs.aws_region }}
-          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
-      - id: bootstrap
-        name: Get bootstrap outputs
-        run: |
-          terraform -chdir=src/bootstrap init \
-            -backend=true -input=false > /dev/null
-          GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap \
-            output -raw arn_for_github_actions_role)
-          GITHUB_PAT_PARAMETER_NAME=$(terraform -chdir=src/bootstrap \
-            output -raw ssm_parameter_name_for_github_pat)
-          ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
-          echo "$ROLE_ARN" >> "$GITHUB_OUTPUT"
-          PAT_NAME="github_pat_parameter_name=$GITHUB_PAT_PARAMETER_NAME"
-          echo "$PAT_NAME" >> "$GITHUB_OUTPUT"
-      - name: Re-configure AWS credentials with bootstrap role
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.aws_region }}
-          role-to-assume: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
       - name: Terraform Format Check
         run: cd src/api/shared/routing && terraform fmt -diff -check -recursive
       - name: Terraform Init
@@ -167,10 +137,7 @@ jobs:
         run: >-
           python3 -m pip install pytest pytest-dependency boto3 botocore
           PyYAML requests
-      - env:
-          SSM_PARAMETER_NAME_FOR_GITHUB_PAT: >-
-            ${{ steps.bootstrap.outputs.github_pat_parameter_name }}
-        name: Run unit tests
+      - name: Run unit tests
         run: |
           python3 -m pytest \
             test/api/shared/routing/pre_deployment/unit/ \
@@ -220,24 +187,9 @@ jobs:
         run: |
           python3 scripts/invalidate_cloudfront.py \
             --fqdn "${{ env.API_FQDN }}" \
-            --region "${{ steps.config.outputs.aws_region }}" \
+            --region "${{ vars.AWS_REGION }}" \
             --paths "/,/index.html,/openapi.json,/404.html"
-      - env:
-          PAT_PARAM: ${{ steps.bootstrap.outputs.github_pat_parameter_name }}
-          REGION: ${{ steps.config.outputs.aws_region }}
-        name: Fetch GitHub PAT from Parameter Store
-        run: |
-          GITHUB_PAT=$(aws ssm get-parameter \
-            --name "$PAT_PARAM" \
-            --with-decryption \
-            --query 'Parameter.Value' \
-            --output text \
-            --region "$REGION")
-          echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
-      - env:
-          SSM_PARAMETER_NAME_FOR_GITHUB_PAT: >-
-            ${{ steps.bootstrap.outputs.github_pat_parameter_name }}
-        name: Run post-deployment integration tests
+      - name: Run post-deployment integration tests
         run: |
           python3 -m pytest \
             test/api/shared/routing/post_deployment/integration/ \

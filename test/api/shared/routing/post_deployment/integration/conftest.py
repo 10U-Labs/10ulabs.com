@@ -1,6 +1,4 @@
 """Pytest configuration and fixtures for post-deployment integration tests."""
-import os
-
 import boto3
 import pytest
 
@@ -132,14 +130,6 @@ def waf_logging_config_fixture():
         logging_response = waf_client.get_logging_configuration(ResourceArn=acl_arn)
         return logging_response.get('LoggingConfiguration')
     return None
-
-
-@pytest.fixture(name="github_pat", scope="module")
-def github_pat_fixture():
-    """Get and return the GitHub PAT from environment variables."""
-    pat = os.environ.get("GITHUB_PAT")
-    assert pat is not None
-    return pat
 
 
 def get_api_gateway_id_by_name(client, api_name):
