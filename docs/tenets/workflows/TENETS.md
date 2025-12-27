@@ -24,9 +24,12 @@ Static analysis steps must follow this order:
 9. Check for duplicate code in source Python files
 10. Check for duplicate code in test Python files
 
+For workflows without source Python files (e.g., infrastructure-only workflows like
+`www_shared.yml`), omit source steps (5, 7, 9). See sections 2-4 for details.
+
 ## 2. Pylint Separation: Source vs Tests
 
-Pylint must run in two separate steps:
+Pylint must run in two separate steps when source code exists:
 
 ```yaml
 - name: Run pylint on source
@@ -41,17 +44,30 @@ Pylint must run in two separate steps:
       --fail-on=C,R,W --fail-under=10.0
 ```
 
+For workflows without source Python files (e.g., infrastructure-only workflows like
+`www_shared.yml`), use only the test step:
+
+```yaml
+- name: Run pylint on tests
+  run: |
+    PYTHONPATH=lib/python python3 -m pylint \
+      lib/python/ test/ \
+      --fail-on=C,R,W --fail-under=10.0
+```
+
 Key points:
 
 - Source step runs without `PYTHONPATH` prefix
 - Test step requires `PYTHONPATH=lib/python` prefix
 - Both include `lib/python/` in the targets
-- Test step includes the full `test/` directory
+- Test step targets the full `test/` directory, not workflow-specific subdirectories
 - Both use `--fail-on=C,R,W --fail-under=10.0`
+- Skip the source step when the only Python source is `lib/python/` (already covered by
+  test step)
 
 ## 3. Mypy Separation: Source vs Tests
 
-Mypy must run in two separate steps:
+Mypy must run in two separate steps when source code exists:
 
 ```yaml
 - name: Run mypy on source
@@ -64,12 +80,22 @@ Mypy must run in two separate steps:
       lib/python/ test/
 ```
 
+For workflows without source Python files (e.g., infrastructure-only workflows like
+`www_shared.yml`), use only the test step:
+
+```yaml
+- name: Run mypy on tests
+  run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/
+```
+
 Key points:
 
 - Source step runs without `MYPYPATH` prefix
 - Test step requires `MYPYPATH=lib/python` prefix
 - Both include `lib/python/` in the targets
-- Test step includes the full `test/` directory
+- Test step targets the full `test/` directory, not workflow-specific subdirectories
+- Skip the source step when the only Python source is `lib/python/` (already covered by
+  test step)
 
 ## 4. Duplicate Code Checking (jscpd)
 
@@ -87,11 +113,23 @@ Duplicate code detection must run in two separate steps when source code exists:
       lib/python/ test/
 ```
 
+For workflows without source Python files (e.g., infrastructure-only workflows like
+`www_shared.yml`), use only the test step:
+
+```yaml
+- name: Check for duplicate code in test Python files
+  run: |
+    jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+      lib/python/ test/
+```
+
 Key points:
 
 - Threshold is always 0 (no duplicates allowed)
 - Both include `lib/python/` in the targets
-- Test step includes the full `test/` directory
+- Test step targets the full `test/` directory, not workflow-specific subdirectories
+- Skip the source step when the only Python source is `lib/python/` (already covered by
+  test step)
 
 ## 5. Just-In-Time (JIT) Dependency Installation
 
