@@ -11,7 +11,7 @@ jobs:
       contents: read
       id-token: write
     runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+      ${{ ( vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
@@ -44,7 +44,7 @@ jobs:
           echo "github_actions_role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
+          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
@@ -102,7 +102,7 @@ jobs:
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
           echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
       - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
+          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
@@ -110,7 +110,7 @@ jobs:
         with:
           python-version: '3.13'
       - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
+          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies

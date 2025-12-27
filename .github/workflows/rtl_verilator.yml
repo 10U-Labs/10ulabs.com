@@ -7,7 +7,7 @@ jobs:
     name: Verify RTL
     runs-on: >-
       ${{
-        (vars.USE_GITHUB_HOSTED == 'true' ||
+        (vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
          github.event.inputs.github_hosted == 'true' ||
          contains(github.event.head_commit.message, '[github-hosted]'))
         && 'ubuntu-latest'
