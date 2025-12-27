@@ -36,6 +36,7 @@ LINT_DISABLE_PATTERNS = [
     (r'#\s*type:\s*ignore', 'type: ignore'),
     (r'#\s*pragma:\s*no\s*cover', 'pragma: no cover'),
     (r'#\s*flake8:\s*noqa', 'flake8: noqa'),
+    (r'#\s*pylint:\s*disable', 'pylint: disable'),
     (r'//\s*nolint', 'nolint (Go)'),
     (r'#\s*rubocop:disable', 'rubocop:disable'),
     (r'//\s*NOLINT', 'NOLINT (C++)'),
