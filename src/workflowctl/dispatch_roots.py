@@ -5,12 +5,18 @@ This module handles dispatching root workflows with proper trigger_descendants
 and invalidate_cloudfront logic based on inputs, commit messages, and changed files.
 
 Usage:
-    python3 src/workflowctl/workflowctl.py dispatch-roots \
+    python3 src/workflowctl/workflowctl.py dispatch-root-workflows \
         --repo owner/repo \
         --roots "bootstrap\\nwww_shared" \
         --changed "file1.py" \
         --trigger-descendants \
         --invalidate-cloudfront
+
+Exit codes:
+    0: Success (all dispatches succeeded or nothing to dispatch)
+    1: Failure (at least one dispatch failed)
+
+No stdout output. Errors go to stderr.
 """
 import argparse
 import os
@@ -64,11 +70,6 @@ def parse_args() -> argparse.Namespace:
         "--graph",
         default="etc/workflow-dependencies.json",
         help="Path to workflow dependency graph JSON file"
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Print what would be dispatched without actually dispatching"
     )
     return parser.parse_args()
 
@@ -179,37 +180,20 @@ def dispatch_workflow(
     workflow: str,
     repo: str,
     trigger_descendants: bool,
-    invalidate_cloudfront: bool,
-    dry_run: bool
+    invalidate_cloudfront: bool
 ) -> bool:
     """Dispatch a single workflow. Returns True on success."""
     workflow_file = f".github/workflows/{workflow}.yml"
 
     # Build list of flags to pass
     flags: list[str] = []
-    if trigger_descendants:
-        if workflow_accepts_input(workflow, "trigger_descendants"):
-            flags.extend(["-f", "trigger_descendants=true"])
-        else:
-            print(f"    (workflow does not accept trigger_descendants)")
-    if invalidate_cloudfront:
-        if workflow_accepts_input(workflow, "invalidate_cloudfront"):
-            flags.extend(["-f", "invalidate_cloudfront=true"])
-        else:
-            print(f"    (workflow does not accept invalidate_cloudfront)")
-
-    if dry_run:
-        flag_msg = f" (with {' '.join(flags)})" if flags else ""
-        print(f"  [DRY RUN] Would dispatch: {workflow_file}{flag_msg}")
-        return True
-
-    print(f"  Dispatching: {workflow_file}")
+    if trigger_descendants and workflow_accepts_input(workflow, "trigger_descendants"):
+        flags.extend(["-f", "trigger_descendants=true"])
+    if invalidate_cloudfront and workflow_accepts_input(workflow, "invalidate_cloudfront"):
+        flags.extend(["-f", "invalidate_cloudfront=true"])
 
     extra_args = flags if flags else None
-    success = dispatch_gh_workflow(workflow_file, repo, extra_args)
-    if success:
-        print(f"    Successfully dispatched {workflow}.yml")
-    return success
+    return dispatch_gh_workflow(workflow_file, repo, extra_args)
 
 
 def main() -> int:
@@ -220,16 +204,13 @@ def main() -> int:
     roots = [r.strip() for r in args.roots.split("\n") if r.strip()]
 
     if not roots:
-        print("No workflows to dispatch")
         return 0
 
     # Parse changed files
     changed_files = [f.strip() for f in args.changed.split("\n") if f.strip()]
 
     # Load graph for descendant checking
-    graph, error = load_graph_with_error(args.graph)
-    if error:
-        print(f"Warning: {error} - descendant detection disabled", file=sys.stderr)
+    graph, _ = load_graph_with_error(args.graph)
 
     # Determine if we should trigger descendants
     trigger = should_trigger_descendants(
@@ -246,38 +227,13 @@ def main() -> int:
         args.commit_message
     )
 
-    if trigger:
-        print("Trigger descendants: enabled")
-    else:
-        print("Trigger descendants: disabled (default)")
-
-    if invalidate:
-        print("Invalidate CloudFront: enabled")
-    else:
-        print("Invalidate CloudFront: disabled (default)")
-
-    print(f"Dispatching {len(roots)} root workflow(s)...")
-
     # Dispatch each root
-    dispatched = 0
     failed = 0
-
     for workflow in roots:
         if not workflow_file_exists(workflow):
-            print(f"  Warning: {workflow}.yml not found, skipping")
             continue
-
-        if dispatch_workflow(workflow, args.repo, trigger, invalidate, args.dry_run):
-            dispatched += 1
-        else:
+        if not dispatch_workflow(workflow, args.repo, trigger, invalidate):
             failed += 1
-
-    print(f"\nDispatched: {dispatched}, Failed: {failed}")
-
-    if trigger:
-        print("Note: Descendants will be triggered via trigger_descendants")
-    if invalidate:
-        print("Note: CloudFront invalidation will be triggered via invalidate_cloudfront")
 
     return 1 if failed > 0 else 0
 

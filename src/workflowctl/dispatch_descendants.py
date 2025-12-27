@@ -7,9 +7,15 @@ dependencies, it checks that all other dependencies have completed successfully
 before dispatching (fan-in behavior).
 
 Usage:
-    python3 src/workflowctl/workflowctl.py dispatch-descendants \
+    python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
         --workflow bootstrap --repo owner/repo \
         --trigger-descendants --invalidate-cloudfront
+
+Exit codes:
+    0: Success (all dispatches succeeded or nothing to dispatch)
+    1: Failure (at least one dispatch failed)
+
+No stdout output. Errors go to stderr.
 """
 import argparse
 import subprocess
@@ -28,11 +34,6 @@ def parse_args() -> argparse.Namespace:
         "--workflow",
         required=True,
         help="The workflow key that just completed (e.g., 'bootstrap')"
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Print what would be dispatched without actually dispatching"
     )
     parser.add_argument(
         "--lookback-hours",
@@ -121,7 +122,6 @@ def all_dependencies_met(
 def dispatch_workflow(
     workflow: str,
     repo: str,
-    dry_run: bool,
     trigger_descendants: bool = False,
     invalidate_cloudfront: bool = False
 ) -> bool:
@@ -135,12 +135,6 @@ def dispatch_workflow(
     if invalidate_cloudfront:
         flags.extend(["-f", "invalidate_cloudfront=true"])
 
-    if dry_run:
-        flag_msg = f" (with {' '.join(flags)})" if flags else ""
-        print(f"  [DRY RUN] Would dispatch: {workflow_file}{flag_msg}")
-        return True
-
-    print(f"  Dispatching: {workflow_file}")
     extra_args = flags if flags else None
     return dispatch_gh_workflow(workflow_file, repo, extra_args)
 
@@ -153,48 +147,33 @@ def main() -> int:
     descendants = find_descendants(graph, args.workflow)
 
     if not descendants:
-        print(f"No descendants found for workflow: {args.workflow}")
         return 0
 
-    print(f"Found {len(descendants)} descendant(s) of '{args.workflow}':")
-    for desc in descendants:
-        deps = graph.get(desc, {}).get("depends_on", [])
-        print(f"  - {desc} (depends on: {', '.join(deps)})")
-    print()
-
-    dispatched = 0
-    skipped = 0
-
+    failed = 0
     for descendant in descendants:
         deps = graph.get(descendant, {}).get("depends_on", [])
 
         if len(deps) == 1:
             # Single dependency - dispatch immediately
-            print(f"{descendant}: single dependency, dispatching...")
-            if dispatch_workflow(
-                descendant, args.repo, args.dry_run,
+            if not dispatch_workflow(
+                descendant, args.repo,
                 args.trigger_descendants, args.invalidate_cloudfront
             ):
-                dispatched += 1
+                failed += 1
         else:
             # Multiple dependencies - check if all are met
-            print(f"{descendant}: checking {len(deps)} dependencies...")
-            all_met, missing = all_dependencies_met(
+            all_met, _ = all_dependencies_met(
                 graph, descendant, args.workflow, args.repo, args.lookback_hours
             )
             if all_met:
-                print("  All dependencies met, dispatching...")
-                if dispatch_workflow(
-                    descendant, args.repo, args.dry_run,
+                if not dispatch_workflow(
+                    descendant, args.repo,
                     args.trigger_descendants, args.invalidate_cloudfront
                 ):
-                    dispatched += 1
-            else:
-                print(f"  Waiting for: {', '.join(missing)}")
-                skipped += 1
+                    failed += 1
+            # If not all met, skip (not a failure, just waiting)
 
-    print(f"\nDispatched: {dispatched}, Waiting: {skipped}")
-    return 0
+    return 1 if failed > 0 else 0
 
 
 if __name__ == "__main__":

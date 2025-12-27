@@ -6,14 +6,16 @@ It identifies which running workflows are downstream of (or equal to) the
 merge roots and cancels them.
 
 Usage:
-    python3 src/workflowctl/workflowctl.py cancel \
+    python3 src/workflowctl/workflowctl.py cancel-workflows \
         --repo owner/repo \
         --merge-roots '["www_shared"]' \
         --graph etc/workflow-dependencies.json
 
-The script will:
-1. Find all workflows that are descendants of merge roots
-2. Cancel any in_progress or queued runs of those workflows
+Exit codes:
+    0: Success (all cancellations succeeded or nothing to cancel)
+    1: Failure (error occurred)
+
+No stdout output. Errors go to stderr.
 """
 import argparse
 import json
@@ -37,11 +39,6 @@ def parse_args() -> argparse.Namespace:
         "--merge-roots",
         required=True,
         help="JSON array of merge root workflow keys"
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Print what would be canceled without actually canceling"
     )
     return parser.parse_args()
 
@@ -69,12 +66,8 @@ def get_cancelable_runs(repo: str, status: str) -> list[dict[str, Any]]:
     ]
 
 
-def cancel_run(repo: str, run_id: int, dry_run: bool) -> bool:
+def cancel_run(repo: str, run_id: int) -> bool:
     """Cancel a workflow run. Returns True on success."""
-    if dry_run:
-        print(f"  [DRY RUN] Would cancel run {run_id}")
-        return True
-
     result = subprocess.run(
         ["gh", "run", "cancel", str(run_id), "--repo", repo],
         capture_output=True,
@@ -84,9 +77,8 @@ def cancel_run(repo: str, run_id: int, dry_run: bool) -> bool:
     if result.returncode != 0:
         # Run may have already completed - this is not an error
         if "cannot be cancelled" in result.stderr.lower():
-            print(f"  Run {run_id} already completed, skipping")
             return True
-        print(f"  Failed to cancel run {run_id}: {result.stderr.strip()}",
+        print(f"Failed to cancel run {run_id}: {result.stderr.strip()}",
               file=sys.stderr)
         return False
     return True
@@ -105,7 +97,6 @@ def main() -> int:
         return 1
 
     if not merge_roots:
-        print("No merge roots provided, nothing to cancel")
         return 0
 
     # Load dependency graph
@@ -116,7 +107,6 @@ def main() -> int:
 
     # Get workflows to cancel (merge roots + all descendants)
     workflows_to_cancel = get_workflows_to_cancel(merge_roots, graph)
-    print(f"Workflows to cancel: {sorted(workflows_to_cancel)}")
 
     # Build name-to-key mapping
     name_to_key = build_name_to_key_map(graph)
@@ -129,21 +119,15 @@ def main() -> int:
     ]
 
     if not runs_to_cancel:
-        print("No runs to cancel")
         return 0
 
-    print(f"\nCanceling {len(runs_to_cancel)} run(s):")
-    canceled = 0
+    # Cancel runs
+    failed = 0
     for run in runs_to_cancel:
-        run_id = run["id"]
-        name = run["name"]
-        run_number = run.get("run_number", "?")
-        print(f"  {name} (run #{run_number}, id={run_id})")
-        if cancel_run(args.repo, run_id, args.dry_run):
-            canceled += 1
+        if not cancel_run(args.repo, run["id"]):
+            failed += 1
 
-    print(f"\nCanceled {canceled} of {len(runs_to_cancel)} runs")
-    return 0
+    return 1 if failed > 0 else 0
 
 
 if __name__ == "__main__":

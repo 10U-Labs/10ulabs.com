@@ -117,22 +117,11 @@ class TestBuildNameToKeyMap:
 class TestCancelRun:
     """Tests for cancel_run function."""
 
-    def test_dry_run_returns_true(self, cancel) -> None:
-        """Test dry run mode returns True."""
-        result = cancel.cancel_run("owner/repo", 123, dry_run=True)
-        assert result is True
-
-    @patch("cancel.subprocess.run")
-    def test_dry_run_does_not_call_subprocess(self, mock_run: MagicMock, cancel) -> None:
-        """Test dry run mode doesn't call subprocess."""
-        cancel.cancel_run("owner/repo", 123, dry_run=True)
-        mock_run.assert_not_called()
-
     @patch("cancel.subprocess.run")
     def test_successful_cancel(self, mock_run: MagicMock, cancel) -> None:
         """Test successful cancellation returns True."""
         mock_run.return_value = MagicMock(returncode=0, stderr="")
-        result = cancel.cancel_run("owner/repo", 123, dry_run=False)
+        result = cancel.cancel_run("owner/repo", 123)
         assert result is True
 
     @patch("cancel.subprocess.run")
@@ -142,7 +131,7 @@ class TestCancelRun:
             returncode=1,
             stderr="Cannot be cancelled: run is not in progress"
         )
-        result = cancel.cancel_run("owner/repo", 123, dry_run=False)
+        result = cancel.cancel_run("owner/repo", 123)
         assert result is True
 
     @patch("cancel.subprocess.run")
@@ -152,5 +141,5 @@ class TestCancelRun:
             returncode=1,
             stderr="Permission denied"
         )
-        result = cancel.cancel_run("owner/repo", 123, dry_run=False)
+        result = cancel.cancel_run("owner/repo", 123)
         assert result is False

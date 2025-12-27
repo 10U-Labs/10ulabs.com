@@ -20,57 +20,57 @@ class TestWorkflowctlCLI:
         assert result == 1
 
     def test_compute_roots_subcommand_routes_correctly(self, workflowctl) -> None:
-        """Test that compute-roots subcommand routes to compute_roots.main."""
+        """Test that compute-root-workflows subcommand routes to compute_roots.main."""
         mock_main = MagicMock(return_value=None)
-        original = workflowctl.COMMANDS["compute-roots"]
+        original = workflowctl.COMMANDS["compute-root-workflows"]
         try:
-            workflowctl.COMMANDS["compute-roots"] = (original[0], mock_main)
-            with patch.object(sys, "argv", ["workflowctl.py", "compute-roots", "file.txt"]):
+            workflowctl.COMMANDS["compute-root-workflows"] = (original[0], mock_main)
+            with patch.object(sys, "argv", ["workflowctl.py", "compute-root-workflows", "file.txt"]):
                 workflowctl.main()
             mock_main.assert_called_once()
         finally:
-            workflowctl.COMMANDS["compute-roots"] = original
+            workflowctl.COMMANDS["compute-root-workflows"] = original
 
     def test_get_running_subcommand_routes_correctly(self, workflowctl) -> None:
-        """Test that get-running subcommand routes to get_running.main."""
+        """Test that get-running-workflows subcommand routes to get_running.main."""
         mock_main = MagicMock(return_value=0)
-        original = workflowctl.COMMANDS["get-running"]
+        original = workflowctl.COMMANDS["get-running-workflows"]
         try:
-            workflowctl.COMMANDS["get-running"] = (original[0], mock_main)
-            argv = ["workflowctl.py", "get-running", "--repo", "test/repo"]
+            workflowctl.COMMANDS["get-running-workflows"] = (original[0], mock_main)
+            argv = ["workflowctl.py", "get-running-workflows", "--repo", "test/repo"]
             with patch.object(sys, "argv", argv):
                 result = workflowctl.main()
             mock_main.assert_called_once()
             assert result == 0
         finally:
-            workflowctl.COMMANDS["get-running"] = original
+            workflowctl.COMMANDS["get-running-workflows"] = original
 
     def test_cancel_subcommand_routes_correctly(self, workflowctl) -> None:
-        """Test that cancel subcommand routes to cancel.main."""
+        """Test that cancel-workflows subcommand routes to cancel.main."""
         mock_main = MagicMock(return_value=0)
-        original = workflowctl.COMMANDS["cancel"]
+        original = workflowctl.COMMANDS["cancel-workflows"]
         try:
-            workflowctl.COMMANDS["cancel"] = (original[0], mock_main)
-            argv = ["workflowctl.py", "cancel", "--repo", "test/repo",
+            workflowctl.COMMANDS["cancel-workflows"] = (original[0], mock_main)
+            argv = ["workflowctl.py", "cancel-workflows", "--repo", "test/repo",
                     "--merge-roots", "[]"]
             with patch.object(sys, "argv", argv):
                 result = workflowctl.main()
             mock_main.assert_called_once()
             assert result == 0
         finally:
-            workflowctl.COMMANDS["cancel"] = original
+            workflowctl.COMMANDS["cancel-workflows"] = original
 
     def test_dispatch_subcommand_routes_correctly(self, workflowctl) -> None:
-        """Test that dispatch subcommand routes to dispatch.main."""
+        """Test that dispatch-descendant-workflows routes to dispatch_descendants.main."""
         mock_main = MagicMock(return_value=0)
-        original = workflowctl.COMMANDS["dispatch"]
+        original = workflowctl.COMMANDS["dispatch-descendant-workflows"]
         try:
-            workflowctl.COMMANDS["dispatch"] = (original[0], mock_main)
-            argv = ["workflowctl.py", "dispatch", "--workflow", "test",
+            workflowctl.COMMANDS["dispatch-descendant-workflows"] = (original[0], mock_main)
+            argv = ["workflowctl.py", "dispatch-descendant-workflows", "--workflow", "test",
                     "--repo", "test/repo"]
             with patch.object(sys, "argv", argv):
                 result = workflowctl.main()
             mock_main.assert_called_once()
             assert result == 0
         finally:
-            workflowctl.COMMANDS["dispatch"] = original
+            workflowctl.COMMANDS["dispatch-descendant-workflows"] = original

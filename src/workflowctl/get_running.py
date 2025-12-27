@@ -2,14 +2,13 @@
 """Get currently running workflows from GitHub Actions.
 
 This script queries the GitHub API for workflow runs that are in_progress or queued,
-maps them to workflow keys using the dependency graph, and outputs a JSON array
-of workflow keys.
+maps them to workflow keys using the dependency graph, and outputs a JSON object.
 
 Usage:
-    python3 src/workflowctl/workflowctl.py get-running --repo owner/repo
+    python3 src/workflowctl/workflowctl.py get-running-workflows --repo owner/repo
 
 Output:
-    JSON array of workflow keys, e.g., ["api_shared_routing", "www_shared"]
+    {"workflows": ["api_shared_routing", "www_shared"]}
 """
 import argparse
 import json
@@ -75,8 +74,8 @@ def main() -> int:
     # Sort for deterministic output
     workflow_keys.sort()
 
-    # Output as JSON array
-    print(json.dumps(workflow_keys))
+    # Output as JSON object
+    print(json.dumps({"workflows": workflow_keys}))
     return 0
 
 

@@ -10,14 +10,14 @@ also modified. The execution plan includes the root workflow(s) and all their
 descendants in topological order (dependencies before dependents).
 
 Usage:
-    python3 src/workflowctl/workflowctl.py compute-roots <changed_files>
-    python3 src/workflowctl/workflowctl.py compute-roots --execution-plan <changed_files>
+    python3 src/workflowctl/workflowctl.py compute-root-workflows <changed_files>
 
     Where <changed_files> is a newline-separated list of file paths.
 
 Output:
-    Default: JSON array of root workflow keys, e.g., ["bootstrap"]
-    With --execution-plan: JSON array of all workflows to run in order
+    Default: {"roots": ["bootstrap", "www_shared"]}
+    With --levels: {"levels": [["bootstrap"], ["www_shared", "api_shared_routing"]]}
+    With --levels --indexed: {"workflows": [{"idx": "01", "level": 1, "name": "bootstrap"}]}
 """
 
 import argparse
@@ -344,12 +344,6 @@ def _parse_args() -> argparse.Namespace:
         help="Path to workflow dependency graph JSON file",
     )
     parser.add_argument(
-        "--output-format",
-        choices=["json", "lines"],
-        default="json",
-        help="Output format: json array or newline-separated lines",
-    )
-    parser.add_argument(
         "--execution-plan",
         action="store_true",
         help="Output full execution plan (roots + descendants) in topological order",
@@ -389,21 +383,16 @@ def output_slots(output: list[str], num_slots: int) -> None:
         print(f"key_{i:02d}={key}")
 
 
-def output_results(
-    output: list[str], output_format: str, indexed: bool = False
-) -> None:
-    """Output results in the specified format."""
+def output_results(output: list[str], indexed: bool = False) -> None:
+    """Output results as JSON object."""
     if indexed:
         # Output as objects with idx and name for proper ordering in GitHub Actions UI
         indexed_output = [
             {"idx": f"{i:02d}", "name": name} for i, name in enumerate(output, 1)
         ]
-        print(json.dumps(indexed_output))
-    elif output_format == "json":
-        print(json.dumps(output))
+        print(json.dumps({"workflows": indexed_output}))
     else:
-        for item in output:
-            print(item)
+        print(json.dumps({"roots": output}))
 
 
 def output_levels_indexed(levels: list[list[str]]) -> None:
@@ -418,7 +407,7 @@ def output_levels_indexed(levels: list[list[str]]) -> None:
                 "name": name
             })
             idx += 1
-    print(json.dumps(indexed_output))
+    print(json.dumps({"workflows": indexed_output}))
 
 
 def main() -> None:
@@ -462,16 +451,16 @@ def main() -> None:
             # Output as indexed objects for matrix visualization
             output_levels_indexed(levels)
         else:
-            # Output as array of arrays for parallel execution
-            print(json.dumps(levels))
+            # Output as JSON object with levels array
+            print(json.dumps({"levels": levels}))
     elif args.slots > 0:
         output = compute_execution_plan(roots, graph)
         output_slots(output, args.slots)
     elif args.execution_plan:
         output = compute_execution_plan(roots, graph)
-        output_results(output, args.output_format, args.indexed)
+        output_results(output, args.indexed)
     else:
-        output_results(roots, args.output_format, args.indexed)
+        output_results(roots, args.indexed)
 
 
 if __name__ == "__main__":

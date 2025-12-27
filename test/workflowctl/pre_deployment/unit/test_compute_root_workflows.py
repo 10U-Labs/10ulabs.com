@@ -665,34 +665,27 @@ class TestOutputSlots:
 class TestOutputResults:
     """Tests for output_results function."""
 
-    def test_output_json(self, compute_roots) -> None:
-        """Test JSON output format."""
+    def test_output_json_object(self, compute_roots) -> None:
+        """Test JSON object output format."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_results(["a", "b", "c"], "json")
+            compute_roots.output_results(["a", "b", "c"])
             output = mock_stdout.getvalue().strip()
-        assert output == '["a", "b", "c"]'
-
-    def test_output_lines(self, compute_roots) -> None:
-        """Test lines output format."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_results(["a", "b", "c"], "lines")
-            output = mock_stdout.getvalue()
-        assert output == "a\nb\nc\n"
+        assert output == '{"roots": ["a", "b", "c"]}'
 
     def test_output_indexed(self, compute_roots) -> None:
         """Test indexed JSON output format."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_results(["a", "b"], "json", indexed=True)
+            compute_roots.output_results(["a", "b"], indexed=True)
             output = mock_stdout.getvalue().strip()
-        expected = '[{"idx": "01", "name": "a"}, {"idx": "02", "name": "b"}]'
+        expected = '{"workflows": [{"idx": "01", "name": "a"}, {"idx": "02", "name": "b"}]}'
         assert output == expected
 
     def test_output_empty(self, compute_roots) -> None:
         """Test output with empty list."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_results([], "json")
+            compute_roots.output_results([])
             output = mock_stdout.getvalue().strip()
-        assert output == "[]"
+        assert output == '{"roots": []}'
 
 
 class TestOutputLevelsIndexed:
@@ -704,8 +697,8 @@ class TestOutputLevelsIndexed:
             compute_roots.output_levels_indexed([["a", "b"]])
             output = mock_stdout.getvalue().strip()
         expected = (
-            '[{"idx": "01", "level": 1, "name": "a"}, '
-            '{"idx": "02", "level": 1, "name": "b"}]'
+            '{"workflows": [{"idx": "01", "level": 1, "name": "a"}, '
+            '{"idx": "02", "level": 1, "name": "b"}]}'
         )
         assert output == expected
 
@@ -715,10 +708,10 @@ class TestOutputLevelsIndexed:
             compute_roots.output_levels_indexed([["a"], ["b", "c"], ["d"]])
             output = mock_stdout.getvalue().strip()
         expected = (
-            '[{"idx": "01", "level": 1, "name": "a"}, '
+            '{"workflows": [{"idx": "01", "level": 1, "name": "a"}, '
             '{"idx": "02", "level": 2, "name": "b"}, '
             '{"idx": "03", "level": 2, "name": "c"}, '
-            '{"idx": "04", "level": 3, "name": "d"}]'
+            '{"idx": "04", "level": 3, "name": "d"}]}'
         )
         assert output == expected
 
@@ -727,7 +720,7 @@ class TestOutputLevelsIndexed:
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
             compute_roots.output_levels_indexed([])
             output = mock_stdout.getvalue().strip()
-        assert output == "[]"
+        assert output == '{"workflows": []}'
 
 
 class TestComputeMergeRoots:

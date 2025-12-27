@@ -6,36 +6,32 @@ from unittest.mock import MagicMock, mock_open, patch
 class TestShouldTriggerDescendants:
     """Tests for should_trigger_descendants function."""
 
-    def test_returns_true_when_input_is_true(self, dispatch_roots) -> None:
-        """Test returns True when trigger_input is 'true'."""
-        assert dispatch_roots.should_trigger_descendants("true", "", [], [], None) is True
-
-    def test_returns_true_when_input_is_true_uppercase(self, dispatch_roots) -> None:
-        """Test returns True when trigger_input is 'TRUE'."""
-        assert dispatch_roots.should_trigger_descendants("TRUE", "", [], [], None) is True
+    def test_returns_true_when_flag_is_true(self, dispatch_roots) -> None:
+        """Test returns True when trigger_flag is True."""
+        assert dispatch_roots.should_trigger_descendants(True, "", [], [], None) is True
 
     def test_returns_true_when_commit_has_tag(self, dispatch_roots) -> None:
         """Test returns True when commit message has [trigger descendants]."""
         assert dispatch_roots.should_trigger_descendants(
-            "false", "feat: add feature [trigger descendants]", [], [], None
+            False, "feat: add feature [trigger descendants]", [], [], None
         ) is True
 
     def test_returns_true_when_commit_has_tag_case_insensitive(self, dispatch_roots) -> None:
         """Test [Trigger Descendants] tag is case insensitive."""
         assert dispatch_roots.should_trigger_descendants(
-            "false", "feat: add feature [Trigger Descendants]", [], [], None
+            False, "feat: add feature [Trigger Descendants]", [], [], None
         ) is True
 
     def test_returns_true_when_dependencies_changed(self, dispatch_roots) -> None:
         """Test returns True when workflow-dependencies.json changed."""
         assert dispatch_roots.should_trigger_descendants(
-            "false", "feat: update deps", ["etc/workflow-dependencies.json"], [], None
+            False, "feat: update deps", ["etc/workflow-dependencies.json"], [], None
         ) is True
 
     def test_returns_false_when_no_conditions_met(self, dispatch_roots) -> None:
         """Test returns False when no conditions are met."""
         assert dispatch_roots.should_trigger_descendants(
-            "false", "feat: normal commit", ["src/file.py"], [], None
+            False, "feat: normal commit", ["src/file.py"], [], None
         ) is False
 
     def test_returns_true_when_descendant_has_changes(self, dispatch_roots) -> None:
@@ -45,7 +41,7 @@ class TestShouldTriggerDescendants:
             "www_shared": {"paths": ["src/www/shared/**"], "depends_on": ["bootstrap"]},
         }
         assert dispatch_roots.should_trigger_descendants(
-            "false", "feat: update both",
+            False, "feat: update both",
             ["src/bootstrap/main.tf", "src/www/shared/main.tf"],
             ["bootstrap"], graph
         ) is True
@@ -57,7 +53,7 @@ class TestShouldTriggerDescendants:
             "www_shared": {"paths": ["src/www/shared/**"], "depends_on": ["bootstrap"]},
         }
         assert dispatch_roots.should_trigger_descendants(
-            "false", "feat: update bootstrap only",
+            False, "feat: update bootstrap only",
             ["src/bootstrap/main.tf"], ["bootstrap"], graph
         ) is False
 
@@ -85,11 +81,11 @@ class TestWorkflowFileExists:
         assert dispatch_roots.workflow_file_exists("missing") is False
 
 
-class TestWorkflowAcceptsTriggerDescendants:
-    """Tests for workflow_accepts_trigger_descendants function."""
+class TestWorkflowAcceptsInput:
+    """Tests for workflow_accepts_input function."""
 
     def test_returns_true_when_input_present(self, dispatch_roots) -> None:
-        """Test returns True when trigger_descendants input is defined."""
+        """Test returns True when specified input is defined."""
         content = """
 name: Test Workflow
 on:
@@ -100,44 +96,32 @@ on:
         type: boolean
 """
         with patch("builtins.open", mock_open(read_data=content)):
-            assert dispatch_roots.workflow_accepts_trigger_descendants("test") is True
+            assert dispatch_roots.workflow_accepts_input("test", "trigger_descendants") is True
 
     def test_returns_false_when_input_missing(self, dispatch_roots) -> None:
-        """Test returns False when trigger_descendants input is not defined."""
+        """Test returns False when specified input is not defined."""
         content = """
 name: Test Workflow
 on:
   workflow_dispatch:
     inputs:
-      dry_run:
+      other_input:
         default: false
         type: boolean
 """
         with patch("builtins.open", mock_open(read_data=content)):
-            assert dispatch_roots.workflow_accepts_trigger_descendants("test") is False
+            assert dispatch_roots.workflow_accepts_input("test", "trigger_descendants") is False
 
     def test_returns_false_on_file_error(self, dispatch_roots) -> None:
         """Test returns False when file cannot be read."""
         with patch("builtins.open", side_effect=IOError("File not found")):
-            assert dispatch_roots.workflow_accepts_trigger_descendants("missing") is False
+            assert dispatch_roots.workflow_accepts_input("missing", "trigger_descendants") is False
 
 
 class TestDispatchWorkflow:
     """Tests for dispatch_workflow function."""
 
-    def test_dry_run_returns_true(self, dispatch_roots) -> None:
-        """Test dry run mode returns True."""
-        with patch("dispatch_roots.dispatch_gh_workflow"):
-            result = dispatch_roots.dispatch_workflow("test", "owner/repo", False, dry_run=True)
-            assert result is True
-
-    def test_dry_run_does_not_call_dispatch(self, dispatch_roots) -> None:
-        """Test dry run mode doesn't call dispatch."""
-        with patch("dispatch_roots.dispatch_gh_workflow") as mock_dispatch:
-            dispatch_roots.dispatch_workflow("test", "owner/repo", False, dry_run=True)
-            mock_dispatch.assert_not_called()
-
-    @patch("dispatch_roots.workflow_accepts_trigger_descendants")
+    @patch("dispatch_roots.workflow_accepts_input")
     @patch("dispatch_roots.dispatch_gh_workflow")
     def test_dispatches_returns_true_on_success(
         self,
@@ -147,10 +131,10 @@ class TestDispatchWorkflow:
     ) -> None:
         """Test dispatch returns True on success."""
         mock_dispatch.return_value = True
-        result = dispatch_roots.dispatch_workflow("test", "owner/repo", False, dry_run=False)
+        result = dispatch_roots.dispatch_workflow("test", "owner/repo", False, False)
         assert result is True
 
-    @patch("dispatch_roots.workflow_accepts_trigger_descendants")
+    @patch("dispatch_roots.workflow_accepts_input")
     @patch("dispatch_roots.dispatch_gh_workflow")
     def test_dispatches_without_flag_when_trigger_false(
         self,
@@ -160,11 +144,11 @@ class TestDispatchWorkflow:
     ) -> None:
         """Test dispatch passes None extra_args when trigger_descendants False."""
         mock_dispatch.return_value = True
-        dispatch_roots.dispatch_workflow("test", "owner/repo", False, dry_run=False)
+        dispatch_roots.dispatch_workflow("test", "owner/repo", False, False)
         call_args = mock_dispatch.call_args
         assert call_args[0][2] is None
 
-    @patch("dispatch_roots.workflow_accepts_trigger_descendants")
+    @patch("dispatch_roots.workflow_accepts_input")
     @patch("dispatch_roots.dispatch_gh_workflow")
     def test_dispatches_with_flag_when_workflow_accepts(
         self,
@@ -175,11 +159,11 @@ class TestDispatchWorkflow:
         """Test dispatch passes trigger_descendants flag when accepted."""
         mock_accepts.return_value = True
         mock_dispatch.return_value = True
-        dispatch_roots.dispatch_workflow("test", "owner/repo", True, dry_run=False)
+        dispatch_roots.dispatch_workflow("test", "owner/repo", True, False)
         call_args = mock_dispatch.call_args
         assert call_args[0][2] == ["-f", "trigger_descendants=true"]
 
-    @patch("dispatch_roots.workflow_accepts_trigger_descendants")
+    @patch("dispatch_roots.workflow_accepts_input")
     @patch("dispatch_roots.dispatch_gh_workflow")
     def test_dispatches_without_flag_when_workflow_rejects(
         self,
@@ -190,11 +174,11 @@ class TestDispatchWorkflow:
         """Test dispatch passes None when workflow rejects trigger_descendants."""
         mock_accepts.return_value = False
         mock_dispatch.return_value = True
-        dispatch_roots.dispatch_workflow("test", "owner/repo", True, dry_run=False)
+        dispatch_roots.dispatch_workflow("test", "owner/repo", True, False)
         call_args = mock_dispatch.call_args
         assert call_args[0][2] is None
 
-    @patch("dispatch_roots.workflow_accepts_trigger_descendants")
+    @patch("dispatch_roots.workflow_accepts_input")
     @patch("dispatch_roots.dispatch_gh_workflow")
     def test_returns_false_on_dispatch_failure(
         self,
@@ -204,5 +188,5 @@ class TestDispatchWorkflow:
     ) -> None:
         """Test returns False when dispatch fails."""
         mock_dispatch.return_value = False
-        result = dispatch_roots.dispatch_workflow("test", "owner/repo", False, dry_run=False)
+        result = dispatch_roots.dispatch_workflow("test", "owner/repo", False, False)
         assert result is False

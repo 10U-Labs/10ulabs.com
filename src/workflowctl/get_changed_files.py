@@ -10,6 +10,9 @@ Supports per-commit skip-CI filtering: files from commits with skip markers
 Usage:
     python3 src/workflowctl/workflowctl.py get-changed-files \
         --base <base_sha> --head <head_sha> [--commits <json>]
+
+Output:
+    {"files": ["file1.py", "file2.py", ...]}
 """
 import argparse
 import json
@@ -147,11 +150,8 @@ def main() -> int:
         excluded = filter_files_by_commits(args.commits)
         files = [f for f in files if f not in excluded]
 
-    # Output in GitHub Actions heredoc format for multi-line values
-    print("changed<<EOF")
-    for f in files:
-        print(f)
-    print("EOF")
+    # Output as JSON object
+    print(json.dumps({"files": files}))
 
     return 0
 
