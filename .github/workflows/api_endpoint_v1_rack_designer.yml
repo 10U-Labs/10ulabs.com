@@ -24,13 +24,6 @@ jobs:
         with:
           aws_region: ${{ vars.AWS_REGION }}
           oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
-      - id: config
-        name: Extract configuration values
-        run: |
-          BACKEND="src/api/endpoints/rack_designer/backend.tf"
-          TF_VER=$(grep 'required_version' $BACKEND \
-            | cut -d'"' -f2 | sed 's/>= //')
-          echo "terraform_version=$TF_VER" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:

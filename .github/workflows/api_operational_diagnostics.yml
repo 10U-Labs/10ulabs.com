@@ -22,13 +22,6 @@ jobs:
         with:
           aws_region: ${{ vars.AWS_REGION }}
           oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
-      - id: config
-        name: Extract configuration values
-        run: |
-          TERRAFORM_VERSION=$(grep 'required_version' \
-            src/api/operational/diagnostics/backend.tf | \
-            cut -d'"' -f2 | sed 's/>= //')
-          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -83,6 +76,17 @@ jobs:
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
+      - id: terraform
+        if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Extract Terraform version
+        run: |
+          TERRAFORM_VERSION=$(grep 'required_version' \
+            src/api/operational/diagnostics/backend.tf | \
+            cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -90,7 +94,7 @@ jobs:
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ steps.config.outputs.terraform_version }}
+          terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
       - name: Terraform Format Check
         run: |
