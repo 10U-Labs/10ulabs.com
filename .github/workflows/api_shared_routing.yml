@@ -7,7 +7,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Deploy API shared routing
     runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+      ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
@@ -30,7 +30,7 @@ jobs:
             src/api/shared/routing/backend.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "terraform_version=$TERRAFORM_VERSION" >> "$GITHUB_OUTPUT"
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
@@ -48,7 +48,7 @@ jobs:
       - name: Terraform Init
         run: cd src/api/shared/routing && terraform init
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup TFLint
@@ -60,7 +60,7 @@ jobs:
         name: Run tflint
         run: cd src/api/shared/routing && tflint --init && tflint
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
@@ -68,7 +68,7 @@ jobs:
         with:
           python-version: '3.13'
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install yamllint
@@ -85,7 +85,7 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_shared_routing.yml
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pylint
@@ -103,7 +103,7 @@ jobs:
             --fail-on=C,R,W \
             --fail-under=10.0
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install mypy
@@ -116,7 +116,7 @@ jobs:
       - name: Run mypy on test code
         run: MYPYPATH=lib/python python3 -m mypy test/api/shared/routing/
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
@@ -130,7 +130,7 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pytest dependencies

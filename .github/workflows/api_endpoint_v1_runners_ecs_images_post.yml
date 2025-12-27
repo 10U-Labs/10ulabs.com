@@ -12,7 +12,7 @@ jobs:
       id-token: write
     runs-on: >-
       ${{
-        (vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+        (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]'))
         && 'ubuntu-latest'
@@ -55,7 +55,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
@@ -63,7 +63,7 @@ jobs:
         with:
           python-version: '3.13'
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
@@ -126,7 +126,7 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install hadolint
@@ -148,7 +148,7 @@ jobs:
           pytest \
             $TEST --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
@@ -163,7 +163,7 @@ jobs:
             $TEST/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install yq
@@ -192,20 +192,20 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - id: build
         if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Build and push Docker image (QEMU)
@@ -245,7 +245,7 @@ jobs:
           echo "ecr_repository=$REPO" >> $GITHUB_OUTPUT
       - id: build-ec2
         if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS != 'true' &&
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true' &&
           github.event.inputs.github_hosted != 'true' &&
           !contains(github.event.head_commit.message, '[github-hosted]')
         name: Build and push Docker image (EC2)

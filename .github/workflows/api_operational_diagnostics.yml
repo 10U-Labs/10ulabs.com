@@ -84,7 +84,7 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
@@ -97,7 +97,7 @@ jobs:
           cd src/api/operational/diagnostics && \
             terraform fmt -diff -check -recursive
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup TFLint

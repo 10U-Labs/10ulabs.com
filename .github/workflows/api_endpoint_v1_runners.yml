@@ -11,7 +11,7 @@ jobs:
       contents: read
       id-token: write
     runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+      ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
@@ -33,7 +33,7 @@ jobs:
             | cut -d'"' -f2 | sed 's/>= //')
           echo "terraform_version=$TF_VERSION" >> $GITHUB_OUTPUT
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
@@ -47,7 +47,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup TFLint
@@ -55,7 +55,7 @@ jobs:
         with:
           tflint_version: latest
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
@@ -73,7 +73,7 @@ jobs:
         name: Run tflint
         run: cd src/api/endpoints/runners && tflint --init && tflint
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install yamllint
@@ -90,7 +90,7 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/endpoints_v1_runners.yml
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pylint
@@ -102,7 +102,7 @@ jobs:
             --fail-on=C,R,W \
             --fail-under=10.0
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install mypy
@@ -112,7 +112,7 @@ jobs:
           python3 -m mypy \
             lib/python/ src/api/endpoints/runners/lambda/handler.py
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd

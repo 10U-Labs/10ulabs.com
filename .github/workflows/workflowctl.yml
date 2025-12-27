@@ -14,7 +14,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Orchestrating workflows
     runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+      ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
@@ -57,7 +57,7 @@ jobs:
         name: Workflowctl testing not required
         run: echo "No workflowctl-related files changed. Skipping tests."
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
@@ -65,7 +65,7 @@ jobs:
         with:
           python-version: '3.13'
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install dependencies

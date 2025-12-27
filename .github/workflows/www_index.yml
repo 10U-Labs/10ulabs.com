@@ -7,7 +7,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Deploy home page
     runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+      ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
@@ -29,7 +29,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
@@ -37,7 +37,7 @@ jobs:
         with:
           python-version: '3.13'
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install yamllint
@@ -54,7 +54,7 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/www_index.yml
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jsonlint
@@ -72,7 +72,7 @@ jobs:
             jsonlint -q "$file"
           done
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pylint
@@ -82,7 +82,7 @@ jobs:
           PYTHONPATH=lib/python python3 -m pylint lib/python/ test/www/paths/ \
             --fail-on=C,R,W --fail-under=10.0
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install mypy
@@ -90,7 +90,7 @@ jobs:
       - name: Run mypy
         run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/www/paths/
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
@@ -104,7 +104,7 @@ jobs:
       - name: Run unit tests
         run: npm test --prefix src/www/paths/index
       - if: >-
-          vars.USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pytest dependencies
