@@ -8,6 +8,7 @@ from test.api.endpoints.runners.ecs.images.conftest import (
     FILES_DIR,
     DOCKERFILE_PATH,
 )
+from unittest.mock import Mock
 
 from dockerfile_parse import DockerfileParser
 import pytest
@@ -15,8 +16,6 @@ import pytest
 # Add directories to path for imports
 sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, FILES_DIR)
-# Add this directory to allow importing test_helpers
-sys.path.insert(0, os.path.dirname(__file__))
 entrypoint_path = os.path.join(FILES_DIR, 'entrypoint.py')
 entrypoint_spec = importlib.util.spec_from_file_location("entrypoint", entrypoint_path)
 if entrypoint_spec is None or entrypoint_spec.loader is None:
@@ -147,3 +146,56 @@ def dockerfile_run_commands_joined():
             commands.append(structure[i]['value'])
         i += 1
     return ' '.join(commands)
+
+
+# --- Entrypoint test fixtures ---
+
+
+@pytest.fixture
+def entrypoint_mocks(monkeypatch):
+    """Patch subprocess for entrypoint tests.
+
+    Returns (mock_run, mock_popen) tuple for tests that need to inspect calls.
+    """
+    mock_run = Mock(return_value=Mock(returncode=0))
+    mock_popen = Mock()
+    popen_process = Mock()
+    popen_process.wait.return_value = 0
+    mock_popen.return_value.__enter__ = Mock(return_value=popen_process)
+    mock_popen.return_value.__exit__ = Mock(return_value=False)
+
+    monkeypatch.setattr('entrypoint.subprocess.run', mock_run)
+    monkeypatch.setattr('entrypoint.subprocess.Popen', mock_popen)
+    return mock_run, mock_popen
+
+
+@pytest.fixture
+def entrypoint_result(request, monkeypatch, entrypoint_mocks):
+    """Run entrypoint.main() with given argv and return mocks.
+
+    Use with @pytest.mark.parametrize('entrypoint_result', [argv], indirect=True)
+    """
+    argv = request.param
+    monkeypatch.setattr('sys.argv', argv)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    return entrypoint_mocks
+
+
+@pytest.fixture
+def config_args(request, monkeypatch, entrypoint_mocks):
+    """Run entrypoint with given argv and return config.sh arguments.
+
+    Use with @pytest.mark.parametrize('config_args', [argv], indirect=True)
+    """
+    argv = request.param
+    monkeypatch.setattr('sys.argv', argv)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+
+    mock_run, _ = entrypoint_mocks
+    for call in mock_run.call_args_list:
+        args = call[0][0] if call[0] else []
+        if args and args[0] == './config.sh':
+            return args
+    return None

@@ -2,7 +2,7 @@
 import os
 import time
 import pytest
-from ec2_helpers import (
+from test.api.endpoints.runners.ec2.images.post.post_deployment.conftest import (
     launch_instance,
     wait_for_instance_ready,
     terminate_instance_safely,

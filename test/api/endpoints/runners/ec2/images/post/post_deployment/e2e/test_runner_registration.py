@@ -2,7 +2,7 @@
 import time
 from botocore.exceptions import ClientError
 import pytest
-from ec2_helpers import get_instance_logs
+from test.api.endpoints.runners.ec2.images.post.post_deployment.conftest import get_instance_logs
 
 
 def poll_ssm_command(ssm_client, instance_id, command_id, max_wait=30):

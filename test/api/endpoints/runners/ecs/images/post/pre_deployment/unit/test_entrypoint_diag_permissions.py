@@ -3,10 +3,9 @@
 Tests verify that the entrypoint properly sets up _diag folder permissions
 before configuring the runner, enabling CloudWatch sidecar to read logs.
 """
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 import pytest
 import entrypoint
-from test_helpers import setup_popen_mock, run_entrypoint
 
 
 def _find_mkdir_call(mock_run):
@@ -40,59 +39,51 @@ def _get_call_indices(mock_run):
     return mkdir_index, chown_index
 
 
-@patch('entrypoint.subprocess.Popen')
-@patch('entrypoint.subprocess.run')
-@patch('sys.argv', [
+@pytest.mark.parametrize('entrypoint_result', [[
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
-])
-def test_main_calls_sudo_mkdir_for_diag(mock_run, mock_popen):
+]], indirect=True)
+def test_main_calls_sudo_mkdir_for_diag(entrypoint_result):
     """Test that main calls sudo mkdir for _diag directory."""
-    run_entrypoint(mock_run, mock_popen)
+    mock_run, _ = entrypoint_result
     mkdir_args = _find_mkdir_call(mock_run)
     assert mkdir_args is not None and mkdir_args[0] == 'sudo' and mkdir_args[1] == 'mkdir'
 
 
-@patch('entrypoint.subprocess.Popen')
-@patch('entrypoint.subprocess.run')
-@patch('sys.argv', [
+@pytest.mark.parametrize('entrypoint_result', [[
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
-])
-def test_main_calls_sudo_chown_for_diag(mock_run, mock_popen):
+]], indirect=True)
+def test_main_calls_sudo_chown_for_diag(entrypoint_result):
     """Test that main calls sudo chown for _diag directory."""
-    run_entrypoint(mock_run, mock_popen)
+    mock_run, _ = entrypoint_result
     chown_args = _find_chown_call(mock_run)
     assert chown_args is not None and chown_args[0] == 'sudo' and chown_args[1] == 'chown'
 
 
-@patch('entrypoint.subprocess.Popen')
-@patch('entrypoint.subprocess.run')
-@patch('sys.argv', [
+@pytest.mark.parametrize('entrypoint_result', [[
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
-])
-def test_main_calls_mkdir_before_chown(mock_run, mock_popen):
+]], indirect=True)
+def test_main_calls_mkdir_before_chown(entrypoint_result):
     """Test that mkdir is called before chown for _diag directory."""
-    run_entrypoint(mock_run, mock_popen)
+    mock_run, _ = entrypoint_result
     mkdir_index, chown_index = _get_call_indices(mock_run)
     assert mkdir_index is not None and chown_index is not None and mkdir_index < chown_index
 
 
-@patch('entrypoint.subprocess.Popen')
-@patch('entrypoint.subprocess.run')
-@patch('sys.argv', [
-    'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
-    '--labels', 'lbl', '--token', 'tok'
-])
-def test_main_continues_if_permission_fix_fails(mock_run, mock_popen):
+def test_main_continues_if_permission_fix_fails(monkeypatch, entrypoint_mocks):
     """Test that main continues even if permission fix commands fail."""
+    mock_run, _ = entrypoint_mocks
     mock_run.side_effect = [
         Mock(returncode=1),  # mkdir fails
         Mock(returncode=1),  # chown fails
         Mock(returncode=0),  # config.sh succeeds
     ]
-    setup_popen_mock(mock_popen)
+    monkeypatch.setattr('sys.argv', [
+        'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
+        '--labels', 'lbl', '--token', 'tok'
+    ])
 
     with pytest.raises(SystemExit) as exc_info:
         entrypoint.main()
