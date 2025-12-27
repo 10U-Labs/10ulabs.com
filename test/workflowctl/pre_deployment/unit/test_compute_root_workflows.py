@@ -375,6 +375,8 @@ class TestGetAllDescendants:
 class TestInsertSorted:
     """Tests for _insert_sorted function."""
 
+    # pylint: disable=protected-access
+
     def test_insert_into_empty_list(self, compute_roots) -> None:
         """Test inserting into empty list."""
         queue: list[str] = []
@@ -577,6 +579,8 @@ class TestComputeExecutionPlanLevels:
 class TestOutputSlots:
     """Tests for _output_slots function."""
 
+    # pylint: disable=protected-access
+
     def test_exact_slots_outputs_count(self, compute_roots) -> None:
         """Test outputting exact number of slots shows correct count."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
@@ -665,6 +669,8 @@ class TestOutputSlots:
 class TestOutputResults:
     """Tests for _output_results function."""
 
+    # pylint: disable=protected-access
+
     def test_output_json(self, compute_roots) -> None:
         """Test JSON output format."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
@@ -697,6 +703,8 @@ class TestOutputResults:
 
 class TestOutputLevelsIndexed:
     """Tests for _output_levels_indexed function."""
+
+    # pylint: disable=protected-access
 
     def test_single_level(self, compute_roots) -> None:
         """Test output with single level."""
