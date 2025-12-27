@@ -225,23 +225,9 @@ def run_lint_disable_check(changed_files):
     return True
 
 
-class AssertCounter(ast.NodeVisitor):
-    """AST visitor that counts assert statements in a function."""
-
-    def __init__(self):
-        self.count = 0
-
-    def visit_Assert(self, node):
-        """Count assert statements."""
-        self.count += 1
-        self.generic_visit(node)
-
-
 def count_asserts_in_function(func_node):
     """Count the number of assert statements in a function node."""
-    counter = AssertCounter()
-    counter.visit(func_node)
-    return counter.count
+    return sum(1 for node in ast.walk(func_node) if isinstance(node, ast.Assert))
 
 
 def check_file_for_single_assert(file_path):
