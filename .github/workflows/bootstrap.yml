@@ -178,7 +178,7 @@ jobs:
             test/bootstrap/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
       - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         name: Set GitHub variables for OIDC authentication
         run: |
           ROLE_ARN=$(cd src/bootstrap && \
