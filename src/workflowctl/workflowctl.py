@@ -8,7 +8,7 @@ and dispatching descendant workflows.
 Usage:
     python3 src/workflowctl/workflowctl.py compute-root-workflows --changed-files x,y
     python3 src/workflowctl/workflowctl.py get-running-workflows --repo owner/repo
-    python3 src/workflowctl/workflowctl.py cancel-workflows --repo o/r --changed-files x
+    python3 src/workflowctl/workflowctl.py cancel-superseded-workflows --repo o/r --changed-files x
     python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows --workflow x
     python3 src/workflowctl/workflowctl.py get-changed-files --base SHA --head SHA
     python3 src/workflowctl/workflowctl.py dispatch-root-workflows --repo o/r --changed-files x
@@ -24,7 +24,7 @@ import get_running
 
 
 COMMANDS = {
-    "cancel-workflows": ("Cancel superseded workflow runs", cancel.main),
+    "cancel-superseded-workflows": ("Cancel superseded workflow runs", cancel.main),
     "compute-root-workflows": ("Compute root workflows from changed files", compute_roots.main),
     "dispatch-descendant-workflows": ("Dispatch descendant workflows", dispatch_descendants.main),
     "dispatch-root-workflows": ("Dispatch root workflows", dispatch_roots.main),

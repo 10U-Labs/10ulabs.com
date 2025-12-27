@@ -46,19 +46,19 @@ class TestWorkflowctlCLI:
             workflowctl.COMMANDS["get-running-workflows"] = original
 
     def test_cancel_subcommand_routes_correctly(self, workflowctl) -> None:
-        """Test that cancel-workflows subcommand routes to cancel.main."""
+        """Test that cancel-superseded-workflows subcommand routes to cancel.main."""
         mock_main = MagicMock(return_value=0)
-        original = workflowctl.COMMANDS["cancel-workflows"]
+        original = workflowctl.COMMANDS["cancel-superseded-workflows"]
         try:
-            workflowctl.COMMANDS["cancel-workflows"] = (original[0], mock_main)
-            argv = ["workflowctl.py", "cancel-workflows", "--repo", "test/repo",
-                    "--merge-roots", "[]"]
+            workflowctl.COMMANDS["cancel-superseded-workflows"] = (original[0], mock_main)
+            argv = ["workflowctl.py", "cancel-superseded-workflows", "--repo", "test/repo",
+                    "--changed-files", "file.py"]
             with patch.object(sys, "argv", argv):
                 result = workflowctl.main()
             mock_main.assert_called_once()
             assert result == 0
         finally:
-            workflowctl.COMMANDS["cancel-workflows"] = original
+            workflowctl.COMMANDS["cancel-superseded-workflows"] = original
 
     def test_dispatch_subcommand_routes_correctly(self, workflowctl) -> None:
         """Test that dispatch-descendant-workflows routes to dispatch_descendants.main."""

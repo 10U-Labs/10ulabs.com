@@ -182,7 +182,7 @@ jobs:
           steps.running.outputs.workflows != '[]'
         name: Cancel superseded workflows
         run: |
-          python3 src/workflowctl/workflowctl.py cancel-workflows \
+          python3 src/workflowctl/workflowctl.py cancel-superseded-workflows \
             --repo "${{ github.repository }}" \
             --changed-files "${{ steps.files.outputs.changed }}" \
             --running '${{ steps.running.outputs.workflows }}' \
