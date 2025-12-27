@@ -15,7 +15,7 @@ Usage:
     Where <changed_files> is a newline-separated list of file paths.
 
 Output:
-    Default: {"roots": ["bootstrap", "www_shared"]}
+    Default: {"workflows": ["bootstrap", "www_shared"]}
     With --levels: {"levels": [["bootstrap"], ["www_shared", "api_shared_routing"]]}
     With --levels --indexed: {"workflows": [{"idx": "01", "level": 1, "name": "bootstrap"}]}
 """
@@ -392,7 +392,7 @@ def output_results(output: list[str], indexed: bool = False) -> None:
         ]
         print(json.dumps({"workflows": indexed_output}))
     else:
-        print(json.dumps({"roots": output}))
+        print(json.dumps({"workflows": output}))
 
 
 def output_levels_indexed(levels: list[list[str]]) -> None:

@@ -670,7 +670,7 @@ class TestOutputResults:
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
             compute_roots.output_results(["a", "b", "c"])
             output = mock_stdout.getvalue().strip()
-        assert output == '{"roots": ["a", "b", "c"]}'
+        assert output == '{"workflows": ["a", "b", "c"]}'
 
     def test_output_indexed(self, compute_roots) -> None:
         """Test indexed JSON output format."""
@@ -685,7 +685,7 @@ class TestOutputResults:
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
             compute_roots.output_results([])
             output = mock_stdout.getvalue().strip()
-        assert output == '{"roots": []}'
+        assert output == '{"workflows": []}'
 
 
 class TestOutputLevelsIndexed:
