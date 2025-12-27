@@ -2,13 +2,14 @@
 """Cancel superseded workflow runs.
 
 This script cancels workflow runs that will be re-run from the merge roots.
-It identifies which running workflows are downstream of (or equal to) the
-merge roots and cancels them.
+It computes the merge roots from changed files and running workflows, then
+cancels all runs downstream of (or equal to) the merge roots.
 
 Usage:
     python3 src/workflowctl/workflowctl.py cancel-workflows \
         --repo owner/repo \
-        --merge-roots '["www_shared"]' \
+        --changed-files "file1.py,file2.py" \
+        --running '["www_shared"]' \
         --graph etc/workflow-dependencies.json
 
 Exit codes:
@@ -18,28 +19,28 @@ Exit codes:
 No stdout output. Errors go to stderr.
 """
 import argparse
-import json
 import subprocess
 import sys
 from typing import Any
 
+from compute_roots import compute_merge_roots, load_graph_and_compute_roots
 from utils import (
+    add_changed_files_arg,
+    add_running_arg,
     build_name_to_key_map,
     create_base_parser,
     get_all_descendants,
     get_workflow_runs,
-    load_graph_with_error,
+    parse_changed_files,
+    parse_running_workflows,
 )
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = create_base_parser("Cancel superseded workflow runs")
-    parser.add_argument(
-        "--merge-roots",
-        required=True,
-        help="JSON array of merge root workflow keys"
-    )
+    add_changed_files_arg(parser)
+    add_running_arg(parser)
     return parser.parse_args()
 
 
@@ -87,23 +88,25 @@ def cancel_run(repo: str, run_id: int) -> bool:
 def main() -> int:
     """Main entry point."""
     args = parse_args()
+    changed_files = parse_changed_files(args.changed_files)
 
-    # Parse merge roots
-    try:
-        merge_roots = json.loads(args.merge_roots)
-    except json.JSONDecodeError:
-        print(f"Error: Invalid JSON for merge-roots: {args.merge_roots}",
-              file=sys.stderr)
+    running_workflows, error = parse_running_workflows(args.running)
+    if error:
+        print(error, file=sys.stderr)
         return 1
+
+    if not running_workflows:
+        return 0
+
+    graph, roots, error = load_graph_and_compute_roots(args.graph, changed_files)
+    if error or graph is None:
+        print(error, file=sys.stderr)
+        return 1
+
+    merge_roots = compute_merge_roots(running_workflows, roots, graph)
 
     if not merge_roots:
         return 0
-
-    # Load dependency graph
-    graph, error = load_graph_with_error(args.graph)
-    if graph is None:
-        print(error, file=sys.stderr)
-        return 1
 
     # Get workflows to cancel (merge roots + all descendants)
     workflows_to_cancel = get_workflows_to_cancel(merge_roots, graph)

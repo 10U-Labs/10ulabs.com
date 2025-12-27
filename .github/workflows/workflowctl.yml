@@ -142,14 +142,9 @@ jobs:
             --base "${{ github.event.before }}" \
             --head "${{ github.sha }}" \
             --commits "$COMMITS_JSON")
-          # Extract files array and convert to newline-separated for compatibility
-          CHANGED=$(echo "$OUTPUT" | jq -r '.files | join("\n")')
-          EOF_MARKER=$(openssl rand -hex 8)
-          {
-            echo "changed<<$EOF_MARKER"
-            echo "$CHANGED"
-            echo "$EOF_MARKER"
-          } >> "$GITHUB_OUTPUT"
+          # Extract files array and convert to comma-separated
+          CHANGED=$(echo "$OUTPUT" | jq -r '.files | join(",")')
+          echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
       - id: running
         name: Get running workflows
         run: |
@@ -165,28 +160,20 @@ jobs:
           GRAPH="etc/workflow-dependencies.json"
           START_FROM="${{ inputs.start_from }}"
           if [ -n "$START_FROM" ]; then
-            # Support comma-separated workflows (trim spaces, newlines)
-            SED_TRIM='s/^[[:space:]]*//;s/[[:space:]]*$//'
-            ROOTS=$(echo "$START_FROM" | tr ',' '\n' | sed "$SED_TRIM")
+            # Manual dispatch: use provided workflows directly (comma-separated)
+            ROOTS=$(echo "$START_FROM" | tr -d ' ')
           else
             CHANGED="${{ steps.files.outputs.changed }}"
             RUNNING='${{ steps.running.outputs.workflows }}'
-            # Get level-1 workflows (independent roots), merge with running
-            OUTPUT=$(echo "$CHANGED" | \
-              python3 src/workflowctl/workflowctl.py compute-root-workflows \
-              --graph $GRAPH --levels --indexed \
+            # Get root workflows, merge with running
+            OUTPUT=$(python3 src/workflowctl/workflowctl.py compute-root-workflows \
+              --changed-files "$CHANGED" \
+              --graph "$GRAPH" \
               --running "$RUNNING")
-            # Extract level-1 workflow names from JSON
-            ROOTS=$(echo "$OUTPUT" | \
-              jq -r '.workflows | map(select(.level == 1) | .name) | join("\n")' \
-              || echo "")
+            # Extract workflow names and convert to comma-separated
+            ROOTS=$(echo "$OUTPUT" | jq -r '.workflows | join(",")' || echo "")
           fi
-          EOF_MARKER=$(openssl rand -hex 8)
-          {
-            echo "root_workflows<<$EOF_MARKER"
-            echo "$ROOTS"
-            echo "$EOF_MARKER"
-          } >> "$GITHUB_OUTPUT"
+          echo "root_workflows=$ROOTS" >> "$GITHUB_OUTPUT"
       - if: steps.plan.outputs.root_workflows == ''
         name: No workflows to dispatch
         run: echo "No workflow-related files changed or no workflows computed"
@@ -195,13 +182,10 @@ jobs:
           steps.running.outputs.workflows != '[]'
         name: Cancel superseded workflows
         run: |
-          ROOTS="${{ steps.plan.outputs.root_workflows }}"
-          # Convert newline-separated roots to JSON array
-          JQ_FILTER='split("\n") | map(select(length > 0))'
-          ROOTS_JSON=$(echo "$ROOTS" | jq -R -s -c "$JQ_FILTER")
           python3 src/workflowctl/workflowctl.py cancel-workflows \
-            --repo ${{ github.repository }} \
-            --merge-roots "$ROOTS_JSON" \
+            --repo "${{ github.repository }}" \
+            --changed-files "${{ steps.files.outputs.changed }}" \
+            --running '${{ steps.running.outputs.workflows }}' \
             --graph etc/workflow-dependencies.json
       - env:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
@@ -217,8 +201,8 @@ jobs:
           fi
           python3 src/workflowctl/workflowctl.py dispatch-root-workflows \
             --repo "${{ github.repository }}" \
-            --roots "${{ steps.plan.outputs.root_workflows }}" \
-            --changed "${{ steps.files.outputs.changed }}" \
+            --changed-files "${{ steps.files.outputs.changed }}" \
+            --running '${{ steps.running.outputs.workflows }}' \
             $FLAGS
 name: Workflow Controller
 on:

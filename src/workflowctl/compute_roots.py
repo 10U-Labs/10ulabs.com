@@ -10,9 +10,8 @@ also modified. The execution plan includes the root workflow(s) and all their
 descendants in topological order (dependencies before dependents).
 
 Usage:
-    python3 src/workflowctl/workflowctl.py compute-root-workflows <changed_files>
-
-    Where <changed_files> is a newline-separated list of file paths.
+    python3 src/workflowctl/workflowctl.py compute-root-workflows \
+        --changed-files "file1.py,file2.py"
 
 Output:
     Default: {"workflows": ["bootstrap", "www_shared"]}
@@ -42,6 +41,22 @@ def load_and_validate_graph(graph_arg: str) -> dict[str, Any]:
         print(f"Error: Dependency graph not found at {graph_path}", file=sys.stderr)
         sys.exit(1)
     return load_dependency_graph(graph_path)
+
+
+def load_graph_and_compute_roots(
+    graph_path: str,
+    changed_files: list[str]
+) -> tuple[dict[str, Any] | None, list[str], str | None]:
+    """Load graph and compute root workflows.
+
+    Returns (graph, roots, error). On success error is None.
+    """
+    try:
+        graph = load_dependency_graph(Path(graph_path))
+    except FileNotFoundError:
+        return None, [], f"Error: Graph file not found: {graph_path}"
+    roots = compute_root_workflows(changed_files, graph)
+    return graph, roots, None
 
 
 def get_all_ancestors(
@@ -333,10 +348,9 @@ def _parse_args() -> argparse.Namespace:
         description="Compute root workflows to trigger based on changed files."
     )
     parser.add_argument(
-        "changed_files",
-        nargs="?",
-        default="-",
-        help="Newline-separated list of changed files (or - for stdin)",
+        "--changed-files",
+        required=True,
+        help="Comma-separated list of changed files",
     )
     parser.add_argument(
         "--graph",
@@ -414,12 +428,9 @@ def main() -> None:
     """Main entry point."""
     args = _parse_args()
 
-    # Read changed files
-    changed_files_str = (
-        sys.stdin.read() if args.changed_files == "-" else args.changed_files
-    )
+    # Parse comma-separated changed files
     changed_files = [
-        line.strip() for line in changed_files_str.strip().split("\n") if line.strip()
+        f.strip() for f in args.changed_files.split(",") if f.strip()
     ]
 
     # Load dependency graph

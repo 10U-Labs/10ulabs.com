@@ -28,6 +28,51 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     return parser
 
 
+def add_changed_files_arg(parser: argparse.ArgumentParser) -> None:
+    """Add --changed-files argument to parser."""
+    parser.add_argument(
+        "--changed-files",
+        required=True,
+        help="Comma-separated list of changed files"
+    )
+
+
+def add_running_arg(parser: argparse.ArgumentParser) -> None:
+    """Add --running argument to parser."""
+    parser.add_argument(
+        "--running",
+        default="[]",
+        help="JSON array of currently running workflow keys"
+    )
+
+
+def parse_changed_files(changed_files_str: str) -> list[str]:
+    """Parse comma-separated changed files string into list."""
+    return [f.strip() for f in changed_files_str.split(",") if f.strip()]
+
+
+def parse_running_workflows(running_str: str) -> tuple[list[str], str | None]:
+    """Parse JSON array of running workflows.
+
+    Returns (workflows, error_message). On success error is None.
+    """
+    try:
+        return json.loads(running_str), None
+    except json.JSONDecodeError:
+        return [], f"Error: Invalid JSON for --running: {running_str}"
+
+
+def load_graph_or_exit(graph_path: str) -> tuple[dict[str, Any] | None, str | None]:
+    """Load graph from path, returning (graph, error).
+
+    On success returns (graph, None). On failure returns (None, error_message).
+    """
+    graph, error = load_graph_with_error(graph_path)
+    if graph is None:
+        return None, error
+    return graph, None
+
+
 def load_graph_with_error(graph_path: str) -> tuple[dict[str, Any] | None, str]:
     """Load dependency graph, returning (graph, error_message).
 

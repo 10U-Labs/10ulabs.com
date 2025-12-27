@@ -6,12 +6,12 @@ for computing root workflows, getting running workflows, canceling workflows,
 and dispatching descendant workflows.
 
 Usage:
-    python3 src/workflowctl/workflowctl.py compute-root-workflows <changed_files>
+    python3 src/workflowctl/workflowctl.py compute-root-workflows --changed-files x,y
     python3 src/workflowctl/workflowctl.py get-running-workflows --repo owner/repo
-    python3 src/workflowctl/workflowctl.py cancel-workflows --repo owner/repo --merge-roots '["x"]'
-    python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows --workflow bootstrap --repo owner/repo
+    python3 src/workflowctl/workflowctl.py cancel-workflows --repo o/r --changed-files x
+    python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows --workflow x
     python3 src/workflowctl/workflowctl.py get-changed-files --base SHA --head SHA
-    python3 src/workflowctl/workflowctl.py dispatch-root-workflows --repo owner/repo --roots ROOTS
+    python3 src/workflowctl/workflowctl.py dispatch-root-workflows --repo o/r --changed-files x
 """
 import sys
 

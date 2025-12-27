@@ -7,8 +7,8 @@ and invalidate_cloudfront logic based on inputs, commit messages, and changed fi
 Usage:
     python3 src/workflowctl/workflowctl.py dispatch-root-workflows \
         --repo owner/repo \
-        --roots "bootstrap\\nwww_shared" \
-        --changed "file1.py" \
+        --changed-files "file1.py,file2.py" \
+        --running '["www_shared"]' \
         --trigger-descendants \
         --invalidate-cloudfront
 
@@ -23,11 +23,15 @@ import os
 import re
 import sys
 
+from compute_roots import compute_merge_roots, load_graph_and_compute_roots
 from utils import (
+    add_changed_files_arg,
+    add_running_arg,
     dispatch_gh_workflow,
     file_matches_pattern,
     get_all_descendants,
-    load_graph_with_error,
+    parse_changed_files,
+    parse_running_workflows,
 )
 
 
@@ -41,16 +45,8 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="GitHub repository (owner/repo)"
     )
-    parser.add_argument(
-        "--roots",
-        required=True,
-        help="Newline-separated list of root workflow keys"
-    )
-    parser.add_argument(
-        "--changed",
-        default="",
-        help="Newline-separated list of changed files"
-    )
+    add_changed_files_arg(parser)
+    add_running_arg(parser)
     parser.add_argument(
         "--commit-message",
         default=os.environ.get("COMMIT_MESSAGE", ""),
@@ -199,18 +195,23 @@ def dispatch_workflow(
 def main() -> int:
     """Main entry point."""
     args = parse_args()
+    changed_files = parse_changed_files(args.changed_files)
 
-    # Parse roots
-    roots = [r.strip() for r in args.roots.split("\n") if r.strip()]
+    graph, roots, error = load_graph_and_compute_roots(args.graph, changed_files)
+    if error or graph is None:
+        print(error, file=sys.stderr)
+        return 1
+
+    running_workflows, error = parse_running_workflows(args.running)
+    if error:
+        print(error, file=sys.stderr)
+        return 1
+
+    if running_workflows:
+        roots = compute_merge_roots(running_workflows, roots, graph)
 
     if not roots:
         return 0
-
-    # Parse changed files
-    changed_files = [f.strip() for f in args.changed.split("\n") if f.strip()]
-
-    # Load graph for descendant checking
-    graph, _ = load_graph_with_error(args.graph)
 
     # Determine if we should trigger descendants
     trigger = should_trigger_descendants(
