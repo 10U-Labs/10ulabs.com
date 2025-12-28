@@ -1,7 +1,7 @@
 {
   "api_shared_routing": {
     "depends_on": [
-      "www_shared"
+      "bootstrap"
     ],
     "name": "Ensuring API shared routing exists and is properly configured",
     "paths": [
@@ -214,7 +214,7 @@
   },
   "www_home": {
     "depends_on": [
-      "api_endpoint_v1_contact"
+      "www_shared"
     ],
     "name": "Ensuring www home page exists and is properly configured",
     "paths": [
@@ -225,7 +225,7 @@
   },
   "www_shared": {
     "depends_on": [
-      "bootstrap"
+      "api_endpoint_v1_contact"
     ],
     "name": "Ensuring www shared infrastructure exists and is properly configured",
     "paths": [

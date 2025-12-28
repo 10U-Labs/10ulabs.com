@@ -3,8 +3,6 @@
 ```
 bootstrap
     ↓
-www_shared
-    ↓
 api_shared_routing
     ↓
 api_operational_health
@@ -28,6 +26,8 @@ api_endpoint_v1_runners
 webhooks_github_jit_runner_requests
     ↓
 api_endpoint_v1_contact
+    ↓
+www_shared
     ↓
 www_home
     ↓
