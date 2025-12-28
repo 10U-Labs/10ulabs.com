@@ -68,6 +68,20 @@ data "terraform_remote_state" "ecs_runner" {
   }
 }
 
+data "terraform_remote_state" "runners" {
+  backend = "s3"
+
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "api/endpoints/runners/terraform.tfstate"
+    region = module.shared.aws_region
+  }
+
+  defaults = {
+    sqs_dlq_name = ""
+  }
+}
+
 data "aws_ssm_parameter" "github_pat" {
   name            = module.shared.ssm_github_pat_name
   with_decryption = true

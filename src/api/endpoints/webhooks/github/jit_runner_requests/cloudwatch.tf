@@ -87,4 +87,26 @@ resource "aws_cloudwatch_metric_alarm" "webhook_handler_errors" {
   })
 }
 
-# Note: job_queue_dlq_messages alarm removed - job_queue moved to /v1/runners endpoint
+resource "aws_cloudwatch_metric_alarm" "runners_dlq_messages" {
+  alarm_name          = "${local.resource_prefix}-runners-dlq-messages"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 0
+  datapoints_to_alarm = 1
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    QueueName = data.terraform_remote_state.runners.outputs.sqs_dlq_name
+  }
+
+  alarm_description = "Runners router DLQ has messages - runner requests are failing"
+  alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-runners-dlq-messages"
+  })
+}
