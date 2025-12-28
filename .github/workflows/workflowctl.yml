@@ -27,6 +27,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
       - id: detect-changes
+        if: github.event.inputs.force_testing != 'true'
         name: Detect workflowctl-related changes
         run: |
           echo "Checking for workflowctl-related file changes..."
@@ -50,10 +51,14 @@ jobs:
             fi
           done
           echo "workflowctl_changed=$WORKFLOWCTL_CHANGED" >> "$GITHUB_OUTPUT"
-      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Workflowctl testing required
         run: echo "Workflowctl-related files changed. Running tests..."
-      - if: steps.detect-changes.outputs.workflowctl_changed != 'true'
+      - if: >-
+          github.event.inputs.force_testing != 'true' &&
+          steps.detect-changes.outputs.workflowctl_changed != 'true'
         name: Workflowctl testing not required
         run: echo "No workflowctl-related files changed. Skipping tests."
       - if: >-
@@ -81,7 +86,9 @@ jobs:
             types-PyYAML==6.0.* \
             yamllint==1.35.*
           echo "Dependencies installed successfully"
-      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -93,39 +100,55 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/workflowctl.yml
-      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Linting JSON files
         run: jsonlint -q etc/workflow-dependencies.json
-      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pylint on source
         run: |
           python3 -m pylint lib/python/ src/workflowctl/ \
             --fail-on=C,R,W --fail-under=10.0
-      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:src/workflowctl python3 -m pylint \
             lib/python/ test/workflowctl/ \
             --fail-on=C,R,W --fail-under=10.0
-      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on source
         run: python3 -m mypy lib/python/ src/workflowctl/
-      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on tests
         run: |
           MYPYPATH=lib/python:src/workflowctl python3 -m mypy \
             lib/python/ test/workflowctl/
-      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ src/workflowctl/
-      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
-      - if: steps.detect-changes.outputs.workflowctl_changed == 'true'
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run unit tests
         run: |
           echo "Running unit tests..."
@@ -217,6 +240,10 @@ on:
       - 'test/claude/**'
   workflow_dispatch:
     inputs:
+      force_testing:
+        default: false
+        description: Force workflowctl testing to run
+        type: boolean
       github_hosted:
         default: false
         description: Use GitHub-hosted runners
