@@ -5,6 +5,7 @@ This document explains the test infrastructure, where to put common code, and wh
 ## Table of Contents
 
 - [Test Hierarchy](#test-hierarchy)
+- [Directory Scope](#directory-scope)
 - [Reusable Utilities in lib/python/](#reusable-utilities-in-libpython)
   - [test_fixtures/](#test_fixtures)
   - [terraform_config/](#terraform_config)
@@ -49,6 +50,25 @@ test/
 | Post-deployment integration | `test/.../post_deployment/integration/conftest.py` | Layer markers, AWS service clients |
 
 **Rule:** Put fixtures at the highest level where they apply. Don't duplicate.
+
+## Directory Scope
+
+Shared directories are for codebase-wide utilities, not module-specific code.
+
+| Directory | Scope | Example Contents |
+|-----------|-------|------------------|
+| `lib/python/` | Entire codebase | `boto_mocks/`, `terraform_config/`, `test_fixtures/aws.py` |
+| `test/` root | All tests | `conftest.py` (path setup), codebase-wide test utilities |
+| `test/<module>/` | Module-specific | `test/workflowctl/conftest.py`, inline `SAMPLE_GRAPH` constants |
+
+**Key principle:** If a fixture or utility is only used by one module's tests, keep it within that module's test directory. Don't pollute shared directories with module-specific code.
+
+Examples:
+- ✅ `lib/python/boto_mocks/` — Used by API, Lambda, and infrastructure tests across the codebase
+- ✅ `test/api/conftest.py` — Terraform utilities used by all API endpoint tests
+- ✅ `test/workflowctl/conftest.py` — Fixtures specific to workflowctl tests
+- ❌ `lib/python/test_fixtures/workflowctl.py` — Wrong: workflowctl-specific code in codebase-wide lib/
+- ❌ `test/workflowctl_fixtures.py` — Wrong: workflowctl-specific code at test/ root level
 
 ## Reusable Utilities in lib/python/
 
