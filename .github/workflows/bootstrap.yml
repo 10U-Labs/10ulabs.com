@@ -192,7 +192,8 @@ jobs:
           if [ "${{ github.event.inputs.trigger_descendants }}" = "true" ]; then
             FLAGS="$FLAGS --trigger-descendants"
           fi
-          if [ "${{ github.event.inputs.invalidate_cloudfront }}" = "true" ]; then
+          INV="${{ github.event.inputs.invalidate_cloudfront }}"
+          if [ "$INV" = "true" ]; then
             FLAGS="$FLAGS --invalidate-cloudfront"
           fi
           python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
