@@ -75,10 +75,8 @@ class TestMain:
                     result = dispatch_workflow.main()
         assert result == 1
 
-    def test_passes_trigger_descendants_when_workflow_accepts_it(
-        self, dispatch_workflow
-    ) -> None:
-        """Test that trigger_descendants=true is passed when workflow accepts it."""
+    def test_trigger_descendants_includes_flag(self, dispatch_workflow) -> None:
+        """Test that -f flag is included for trigger_descendants."""
         argv = ["prog", "--workflow", "test", "--repo", "o/r", "--trigger-descendants"]
         with patch.object(sys, "argv", argv):
             with patch("dispatch_workflow.workflow_file_exists", return_value=True):
@@ -88,6 +86,17 @@ class TestMain:
                         dispatch_workflow.main()
         extra_args = mock_dispatch.call_args[0][2]
         assert "-f" in extra_args
+
+    def test_trigger_descendants_includes_value(self, dispatch_workflow) -> None:
+        """Test that trigger_descendants=true value is included."""
+        argv = ["prog", "--workflow", "test", "--repo", "o/r", "--trigger-descendants"]
+        with patch.object(sys, "argv", argv):
+            with patch("dispatch_workflow.workflow_file_exists", return_value=True):
+                with patch("dispatch_workflow.workflow_accepts_input", return_value=True):
+                    with patch("dispatch_workflow.dispatch_gh_workflow") as mock_dispatch:
+                        mock_dispatch.return_value = True
+                        dispatch_workflow.main()
+        extra_args = mock_dispatch.call_args[0][2]
         assert "trigger_descendants=true" in extra_args
 
     def test_skips_trigger_descendants_when_workflow_does_not_accept_it(
@@ -104,10 +113,8 @@ class TestMain:
         extra_args = mock_dispatch.call_args[0][2]
         assert extra_args is None
 
-    def test_passes_invalidate_cloudfront_when_workflow_accepts_it(
-        self, dispatch_workflow
-    ) -> None:
-        """Test that invalidate_cloudfront=true is passed when workflow accepts it."""
+    def test_invalidate_cloudfront_includes_flag(self, dispatch_workflow) -> None:
+        """Test that -f flag is included for invalidate_cloudfront."""
         argv = ["prog", "--workflow", "test", "--repo", "o/r", "--invalidate-cloudfront"]
         with patch.object(sys, "argv", argv):
             with patch("dispatch_workflow.workflow_file_exists", return_value=True):
@@ -117,6 +124,17 @@ class TestMain:
                         dispatch_workflow.main()
         extra_args = mock_dispatch.call_args[0][2]
         assert "-f" in extra_args
+
+    def test_invalidate_cloudfront_includes_value(self, dispatch_workflow) -> None:
+        """Test that invalidate_cloudfront=true value is included."""
+        argv = ["prog", "--workflow", "test", "--repo", "o/r", "--invalidate-cloudfront"]
+        with patch.object(sys, "argv", argv):
+            with patch("dispatch_workflow.workflow_file_exists", return_value=True):
+                with patch("dispatch_workflow.workflow_accepts_input", return_value=True):
+                    with patch("dispatch_workflow.dispatch_gh_workflow") as mock_dispatch:
+                        mock_dispatch.return_value = True
+                        dispatch_workflow.main()
+        extra_args = mock_dispatch.call_args[0][2]
         assert "invalidate_cloudfront=true" in extra_args
 
     def test_skips_invalidate_cloudfront_when_workflow_does_not_accept_it(

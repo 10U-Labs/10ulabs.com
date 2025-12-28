@@ -70,22 +70,13 @@ jobs:
         with:
           python-version: '3.13'
       - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install dependencies
-        run: |
-          echo "Installing Python dependencies..."
-          python3 -m pip install --upgrade pip
-          python3 -m pip install \
-            boto3==1.35.* \
-            mypy==1.13.* \
-            pylint==3.3.* \
-            pytest==8.3.* \
-            pyyaml==6.0.* \
-            types-PyYAML==6.0.* \
-            yamllint==1.35.*
-          echo "Dependencies installed successfully"
+          contains(github.event.head_commit.message, '[github-hosted]')) &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Install yamllint
+        run: python3 -m pip install yamllint==1.35.*
       - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
@@ -106,6 +97,14 @@ jobs:
         name: Linting JSON files
         run: jsonlint -q etc/workflow-dependencies.json
       - if: >-
+          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')) &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Install pylint
+        run: python3 -m pip install pylint==3.3.*
+      - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pylint on source
@@ -117,9 +116,17 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pylint on tests
         run: |
-          PYTHONPATH=lib/python:src/workflowctl python3 -m pylint \
-            lib/python/ test/workflowctl/ \
+          PYTHONPATH=lib/python python3 -m pylint \
+            lib/python/ test/ \
             --fail-on=C,R,W --fail-under=10.0
+      - if: >-
+          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')) &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Install mypy
+        run: python3 -m pip install mypy==1.13.* types-PyYAML==6.0.*
       - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
@@ -129,9 +136,15 @@ jobs:
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on tests
-        run: |
-          MYPYPATH=lib/python:src/workflowctl python3 -m mypy \
-            lib/python/ test/workflowctl/
+        run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/
+      - if: >-
+          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')) &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Install jscpd
+        run: npm install -g jscpd
       - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
@@ -147,15 +160,21 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
       - if: >-
+          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')) &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Install pytest dependencies
+        run: python3 -m pip install pytest==8.3.* pyyaml==6.0.*
+      - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run unit tests
         run: |
-          echo "Running unit tests..."
           python3 -m pytest \
             test/workflowctl/ \
             --verbose --pythonwarnings=error
-          echo "Unit tests completed"
       - env:
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}
         id: files
