@@ -1,27 +1,7 @@
 """Lambda handler for the diagnostics echo API endpoint."""
-import json
 from typing import Any, Dict
 
-
-def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a JSON response with standard headers."""
-    return {
-        'statusCode': status_code,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type,x-api-key,x-test-mode'
-        },
-        'body': json.dumps(body)
-    }
-
-
-def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Parse the request body from the Lambda event."""
-    body = event.get('body', {})
-    result = json.loads(body) if isinstance(body, str) else body
-    return result
+from lambda_http import json_response, parse_body
 
 
 def handle_echo_post(event: Dict[str, Any]) -> Dict[str, Any]:

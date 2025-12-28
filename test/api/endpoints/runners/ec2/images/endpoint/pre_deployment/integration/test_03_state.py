@@ -13,7 +13,7 @@ from terraform_drift.test_helpers import create_orphaned_resource_tests
 pytestmark = pytest.mark.layer(3)
 
 IMAGE_FOR_EC2_RUNNERS_SRC = (
-    Path(__file__).parents[7] / "src" / "api" / "endpoints" / "runners" / "ec2" / "images"
+    Path(__file__).parents[9] / "src" / "api" / "endpoints" / "runners" / "ec2" / "images"
 )
 
 TestOrphanedResources = create_orphaned_resource_tests(

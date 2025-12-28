@@ -8,8 +8,8 @@ import pytest
 from repo_utils import REPO_ROOT
 from test_fixtures import get_shared_config, get_tfvars_values, get_endpoint_local_values
 
-ECS_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
-API_BACKEND_SRC = REPO_ROOT / "src" / "api" / "backend"
+ECS_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ecs"
+API_BACKEND_SRC = REPO_ROOT / "src" / "api" / "shared" / "routing"
 
 # Use shared AWS fixtures (provides ecs_client, dynamodb_client, etc.)
 pytest_plugins = ['test_fixtures.aws']

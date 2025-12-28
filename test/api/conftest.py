@@ -22,9 +22,9 @@ from test_fixtures.terraform import terraform_init, terraform_output
 pytest_plugins = ['test_fixtures.aws']
 
 # Common directory constants
-API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
+API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "shared" / "routing"
 API_SHARED_ROUTING_DIR = REPO_ROOT / "src" / "api" / "shared" / "routing"
-ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
+ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ecs"
 
 
 def get_runners_outputs(directory: Path) -> Dict[str, str]:

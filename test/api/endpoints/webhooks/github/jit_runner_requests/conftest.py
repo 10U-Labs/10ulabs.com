@@ -11,7 +11,7 @@ from test_fixtures import get_shared_config, get_tfvars_values, get_endpoint_loc
 RUNNERS_SRC_PATH = (
     REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
 )
-ECS_RUNNER_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
+ECS_RUNNER_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ecs"
 
 # Use shared AWS fixtures (provides ssm_client, etc.)
 pytest_plugins = ['test_fixtures.aws']

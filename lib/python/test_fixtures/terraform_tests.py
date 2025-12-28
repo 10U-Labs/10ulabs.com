@@ -12,7 +12,7 @@ from naming_conventions import validate_name
 from repo_utils import REPO_ROOT
 from terraform_config import extract_iam_role_names, extract_lambda_function_names
 
-API_BACKEND_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "backend" / "outputs.tf"
+API_BACKEND_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "shared" / "routing" / "outputs.tf"
 
 
 def get_api_shared_routing_outputs() -> set:
@@ -374,7 +374,10 @@ def create_lambda_terraform_tests(
             """Verify correct source file path."""
             with open(lambda_file, encoding="utf-8") as f:
                 content = f.read()
-            assert 'source_file = "${path.module}/lambda/handler.py"' in content
+            # Support both single-file and multi-source archive formats
+            simple_format = 'source_file = "${path.module}/lambda/handler.py"'
+            multi_source_format = 'content  = file("${path.module}/lambda/handler.py")'
+            assert simple_format in content or multi_source_format in content
 
         def test_handler_py_file_exists(self):
             """Verify handler.py file exists."""

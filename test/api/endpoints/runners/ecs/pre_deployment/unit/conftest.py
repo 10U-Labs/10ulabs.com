@@ -1,4 +1,5 @@
 """Shared fixtures and utilities for ECS runner pre-deployment unit tests."""
+import sys
 from types import ModuleType
 from typing import Any, Dict
 from unittest.mock import MagicMock, Mock, patch
@@ -13,6 +14,9 @@ from lambda_response import (
 from urllib_mocks import create_mock_urllib_response
 from module_utils import load_module_from_path, reset_module_state
 from event_factories import create_ecs_runner_post_event
+from aws_clients import reset_clients
+from github_runner_api import reset_github_token_cache
+from infra_validation import set_dependencies_status
 
 from ...conftest import ECS_RUNNER_SRC
 
@@ -25,8 +29,15 @@ __all__ = [
 
 
 def load_handler_module() -> ModuleType:
-    """Load the ECS runner handler module dynamically."""
-    handler_path = ECS_RUNNER_SRC / "lambda" / "handler.py"
+    """Load the ECS runner handler module with its dependencies."""
+    lambda_dir = ECS_RUNNER_SRC / "lambda"
+    lambda_dir_str = str(lambda_dir)
+
+    # Add lambda dir to path for local imports (clients, responses, etc.)
+    if lambda_dir_str not in sys.path:
+        sys.path.insert(0, lambda_dir_str)
+
+    handler_path = lambda_dir / "handler.py"
     return load_module_from_path("ecs_runner_handler", handler_path)
 
 
@@ -50,9 +61,12 @@ def ecs_runner_handler(config: Dict[str, str]) -> Any:
     with patch.dict('os.environ', env_vars):
         module = load_handler_module()
         reset_module_state(module)
-        # Set dependencies as valid for unit tests (skips infrastructure validation)
-        module.set_dependencies_status(checked=True, valid=True, errors=[])
+        set_dependencies_status(checked=True, valid=True, errors=[])
+        reset_clients()
+        reset_github_token_cache()
         yield module
+        reset_clients()
+        reset_github_token_cache()
 
 
 @pytest.fixture

@@ -25,7 +25,7 @@ import pytest
 pytest_plugins = ['pytest_layers']
 
 
-API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
+API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "shared" / "routing"
 API_SHARED_DOCKER_REPOSITORY_DIR = REPO_ROOT / "src" / "api" / "shared" / "docker_repository"
 API_SHARED_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "shared" / "networking"
 EC2_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"

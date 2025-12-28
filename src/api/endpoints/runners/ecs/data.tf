@@ -39,8 +39,36 @@ data "archive_file" "lambda" {
     filename = "handler.py"
   }
   source {
+    content  = file("${path.module}/lambda/clients.py")
+    filename = "clients.py"
+  }
+  source {
+    content  = file("${path.module}/lambda/responses.py")
+    filename = "responses.py"
+  }
+  source {
+    content  = file("${path.module}/lambda/validation.py")
+    filename = "validation.py"
+  }
+  source {
+    content  = file("${path.module}/lambda/github.py")
+    filename = "github.py"
+  }
+  source {
+    content  = file("${path.module}/lambda/fargate_ops.py")
+    filename = "fargate_ops.py"
+  }
+  source {
     content  = file("${path.module}/../../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../../lib/python/lambda_http/__init__.py")
+    filename = "lambda_http.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../../lib/python/github_runner_api/__init__.py")
+    filename = "github_runner_api.py"
   }
   source {
     content  = file("${path.module}/../../../../../etc/runners.json")

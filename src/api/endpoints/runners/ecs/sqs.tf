@@ -14,7 +14,7 @@ resource "aws_sqs_queue" "dlq" {
 
 resource "aws_sqs_queue" "main" {
   name                       = module.shared.lambda_handler_names.ecs_runner
-  visibility_timeout_seconds = 180 # 3 minutes (Lambda timeout * 6)
+  visibility_timeout_seconds = 180   # 3 minutes (Lambda timeout * 6)
   message_retention_seconds  = 14400 # 4 hours
 
   redrive_policy = jsonencode({

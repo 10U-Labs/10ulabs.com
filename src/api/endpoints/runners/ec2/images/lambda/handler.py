@@ -8,6 +8,8 @@ from typing import Any, Dict
 import boto3
 from botocore.exceptions import ClientError
 
+from lambda_http import error_response, parse_body, success_response
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -52,43 +54,6 @@ def get_ssm_client():
 def set_client(name, client):
     """Set a client for testing purposes."""
     _clients[name] = client
-
-
-def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a JSON API Gateway response."""
-    return {
-        'statusCode': status_code,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type,x-api-key,x-test-mode'
-        },
-        'body': json.dumps(body)
-    }
-
-
-def success_response(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a success response with appropriate status code."""
-    status_code = 200 if data.get('success', True) else 500
-    return json_response(status_code, data)
-
-
-def error_response(
-    status_code: int, error: str, details: str | None = None
-) -> Dict[str, Any]:
-    """Create an error response."""
-    body: Dict[str, Any] = {'success': False, 'error': error}
-    if details:
-        body['details'] = details
-    return json_response(status_code, body)
-
-
-def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Parse the request body from an API Gateway event."""
-    body = event.get('body', {})
-    result = json.loads(body) if isinstance(body, str) else body
-    return result
 
 
 _github_token_cache: Dict[str, str] = {'value': ''}

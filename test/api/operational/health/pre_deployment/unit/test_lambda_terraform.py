@@ -4,7 +4,7 @@ from test_fixtures.terraform_tests import create_lambda_terraform_tests
 
 
 LAMBDA_FILE = HEALTH_SRC / "lambda.tf"
-API_BACKEND_SRC = REPO_ROOT / "src" / "api" / "backend"
+API_BACKEND_SRC = REPO_ROOT / "src" / "api" / "shared" / "routing"
 
 TestLambdaTerraform = create_lambda_terraform_tests(
     lambda_file=LAMBDA_FILE,

@@ -1,8 +1,6 @@
 """Pytest fixtures for post-deployment tests."""
 import os
-import sys
 import time
-from pathlib import Path
 
 import boto3
 from botocore.exceptions import ClientError

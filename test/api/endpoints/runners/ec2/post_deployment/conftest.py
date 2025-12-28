@@ -19,7 +19,7 @@ def api_url_fixture(shared_config):
 
 def get_api_key_parameter_name():
     """Get the SSM parameter name for the API key from tfvars."""
-    tfvars_path = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
+    tfvars_path = REPO_ROOT / "src" / "api" / "shared" / "routing" / "terraform.tfvars"
     tfvars = parse_tfvars(tfvars_path)
     return tfvars.get('ssm_parameter_name_for_api_key', '/api/key')
 

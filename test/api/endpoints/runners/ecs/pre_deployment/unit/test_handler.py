@@ -1,11 +1,13 @@
 """Unit tests for ECS runner Lambda handler."""
 import json
+import sys
 import urllib.error
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
 
+from repo_utils import REPO_ROOT
 from .conftest import (
     parse_response_body,
     assert_response_status,
@@ -16,6 +18,13 @@ from .conftest import (
     create_mock_ecs_with_run_task,
     create_mock_ecs_for_status,
 )
+
+# Add ECS lambda dir to path for importing split modules
+ECS_LAMBDA_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ecs" / "lambda"
+if str(ECS_LAMBDA_DIR) not in sys.path:
+    sys.path.insert(0, str(ECS_LAMBDA_DIR))
+
+import fargate_ops
 
 
 def test_lambda_handler_ecs_runner_post_with_missing_job_id_returns_400(
@@ -83,9 +92,7 @@ def _invoke_post_handler_and_get_run_task_kwargs(
 ):
     """Set up mocks, invoke POST handler, and return run_task call kwargs."""
     mock_ecs = _setup_post_handler_mocks(mock_boto_client)
-    with patch.object(
-        ecs_runner_handler, 'get_runner_registration_token', return_value='test-token'
-    ):
+    with patch('fargate_ops.get_runner_registration_token', return_value='test-token'):
         event = ecs_runner_post_event_factory(job_id=12346, github_repo='test-org/test-repo')
         ecs_runner_handler.lambda_handler(event, lambda_context)
     return mock_ecs.run_task.call_args[1]
@@ -143,16 +150,16 @@ def test_lambda_handler_ecs_runner_unsupported_method_returns_404(
     assert_response_status(response, 404)
 
 
-def _setup_ecs_status_mocks(handler):
+def _setup_ecs_status_mocks():
     """Set up common mocks for ECS status tests."""
     mock_ecs = create_mock_ecs_for_status()
-    return patch.object(handler, 'get_ecs_client', return_value=mock_ecs)
+    return patch('fargate_ops.get_ecs_client', return_value=mock_ecs)
 
 
 def test_get_ecs_runner_status_returns_success_with_no_tasks(ecs_runner_handler):
     """Test get ecs runner status returns success with no tasks."""
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        with _setup_ecs_status_mocks(ecs_runner_handler):
+        with _setup_ecs_status_mocks():
             result = ecs_runner_handler.get_ecs_runner_status()
             assert result['success'] is True
 
@@ -160,7 +167,7 @@ def test_get_ecs_runner_status_returns_success_with_no_tasks(ecs_runner_handler)
 def test_get_ecs_runner_status_returns_zero_running_tasks_when_empty(ecs_runner_handler):
     """Test get ecs runner status returns zero running tasks when empty."""
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        with _setup_ecs_status_mocks(ecs_runner_handler):
+        with _setup_ecs_status_mocks():
             result = ecs_runner_handler.get_ecs_runner_status()
             assert result['running_tasks'] == 0
 
@@ -168,7 +175,7 @@ def test_get_ecs_runner_status_returns_zero_running_tasks_when_empty(ecs_runner_
 def test_get_ecs_runner_status_returns_empty_task_list_when_no_tasks(ecs_runner_handler):
     """Test get ecs runner status returns empty task list when no tasks."""
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        with _setup_ecs_status_mocks(ecs_runner_handler):
+        with _setup_ecs_status_mocks():
             result = ecs_runner_handler.get_ecs_runner_status()
             assert result['tasks'] == []
 
@@ -176,7 +183,7 @@ def test_get_ecs_runner_status_returns_empty_task_list_when_no_tasks(ecs_runner_
 def test_get_ecs_runner_status_returns_cluster_name(ecs_runner_handler):
     """Test get ecs runner status returns cluster name."""
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        with _setup_ecs_status_mocks(ecs_runner_handler):
+        with _setup_ecs_status_mocks():
             result = ecs_runner_handler.get_ecs_runner_status()
             assert result['cluster'] == 'test-cluster'
 
@@ -184,13 +191,12 @@ def test_get_ecs_runner_status_returns_cluster_name(ecs_runner_handler):
 def test_get_ecs_runner_status_handles_client_error(ecs_runner_handler):
     """Test get ecs runner status handles client error."""
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        with patch.object(ecs_runner_handler, 'get_ecs_client') as mock_get_client:
-            mock_ecs = MagicMock()
-            mock_ecs.list_tasks.side_effect = ClientError(
-                {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
-                'list_tasks'
-            )
-            mock_get_client.return_value = mock_ecs
+        mock_ecs = MagicMock()
+        mock_ecs.list_tasks.side_effect = ClientError(
+            {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
+            'list_tasks'
+        )
+        with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
             result = ecs_runner_handler.get_ecs_runner_status()
             assert result['success'] is False
 
@@ -288,7 +294,7 @@ def test_launch_fargate_runner_no_github_token(mock_boto_client, ecs_runner_hand
         'CONTAINER_NAME': 'runner'
     }
     with patch.dict('os.environ', env):
-        with patch.object(ecs_runner_handler, 'get_github_token', return_value=''):
+        with patch('fargate_ops.get_github_token', return_value=''):
             result = ecs_runner_handler.launch_fargate_runner(123, ['test'], 'test/repo')
             assert result['success'] is False
 
@@ -325,9 +331,7 @@ def test_launch_fargate_runner_ecs_run_task_success(mock_boto_client, ecs_runner
     """Test launch fargate runner ecs run task success."""
     _, env = _setup_fargate_runner_mocks(mock_boto_client)
     with patch.dict('os.environ', env):
-        with patch.object(
-            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
-        ):
+        with patch('fargate_ops.get_runner_registration_token', return_value='test-reg-token'):
             result = ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
             assert result['success'] is True
 
@@ -336,9 +340,7 @@ def _get_capacity_provider_from_run_task(mock_boto_client, ecs_runner_handler, u
     """Launch runner and return capacity provider from run_task call."""
     mock_ecs, env = _setup_fargate_runner_mocks(mock_boto_client, use_spot=use_spot)
     with patch.dict('os.environ', env, clear=False):
-        with patch.object(
-            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
-        ):
+        with patch('fargate_ops.get_runner_registration_token', return_value='test-reg-token'):
             ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
     return mock_ecs.run_task.call_args[1]['capacityProviderStrategy'][0]['capacityProvider']
 
@@ -449,7 +451,7 @@ def test_get_fargate_task_status_returns_status_from_describe_tasks(ecs_runner_h
             'startedAt': '2024-01-01T00:00:00Z'
         }]
     }
-    with patch.object(ecs_runner_handler, 'get_ecs_client', return_value=mock_ecs):
+    with patch.object(fargate_ops, 'get_ecs_client', return_value=mock_ecs):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.get_fargate_task_status('test-cluster', task_arn)
         assert result['status'] == 'RUNNING'
@@ -459,7 +461,7 @@ def test_get_fargate_task_status_returns_unknown_on_empty_response(ecs_runner_ha
     """Test get fargate task status returns unknown on empty response."""
     mock_ecs = MagicMock()
     mock_ecs.describe_tasks.return_value = {'tasks': []}
-    with patch.object(ecs_runner_handler, 'get_ecs_client', return_value=mock_ecs):
+    with patch.object(fargate_ops, 'get_ecs_client', return_value=mock_ecs):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.get_fargate_task_status('test-cluster', task_arn)
         assert result['status'] == 'UNKNOWN'
@@ -480,7 +482,7 @@ def test_is_fargate_spot_interruption_returns_false_for_other_reasons(ecs_runner
 def test_wait_for_fargate_task_provisioned_returns_success_when_running(ecs_runner_handler):
     """Test wait for fargate task provisioned returns success when running."""
     task_status = {'status': 'RUNNING', 'stopped_reason': '', 'started_at': '2024-01-01'}
-    with patch.object(ecs_runner_handler, 'get_fargate_task_status', return_value=task_status):
+    with patch.object(fargate_ops, 'get_fargate_task_status', return_value=task_status):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['success'] is True
@@ -489,7 +491,7 @@ def test_wait_for_fargate_task_provisioned_returns_success_when_running(ecs_runn
 def test_wait_for_fargate_task_provisioned_not_spot_interrupted_when_running(ecs_runner_handler):
     """Test wait for fargate task provisioned is not spot interrupted when running."""
     task_status = {'status': 'RUNNING', 'stopped_reason': '', 'started_at': '2024-01-01'}
-    with patch.object(ecs_runner_handler, 'get_fargate_task_status', return_value=task_status):
+    with patch.object(fargate_ops, 'get_fargate_task_status', return_value=task_status):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['spot_interrupted'] is False
@@ -502,7 +504,7 @@ def test_wait_for_fargate_task_provisioned_returns_failure_on_spot_interruption(
         'stopped_reason': 'Your Spot Task was interrupted.',
         'started_at': None
     }
-    with patch.object(ecs_runner_handler, 'get_fargate_task_status', return_value=task_status):
+    with patch.object(fargate_ops, 'get_fargate_task_status', return_value=task_status):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['success'] is False
@@ -515,7 +517,7 @@ def test_wait_for_fargate_task_provisioned_sets_spot_interrupted_flag(ecs_runner
         'stopped_reason': 'Your Spot Task was interrupted.',
         'started_at': None
     }
-    with patch.object(ecs_runner_handler, 'get_fargate_task_status', return_value=task_status):
+    with patch.object(fargate_ops, 'get_fargate_task_status', return_value=task_status):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['spot_interrupted'] is True
@@ -536,7 +538,7 @@ def test_store_workflow_runner_stores_state_field(ecs_runner_handler):
     """Test store workflow runner stores state field."""
     mock_dynamodb = MagicMock()
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
+        with patch('fargate_ops.get_dynamodb_client', return_value=mock_dynamodb):
             runner = _create_test_workflow_runner(ecs_runner_handler, state='requested')
             ecs_runner_handler.store_workflow_runner(runner)
             item = mock_dynamodb.put_item.call_args[1]['Item']
@@ -547,7 +549,7 @@ def test_store_workflow_runner_defaults_state_to_requested(ecs_runner_handler):
     """Test store workflow runner defaults state to requested."""
     mock_dynamodb = MagicMock()
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
+        with patch('fargate_ops.get_dynamodb_client', return_value=mock_dynamodb):
             runner = _create_test_workflow_runner(ecs_runner_handler)
             ecs_runner_handler.store_workflow_runner(runner)
             item = mock_dynamodb.put_item.call_args[1]['Item']
@@ -574,7 +576,7 @@ def test_store_workflow_runner_returns_true_on_success(ecs_runner_handler):
     """Test store workflow runner returns true on success."""
     mock_dynamodb = MagicMock()
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
+        with patch('fargate_ops.get_dynamodb_client', return_value=mock_dynamodb):
             runner = _create_test_workflow_runner(ecs_runner_handler)
             result = ecs_runner_handler.store_workflow_runner(runner)
             assert result is True
@@ -587,7 +589,7 @@ def test_store_workflow_runner_returns_false_on_client_error(ecs_runner_handler)
         {'Error': {'Code': 'TestError', 'Message': 'Test error'}}, 'put_item'
     )
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
+        with patch('fargate_ops.get_dynamodb_client', return_value=mock_dynamodb):
             runner = _create_test_workflow_runner(ecs_runner_handler)
             result = ecs_runner_handler.store_workflow_runner(runner)
             assert result is False
@@ -610,9 +612,7 @@ def _launch_runner_and_get_github_token_env(mock_boto_client, ecs_runner_handler
     )
     env = create_fargate_runner_env()
     with patch.dict('os.environ', env):
-        with patch.object(
-            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
-        ):
+        with patch('fargate_ops.get_runner_registration_token', return_value='test-reg-token'):
             ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
     return _get_github_token_from_run_task(mock_ecs)
 
@@ -651,8 +651,6 @@ def test_launch_fargate_runner_does_not_pass_empty_github_token(
     )
     env = create_fargate_runner_env()
     with patch.dict('os.environ', env):
-        with patch.object(
-            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
-        ):
+        with patch('fargate_ops.get_runner_registration_token', return_value='test-reg-token'):
             result = ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
             assert result['success'] is False

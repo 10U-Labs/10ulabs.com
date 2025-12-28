@@ -1,5 +1,6 @@
 """Pytest fixtures for EC2 runner pre-deployment unit tests."""
 import json
+import sys
 from typing import Any, Dict
 from types import ModuleType
 from unittest.mock import MagicMock, Mock, patch
@@ -14,8 +15,15 @@ from lambda_response import (
 )
 from boto_mocks import create_client_error, create_multi_client_mock, setup_mock_ec2_vpc_responses
 from module_utils import load_module_from_path, reset_module_state
+from aws_clients import reset_clients
+from github_runner_api import reset_github_token_cache
 
 from ...conftest import EC2_RUNNER_SRC
+
+# Add EC2 lambda dir to path for importing split modules
+EC2_LAMBDA_DIR = EC2_RUNNER_SRC / "lambda"
+if str(EC2_LAMBDA_DIR) not in sys.path:
+    sys.path.insert(0, str(EC2_LAMBDA_DIR))
 
 # Re-export for backward compatibility
 __all__ = [
@@ -36,6 +44,7 @@ def load_handler_module() -> ModuleType:
 @pytest.fixture
 def ec2_runner_handler(config: Dict[str, str]) -> Any:
     """Provide an EC2 runner handler module with mocked environment."""
+    ec2_instance_types = config.get('ec2_instance_types', ['t3.micro', 't3.small'])
     env_vars = {
         'AWS_REGION': config['aws_region'],
         'EC2_AMI_PURPOSE_TAG': 'Purpose',
@@ -44,7 +53,7 @@ def ec2_runner_handler(config: Dict[str, str]) -> Any:
         'EC2_MANAGED_BY_TAG': 'api-ec2-runner',
         'GITHUB_REPO': config['github_repo'],
         'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
-        'EC2_INSTANCE_TYPES': ','.join(config['ec2_instance_types']),
+        'EC2_INSTANCE_TYPES': ','.join(ec2_instance_types),
         'API_DOMAIN': config['api_fqdn'],
         'SUBNETS': 'subnet-test1,subnet-test2',
         'SECURITY_GROUPS': 'sg-test',
@@ -56,7 +65,11 @@ def ec2_runner_handler(config: Dict[str, str]) -> Any:
     with patch.dict('os.environ', env_vars):
         module = load_handler_module()
         reset_module_state(module)
+        reset_clients()
+        reset_github_token_cache()
         yield module
+        reset_clients()
+        reset_github_token_cache()
 
 
 @pytest.fixture
