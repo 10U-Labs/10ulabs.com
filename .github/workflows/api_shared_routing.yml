@@ -94,16 +94,16 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pylint
         run: python3 -m pip install pylint
-      - name: Run pylint on source code
+      - name: Run pylint on source
         run: |
-          for file in src/api/shared/routing/lambdas/*.py; do
-            python3 -m pylint "$file" \
-              --fail-on=C,R,W \
-              --fail-under=10.0
-          done
-      - name: Run pylint on test code
+          python3 -m pylint \
+            lib/python/ src/api/shared/routing/lambdas/*.py \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - name: Run pylint on tests
         run: |
-          PYTHONPATH=lib/python python3 -m pylint test/api/shared/routing/ \
+          PYTHONPATH=lib/python python3 -m pylint \
+            lib/python/ test/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - if: >-
@@ -112,13 +112,11 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install mypy
         run: python3 -m pip install mypy boto3-stubs types-requests types-PyYAML
-      - name: Run mypy on source code
+      - name: Run mypy on source
         run: |
-          for file in src/api/shared/routing/lambdas/*.py; do
-            python3 -m mypy "$file"
-          done
-      - name: Run mypy on test code
-        run: MYPYPATH=lib/python python3 -m mypy test/api/shared/routing/
+          python3 -m mypy lib/python/ src/api/shared/routing/lambdas/*.py
+      - name: Run mypy on tests
+        run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
