@@ -3,7 +3,25 @@
 import json
 from unittest.mock import MagicMock, patch
 
-from test_fixtures.workflowctl import MINIMAL_GRAPH
+
+# Sample dependency graph for testing
+SAMPLE_GRAPH = {
+    "bootstrap": {
+        "name": "Ensuring bootstrap infrastructure exists and is properly configured",
+        "depends_on": [],
+        "paths": ["src/bootstrap/**"],
+    },
+    "www_shared": {
+        "name": "WWW Shared",
+        "depends_on": ["bootstrap"],
+        "paths": ["src/www/shared/**"],
+    },
+    "api_shared_routing": {
+        "name": "Ensuring API backend exists and is properly configured",
+        "depends_on": ["www_shared"],
+        "paths": ["src/api/backend/**"],
+    },
+}
 
 
 class TestBuildNameToKeyMap:
@@ -11,7 +29,7 @@ class TestBuildNameToKeyMap:
 
     def test_builds_correct_mapping(self, utils) -> None:
         """Test that name-to-key mapping is built correctly."""
-        name_to_key = utils.build_name_to_key_map(MINIMAL_GRAPH)
+        name_to_key = utils.build_name_to_key_map(SAMPLE_GRAPH)
         expected = {
             "Ensuring bootstrap infrastructure exists and is properly configured": "bootstrap",
             "WWW Shared": "www_shared",

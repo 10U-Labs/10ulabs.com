@@ -15,11 +15,6 @@ from typing import Any, Dict
 import pytest
 
 from repo_utils import REPO_ROOT
-from test_fixtures.workflowctl import (
-    DIAMOND_GRAPH,
-    EXTENDED_LINEAR_GRAPH,
-    MINIMAL_GRAPH,
-)
 
 
 # Standard dependency graph for testing workflowctl functionality.
@@ -143,37 +138,3 @@ def sample_graph() -> Dict[str, Dict[str, Any]]:
     Each workflow has name, depends_on, and paths fields.
     """
     return SAMPLE_GRAPH.copy()
-
-
-@pytest.fixture
-def extended_linear_graph() -> Dict[str, Dict[str, Any]]:
-    """Provide an extended linear dependency graph for testing.
-
-    This graph represents a deep linear chain:
-    bootstrap -> www_shared -> api -> health -> ecr -> ecs_images -> ecs_runner -> contact
-
-    Use this for testing deep ancestor/descendant traversal algorithms.
-    """
-    return EXTENDED_LINEAR_GRAPH.copy()
-
-
-@pytest.fixture
-def diamond_graph() -> Dict[str, Dict[str, Any]]:
-    """Provide a diamond-shaped dependency graph for testing.
-
-    This graph has multiple paths to www_app:
-    bootstrap -> www_shared -> www_app
-    bootstrap -> api_shared -> www_app
-
-    Use this for testing multi-parent dependency scenarios.
-    """
-    return DIAMOND_GRAPH.copy()
-
-
-@pytest.fixture
-def minimal_graph() -> Dict[str, Dict[str, Any]]:
-    """Provide a minimal dependency graph for basic testing.
-
-    This graph is a simple 3-node linear chain for utility tests.
-    """
-    return MINIMAL_GRAPH.copy()
