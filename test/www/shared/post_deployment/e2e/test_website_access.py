@@ -49,14 +49,14 @@ def test_apex_redirect_preserves_path(config):
     assert '/some/path' in location
 
 
-def test_rack_designer_redirects_to_trailing_slash(website_url):
-    """Test that rack-designer redirects to trailing slash."""
+def test_rack_designer_serves_content_directly(website_url):
+    """Test that rack-designer serves content without redirect."""
     response = requests.get(f"{website_url}/rack-designer", timeout=30, allow_redirects=False)
-    assert response.status_code == 301
+    assert response.status_code == 200
 
 
-def test_rack_designer_redirect_location_has_trailing_slash(website_url):
-    """Test that rack-designer redirect has trailing slash."""
+def test_rack_designer_returns_html_content(website_url):
+    """Test that rack-designer returns HTML content."""
     response = requests.get(f"{website_url}/rack-designer", timeout=30, allow_redirects=False)
-    location = response.headers.get('Location', '')
-    assert location.endswith('/rack-designer/')
+    content_type = response.headers.get('Content-Type', '')
+    assert 'text/html' in content_type
