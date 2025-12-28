@@ -1,11 +1,50 @@
-"""Pytest configuration for workflowctl tests."""
+"""Pytest configuration for workflowctl tests.
+
+This module provides fixtures for testing workflowctl scripts. It uses dynamic
+module loading because src/workflowctl/*.py are standalone scripts without
+__init__.py (they're executed directly, not imported as packages).
+
+Note: workflowctl tests mock subprocess calls, not AWS SDK calls. For AWS-related
+tests, use pytest_plugins = ['test_fixtures.unit'] or ['test_fixtures.aws'].
+"""
 
 import importlib.util
 import sys
+from typing import Any, Dict
 
 import pytest
 
 from repo_utils import REPO_ROOT
+
+
+# Standard dependency graph for testing workflowctl functionality.
+# This graph represents a linear dependency chain with paths for file matching.
+# Use this fixture when testing functions that need a realistic workflow graph.
+SAMPLE_GRAPH: Dict[str, Dict[str, Any]] = {
+    "bootstrap": {
+        "name": "Bootstrap",
+        "depends_on": [],
+        "paths": [".github/workflows/bootstrap.yml", "src/bootstrap/**"],
+    },
+    "www_shared": {
+        "name": "WWW Shared",
+        "depends_on": ["bootstrap"],
+        "paths": [".github/workflows/www_shared.yml", "src/www/shared/**"],
+    },
+    "api_shared_routing": {
+        "name": "API Shared Routing",
+        "depends_on": ["www_shared"],
+        "paths": [".github/workflows/api_shared_routing.yml", "src/api/shared/routing/**"],
+    },
+    "api_operational_health": {
+        "name": "API Operational Health",
+        "depends_on": ["api_shared_routing"],
+        "paths": [
+            ".github/workflows/api_operational_health.yml",
+            "src/api/operational/health/**",
+        ],
+    },
+}
 
 WORKFLOWCTL_DIR = REPO_ROOT / "src" / "workflowctl"
 sys.path.insert(0, str(WORKFLOWCTL_DIR))
@@ -87,3 +126,15 @@ def compute_roots():
 def dispatch_workflow():
     """Provide access to the dispatch_workflow module."""
     return _dispatch_workflow_module
+
+
+@pytest.fixture
+def sample_graph() -> Dict[str, Dict[str, Any]]:
+    """Provide a standard dependency graph for testing.
+
+    This graph represents a linear chain:
+    bootstrap -> www_shared -> api_shared_routing -> api_operational_health
+
+    Each workflow has name, depends_on, and paths fields.
+    """
+    return SAMPLE_GRAPH.copy()

@@ -16,7 +16,7 @@
     "depends_on": [
       "api_endpoint_v1_runners_ec2"
     ],
-    "name": "Deploying API Shared Docker Repository Infrastructure",
+    "name": "Ensuring API shared Docker repository exists and is properly configured",
     "paths": [
       ".github/workflows/api_shared_docker_repository.yml",
       "src/api/shared/docker_repository/**",
@@ -49,7 +49,7 @@
     "depends_on": [
       "webhooks_github_jit_runner_requests"
     ],
-    "name": "Ensuring /v1/contact API endpoint exists and is properly configured",
+    "name": "Ensuring the /v1/contact API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_contact.yml",
       "src/api/endpoints/contact/**",
@@ -87,7 +87,7 @@
     "depends_on": [
       "api_operational_health"
     ],
-    "name": "Ensuring /diagnostics/echo API endpoint exists and is properly configured",
+    "name": "Ensuring the /diagnostics/echo API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_operational_diagnostics.yml",
       "src/api/operational/diagnostics/**",
@@ -110,7 +110,7 @@
     "depends_on": [
       "api_shared_networking"
     ],
-    "name": "Ensuring /v1/runners/ec2/images API endpoint exists and is properly configured",
+    "name": "Ensuring the /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2_images.yml",
       "src/api/endpoints/image_for_runners/ec2s/*.tf",
@@ -189,7 +189,7 @@
     "depends_on": [
       "api_shared_routing"
     ],
-    "name": "Ensuring operational health endpoint exists and is properly configured",
+    "name": "Ensuring the /health API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_operational_health.yml",
       "src/api/operational/health/**",
@@ -198,7 +198,7 @@
   },
   "rtl_verilator": {
     "depends_on": [],
-    "name": "Verifying RTL design with Verilator",
+    "name": "RTL Verilator",
     "paths": [
       ".github/workflows/rtl_verilator.yml",
       "src/rtl/**"

@@ -173,7 +173,15 @@ jobs:
         name: Run unit tests
         run: |
           python3 -m pytest \
-            test/workflowctl/ \
+            test/workflowctl/pre_deployment/unit/ \
+            --verbose --pythonwarnings=error
+      - if: >-
+          github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true'
+        name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/workflowctl/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
       - env:
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}

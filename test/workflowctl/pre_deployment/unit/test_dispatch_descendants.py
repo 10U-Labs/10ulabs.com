@@ -2,7 +2,25 @@
 
 import sys
 from datetime import datetime, timezone
+from typing import Any, Tuple
 from unittest.mock import patch, MagicMock
+
+
+def _run_main_with_unmet_deps(dispatch_descendants: Any) -> Tuple[int, MagicMock]:
+    """Run main() with unmet dependencies and return (result, mock_dispatch)."""
+    argv = ["prog", "--workflow", "www_shared", "--repo", "o/r"]
+    mock_dispatch = MagicMock()
+    with patch.object(sys, "argv", argv):
+        with patch(
+            "dispatch_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
+        ):
+            with patch(
+                "dispatch_descendants.all_dependencies_met",
+                return_value=(False, ["api_shared"])
+            ):
+                with patch("dispatch_descendants.dispatch_workflow", mock_dispatch):
+                    result = dispatch_descendants.main()
+    return result, mock_dispatch
 
 
 SAMPLE_GRAPH = {
@@ -384,32 +402,10 @@ class TestMain:
         self, dispatch_descendants
     ) -> None:
         """Test that dispatch is skipped when dependencies are not met."""
-        argv = ["prog", "--workflow", "www_shared", "--repo", "o/r"]
-        with patch.object(sys, "argv", argv):
-            with patch(
-                "dispatch_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
-            ):
-                with patch(
-                    "dispatch_descendants.all_dependencies_met",
-                    return_value=(False, ["api_shared"])
-                ):
-                    with patch(
-                        "dispatch_descendants.dispatch_workflow"
-                    ) as mock_dispatch:
-                        dispatch_descendants.main()
+        _, mock_dispatch = _run_main_with_unmet_deps(dispatch_descendants)
         mock_dispatch.assert_not_called()
 
     def test_returns_0_when_dependencies_not_met(self, dispatch_descendants) -> None:
         """Test returns 0 when skipping due to unmet dependencies."""
-        argv = ["prog", "--workflow", "www_shared", "--repo", "o/r"]
-        with patch.object(sys, "argv", argv):
-            with patch(
-                "dispatch_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
-            ):
-                with patch(
-                    "dispatch_descendants.all_dependencies_met",
-                    return_value=(False, ["api_shared"])
-                ):
-                    with patch("dispatch_descendants.dispatch_workflow"):
-                        result = dispatch_descendants.main()
+        result, _ = _run_main_with_unmet_deps(dispatch_descendants)
         assert result == 0

@@ -242,5 +242,3 @@ def test_health_handler_uses_shared_module():
     """Verify health handler function name comes from shared module."""
     content = _read_apigateway_tf()
     assert 'module.shared.lambda_handler_names.health' in content
-
-
