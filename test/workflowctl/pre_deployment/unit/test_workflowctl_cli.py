@@ -25,7 +25,8 @@ class TestWorkflowctlCLI:
         original = workflowctl.COMMANDS["compute-root-workflows"]
         try:
             workflowctl.COMMANDS["compute-root-workflows"] = (original[0], mock_main)
-            with patch.object(sys, "argv", ["workflowctl.py", "compute-root-workflows", "file.txt"]):
+            argv = ["workflowctl.py", "compute-root-workflows", "file.txt"]
+            with patch.object(sys, "argv", argv):
                 workflowctl.main()
             mock_main.assert_called_once()
         finally:

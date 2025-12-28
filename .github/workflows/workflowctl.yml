@@ -148,7 +148,8 @@ jobs:
       - id: running
         name: Get running workflows
         run: |
-          OUTPUT=$(python3 src/workflowctl/workflowctl.py get-running-workflows \
+          CMD="python3 src/workflowctl/workflowctl.py get-running-workflows"
+          OUTPUT=$($CMD \
             --repo ${{ github.repository }} \
             --graph etc/workflow-dependencies.json)
           # Extract workflows array as JSON
@@ -166,7 +167,8 @@ jobs:
             CHANGED="${{ steps.files.outputs.changed }}"
             RUNNING='${{ steps.running.outputs.workflows }}'
             # Get root workflows, merge with running
-            OUTPUT=$(python3 src/workflowctl/workflowctl.py compute-root-workflows \
+            CMD="python3 src/workflowctl/workflowctl.py compute-root-workflows"
+            OUTPUT=$($CMD \
               --changed-files "$CHANGED" \
               --graph "$GRAPH" \
               --running "$RUNNING")
