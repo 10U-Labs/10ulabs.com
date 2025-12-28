@@ -295,3 +295,20 @@ class TestDispatchGhWorkflow:
             utils.dispatch_gh_workflow("workflow.yml", "owner/repo", ["-f", "key=value"])
         cmd = mock_run.call_args[0][0]
         assert "key=value" in cmd
+
+
+class TestFileMatchesPatternDoublestar:
+    """Tests for ** pattern matching via directory prefix."""
+
+    def test_matches_nested_path_with_doublestar(self, utils) -> None:
+        """Test ** pattern matches deeply nested paths via startswith."""
+        # This tests line 174 - the dir_prefix startswith fallback
+        result = utils.file_matches_pattern(
+            "src/api/v1/handlers/endpoint.py", "src/api/**"
+        )
+        assert result is True
+
+    def test_doublestar_requires_prefix_match(self, utils) -> None:
+        """Test ** pattern requires correct directory prefix."""
+        result = utils.file_matches_pattern("srcapi/file.py", "src/api/**")
+        assert result is False

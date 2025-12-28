@@ -1,5 +1,6 @@
 """Unit tests for get_changed_files.py."""
 import json
+import sys
 
 from unittest.mock import MagicMock, patch
 
@@ -307,3 +308,79 @@ class TestFilterFilesByCommits:
         ]
         result = get_changed_files.filter_files_by_commits(json.dumps(commits))
         assert result == set()
+
+
+class TestParseArgs:
+    """Tests for parse_args function."""
+
+    def test_parses_base_argument(self, get_changed_files) -> None:
+        """Test parsing required --base argument."""
+        argv = ["prog", "--base", "abc123", "--head", "def456"]
+        with patch.object(sys, "argv", argv):
+            args = get_changed_files.parse_args()
+        assert args.base == "abc123"
+
+    def test_parses_head_argument(self, get_changed_files) -> None:
+        """Test parsing required --head argument."""
+        argv = ["prog", "--base", "abc123", "--head", "def456"]
+        with patch.object(sys, "argv", argv):
+            args = get_changed_files.parse_args()
+        assert args.head == "def456"
+
+    def test_parses_commits_json(self, get_changed_files) -> None:
+        """Test parsing optional --commits JSON argument."""
+        commits = '[{"message": "test"}]'
+        argv = ["prog", "--base", "a", "--head", "b", "--commits", commits]
+        with patch.object(sys, "argv", argv):
+            args = get_changed_files.parse_args()
+        assert args.commits == commits
+
+    def test_commits_defaults_to_empty(self, get_changed_files) -> None:
+        """Test --commits defaults to empty string."""
+        argv = ["prog", "--base", "a", "--head", "b"]
+        with patch.object(sys, "argv", argv):
+            args = get_changed_files.parse_args()
+        assert args.commits == ""
+
+
+class TestMain:
+    """Tests for main function."""
+
+    def test_returns_0_on_success(self, get_changed_files, capsys) -> None:
+        """Test main returns 0 on success."""
+        argv = ["prog", "--base", "a", "--head", "b"]
+        with patch.object(sys, "argv", argv):
+            with patch.object(
+                get_changed_files, "get_changed_files", return_value=["file.py"]
+            ):
+                result = get_changed_files.main()
+        # Consume stdout for cleanup
+        capsys.readouterr()
+        assert result == 0
+
+    def test_outputs_json_with_files(self, get_changed_files, capsys) -> None:
+        """Test main outputs JSON with files key."""
+        argv = ["prog", "--base", "a", "--head", "b"]
+        with patch.object(sys, "argv", argv):
+            with patch.object(
+                get_changed_files, "get_changed_files", return_value=["file.py"]
+            ):
+                get_changed_files.main()
+        out = capsys.readouterr().out
+        assert '"files"' in out
+
+    def test_filters_files_when_commits_provided(self, get_changed_files, capsys) -> None:
+        """Test main filters files based on commits."""
+        commits = '[{"id": "abc", "message": "[skip ci] test"}]'
+        argv = ["prog", "--base", "a", "--head", "b", "--commits", commits]
+        with patch.object(sys, "argv", argv):
+            with patch.object(
+                get_changed_files, "get_changed_files", return_value=["a.py", "b.py"]
+            ):
+                with patch.object(
+                    get_changed_files, "filter_files_by_commits", return_value={"a.py"}
+                ):
+                    get_changed_files.main()
+        out = capsys.readouterr().out
+        # a.py should be filtered out, b.py should remain
+        assert "b.py" in out

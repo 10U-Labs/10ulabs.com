@@ -1,4 +1,5 @@
 """Unit tests for cancel.py."""
+import sys
 
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
@@ -145,3 +146,51 @@ class TestCancelRun:
         )
         result = cancel.cancel_run("owner/repo", 123)
         assert result is False
+
+
+class TestGetCancelableRuns:
+    """Tests for get_cancelable_runs function."""
+
+    @patch("cancel.get_workflow_runs")
+    def test_extracts_required_fields(
+        self, mock_get_runs: MagicMock, cancel
+    ) -> None:
+        """Test that only id, name, run_number are extracted."""
+        mock_get_runs.return_value = [
+            {"id": 1, "name": "Test", "run_number": 42, "extra": "ignored", "status": "in_progress"}
+        ]
+        result = cancel.get_cancelable_runs("owner/repo", "in_progress")
+        assert result == [{"id": 1, "name": "Test", "run_number": 42}]
+
+    @patch("cancel.get_workflow_runs")
+    def test_handles_empty_runs(self, mock_get_runs: MagicMock, cancel) -> None:
+        """Test empty runs returns empty list."""
+        mock_get_runs.return_value = []
+        result = cancel.get_cancelable_runs("owner/repo", "in_progress")
+        assert result == []
+
+
+class TestMainEdgeCases:
+    """Edge case tests for main function."""
+
+    def test_returns_0_when_no_merge_roots(self, cancel) -> None:
+        """Test returns 0 when compute_merge_roots returns empty."""
+        argv = [
+            "prog", "--running", '["api"]',
+            "--graph", "g.json", "--repo", "o/r", "--changed-files", ""
+        ]
+        with patch.object(sys, "argv", argv):
+            with patch(
+                "cancel.parse_running_workflows",
+                return_value=(["api"], None)
+            ):
+                with patch(
+                    "cancel.load_graph_and_compute_roots",
+                    return_value=({"bootstrap": {}}, ["bootstrap"], None)
+                ):
+                    with patch(
+                        "cancel.compute_merge_roots",
+                        return_value=[]
+                    ):
+                        result = cancel.main()
+        assert result == 0

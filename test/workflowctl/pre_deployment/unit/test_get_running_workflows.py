@@ -1,6 +1,7 @@
 """Unit tests for get_running.py and utils.py."""
 
 import json
+import sys
 from unittest.mock import MagicMock, patch
 
 
@@ -102,3 +103,38 @@ class TestGetWorkflowRuns:
         )
         result = utils.get_workflow_runs("owner/repo", "in_progress")
         assert result == []
+
+
+def _run_main_with_exclude_flag(get_running, capsys):
+    """Helper to run main with --exclude-workflowctl flag."""
+    graph = {
+        "bootstrap": {"name": "Bootstrap", "depends_on": []},
+        "workflowctl": {"name": "Workflow Controller", "depends_on": []},
+    }
+    runs = [
+        {"name": "Bootstrap", "status": "in_progress"},
+        {"name": "Workflow Controller", "status": "in_progress"},
+    ]
+    argv = [
+        "prog", "--graph", "g.json", "--repo", "o/r", "--exclude-workflowctl"
+    ]
+    with patch.object(sys, "argv", argv):
+        with patch("get_running.load_graph_with_error", return_value=(graph, "")):
+            with patch("get_running.get_workflow_runs", return_value=runs):
+                get_running.main()
+    out = capsys.readouterr().out
+    return json.loads(out)
+
+
+class TestMainExcludeWorkflowctl:
+    """Tests for workflowctl exclusion in main."""
+
+    def test_excludes_workflowctl_when_flag_set(self, get_running, capsys) -> None:
+        """Test workflowctl workflow is excluded when flag is set."""
+        result = _run_main_with_exclude_flag(get_running, capsys)
+        assert "workflowctl" not in result["workflows"]
+
+    def test_includes_bootstrap_when_exclude_flag_set(self, get_running, capsys) -> None:
+        """Test bootstrap workflow is still included when exclude flag is set."""
+        result = _run_main_with_exclude_flag(get_running, capsys)
+        assert "bootstrap" in result["workflows"]

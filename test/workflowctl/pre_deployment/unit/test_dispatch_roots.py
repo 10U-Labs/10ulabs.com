@@ -1,4 +1,5 @@
 """Unit tests for dispatch_roots.py."""
+import sys
 
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -190,3 +191,82 @@ class TestDispatchWorkflow:
         mock_dispatch.return_value = False
         result = dispatch_roots.dispatch_workflow("test", "owner/repo", False, False)
         assert result is False
+
+    @patch("dispatch_roots.workflow_accepts_input")
+    @patch("dispatch_roots.dispatch_gh_workflow")
+    def test_includes_invalidate_cloudfront_flag(
+        self,
+        mock_dispatch: MagicMock,
+        mock_accepts: MagicMock,
+        dispatch_roots
+    ) -> None:
+        """Test dispatch includes invalidate_cloudfront flag when True and accepted."""
+        mock_accepts.return_value = True
+        mock_dispatch.return_value = True
+        dispatch_roots.dispatch_workflow("test", "owner/repo", False, True)
+        call_args = mock_dispatch.call_args
+        assert call_args[0][2] == ["-f", "invalidate_cloudfront=true"]
+
+
+class TestShouldInvalidateCloudfront:
+    """Tests for should_invalidate_cloudfront function."""
+
+    def test_returns_true_when_flag_is_true(self, dispatch_roots) -> None:
+        """Test returns True when invalidate_flag is True."""
+        result = dispatch_roots.should_invalidate_cloudfront(True, "any message")
+        assert result is True
+
+    def test_returns_true_when_commit_has_tag(self, dispatch_roots) -> None:
+        """Test returns True when commit has [invalidate cloudfront] tag."""
+        result = dispatch_roots.should_invalidate_cloudfront(
+            False, "fix: update [invalidate cloudfront]"
+        )
+        assert result is True
+
+    def test_returns_true_case_insensitive(self, dispatch_roots) -> None:
+        """Test tag matching is case insensitive."""
+        result = dispatch_roots.should_invalidate_cloudfront(
+            False, "[INVALIDATE CLOUDFRONT]"
+        )
+        assert result is True
+
+    def test_returns_false_when_no_conditions_met(self, dispatch_roots) -> None:
+        """Test returns False when no conditions are met."""
+        result = dispatch_roots.should_invalidate_cloudfront(False, "normal commit")
+        assert result is False
+
+
+class TestMainWithRunningWorkflows:
+    """Tests for main with running workflows."""
+
+    def test_calls_compute_merge_roots_with_running(self, dispatch_roots) -> None:
+        """Test compute_merge_roots is called when running_workflows provided."""
+        graph: dict = {"a": {"depends_on": []}, "b": {"depends_on": []}}
+        argv = [
+            "prog", "--running", '["b"]',
+            "--graph", "g.json", "--repo", "o/r",
+            "--changed-files", "", "--commit-message", ""
+        ]
+        with patch.object(sys, "argv", argv):
+            with patch(
+                "dispatch_roots.load_graph_and_compute_roots",
+                return_value=(graph, ["a"], None)
+            ):
+                with patch(
+                    "dispatch_roots.parse_running_workflows",
+                    return_value=(["b"], None)
+                ):
+                    with patch(
+                        "dispatch_roots.compute_merge_roots",
+                        return_value=["a"]
+                    ) as mock_merge:
+                        with patch(
+                            "dispatch_roots.workflow_file_exists",
+                            return_value=True
+                        ):
+                            with patch(
+                                "dispatch_roots.dispatch_workflow",
+                                return_value=True
+                            ):
+                                dispatch_roots.main()
+        mock_merge.assert_called_once_with(["b"], ["a"], graph)

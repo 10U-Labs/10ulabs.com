@@ -868,3 +868,32 @@ class TestComputeMergeRoots:
         result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
         # www_shared is ancestor of api, unknown is filtered
         assert result == ["www_shared"]
+
+    def test_returns_empty_when_both_inputs_empty(self, compute_roots) -> None:
+        """Test returns [] when running and new_roots are both empty."""
+        result = compute_roots.compute_merge_roots([], [], SAMPLE_GRAPH)
+        assert result == []
+
+    def test_returns_empty_when_workflows_not_in_graph(self, compute_roots) -> None:
+        """Test returns [] when workflows don't exist in graph."""
+        result = compute_roots.compute_merge_roots(
+            ["nonexistent"], ["also_nonexistent"], SAMPLE_GRAPH
+        )
+        assert result == []
+
+
+class TestTopologicalSortLevelsCycle:
+    """Tests for cycle detection in topological_sort_levels."""
+
+    def test_handles_cyclic_graph(self, compute_roots) -> None:
+        """Test gracefully handles cyclic dependencies."""
+        cyclic_graph = {
+            "a": {"depends_on": ["c"]},
+            "b": {"depends_on": ["a"]},
+            "c": {"depends_on": ["b"]},  # cycle: a -> b -> c -> a
+        }
+        result = compute_roots.topological_sort_levels({"a", "b", "c"}, cyclic_graph)
+        # Should return partial result (empty), not infinite loop
+        assert isinstance(result, list)
+
+

@@ -409,3 +409,24 @@ class TestMain:
         """Test returns 0 when skipping due to unmet dependencies."""
         result, _ = _run_main_with_unmet_deps(dispatch_descendants)
         assert result == 0
+
+    def test_returns_1_when_dispatch_fails_with_met_deps(
+        self, dispatch_descendants
+    ) -> None:
+        """Test returns 1 when dispatch fails for workflow with all deps met."""
+        argv = ["prog", "--workflow", "www_shared", "--repo", "o/r"]
+        with patch.object(sys, "argv", argv):
+            with patch(
+                "dispatch_descendants.load_dependency_graph",
+                return_value=SAMPLE_GRAPH
+            ):
+                with patch(
+                    "dispatch_descendants.all_dependencies_met",
+                    return_value=(True, [])
+                ):
+                    with patch(
+                        "dispatch_descendants.dispatch_workflow",
+                        return_value=False
+                    ):
+                        result = dispatch_descendants.main()
+        assert result == 1
