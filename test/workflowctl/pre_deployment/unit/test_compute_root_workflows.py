@@ -1,6 +1,7 @@
 """Unit tests for compute_roots.py."""
 
 import io
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -895,5 +896,19 @@ class TestTopologicalSortLevelsCycle:
         result = compute_roots.topological_sort_levels({"a", "b", "c"}, cyclic_graph)
         # Should return partial result (empty), not infinite loop
         assert isinstance(result, list)
+
+
+class TestMainLevelsIndexed:
+    """Tests for main with --levels --indexed."""
+
+    def test_outputs_indexed_format(self, compute_roots, capsys) -> None:
+        """Test main with --levels --indexed outputs indexed format."""
+        graph = {"a": {"depends_on": [], "paths": ["a.py"]}}
+        argv = ["prog", "--changed-files", "a.py", "--levels", "--indexed"]
+        with patch.object(sys, "argv", argv):
+            with patch("compute_roots.load_dependency_graph", return_value=graph):
+                compute_roots.main()
+        out = capsys.readouterr().out
+        assert '"idx":' in out
 
 

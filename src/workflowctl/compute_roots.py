@@ -314,10 +314,8 @@ def compute_merge_roots(
         return []
 
     # Combine all workflows that need to be covered
+    # Note: affected is guaranteed non-empty since new_roots is non-empty at this point
     affected = set(running_workflows) | set(new_roots)
-
-    if not affected:
-        return []
 
     # Filter to only workflows that exist in the graph
     affected = {wf for wf in affected if wf in graph}

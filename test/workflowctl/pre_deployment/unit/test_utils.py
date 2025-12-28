@@ -300,12 +300,12 @@ class TestDispatchGhWorkflow:
 class TestFileMatchesPatternDoublestar:
     """Tests for ** pattern matching via directory prefix."""
 
-    def test_matches_nested_path_with_doublestar(self, utils) -> None:
-        """Test ** pattern matches deeply nested paths via startswith."""
-        # This tests line 174 - the dir_prefix startswith fallback
-        result = utils.file_matches_pattern(
-            "src/api/v1/handlers/endpoint.py", "src/api/**"
-        )
+    def test_matches_via_startswith_when_fnmatch_fails(self, utils) -> None:
+        """Test ** pattern matches via startswith when fnmatch fails."""
+        # Pattern src/api/**/*.py with file src/api/v1/test (no .py)
+        # fnmatch(src/api/v1/test, src/api/*/*.py) = False
+        # but startswith(src/api/) = True, so line 174 is hit
+        result = utils.file_matches_pattern("src/api/v1/test", "src/api/**/*.py")
         assert result is True
 
     def test_doublestar_requires_prefix_match(self, utils) -> None:
