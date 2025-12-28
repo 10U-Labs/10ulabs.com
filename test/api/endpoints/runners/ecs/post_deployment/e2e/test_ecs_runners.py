@@ -42,12 +42,9 @@ def wait_for_task_running(ecs_client, cluster_name, task_arn, timeout=120):
     return False
 
 
-def stop_task_safely(ecs_client, cluster_name, task_arn):
-    """Stop an ECS task, ignoring errors."""
-    try:
-        ecs_client.stop_task(cluster=cluster_name, task=task_arn)
-    except ClientError:
-        pass
+def stop_task(ecs_client, cluster_name, task_arn):
+    """Stop an ECS task."""
+    ecs_client.stop_task(cluster=cluster_name, task=task_arn)
 
 
 @pytest.fixture(name="test_fargate_task", scope="module")
@@ -85,7 +82,7 @@ def test_fargate_task_fixture(test_context, ecr_image_count, ecs_context, config
         "cluster_name": ecs_context["cluster_name"],
         "run_id": test_context["github_run_id"]
     }
-    stop_task_safely(ecs_context["client"], ecs_context["cluster_name"], task_arn)
+    stop_task(ecs_context["client"], ecs_context["cluster_name"], task_arn)
 
 
 def test_ecs_runner_post_returns_response(test_fargate_task, stable_ecr_image_exists):

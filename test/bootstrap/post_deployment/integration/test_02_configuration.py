@@ -295,11 +295,8 @@ def test_cloudtrail_s3_bucket_versioning_disabled(s3_client, cloudtrail_client):
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
-    try:
-        versioning = s3_client.get_bucket_versioning(Bucket=bucket_name)
-        assert versioning.get('Status') != 'Enabled'
-    except KeyError:
-        pass
+    versioning = s3_client.get_bucket_versioning(Bucket=bucket_name)
+    assert versioning.get('Status') != 'Enabled'
 
 
 def test_cloudtrail_has_cloudwatch_logs_configured(cloudtrail_client):
@@ -344,11 +341,8 @@ def test_access_log_bucket_has_encryption(s3_client, access_log_bucket):
 def test_access_log_bucket_versioning_disabled(s3_client, access_log_bucket):
     """Test that access log bucket versioning is disabled."""
     if access_log_bucket:
-        try:
-            versioning = s3_client.get_bucket_versioning(Bucket=access_log_bucket)
-            assert versioning.get('Status') != 'Enabled'
-        except KeyError:
-            pass
+        versioning = s3_client.get_bucket_versioning(Bucket=access_log_bucket)
+        assert versioning.get('Status') != 'Enabled'
 
 
 def test_access_log_bucket_has_standard_ia_transition_at_30_days(s3_client, access_log_bucket):
@@ -373,12 +367,9 @@ def test_cloudtrail_bucket_enforces_ssl(s3_client, cloudtrail_client):
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
-    try:
-        policy = s3_client.get_bucket_policy(Bucket=bucket_name)
-        policy_doc = policy['Policy']
-        assert 'aws:SecureTransport' in policy_doc or 'ssl' in policy_doc.lower()
-    except s3_client.exceptions.NoSuchBucketPolicy:
-        pass
+    policy = s3_client.get_bucket_policy(Bucket=bucket_name)
+    policy_doc = policy['Policy']
+    assert 'aws:SecureTransport' in policy_doc or 'ssl' in policy_doc.lower()
 
 
 # =============================================================================

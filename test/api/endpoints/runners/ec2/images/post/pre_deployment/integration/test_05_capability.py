@@ -33,13 +33,10 @@ def test_can_create_tag_on_ami(ec2_client, source_ami_id):
 
         assert actual_value == test_tag_value
     finally:
-        try:
-            ec2_client.delete_tags(
-                Resources=[source_ami_id],
-                Tags=[{"Key": test_tag_key}],
-            )
-        except ClientError:
-            pass
+        ec2_client.delete_tags(
+            Resources=[source_ami_id],
+            Tags=[{"Key": test_tag_key}],
+        )
 
 
 def test_can_update_ssm_parameter_with_ami_id(ssm_client, source_ami_id):
@@ -66,7 +63,4 @@ def test_can_update_ssm_parameter_with_ami_id(ssm_client, source_ami_id):
 
         assert parameter_value == source_ami_id
     finally:
-        try:
-            ssm_client.delete_parameter(Name=test_parameter_name)
-        except ClientError:
-            pass
+        ssm_client.delete_parameter(Name=test_parameter_name)

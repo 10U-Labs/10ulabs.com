@@ -73,10 +73,7 @@ def test_can_put_object_to_state_bucket(s3_client, state_bucket_name, test_objec
             pytest.fail(f"No permission to call s3:PutObject on '{state_bucket_name}'")
         raise
     finally:
-        try:
-            s3_client.delete_object(Bucket=state_bucket_name, Key=test_object_key)
-        except ClientError:
-            pass
+        s3_client.delete_object(Bucket=state_bucket_name, Key=test_object_key)
 
 
 def test_can_delete_object_from_state_bucket(s3_client, state_bucket_name, test_object_key):
@@ -95,10 +92,7 @@ def test_can_delete_object_from_state_bucket(s3_client, state_bucket_name, test_
             pytest.fail(f"No permission to call s3:DeleteObject on '{state_bucket_name}'")
         raise
     finally:
-        try:
-            s3_client.delete_object(Bucket=state_bucket_name, Key=test_object_key)
-        except ClientError:
-            pass
+        s3_client.delete_object(Bucket=state_bucket_name, Key=test_object_key)
 
 
 def test_can_create_route53_record(route53_client, hosted_zone_id, test_record_name):
@@ -126,23 +120,20 @@ def test_can_create_route53_record(route53_client, hosted_zone_id, test_record_n
             pytest.fail(f"No permission to create records in zone '{hosted_zone_id}'")
         raise
     finally:
-        try:
-            route53_client.change_resource_record_sets(
-                HostedZoneId=hosted_zone_id,
-                ChangeBatch={
-                    "Changes": [{
-                        "Action": "DELETE",
-                        "ResourceRecordSet": {
-                            "Name": test_record_name,
-                            "Type": "TXT",
-                            "TTL": 60,
-                            "ResourceRecords": [{"Value": '"pre-deployment-test-v1"'}]
-                        }
-                    }]
-                }
-            )
-        except ClientError:
-            pass
+        route53_client.change_resource_record_sets(
+            HostedZoneId=hosted_zone_id,
+            ChangeBatch={
+                "Changes": [{
+                    "Action": "DELETE",
+                    "ResourceRecordSet": {
+                        "Name": test_record_name,
+                        "Type": "TXT",
+                        "TTL": 60,
+                        "ResourceRecords": [{"Value": '"pre-deployment-test-v1"'}]
+                    }
+                }]
+            }
+        )
 
 
 def test_can_upsert_route53_record(route53_client, hosted_zone_id, test_record_name):
@@ -185,23 +176,20 @@ def test_can_upsert_route53_record(route53_client, hosted_zone_id, test_record_n
             pytest.fail(f"No permission to modify records in zone '{hosted_zone_id}'")
         raise
     finally:
-        try:
-            route53_client.change_resource_record_sets(
-                HostedZoneId=hosted_zone_id,
-                ChangeBatch={
-                    "Changes": [{
-                        "Action": "DELETE",
-                        "ResourceRecordSet": {
-                            "Name": test_record_name,
-                            "Type": "TXT",
-                            "TTL": 60,
-                            "ResourceRecords": [{"Value": '"pre-deployment-test-v2"'}]
-                        }
-                    }]
-                }
-            )
-        except ClientError:
-            pass
+        route53_client.change_resource_record_sets(
+            HostedZoneId=hosted_zone_id,
+            ChangeBatch={
+                "Changes": [{
+                    "Action": "DELETE",
+                    "ResourceRecordSet": {
+                        "Name": test_record_name,
+                        "Type": "TXT",
+                        "TTL": 60,
+                        "ResourceRecords": [{"Value": '"pre-deployment-test-v2"'}]
+                    }
+                }]
+            }
+        )
 
 
 def test_can_delete_route53_record(route53_client, hosted_zone_id, test_record_name):

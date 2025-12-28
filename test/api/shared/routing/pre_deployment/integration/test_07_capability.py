@@ -65,10 +65,7 @@ class TestCentralLogsBucketCapabilities:
                 )
             raise
         finally:
-            try:
-                s3_client.delete_object(Bucket=central_logs_bucket_name, Key=test_key)
-            except ClientError:
-                pass
+            s3_client.delete_object(Bucket=central_logs_bucket_name, Key=test_key)
 
     def test_can_delete_from_central_logs_bucket(
         self, s3_client, central_logs_bucket_name
@@ -92,7 +89,4 @@ class TestCentralLogsBucketCapabilities:
                 )
             raise
         finally:
-            try:
-                s3_client.delete_object(Bucket=central_logs_bucket_name, Key=test_key)
-            except ClientError:
-                pass
+            s3_client.delete_object(Bucket=central_logs_bucket_name, Key=test_key)

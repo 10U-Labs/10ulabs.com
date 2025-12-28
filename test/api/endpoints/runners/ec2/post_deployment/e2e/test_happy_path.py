@@ -84,12 +84,9 @@ def wait_for_instance_running(ec2_client, instance_id, timeout=120):
     return False
 
 
-def terminate_instance_safely(ec2_client, instance_id):
-    """Terminate an EC2 instance, ignoring errors if already terminated."""
-    try:
-        ec2_client.terminate_instances(InstanceIds=[instance_id])
-    except ClientError:
-        pass
+def terminate_instance(ec2_client, instance_id):
+    """Terminate an EC2 instance."""
+    ec2_client.terminate_instances(InstanceIds=[instance_id])
 
 
 def query_workflow_runners_by_run_id(dynamodb_client, table_name, run_id):
@@ -130,7 +127,7 @@ def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client
         "instance_id": instance_id, "job_id": job_id,
         "github_repo": test_context["github_repo"], "run_id": test_context["github_run_id"]
     }
-    terminate_instance_safely(ec2_client, instance_id)
+    terminate_instance(ec2_client, instance_id)
 
 
 def test_ec2_runner_post_returns_response(test_ec2_runner_instance, latest_ami_exists):
