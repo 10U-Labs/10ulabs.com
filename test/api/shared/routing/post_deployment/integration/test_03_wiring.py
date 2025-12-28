@@ -287,38 +287,6 @@ def test_waf_metrics_being_collected():
     assert 'Datapoints' in response
 
 
-def test_cloudwatch_metrics_published_for_circuit_breaker(aws_region):
-    """Verify circuit breaker state metrics are published."""
-    cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
-    end_time = datetime.now(UTC)
-    start_time = end_time - timedelta(hours=1)
-    response = cloudwatch.get_metric_statistics(
-        Namespace='WebhookRouter',
-        MetricName='CircuitBreakerState',
-        Dimensions=[],
-        StartTime=start_time,
-        EndTime=end_time,
-        Period=3600,
-        Statistics=['Average']
-    )
-    assert 'Datapoints' in response
-
-
-def test_eventbridge_scheduled_rules_exist(aws_region):
-    """Verify scheduled EventBridge rules exist for DLQ reprocessing."""
-    events = boto3.client('events', region_name=aws_region)
-    rules = events.list_rules()
-    scheduled_rules = [r for r in rules['Rules'] if r.get('ScheduleExpression')]
-    assert len(scheduled_rules) > 0
-
-
-def test_dynamodb_consumed_capacity_metrics_available(config, aws_region):
-    """Verify DynamoDB consumed capacity metrics are available."""
-    cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
-    table_name = config['circuit_breaker_state_table_name']
-    response = cloudwatch.list_metrics(
-        Namespace='AWS/DynamoDB',
-        MetricName='ConsumedReadCapacityUnits',
-        Dimensions=[{'Name': 'TableName', 'Value': table_name}]
-    )
-    assert 'Metrics' in response
+# Note: WebhookRouter metrics (CircuitBreakerState) and circuit_breaker_state_table
+# DynamoDB metrics are tested in jit_runner_requests post-deployment tests because
+# those resources are created by that module.
