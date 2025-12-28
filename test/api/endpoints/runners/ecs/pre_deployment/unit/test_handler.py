@@ -19,12 +19,10 @@ from .conftest import (
     create_mock_ecs_for_status,
 )
 
-# Add ECS lambda dir to path for importing split modules
+# Add ECS lambda dir to path for importing split modules at runtime
 ECS_LAMBDA_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ecs" / "lambda"
 if str(ECS_LAMBDA_DIR) not in sys.path:
     sys.path.insert(0, str(ECS_LAMBDA_DIR))
-
-import fargate_ops
 
 
 def test_lambda_handler_ecs_runner_post_with_missing_job_id_returns_400(
@@ -451,7 +449,7 @@ def test_get_fargate_task_status_returns_status_from_describe_tasks(ecs_runner_h
             'startedAt': '2024-01-01T00:00:00Z'
         }]
     }
-    with patch.object(fargate_ops, 'get_ecs_client', return_value=mock_ecs):
+    with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.get_fargate_task_status('test-cluster', task_arn)
         assert result['status'] == 'RUNNING'
@@ -461,7 +459,7 @@ def test_get_fargate_task_status_returns_unknown_on_empty_response(ecs_runner_ha
     """Test get fargate task status returns unknown on empty response."""
     mock_ecs = MagicMock()
     mock_ecs.describe_tasks.return_value = {'tasks': []}
-    with patch.object(fargate_ops, 'get_ecs_client', return_value=mock_ecs):
+    with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.get_fargate_task_status('test-cluster', task_arn)
         assert result['status'] == 'UNKNOWN'
@@ -482,7 +480,7 @@ def test_is_fargate_spot_interruption_returns_false_for_other_reasons(ecs_runner
 def test_wait_for_fargate_task_provisioned_returns_success_when_running(ecs_runner_handler):
     """Test wait for fargate task provisioned returns success when running."""
     task_status = {'status': 'RUNNING', 'stopped_reason': '', 'started_at': '2024-01-01'}
-    with patch.object(fargate_ops, 'get_fargate_task_status', return_value=task_status):
+    with patch('fargate_ops.get_fargate_task_status', return_value=task_status):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['success'] is True
@@ -491,7 +489,7 @@ def test_wait_for_fargate_task_provisioned_returns_success_when_running(ecs_runn
 def test_wait_for_fargate_task_provisioned_not_spot_interrupted_when_running(ecs_runner_handler):
     """Test wait for fargate task provisioned is not spot interrupted when running."""
     task_status = {'status': 'RUNNING', 'stopped_reason': '', 'started_at': '2024-01-01'}
-    with patch.object(fargate_ops, 'get_fargate_task_status', return_value=task_status):
+    with patch('fargate_ops.get_fargate_task_status', return_value=task_status):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['spot_interrupted'] is False
@@ -504,7 +502,7 @@ def test_wait_for_fargate_task_provisioned_returns_failure_on_spot_interruption(
         'stopped_reason': 'Your Spot Task was interrupted.',
         'started_at': None
     }
-    with patch.object(fargate_ops, 'get_fargate_task_status', return_value=task_status):
+    with patch('fargate_ops.get_fargate_task_status', return_value=task_status):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['success'] is False
@@ -517,7 +515,7 @@ def test_wait_for_fargate_task_provisioned_sets_spot_interrupted_flag(ecs_runner
         'stopped_reason': 'Your Spot Task was interrupted.',
         'started_at': None
     }
-    with patch.object(fargate_ops, 'get_fargate_task_status', return_value=task_status):
+    with patch('fargate_ops.get_fargate_task_status', return_value=task_status):
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['spot_interrupted'] is True

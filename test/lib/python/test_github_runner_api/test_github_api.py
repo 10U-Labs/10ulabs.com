@@ -13,17 +13,32 @@ from github_runner_api import (
 )
 
 
+def _create_mock_json_response(data):
+    """Create a mock urlopen response that returns JSON data."""
+    mock_response = MagicMock()
+    mock_response.read.return_value = json.dumps(data).encode()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+    return mock_response
+
+
+def _create_runner_with_labels(runner_id, name, status, label_names):
+    """Create a runner dict with the given labels."""
+    return {
+        'id': runner_id,
+        'name': name,
+        'status': status,
+        'labels': [{'name': label} for label in label_names]
+    }
+
+
 class TestGetRunnerRegistrationToken:
     """Tests for get_runner_registration_token function."""
 
     @patch('urllib.request.urlopen')
     def test_returns_token_on_success(self, mock_urlopen):
         """Test returns token from successful API response."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({'token': 'test-token-123'}).encode()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_response
+        mock_urlopen.return_value = _create_mock_json_response({'token': 'test-token-123'})
 
         result = get_runner_registration_token('github-token', 'owner/repo')
         assert result == 'test-token-123'
@@ -39,11 +54,7 @@ class TestGetRunnerRegistrationToken:
     @patch('urllib.request.urlopen')
     def test_uses_repo_in_url(self, mock_urlopen):
         """Test includes repo in GitHub API URL."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({'token': 'token'}).encode()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_response
+        mock_urlopen.return_value = _create_mock_json_response({'token': 'token'})
 
         get_runner_registration_token('github-token', 'owner/repo')
 
@@ -53,11 +64,7 @@ class TestGetRunnerRegistrationToken:
     @patch('urllib.request.urlopen')
     def test_uses_registration_token_endpoint(self, mock_urlopen):
         """Test calls registration-token endpoint."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({'token': 'token'}).encode()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_response
+        mock_urlopen.return_value = _create_mock_json_response({'token': 'token'})
 
         get_runner_registration_token('github-token', 'owner/repo')
 
@@ -72,11 +79,7 @@ class TestListRepoRunners:
     def test_returns_correct_runner_count(self, mock_urlopen):
         """Test returns correct number of runners."""
         runners = [{'id': 1, 'name': 'runner-1'}, {'id': 2, 'name': 'runner-2'}]
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({'runners': runners}).encode()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_response
+        mock_urlopen.return_value = _create_mock_json_response({'runners': runners})
 
         result = list_repo_runners('github-token', 'owner/repo')
         assert len(result) == 2
@@ -85,11 +88,7 @@ class TestListRepoRunners:
     def test_returns_runner_data(self, mock_urlopen):
         """Test returns runner data correctly."""
         runners = [{'id': 1, 'name': 'runner-1'}, {'id': 2, 'name': 'runner-2'}]
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({'runners': runners}).encode()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_response
+        mock_urlopen.return_value = _create_mock_json_response({'runners': runners})
 
         result = list_repo_runners('github-token', 'owner/repo')
         assert result[0]['name'] == 'runner-1'
@@ -300,12 +299,10 @@ class TestGetExistingRunnerForWorkflow:
     @patch('github_runner_api.list_repo_runners')
     def test_finds_matching_runner(self, mock_list):
         """Test finds runner matching run_id and labels."""
-        mock_list.return_value = [{
-            'id': 1,
-            'name': 'runner-1',
-            'status': 'online',
-            'labels': [{'name': 'runner-12345'}, {'name': 'self-hosted'}, {'name': 'linux'}]
-        }]
+        runner = _create_runner_with_labels(
+            1, 'runner-1', 'online', ['runner-12345', 'self-hosted', 'linux']
+        )
+        mock_list.return_value = [runner]
 
         result = get_existing_runner_for_workflow(
             'token', 'owner/repo', 12345, ['self-hosted', 'linux']
@@ -316,12 +313,10 @@ class TestGetExistingRunnerForWorkflow:
     @patch('github_runner_api.list_repo_runners')
     def test_returns_correct_runner_id(self, mock_list):
         """Test returns runner with correct id."""
-        mock_list.return_value = [{
-            'id': 1,
-            'name': 'runner-1',
-            'status': 'online',
-            'labels': [{'name': 'runner-12345'}, {'name': 'self-hosted'}, {'name': 'linux'}]
-        }]
+        runner = _create_runner_with_labels(
+            1, 'runner-1', 'online', ['runner-12345', 'self-hosted', 'linux']
+        )
+        mock_list.return_value = [runner]
 
         result = get_existing_runner_for_workflow(
             'token', 'owner/repo', 12345, ['self-hosted', 'linux']
