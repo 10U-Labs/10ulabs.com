@@ -75,3 +75,18 @@ class TestWorkflowctlCLI:
             assert result == 0
         finally:
             workflowctl.COMMANDS["dispatch-descendant-workflows"] = original
+
+    def test_dispatch_workflow_subcommand_routes_correctly(self, workflowctl) -> None:
+        """Test that dispatch-workflow routes to dispatch_workflow.main."""
+        mock_main = MagicMock(return_value=0)
+        original = workflowctl.COMMANDS["dispatch-workflow"]
+        try:
+            workflowctl.COMMANDS["dispatch-workflow"] = (original[0], mock_main)
+            argv = ["workflowctl.py", "dispatch-workflow", "--workflow", "test",
+                    "--repo", "test/repo"]
+            with patch.object(sys, "argv", argv):
+                result = workflowctl.main()
+            mock_main.assert_called_once()
+            assert result == 0
+        finally:
+            workflowctl.COMMANDS["dispatch-workflow"] = original

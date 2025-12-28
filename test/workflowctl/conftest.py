@@ -32,6 +32,7 @@ _dispatch_roots_module = _load_module("dispatch_roots")
 _get_changed_files_module = _load_module("get_changed_files")
 _get_running_module = _load_module("get_running")
 _compute_roots_module = _load_module("compute_roots")
+_dispatch_workflow_module = _load_module("dispatch_workflow")
 
 
 @pytest.fixture
@@ -80,3 +81,9 @@ def get_running():
 def compute_roots():
     """Provide access to the compute_roots module."""
     return _compute_roots_module
+
+
+@pytest.fixture
+def dispatch_workflow():
+    """Provide access to the dispatch_workflow module."""
+    return _dispatch_workflow_module
