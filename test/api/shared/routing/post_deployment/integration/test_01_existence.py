@@ -124,11 +124,8 @@ def test_cloudwatch_alarm_webhook_handler_errors_exists(cloudwatch_client, confi
     assert len(alarms['MetricAlarms']) == 1
 
 
-def test_cloudwatch_alarm_runners_dlq_messages_exists(cloudwatch_client, config):
-    """Verify runners router DLQ messages alarm exists."""
-    alarm_name = f"{config['resource_prefix']}-runners-dlq-messages"
-    alarms = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
-    assert len(alarms['MetricAlarms']) == 1
+# Note: runners-dlq-messages alarm is tested in jit_runner_requests tests
+# because the alarm is created in that module (after routing deploys)
 
 
 # =============================================================================

@@ -164,6 +164,13 @@ def test_circuit_breaker_open_alarm_exists(cloudwatch_client, config):
     assert len(alarms["MetricAlarms"]) == 1
 
 
+def test_runners_dlq_messages_alarm_exists(cloudwatch_client, config):
+    """Verify runners router DLQ messages CloudWatch alarm exists."""
+    alarm_name = f"{config['resource_prefix']}-runners-dlq-messages"
+    alarms = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(alarms["MetricAlarms"]) == 1
+
+
 # === SNS Topics ===
 
 
