@@ -107,10 +107,16 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pylint
         run: python3 -m pip install pylint
-      - name: Run pylint
+      - name: Run pylint on source
+        run: |
+          python3 -m pylint \
+            src/www/shared/lambda/ \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ src/www/shared/lambda/ test/ \
+            lib/python/ test/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - if: >-
@@ -119,20 +125,28 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install mypy
         run: python3 -m pip install mypy boto3-stubs types-requests
-      - name: Run mypy
+      - name: Run mypy on source
+        run: |
+          python3 -m mypy \
+            src/www/shared/lambda/
+      - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy \
-            lib/python/ src/www/shared/lambda/ test/
+            lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
         run: npm install -g jscpd
-      - name: Check for duplicate code in Python files
+      - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/www/shared/lambda/ test/
+            src/www/shared/lambda/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||

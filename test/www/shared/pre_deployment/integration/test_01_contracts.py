@@ -162,3 +162,42 @@ def test_waf_module_source_path_exists():
     assert resolved_path.exists(), (
         f"WAF module source path does not exist: {resolved_path}"
     )
+
+
+def test_lambda_handler_file_exists():
+    """Verify Lambda@Edge handler file exists."""
+    handler_path = SRC_DIR / "lambda" / "spa_routing.py"
+    assert handler_path.exists(), f"Lambda handler not found: {handler_path}"
+
+
+def test_lambda_handler_has_handler_function():
+    """Verify Lambda@Edge handler has the expected handler function."""
+    handler_content = (SRC_DIR / "lambda" / "spa_routing.py").read_text()
+    assert "def handler(" in handler_content, (
+        "Lambda handler file missing 'def handler(' function"
+    )
+
+
+def test_lambda_edge_references_handler_file():
+    """Verify lambda_edge.tf references the correct handler file."""
+    lambda_content = _read_file("lambda_edge.tf")
+    assert "spa_routing.py" in lambda_content, (
+        "lambda_edge.tf does not reference spa_routing.py"
+    )
+
+
+def test_lambda_edge_has_handler_config():
+    """Verify lambda_edge.tf has handler configuration."""
+    lambda_content = _read_file("lambda_edge.tf")
+    match = re.search(r'handler\s*=\s*"([^"]+)"', lambda_content)
+    assert match, "lambda_edge.tf missing handler configuration"
+
+
+def test_lambda_edge_handler_matches_module():
+    """Verify lambda_edge.tf handler config matches Python module."""
+    lambda_content = _read_file("lambda_edge.tf")
+    match = re.search(r'handler\s*=\s*"([^"]+)"', lambda_content)
+    handler_config = match.group(1) if match else ""
+    assert handler_config == "spa_routing.handler", (
+        f"Expected handler 'spa_routing.handler', got '{handler_config}'"
+    )

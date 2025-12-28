@@ -72,3 +72,36 @@ def test_route53_alias_target_is_cloudfront(website_dns_record):
     assert "cloudfront.net" in alias_target, (
         f"Alias does not point to CloudFront: {alias_target}"
     )
+
+
+def test_cloudfront_has_lambda_edge_association(default_cache_behavior):
+    """Verify CloudFront has Lambda@Edge viewer-request association."""
+    associations = default_cache_behavior.get("LambdaFunctionAssociations", {})
+    items = associations.get("Items", [])
+    viewer_request = [a for a in items if a["EventType"] == "viewer-request"]
+    assert len(viewer_request) == 1, (
+        f"Expected 1 viewer-request Lambda, found {len(viewer_request)}"
+    )
+
+
+def test_cloudfront_lambda_edge_is_spa_routing(default_cache_behavior):
+    """Verify CloudFront Lambda@Edge is the SPA routing function."""
+    associations = default_cache_behavior.get("LambdaFunctionAssociations", {})
+    items = associations.get("Items", [])
+    viewer_request = [a for a in items if a["EventType"] == "viewer-request"]
+    lambda_arn = viewer_request[0]["LambdaFunctionARN"]
+    assert "SpaRouting" in lambda_arn, f"Lambda ARN does not contain SpaRouting: {lambda_arn}"
+
+
+def test_cloudfront_has_waf_association(distribution_config):
+    """Verify CloudFront has WAF web ACL associated."""
+    web_acl_id = distribution_config["DistributionConfig"].get("WebACLId", "")
+    assert web_acl_id, "CloudFront has no WAF web ACL associated"
+
+
+def test_cloudfront_waf_is_correct_acl(distribution_config, config):
+    """Verify CloudFront WAF is the website WAF ACL."""
+    web_acl_id = distribution_config["DistributionConfig"].get("WebACLId", "")
+    assert config["resource_prefix"] in web_acl_id or "Website" in web_acl_id, (
+        f"WAF ACL does not appear to be website WAF: {web_acl_id}"
+    )

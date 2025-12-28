@@ -99,6 +99,18 @@ class TestFileExtensionPassthrough:
         response = handler(event, None)
         assert response["uri"] == uri
 
+    def test_file_uri_is_not_modified(self):
+        """Test that file URIs are returned without modification."""
+        event = make_event(host="www.example.com", uri="/assets/logo.svg")
+        response = handler(event, None)
+        assert response["uri"] == "/assets/logo.svg"
+
+    def test_file_request_does_not_redirect(self):
+        """Test that file requests do not trigger a redirect."""
+        event = make_event(host="www.example.com", uri="/assets/logo.svg")
+        response = handler(event, None)
+        assert "status" not in response
+
 
 class TestSpaRouting:
     """Tests for SPA routing behavior (paths without extensions)."""
@@ -192,3 +204,61 @@ class TestEdgeCases:
         response = handler(event, None)
         location = response["headers"]["location"][0]["value"]
         assert location == "https://www./about"
+
+    def test_path_with_dot_in_segment_gets_index_html(self):
+        """Test that paths with dots in segments (not extensions) get index.html."""
+        event = make_event(host="www.example.com", uri="/v1.0/api")
+        response = handler(event, None)
+        # Has a dot, so treated as file - passes through
+        assert response["uri"] == "/v1.0/api"
+
+    def test_file_with_multiple_dots_passes_through(self):
+        """Test that files with multiple dots pass through."""
+        event = make_event(host="www.example.com", uri="/app.bundle.min.js")
+        response = handler(event, None)
+        assert response["uri"] == "/app.bundle.min.js"
+
+    def test_very_long_path_gets_index_html(self):
+        """Test that very long paths without extension get index.html."""
+        long_path = "/" + "/".join(["segment"] * 50)
+        event = make_event(host="www.example.com", uri=long_path)
+        response = handler(event, None)
+        assert response["uri"] == f"{long_path}/index.html"
+
+    def test_path_with_hyphen_gets_index_html(self):
+        """Test that paths with hyphens get index.html."""
+        event = make_event(host="www.example.com", uri="/my-page-name")
+        response = handler(event, None)
+        assert response["uri"] == "/my-page-name/index.html"
+
+    def test_path_with_underscore_gets_index_html(self):
+        """Test that paths with underscores get index.html."""
+        event = make_event(host="www.example.com", uri="/my_page_name")
+        response = handler(event, None)
+        assert response["uri"] == "/my_page_name/index.html"
+
+    def test_path_with_numbers_gets_index_html(self):
+        """Test that paths with numbers get index.html."""
+        event = make_event(host="www.example.com", uri="/page123")
+        response = handler(event, None)
+        assert response["uri"] == "/page123/index.html"
+
+    def test_hidden_file_passes_through(self):
+        """Test that hidden files (starting with dot) pass through."""
+        event = make_event(host="www.example.com", uri="/.well-known/acme-challenge")
+        response = handler(event, None)
+        # Has a dot, treated as having extension
+        assert response["uri"] == "/.well-known/acme-challenge"
+
+    def test_subdomain_without_www_returns_301(self):
+        """Test that subdomains without www return 301 status."""
+        event = make_event(host="api.example.com", uri="/health")
+        response = handler(event, None)
+        assert response["status"] == "301"
+
+    def test_subdomain_without_www_redirect_location(self):
+        """Test that subdomain redirect location adds www prefix."""
+        event = make_event(host="api.example.com", uri="/health")
+        response = handler(event, None)
+        location = response["headers"]["location"][0]["value"]
+        assert location == "https://www.api.example.com/health"

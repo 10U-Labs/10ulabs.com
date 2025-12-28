@@ -78,3 +78,40 @@ def create_simple_config(tfvars_path: Path, shared_config: Dict[str, str]) -> Di
     result['aws_region'] = shared_config['aws_region']
     result['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
     return result
+
+
+def create_website_config(
+    locals_path: Path,
+    shared_config: Dict[str, str],
+    hosted_zone_id: str = ""
+) -> Dict[str, str]:
+    """Create a website config dict from locals.tf and shared config.
+
+    Used by www_shared tests to build configuration from Terraform locals.
+
+    Args:
+        locals_path: Path to the www/shared/locals.tf file
+        shared_config: The shared_config fixture value
+        hosted_zone_id: Route53 hosted zone ID (optional, can be looked up separately)
+
+    Returns:
+        Website configuration dictionary
+    """
+    website_locals = parse_locals_file(locals_path, shared_config)
+    domain_name = shared_config.get('domain_name', '')
+
+    return {
+        'aws_region': shared_config['aws_region'],
+        'aws_account_id': website_locals.get('aws_account_id', ''),
+        'central_logs_bucket': shared_config.get('name_for_central_logs_bucket', ''),
+        'website_fqdn': f"www.{domain_name}",
+        'website_bucket_name': f"www-{domain_name.replace('.', '-')}",
+        'apex_fqdn': domain_name,
+        'github_org': shared_config.get('github_org', ''),
+        'github_repo': (
+            f"{shared_config.get('github_org', '')}/"
+            f"{shared_config.get('name_for_github_repo', '')}"
+        ),
+        'resource_prefix': website_locals.get('resource_prefix', ''),
+        'hosted_zone_id': hosted_zone_id,
+    }
