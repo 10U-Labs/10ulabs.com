@@ -2,46 +2,16 @@
 import boto3
 import pytest
 
-# Note: pytest_plugins inherited from root conftest.py
-
-
-@pytest.fixture(name="s3_client", scope="module")
-def s3_client_fixture(aws_region):
-    """Create and return a boto3 S3 client for the specified region."""
-    return boto3.client("s3", region_name=aws_region)
-
-
-# Note: dynamodb_client fixture is inherited from parent conftest.py
-
-
-@pytest.fixture(name="cloudwatch_client", scope="module")
-def cloudwatch_client_fixture(aws_region):
-    """Create and return a boto3 CloudWatch client for the specified region."""
-    return boto3.client("cloudwatch", region_name=aws_region)
+# Note: The following fixtures are inherited from parent conftest files:
+# - From test_fixtures/aws.py: iam_client, s3_client, logs_client, apigateway_client,
+#   ec2_client, lambda_client, dynamodb_client
+# - From routing/conftest.py: cloudwatch_client, events_client, sns_client
 
 
 @pytest.fixture(name="sqs_client", scope="module")
 def sqs_client_fixture(aws_region):
     """Create and return a boto3 SQS client for the specified region."""
     return boto3.client("sqs", region_name=aws_region)
-
-
-@pytest.fixture(name="events_client", scope="module")
-def events_client_fixture(aws_region):
-    """Create and return a boto3 EventBridge client for the specified region."""
-    return boto3.client("events", region_name=aws_region)
-
-
-@pytest.fixture(name="ec2_client", scope="module")
-def ec2_client_fixture(aws_region):
-    """Create and return a boto3 EC2 client for the specified region."""
-    return boto3.client("ec2", region_name=aws_region)
-
-
-@pytest.fixture(name="apigateway_client", scope="module")
-def apigateway_client_fixture(aws_region):
-    """Create and return a boto3 API Gateway client for the specified region."""
-    return boto3.client("apigateway", region_name=aws_region)
 
 
 @pytest.fixture(name="api_gateway_id", scope="module")
@@ -54,12 +24,6 @@ def api_gateway_id_fixture(apigateway_client, config):
 def apigatewayv2_client_fixture(aws_region):
     """Create and return a boto3 API Gateway V2 client for the specified region."""
     return boto3.client("apigatewayv2", region_name=aws_region)
-
-
-@pytest.fixture(name="logs_client", scope="module")
-def logs_client_fixture(aws_region):
-    """Create and return a boto3 CloudWatch Logs client for the specified region."""
-    return boto3.client("logs", region_name=aws_region)
 
 
 @pytest.fixture(name="cloudfront_client", scope="module")
@@ -101,18 +65,6 @@ def acm_client_fixture():
     where other resources are deployed.
     """
     return boto3.client("acm", region_name="us-east-1")
-
-
-@pytest.fixture(name="iam_client", scope="module")
-def iam_client_fixture():
-    """Create and return a boto3 IAM client."""
-    return boto3.client("iam")
-
-
-@pytest.fixture(name="sns_client", scope="module")
-def sns_client_fixture(aws_region):
-    """Create and return a boto3 SNS client for the specified region."""
-    return boto3.client("sns", region_name=aws_region)
 
 
 @pytest.fixture(name="firehose_client", scope="module")
