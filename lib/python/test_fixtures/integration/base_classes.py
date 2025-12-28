@@ -1,12 +1,21 @@
-"""Base test classes for 6-layer pre-deployment integration tests.
+"""Base test classes for pre-deployment integration tests.
 
-The 6-layer testing model:
-- Layer 1: Authentication - Valid credentials exist
-- Layer 2: Authorization - Permission to inspect resources
-- Layer 3: State - Terraform state matches AWS reality
-- Layer 4: Existence - Required resources exist
-- Layer 5: Configuration - Resources configured correctly
-- Layer 6: Capability - Can perform required operations
+These classes implement the 7-layer testing model documented in docs/tenets/tests/.
+The class naming (Layer1-Layer6) is offset by 1 for backward compatibility:
+
+    Documentation Layer    Class Prefix    Purpose
+    ------------------    ------------    -------
+    Layer 1: Contracts    (no class)      Local file compatibility (unit tests)
+    Layer 2: Authentication    Layer1     Valid credentials exist
+    Layer 3: Authorization     Layer2     Permission to inspect resources
+    Layer 4: State             Layer4     Terraform state matches AWS reality
+    Layer 5: Existence         Layer4     Required resources exist
+    Layer 6: Configuration     Layer5     Resources configured correctly
+    Layer 7: Capability        Layer6     Can perform required operations
+
+New tests should use pytestmark = pytest.mark.layer(N) where N matches the
+documentation layer number (1-7). The base classes are named Layer1-Layer6
+for backward compatibility with existing tests.
 """
 import uuid
 

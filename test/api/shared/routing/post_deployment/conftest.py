@@ -4,17 +4,12 @@ from test.api.conftest import (
     skip_if_endpoint_not_deployed,
 )
 
-import boto3
 import pytest
 
 # Re-export for backwards compatibility
 __all__ = ['endpoint_is_deployed', 'skip_if_endpoint_not_deployed']
 
-
-@pytest.fixture(name="dynamodb_client", scope="session")
-def dynamodb_client_fixture(aws_region):
-    """Provide DynamoDB client for the configured region."""
-    return boto3.client("dynamodb", region_name=aws_region)
+# Note: dynamodb_client fixture is inherited from parent conftest.py
 
 
 @pytest.fixture(name="api_url", scope="module")

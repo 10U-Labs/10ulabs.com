@@ -2,8 +2,7 @@
 import boto3
 import pytest
 
-# Import layer-based test dependency tracking
-pytest_plugins = ['pytest_layers']
+# Note: pytest_plugins inherited from root conftest.py
 
 
 @pytest.fixture(name="s3_client", scope="module")
@@ -12,10 +11,7 @@ def s3_client_fixture(aws_region):
     return boto3.client("s3", region_name=aws_region)
 
 
-@pytest.fixture(name="dynamodb_client", scope="module")
-def dynamodb_client_fixture(aws_region):
-    """Create and return a boto3 DynamoDB client for the specified region."""
-    return boto3.client("dynamodb", region_name=aws_region)
+# Note: dynamodb_client fixture is inherited from parent conftest.py
 
 
 @pytest.fixture(name="cloudwatch_client", scope="module")
@@ -46,6 +42,12 @@ def ec2_client_fixture(aws_region):
 def apigateway_client_fixture(aws_region):
     """Create and return a boto3 API Gateway client for the specified region."""
     return boto3.client("apigateway", region_name=aws_region)
+
+
+@pytest.fixture(name="api_gateway_id", scope="module")
+def api_gateway_id_fixture(apigateway_client, config):
+    """Get API Gateway REST API ID by name."""
+    return get_api_gateway_id_by_name(apigateway_client, config['api_gateway_name'])
 
 
 @pytest.fixture(name="apigatewayv2_client", scope="module")

@@ -8,6 +8,9 @@ import boto3
 import pytest
 from test_fixtures.config import parse_tfvars_file, parse_locals_file
 
+# Import layer-based test dependency tracking for all test subdirectories
+pytest_plugins = ['test_fixtures.aws', 'pytest_layers']
+
 
 def parse_bootstrap_tfvar(var_name: str) -> str:
     """Parse a variable from bootstrap terraform.tfvars file."""
@@ -86,8 +89,8 @@ def sns_client(aws_region):
     return boto3.client('sns', region_name=aws_region)
 
 
-@pytest.fixture
-def dynamodb_client(aws_region):
+@pytest.fixture(name="dynamodb_client", scope="module")
+def dynamodb_client_fixture(aws_region):
     """Provide DynamoDB client for the configured AWS region."""
     return boto3.client('dynamodb', region_name=aws_region)
 
