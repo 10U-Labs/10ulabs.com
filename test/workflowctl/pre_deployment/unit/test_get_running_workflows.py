@@ -3,7 +3,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
-from conftest import MINIMAL_GRAPH
+from test_fixtures.workflowctl import MINIMAL_GRAPH
 
 
 class TestBuildNameToKeyMap:

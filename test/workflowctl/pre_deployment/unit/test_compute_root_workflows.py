@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from conftest import EXTENDED_LINEAR_GRAPH
+from test_fixtures.workflowctl import EXTENDED_LINEAR_GRAPH
 
 
 class TestFileMatchesPatterns:

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Tuple
 from unittest.mock import patch, MagicMock
 
-from conftest import DIAMOND_GRAPH
+from test_fixtures.workflowctl import DIAMOND_GRAPH
 
 
 def _run_main_with_unmet_deps(dispatch_descendants: Any) -> Tuple[int, MagicMock]:
