@@ -74,23 +74,6 @@ def test_handler_processes_job_dlq(dlq_reprocessor, dlq_message_factory, mock_sq
     assert_response_status(response, 200)
 
 
-def test_handler_returns_reprocessed_count(
-    dlq_reprocessor,
-    dlq_message_factory,
-    mock_sqs,
-    lambda_context
-):
-    """Test handler returns reprocessed count."""
-    mock_sqs.receive_message.return_value = {
-        'Messages': [dlq_message_factory(body={'job_id': 123})]
-    }
-    with patch.dict('os.environ', JOB_DLQ_ENV):
-        response = dlq_reprocessor.handler({}, lambda_context)
-    body = parse_response_body(response)
-    assert body['job_dlq']['reprocessed'] == 1
-
-
-
 def test_handler_handles_webhook_dlq_with_note(dlq_reprocessor, lambda_context):
     """Test handler handles webhook dlq with note."""
     event = {}
@@ -328,47 +311,6 @@ def test_dlq_reprocessor_with_all_env_vars(dlq_reprocessor, lambda_context):
     assert response['statusCode'] == 200
 
 
-def test_dlq_reprocessor_processes_job_dlq_messages(dlq_reprocessor, lambda_context):
-    """Test dlq reprocessor processes job dlq messages."""
-    mock_sqs = _create_mock_sqs_with_messages([_create_sqs_message()])
-    with _patched_dlq_handler(mock_sqs):
-        response = dlq_reprocessor.handler({}, lambda_context)
-    body = json.loads(response['body'])
-    assert body['job_dlq']['reprocessed'] == 1
-
-
-def test_dlq_reprocessor_deletes_messages_after_reprocessing(dlq_reprocessor, lambda_context):
-    """Test dlq reprocessor deletes messages after reprocessing."""
-    mock_sqs = _create_mock_sqs_with_messages([_create_sqs_message()])
-    with _patched_dlq_handler(mock_sqs):
-        dlq_reprocessor.handler({}, lambda_context)
-    assert mock_sqs.delete_message.called
-
-
-def test_dlq_reprocessor_handles_send_message_failure(dlq_reprocessor, lambda_context):
-    """Test dlq reprocessor handles send message failure."""
-    err = ClientError(
-        {'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'SendMessage'
-    )
-    mock_sqs = _create_mock_sqs_with_messages([_create_sqs_message()], send_error=err)
-    with _patched_dlq_handler(mock_sqs):
-        response = dlq_reprocessor.handler({}, lambda_context)
-    body = json.loads(response['body'])
-    assert body['job_dlq']['failed'] == 1
-
-
-def test_dlq_reprocessor_handles_receive_message_failure(dlq_reprocessor, lambda_context):
-    """Test dlq reprocessor handles receive message failure."""
-    err = ClientError(
-        {'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'ReceiveMessage'
-    )
-    mock_sqs = _create_mock_sqs_with_messages(receive_error=err)
-    with _patched_dlq_handler(mock_sqs):
-        response = dlq_reprocessor.handler({}, lambda_context)
-    body = json.loads(response['body'])
-    assert 'error' in body['job_dlq']
-
-
 def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(
     dlq_reprocessor, lambda_context
 ):
@@ -380,24 +322,3 @@ def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(
     assert body['webhook_dlq']['note'] == 'Manual intervention required'
 
 
-def test_dlq_reprocessor_reprocesses_multiple_messages(dlq_reprocessor, lambda_context):
-    """Test dlq reprocessor reprocesses multiple messages."""
-    messages = [
-        _create_sqs_message(body='{"test": "data1"}', handle='handle1'),
-        _create_sqs_message(body='{"test": "data2"}', handle='handle2')
-    ]
-    mock_sqs = _create_mock_sqs_with_messages(messages)
-    with _patched_dlq_handler(mock_sqs):
-        response = dlq_reprocessor.handler({}, lambda_context)
-    body = json.loads(response['body'])
-    assert body['job_dlq']['reprocessed'] == 2
-
-
-def test_dlq_reprocessor_preserves_message_attributes(dlq_reprocessor, lambda_context):
-    """Test dlq reprocessor preserves message attributes."""
-    attrs = {'attr1': {'StringValue': 'value1'}}
-    mock_sqs = _create_mock_sqs_with_messages([_create_sqs_message(attrs=attrs)])
-    with _patched_dlq_handler(mock_sqs):
-        dlq_reprocessor.handler({}, lambda_context)
-    call_args = mock_sqs.send_message.call_args
-    assert 'MessageAttributes' in call_args[1]

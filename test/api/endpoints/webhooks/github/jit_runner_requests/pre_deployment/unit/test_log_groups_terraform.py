@@ -73,14 +73,6 @@ def test_runners_handler_log_group_has_7_day_retention(runners_src_path):
     assert "retention_in_days = 7" in section
 
 
-def test_runner_starter_log_group_has_7_day_retention(runners_src_path):
-    """Verify runner_starter log group has 7-day retention."""
-    with open(runners_src_path / "lambda.tf", encoding="utf-8") as f:
-        content = f.read()
-    section = _get_log_group_section(content, "runner_starter")
-    assert "retention_in_days = 7" in section
-
-
 def test_runner_terminator_log_group_has_7_day_retention(runners_src_path):
     """Verify runner_terminator log group has 7-day retention."""
     with open(runners_src_path / "lambda.tf", encoding="utf-8") as f:
@@ -155,13 +147,6 @@ def test_drift_recovery_subscription_filter_exists(runners_src_path):
     with open(runners_src_path / "log_subscriptions.tf", encoding="utf-8") as f:
         content = f.read()
     assert 'resource "aws_cloudwatch_log_subscription_filter" "drift_recovery"' in content
-
-
-def test_runner_starter_subscription_filter_exists(runners_src_path):
-    """Verify runner_starter subscription filter exists."""
-    with open(runners_src_path / "log_subscriptions.tf", encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_cloudwatch_log_subscription_filter" "runner_starter"' in content
 
 
 def test_runner_terminator_subscription_filter_exists(runners_src_path):

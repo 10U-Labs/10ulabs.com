@@ -154,14 +154,6 @@ def test_runners_handler_archive_file_exists(runners_src_path):
     assert 'data "archive_file" "runners_handler"' in content
 
 
-def test_runner_starter_archive_file_exists(runners_src_path):
-    """Test runner_starter archive_file data source exists."""
-    lambda_file = runners_src_path / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'data "archive_file" "runner_starter"' in content
-
-
 def test_runner_terminator_archive_file_exists(runners_src_path):
     """Test runner_terminator archive_file data source exists."""
     lambda_file = runners_src_path / "lambda.tf"
@@ -234,18 +226,6 @@ def test_runners_handler_archive_includes_all_common_modules(runners_src_path):
     lambda_file = runners_src_path / "lambda.tf"
     for module in COMMON_MODULES:
         assert_archive_includes_file(lambda_file, "runners_handler", module)
-
-
-def test_runner_starter_archive_includes_all_common_modules(runners_src_path):
-    """Test runner_starter archive includes all common modules.
-
-    Regression test: runner_starter.py imports from common.aws_clients,
-    common.cloudwatch, and common.lambda_utils, but common/__init__.py
-    requires all modules to be present.
-    """
-    lambda_file = runners_src_path / "lambda.tf"
-    for module in COMMON_MODULES:
-        assert_archive_includes_file(lambda_file, "runner_starter", module)
 
 
 def test_runner_terminator_archive_includes_all_common_modules(runners_src_path):
@@ -324,12 +304,6 @@ def test_runners_handler_archive_includes_runner_labels(runners_src_path):
     assert_archive_includes_file(lambda_file, "runners_handler", "runner_labels.py")
 
 
-def test_runner_starter_archive_includes_runner_labels(runners_src_path):
-    """Test runner_starter archive includes runner_labels.py shared module."""
-    lambda_file = runners_src_path / "lambda.tf"
-    assert_archive_includes_file(lambda_file, "runner_starter", "runner_labels.py")
-
-
 def test_spot_interruption_handler_archive_includes_runner_labels(runners_src_path):
     """Test spot_interruption_handler archive includes runner_labels.py."""
     lambda_file = runners_src_path / "lambda.tf"
@@ -347,12 +321,6 @@ def test_runners_handler_archive_includes_runners_config(runners_src_path):
     """Test runners_handler archive includes etc/runners.json config."""
     lambda_file = runners_src_path / "lambda.tf"
     assert_archive_includes_file(lambda_file, "runners_handler", "etc/runners.json")
-
-
-def test_runner_starter_archive_includes_runners_config(runners_src_path):
-    """Test runner_starter archive includes etc/runners.json config."""
-    lambda_file = runners_src_path / "lambda.tf"
-    assert_archive_includes_file(lambda_file, "runner_starter", "etc/runners.json")
 
 
 # =============================================================================
@@ -501,5 +469,3 @@ def test_circuit_breaker_recovery_archive_includes_runners_config(runners_src_pa
     assert_archive_includes_file(
         lambda_file, "circuit_breaker_recovery", "etc/runners.json"
     )
-
-

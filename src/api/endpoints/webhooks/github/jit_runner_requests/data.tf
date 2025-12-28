@@ -34,12 +34,26 @@ data "terraform_remote_state" "api" {
   }
 }
 
+data "terraform_remote_state" "ec2_runner" {
+  backend = "s3"
+
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "api/endpoints/runners/ec2/terraform.tfstate"
+    region = module.shared.aws_region
+  }
+
+  defaults = {
+    ec2_runner_managed_by_tag = ""
+  }
+}
+
 data "terraform_remote_state" "ecs_runner" {
   backend = "s3"
 
   config = {
     bucket = module.shared.name_for_terraform_state_bucket
-    key    = "api/endpoints/ecs_runner/terraform.tfstate"
+    key    = "api/endpoints/runners/ecs/terraform.tfstate"
     region = module.shared.aws_region
   }
 

@@ -57,14 +57,6 @@ def test_cloudwatch_alarm_webhook_handler_errors_exists(runners_src_path):
     assert 'resource "aws_cloudwatch_metric_alarm" "webhook_handler_errors"' in content
 
 
-def test_cloudwatch_alarm_job_queue_dlq_exists(runners_src_path):
-    """Test cloudwatch alarm job queue dlq exists."""
-    cloudwatch_file = runners_src_path / "cloudwatch.tf"
-    with open(cloudwatch_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_cloudwatch_metric_alarm" "job_queue_dlq_messages"' in content
-
-
 def test_eventbridge_rule_remediation_exists(runners_src_path):
     """Test eventbridge rule remediation exists."""
     eventbridge_file = runners_src_path / "eventbridge.tf"

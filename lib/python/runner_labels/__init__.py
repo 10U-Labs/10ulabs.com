@@ -391,10 +391,10 @@ def get_runner_type_from_labels(
 
         if parsed.platform == "ec2":
             runner_type = "ec2-e2e" if is_e2e else "ec2"
-            endpoint_suffix = "ec2-runner"
+            endpoint_suffix = "ec2"
         elif parsed.platform == "ecs":
             runner_type = "fargate-e2e" if is_e2e else "fargate"
-            endpoint_suffix = "ecs-runner"
+            endpoint_suffix = "ecs"
     except (LabelParseError, LabelValidationError):
         pass
 

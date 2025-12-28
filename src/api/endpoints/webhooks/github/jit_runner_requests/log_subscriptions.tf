@@ -19,15 +19,6 @@ resource "aws_cloudwatch_log_subscription_filter" "runners_handler" {
   role_arn        = local.firehose_role_arn
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "runner_starter" {
-  count           = local.create_subscriptions ? 1 : 0
-  name            = "runner-starter-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.runner_starter.name
-  filter_pattern  = ""
-  destination_arn = local.firehose_arn
-  role_arn        = local.firehose_role_arn
-}
-
 resource "aws_cloudwatch_log_subscription_filter" "runner_terminator" {
   count           = local.create_subscriptions ? 1 : 0
   name            = "runner-terminator-to-firehose"

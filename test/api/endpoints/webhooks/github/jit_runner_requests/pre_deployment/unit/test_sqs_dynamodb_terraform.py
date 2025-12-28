@@ -19,30 +19,6 @@ def test_webhook_dlq_exists(runners_src_path):
     assert 'resource "aws_sqs_queue" "webhook_dlq"' in content
 
 
-def test_job_queue_dlq_exists(runners_src_path):
-    """Test job queue dlq exists."""
-    sqs_file = runners_src_path / "sqs.tf"
-    with open(sqs_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_sqs_queue" "job_queue_dlq"' in content
-
-
-def test_job_queue_exists(runners_src_path):
-    """Test job queue exists."""
-    sqs_file = runners_src_path / "sqs.tf"
-    with open(sqs_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_sqs_queue" "job_queue"' in content
-
-
-def test_job_queue_has_redrive_policy(runners_src_path):
-    """Test job queue has redrive policy."""
-    sqs_file = runners_src_path / "sqs.tf"
-    with open(sqs_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'redrive_policy' in content
-
-
 def test_idempotency_table_exists(runners_src_path):
     """Test idempotency table exists."""
     dynamodb_file = runners_src_path / "dynamodb.tf"

@@ -42,7 +42,14 @@ data "archive_file" "runners_handler" {
     content  = file("${path.module}/lambdas/common/webhook_ingress.py")
     filename = "common/webhook_ingress.py"
   }
-  # Note: runner_labels no longer needed - routing logic moved to /v1/runners endpoint
+  source {
+    content  = file("${path.module}/../../../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../../../etc/runners.json")
+    filename = "etc/runners.json"
+  }
 }
 
 resource "aws_lambda_function" "runners_handler" {
@@ -596,7 +603,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
 
   environment {
     variables = {
-      WEBHOOK_DLQ_URL             = aws_sqs_queue.webhook_dlq.url
+      WEBHOOK_DLQ_URL = aws_sqs_queue.webhook_dlq.url
       # Note: JOB_DLQ_URL and JOB_QUEUE_URL removed - routing logic moved to /v1/runners
       SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
       GITHUB_TOKEN_PARAMETER_NAME = module.shared.ssm_github_pat_name

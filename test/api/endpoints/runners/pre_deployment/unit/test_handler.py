@@ -76,28 +76,28 @@ class TestRunnerLabels:
     def test_ec2_label_returns_ec2_runner_type(self):
         """Test EC2 labels return ec2 runner type."""
         import runner_labels
-        job_labels = ['self-hosted', 'linux', 'ec2']
+        job_labels = ['ec2', 'general-purpose', 'arm', 'spot', 'runner-12345']
         runner_type, _ = runner_labels.get_runner_type_from_labels(job_labels)
         assert runner_type == 'ec2'
 
     def test_ec2_label_returns_ec2_endpoint(self):
         """Test EC2 labels return ec2 endpoint."""
         import runner_labels
-        job_labels = ['self-hosted', 'linux', 'ec2']
+        job_labels = ['ec2', 'general-purpose', 'arm', 'spot', 'runner-12345']
         _, endpoint = runner_labels.get_runner_type_from_labels(job_labels)
         assert endpoint == 'ec2'
 
     def test_fargate_label_returns_fargate_runner_type(self):
         """Test Fargate labels return fargate runner type."""
         import runner_labels
-        job_labels = ['self-hosted', 'linux', 'ecs', 'fargate']
+        job_labels = ['ecs', 'fargate', 'arm', 'spot', 'runner-12345']
         runner_type, _ = runner_labels.get_runner_type_from_labels(job_labels)
         assert runner_type == 'fargate'
 
     def test_fargate_label_returns_ecs_endpoint(self):
         """Test Fargate labels return ecs endpoint."""
         import runner_labels
-        job_labels = ['self-hosted', 'linux', 'ecs', 'fargate']
+        job_labels = ['ecs', 'fargate', 'arm', 'spot', 'runner-12345']
         _, endpoint = runner_labels.get_runner_type_from_labels(job_labels)
         assert endpoint == 'ecs'
 

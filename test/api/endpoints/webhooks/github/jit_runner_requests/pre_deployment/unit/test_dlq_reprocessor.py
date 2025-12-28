@@ -471,14 +471,6 @@ def test_handler_returns_200_status_code(dlq_reprocessor, lambda_context):
     assert result['statusCode'] == 200
 
 
-def test_handler_returns_json_body(dlq_reprocessor, lambda_context):
-    """Test handler returns json body."""
-    env_vars = _create_handler_test_env()
-    result = _run_handler_with_empty_sqs(dlq_reprocessor, env_vars, lambda_context)
-    body = json.loads(result['body'])
-    assert 'job_dlq' in body
-
-
 def test_handler_includes_webhook_dlq_note_when_configured(dlq_reprocessor, lambda_context):
     """Test handler includes webhook dlq note when configured."""
     env = {**_create_handler_test_env(), 'WEBHOOK_DLQ_URL': 'webhook-dlq'}

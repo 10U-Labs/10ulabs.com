@@ -28,13 +28,12 @@ def get_github_token() -> str:
         logger.error("GITHUB_TOKEN_SECRET_NAME not set")
         return ''
     try:
-        from botocore.exceptions import ClientError
         response = get_ssm_client().get_parameter(Name=parameter_name, WithDecryption=True)
         token = response['Parameter']['Value']
         _github_token_cache['value'] = token
         return token
-    except Exception as e:  # Catch ClientError and other exceptions
-        logger.error("Failed to retrieve GitHub token: %s", e)
+    except (KeyError, TypeError) as e:
+        logger.error("Failed to parse GitHub token response: %s", e)
         return ''
 
 
