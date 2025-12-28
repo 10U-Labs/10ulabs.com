@@ -6,10 +6,12 @@
     "name": "Ensuring API shared routing exists and is properly configured",
     "paths": [
       ".github/workflows/api_shared_routing.yml",
+      "lib/python/test_fixtures/**",
       "src/api/shared/routing/**",
       "src/www/api/**",
+      "test/api/conftest.py",
       "test/api/shared/routing/**",
-      "test/api/conftest.py"
+      "test/lib/python/test_test_fixtures/**"
     ]
   },
   "api_shared_docker_repository": {
@@ -90,8 +92,10 @@
     "name": "Ensuring the /diagnostics/echo API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_operational_diagnostics.yml",
+      "lib/python/test_fixtures/**",
       "src/api/operational/diagnostics/**",
-      "test/api/operational/diagnostics/**"
+      "test/api/operational/diagnostics/**",
+      "test/lib/python/test_test_fixtures/**"
     ]
   },
   "api_endpoint_v1_runners_ecs": {
@@ -180,9 +184,11 @@
     "name": "Ensuring the /v1/simulation-soc API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_simulation_soc.yml",
+      "lib/python/test_fixtures/**",
       "src/api/endpoints/simulation_soc/**",
       "src/www/paths/simulations/soc/**",
-      "test/api/endpoints/simulation_soc/**"
+      "test/api/endpoints/simulation_soc/**",
+      "test/lib/python/test_test_fixtures/**"
     ]
   },
   "api_operational_health": {
@@ -192,8 +198,10 @@
     "name": "Ensuring the /health API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_operational_health.yml",
+      "lib/python/test_fixtures/**",
       "src/api/operational/health/**",
-      "test/api/operational/health/**"
+      "test/api/operational/health/**",
+      "test/lib/python/test_test_fixtures/**"
     ]
   },
   "rtl_verilator": {
@@ -222,9 +230,11 @@
     "name": "Ensuring www shared infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/www_shared.yml",
+      "lib/python/test_fixtures/**",
       "lib/terraform/modules/cloudfront_waf/**",
       "lib/terraform/modules/s3_bucket/**",
       "src/www/shared/**",
+      "test/lib/python/test_test_fixtures/**",
       "test/lib/terraform/modules/cloudfront_waf/**",
       "test/lib/terraform/modules/s3_bucket/**",
       "test/www/shared/**"
