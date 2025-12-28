@@ -351,3 +351,434 @@ class TestDefaultRedactFields:
     def test_default_fields_include_webhook_secret(self):
         """Test webhook_secret is in default redact fields."""
         assert 'webhook_secret' in DEFAULT_REDACT_FIELDS
+
+
+class TestAuditRecordProperties:
+    """Tests for AuditRecord metadata properties."""
+
+    def test_source_ip_from_metadata(self):
+        """Test source_ip property retrieves from metadata."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='received', request_timestamp='2024-01-01T00:00:00Z',
+            metadata={'source_ip': '1.2.3.4'}
+        )
+        assert record.source_ip == '1.2.3.4'
+
+    def test_source_ip_default_empty(self):
+        """Test source_ip returns empty string when not set."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='received', request_timestamp='2024-01-01T00:00:00Z'
+        )
+        assert record.source_ip == ''
+
+    def test_user_agent_from_metadata(self):
+        """Test user_agent property retrieves from metadata."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='received', request_timestamp='2024-01-01T00:00:00Z',
+            metadata={'user_agent': 'test-agent'}
+        )
+        assert record.user_agent == 'test-agent'
+
+    def test_user_agent_default_empty(self):
+        """Test user_agent returns empty string when not set."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='received', request_timestamp='2024-01-01T00:00:00Z'
+        )
+        assert record.user_agent == ''
+
+    def test_correlation_id_from_metadata(self):
+        """Test correlation_id property retrieves from metadata."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='received', request_timestamp='2024-01-01T00:00:00Z',
+            metadata={'correlation_id': 'corr-123'}
+        )
+        assert record.correlation_id == 'corr-123'
+
+    def test_completion_timestamp_from_metadata(self):
+        """Test completion_timestamp property retrieves from metadata."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='completed', request_timestamp='2024-01-01T00:00:00Z',
+            metadata={'completion_timestamp': '2024-01-01T00:01:00Z'}
+        )
+        assert record.completion_timestamp == '2024-01-01T00:01:00Z'
+
+    def test_response_code_from_metadata(self):
+        """Test response_code property retrieves from metadata."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='completed', request_timestamp='2024-01-01T00:00:00Z',
+            metadata={'response_code': 200}
+        )
+        assert record.response_code == 200
+
+    def test_response_code_default_zero(self):
+        """Test response_code returns 0 when not set."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='received', request_timestamp='2024-01-01T00:00:00Z'
+        )
+        assert record.response_code == 0
+
+    def test_error_message_from_metadata(self):
+        """Test error_message property retrieves from metadata."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='failed', request_timestamp='2024-01-01T00:00:00Z',
+            metadata={'error_message': 'Something went wrong'}
+        )
+        assert record.error_message == 'Something went wrong'
+
+    def test_reprocess_count_from_metadata(self):
+        """Test reprocess_count property retrieves from metadata."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='received', request_timestamp='2024-01-01T00:00:00Z',
+            metadata={'reprocess_count': 3}
+        )
+        assert record.reprocess_count == 3
+
+    def test_reprocess_count_default_zero(self):
+        """Test reprocess_count returns 0 when not set."""
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='received', request_timestamp='2024-01-01T00:00:00Z'
+        )
+        assert record.reprocess_count == 0
+
+
+class TestClientSingletons:
+    """Tests for singleton client functions."""
+
+    def test_get_sqs_client_returns_same_instance_on_second_call(self):
+        """Test _get_sqs_client returns cached client on second call."""
+        import audit_logger
+        audit_logger._clients['sqs'] = None
+        with patch('audit_logger.boto3.client') as mock_boto:
+            mock_client = MagicMock()
+            mock_boto.return_value = mock_client
+            client1 = audit_logger._get_sqs_client()
+            client2 = audit_logger._get_sqs_client()
+            assert client1 is client2
+        audit_logger._clients['sqs'] = None
+
+    def test_get_sqs_client_calls_boto3_once(self):
+        """Test _get_sqs_client only creates client once."""
+        import audit_logger
+        audit_logger._clients['sqs'] = None
+        with patch('audit_logger.boto3.client') as mock_boto:
+            mock_client = MagicMock()
+            mock_boto.return_value = mock_client
+            audit_logger._get_sqs_client()
+            audit_logger._get_sqs_client()
+            mock_boto.assert_called_once_with('sqs')
+        audit_logger._clients['sqs'] = None
+
+    def test_get_dynamodb_client_returns_same_instance_on_second_call(self):
+        """Test _get_dynamodb_client returns cached client on second call."""
+        import audit_logger
+        audit_logger._clients['dynamodb'] = None
+        with patch('audit_logger.boto3.client') as mock_boto:
+            mock_client = MagicMock()
+            mock_boto.return_value = mock_client
+            client1 = audit_logger._get_dynamodb_client()
+            client2 = audit_logger._get_dynamodb_client()
+            assert client1 is client2
+        audit_logger._clients['dynamodb'] = None
+
+    def test_get_dynamodb_client_calls_boto3_once(self):
+        """Test _get_dynamodb_client only creates client once."""
+        import audit_logger
+        audit_logger._clients['dynamodb'] = None
+        with patch('audit_logger.boto3.client') as mock_boto:
+            mock_client = MagicMock()
+            mock_boto.return_value = mock_client
+            audit_logger._get_dynamodb_client()
+            audit_logger._get_dynamodb_client()
+            mock_boto.assert_called_once_with('dynamodb')
+        audit_logger._clients['dynamodb'] = None
+
+
+class TestWriteAheadLoggerAdvanced:
+    """Advanced tests for WriteAheadLogger class."""
+
+    @pytest.fixture
+    def logger_no_queue(self):
+        """Create a WriteAheadLogger without write-ahead queue."""
+        return WriteAheadLogger(
+            audit_table_name='test-audit-table',
+            write_ahead_queue_url=None,
+            endpoint_name='test-endpoint'
+        )
+
+    def test_parses_base64_encoded_body(self):
+        """Test parse_body handles base64 encoded body."""
+        import base64
+        logger = WriteAheadLogger(
+            audit_table_name='test', endpoint_name='test'
+        )
+        body_json = json.dumps({'key': 'value'})
+        encoded_body = base64.b64encode(body_json.encode()).decode()
+        event = {'body': encoded_body, 'isBase64Encoded': True}
+        result = logger.parse_body(event)
+        assert result == {'key': 'value'}
+
+    def test_extract_request_info_from_identity(self):
+        """Test extract_request_info gets sourceIp from identity."""
+        logger = WriteAheadLogger(
+            audit_table_name='test', endpoint_name='test'
+        )
+        event = {
+            'httpMethod': 'GET',
+            'headers': {},
+            'requestContext': {
+                'identity': {'sourceIp': '5.6.7.8'}
+            }
+        }
+        result = logger.extract_request_info(event)
+        assert result['source_ip'] == '5.6.7.8'
+
+    def test_extract_request_info_fallback_to_x_request_id(self):
+        """Test extract_request_info falls back to x-request-id."""
+        logger = WriteAheadLogger(
+            audit_table_name='test', endpoint_name='test'
+        )
+        event = {
+            'httpMethod': 'GET',
+            'headers': {'x-request-id': 'req-456'},
+            'requestContext': {}
+        }
+        result = logger.extract_request_info(event)
+        assert result['correlation_id'] == 'req-456'
+
+    def test_extract_request_info_handles_none_headers_method(self):
+        """Test extract_request_info returns UNKNOWN method for None headers."""
+        logger = WriteAheadLogger(
+            audit_table_name='test', endpoint_name='test'
+        )
+        event = {
+            'headers': None,
+            'requestContext': None
+        }
+        result = logger.extract_request_info(event)
+        assert result['method'] == 'UNKNOWN'
+
+    def test_extract_request_info_handles_none_headers_user_agent(self):
+        """Test extract_request_info returns empty user_agent for None headers."""
+        logger = WriteAheadLogger(
+            audit_table_name='test', endpoint_name='test'
+        )
+        event = {
+            'headers': None,
+            'requestContext': None
+        }
+        result = logger.extract_request_info(event)
+        assert result['user_agent'] == ''
+
+    @patch('audit_logger._get_dynamodb_client')
+    def test_log_request_received_without_sqs(self, mock_ddb, logger_no_queue):
+        """Test log_request_received works without SQS queue."""
+        mock_ddb.return_value = MagicMock()
+        event = {'httpMethod': 'POST', 'headers': {}, 'body': '{}'}
+        record = logger_no_queue.log_request_received(event)
+        assert record.status == 'received'
+
+    @patch('audit_logger._get_dynamodb_client')
+    @patch('audit_logger._get_sqs_client')
+    def test_write_to_sqs_handles_error(self, mock_sqs, mock_ddb):
+        """Test _write_to_sqs handles ClientError gracefully."""
+        from botocore.exceptions import ClientError
+        mock_sqs_client = MagicMock()
+        mock_sqs_client.send_message.side_effect = ClientError(
+            {'Error': {'Code': 'ServiceUnavailable'}}, 'SendMessage'
+        )
+        mock_sqs.return_value = mock_sqs_client
+        mock_ddb.return_value = MagicMock()
+
+        logger = WriteAheadLogger(
+            audit_table_name='test',
+            write_ahead_queue_url='https://sqs.test.com/queue',
+            endpoint_name='test'
+        )
+        event = {'httpMethod': 'POST', 'headers': {}, 'body': '{}'}
+        # Should not raise, continues without SQS
+        record = logger.log_request_received(event)
+        assert record.status == 'received'
+
+    @patch('audit_logger._get_dynamodb_client')
+    def test_write_to_dynamodb_raises_on_error(self, mock_ddb):
+        """Test _write_to_dynamodb raises ClientError."""
+        from botocore.exceptions import ClientError
+        mock_ddb_client = MagicMock()
+        mock_ddb_client.put_item.side_effect = ClientError(
+            {'Error': {'Code': 'ValidationException'}}, 'PutItem'
+        )
+        mock_ddb.return_value = mock_ddb_client
+
+        logger = WriteAheadLogger(
+            audit_table_name='test', endpoint_name='test'
+        )
+        event = {'httpMethod': 'POST', 'headers': {}, 'body': '{}'}
+        with pytest.raises(ClientError):
+            logger.log_request_received(event)
+
+    @patch('audit_logger._get_dynamodb_client')
+    def test_update_status_handles_error_gracefully(self, mock_ddb):
+        """Test _update_status handles ClientError without raising."""
+        from botocore.exceptions import ClientError
+        mock_ddb_client = MagicMock()
+        mock_ddb_client.update_item.side_effect = ClientError(
+            {'Error': {'Code': 'ValidationException'}}, 'UpdateItem'
+        )
+        mock_ddb.return_value = mock_ddb_client
+
+        logger = WriteAheadLogger(
+            audit_table_name='test', endpoint_name='test'
+        )
+        record = AuditRecord(
+            request_id='test-123', endpoint='test', method='POST',
+            status='received', request_timestamp='2024-01-01T00:00:00Z'
+        )
+        # Should not raise
+        logger.log_processing_started(record)
+        assert record.status == 'processing'
+
+
+class TestAuditRequestDecoratorAdvanced:
+    """Advanced tests for audit_request decorator."""
+
+    @patch('audit_logger._get_dynamodb_client')
+    @patch('audit_logger._get_sqs_client')
+    def test_decorator_logs_failure_on_4xx_response(self, mock_sqs, mock_ddb):
+        """Test decorator logs failure for 4xx response codes."""
+        mock_sqs.return_value = MagicMock()
+        mock_ddb.return_value = MagicMock()
+
+        @audit_request('test-endpoint')
+        def handler(_event, _context):
+            return {'statusCode': 400, 'body': 'Bad Request'}
+
+        event = {'httpMethod': 'POST', 'headers': {}, 'body': '{}'}
+        with patch.dict('os.environ', {'AUDIT_ENABLED': 'true', 'AUDIT_TABLE_NAME': 'test'}):
+            result = handler(event, None)
+        assert result['statusCode'] == 400
+
+    @patch('audit_logger._get_dynamodb_client')
+    @patch('audit_logger._get_sqs_client')
+    def test_decorator_logs_failure_on_exception(self, mock_sqs, mock_ddb):
+        """Test decorator logs failure and re-raises exception."""
+        mock_sqs.return_value = MagicMock()
+        mock_ddb.return_value = MagicMock()
+
+        @audit_request('test-endpoint')
+        def handler(_event, _context):
+            raise ValueError("Something went wrong")
+
+        event = {'httpMethod': 'POST', 'headers': {}, 'body': '{}'}
+        with patch.dict('os.environ', {'AUDIT_ENABLED': 'true', 'AUDIT_TABLE_NAME': 'test'}):
+            with pytest.raises(ValueError, match="Something went wrong"):
+                handler(event, None)
+
+    @patch('audit_logger._get_dynamodb_client')
+    @patch('audit_logger._get_sqs_client')
+    def test_decorator_with_custom_redact_fields(self, mock_sqs, mock_ddb):
+        """Test decorator uses custom redact fields."""
+        mock_sqs.return_value = MagicMock()
+        mock_ddb.return_value = MagicMock()
+
+        @audit_request('test-endpoint', redact_fields=['email'])
+        def handler(_event, _context):
+            return {'statusCode': 200}
+
+        event = {'httpMethod': 'POST', 'headers': {}, 'body': '{"email": "test@test.com"}'}
+        with patch.dict('os.environ', {'AUDIT_ENABLED': 'true', 'AUDIT_TABLE_NAME': 'test'}):
+            handler(event, None)
+
+    @patch('audit_logger._get_dynamodb_client')
+    @patch('audit_logger._get_sqs_client')
+    def test_decorator_with_write_ahead_queue(self, mock_sqs, mock_ddb):
+        """Test decorator uses write-ahead queue when configured."""
+        mock_sqs.return_value = MagicMock()
+        mock_ddb.return_value = MagicMock()
+
+        @audit_request('test-endpoint')
+        def handler(_event, _context):
+            return {'statusCode': 200}
+
+        event = {'httpMethod': 'POST', 'headers': {}, 'body': '{}'}
+        with patch.dict('os.environ', {
+            'AUDIT_ENABLED': 'true',
+            'AUDIT_TABLE_NAME': 'test',
+            'WRITE_AHEAD_QUEUE_URL': 'https://sqs.test.com/queue'
+        }):
+            handler(event, None)
+        mock_sqs.return_value.send_message.assert_called()
+
+    @patch('audit_logger._get_dynamodb_client')
+    @patch('audit_logger._get_sqs_client')
+    def test_decorator_with_response_missing_status_code(self, mock_sqs, mock_ddb):
+        """Test decorator handles response without statusCode."""
+        mock_sqs.return_value = MagicMock()
+        mock_ddb.return_value = MagicMock()
+
+        @audit_request('test-endpoint')
+        def handler(_event, _context):
+            return {'body': 'response'}  # No statusCode
+
+        event = {'httpMethod': 'POST', 'headers': {}, 'body': '{}'}
+        with patch.dict('os.environ', {'AUDIT_ENABLED': 'true', 'AUDIT_TABLE_NAME': 'test'}):
+            result = handler(event, None)
+        assert result == {'body': 'response'}
+
+
+class TestGetWriteAheadLogger:
+    """Tests for get_write_ahead_logger function."""
+
+    def test_get_write_ahead_logger_reads_audit_table_name_from_env(self):
+        """Test get_write_ahead_logger reads AUDIT_TABLE_NAME from environment."""
+        from audit_logger import get_write_ahead_logger
+        with patch.dict('os.environ', {
+            'AUDIT_TABLE_NAME': 'my-audit-table',
+            'WRITE_AHEAD_QUEUE_URL': 'https://sqs.test.com/my-queue'
+        }):
+            logger = get_write_ahead_logger('my-endpoint')
+            assert logger.audit_table_name == 'my-audit-table'
+
+    def test_get_write_ahead_logger_reads_queue_url_from_env(self):
+        """Test get_write_ahead_logger reads WRITE_AHEAD_QUEUE_URL from environment."""
+        from audit_logger import get_write_ahead_logger
+        with patch.dict('os.environ', {
+            'AUDIT_TABLE_NAME': 'my-audit-table',
+            'WRITE_AHEAD_QUEUE_URL': 'https://sqs.test.com/my-queue'
+        }):
+            logger = get_write_ahead_logger('my-endpoint')
+            assert logger.write_ahead_queue_url == 'https://sqs.test.com/my-queue'
+
+    def test_get_write_ahead_logger_sets_endpoint_name(self):
+        """Test get_write_ahead_logger sets endpoint name correctly."""
+        from audit_logger import get_write_ahead_logger
+        with patch.dict('os.environ', {
+            'AUDIT_TABLE_NAME': 'my-audit-table',
+            'WRITE_AHEAD_QUEUE_URL': 'https://sqs.test.com/my-queue'
+        }):
+            logger = get_write_ahead_logger('my-endpoint')
+            assert logger.endpoint_name == 'my-endpoint'
+
+    def test_get_write_ahead_logger_with_custom_redact(self):
+        """Test get_write_ahead_logger with custom redact fields."""
+        from audit_logger import get_write_ahead_logger
+        with patch.dict('os.environ', {'AUDIT_TABLE_NAME': 'test'}, clear=True):
+            logger = get_write_ahead_logger('test', redact_fields=['custom'])
+            assert 'custom' in logger.redact_fields
+
+    def test_get_write_ahead_logger_no_queue(self):
+        """Test get_write_ahead_logger without queue URL."""
+        from audit_logger import get_write_ahead_logger
+        with patch.dict('os.environ', {'AUDIT_TABLE_NAME': 'test'}, clear=True):
+            logger = get_write_ahead_logger('test')
+            assert logger.write_ahead_queue_url is None

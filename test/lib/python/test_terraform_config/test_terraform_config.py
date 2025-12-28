@@ -194,3 +194,377 @@ class TestResolveLambdaFunctionName:
         '''
         result = _resolve_lambda_function_name(block, "TenULabs", {}, {}, {})
         assert result is None
+
+    def test_returns_none_for_local_not_in_map(self):
+        """Test returns None when local reference not in map."""
+        block = '''
+        function_name = local.missing_name
+        '''
+        result = _resolve_lambda_function_name(block, "TenULabs", {"other": "value"}, {}, {})
+        assert result is None
+
+    def test_returns_none_for_var_not_in_tfvars(self):
+        """Test returns None when var reference not in tfvars."""
+        block = '''
+        function_name = var.missing_name
+        '''
+        result = _resolve_lambda_function_name(block, "TenULabs", {}, {"other": "value"}, {})
+        assert result is None
+
+    def test_returns_none_for_handler_not_in_map(self):
+        """Test returns None when handler reference not in map."""
+        block = '''
+        function_name = module.shared.lambda_handler_names.missing
+        '''
+        result = _resolve_lambda_function_name(block, "TenULabs", {}, {}, {"other": "value"})
+        assert result is None
+
+
+# Integration tests using real shared module files
+class TestParseLocals:
+    """Tests for parse_locals function."""
+
+    def test_returns_dict(self):
+        """Test parse_locals returns a dict."""
+        from terraform_config import parse_locals
+        result = parse_locals()
+        assert isinstance(result, dict)
+
+    def test_contains_aws_region(self):
+        """Test parse_locals contains aws_region."""
+        from terraform_config import parse_locals
+        result = parse_locals()
+        assert "aws_region" in result
+
+    def test_contains_resource_prefix(self):
+        """Test parse_locals contains resource_prefix."""
+        from terraform_config import parse_locals
+        result = parse_locals()
+        assert "resource_prefix" in result
+
+
+class TestParseLambdaHandlerNames:
+    """Tests for parse_lambda_handler_names function."""
+
+    def test_returns_dict(self):
+        """Test parse_lambda_handler_names returns a dict."""
+        from terraform_config import parse_lambda_handler_names
+        result = parse_lambda_handler_names()
+        assert isinstance(result, dict)
+
+    def test_values_do_not_contain_unresolved_local_resource_prefix(self):
+        """Test handler name values do not contain unresolved local.resource_prefix."""
+        from terraform_config import parse_lambda_handler_names
+        result = parse_lambda_handler_names()
+        unresolved_values = [v for v in result.values() if "${local.resource_prefix}" in v]
+        assert unresolved_values == []
+
+
+class TestParseOutputs:
+    """Tests for parse_outputs function."""
+
+    def test_returns_dict(self):
+        """Test parse_outputs returns a dict."""
+        from terraform_config import parse_outputs
+        result = parse_outputs()
+        assert isinstance(result, dict)
+
+
+class TestGetSharedConfig:
+    """Tests for get_shared_config function."""
+
+    def test_returns_dict(self):
+        """Test get_shared_config returns a dict."""
+        from terraform_config import get_shared_config
+        result = get_shared_config()
+        assert isinstance(result, dict)
+
+    def test_contains_lambda_handler_names_key(self):
+        """Test get_shared_config includes lambda_handler_names key."""
+        from terraform_config import get_shared_config
+        result = get_shared_config()
+        assert "lambda_handler_names" in result
+
+    def test_lambda_handler_names_is_dict(self):
+        """Test get_shared_config lambda_handler_names value is a dict."""
+        from terraform_config import get_shared_config
+        result = get_shared_config()
+        assert isinstance(result["lambda_handler_names"], dict)
+
+
+class TestTestAwsRegion:
+    """Tests for TEST_AWS_REGION constant."""
+
+    def test_is_string(self):
+        """Test TEST_AWS_REGION is a string."""
+        from terraform_config import TEST_AWS_REGION
+        assert isinstance(TEST_AWS_REGION, str)
+
+    def test_is_valid_region_format(self):
+        """Test TEST_AWS_REGION matches AWS region format."""
+        from terraform_config import TEST_AWS_REGION
+        assert TEST_AWS_REGION.startswith("us-") or TEST_AWS_REGION.startswith("eu-")
+
+
+class TestGetResourcePrefix:
+    """Tests for get_resource_prefix function."""
+
+    def test_returns_string(self):
+        """Test get_resource_prefix returns a string."""
+        from terraform_config import get_resource_prefix
+        result = get_resource_prefix()
+        assert isinstance(result, str)
+
+    def test_returns_non_empty(self):
+        """Test get_resource_prefix returns non-empty string."""
+        from terraform_config import get_resource_prefix
+        result = get_resource_prefix()
+        assert len(result) > 0
+
+
+class TestGetRunnersResourceNames:
+    """Tests for get_runners_resource_names function."""
+
+    def test_returns_dict(self):
+        """Test get_runners_resource_names returns a dict."""
+        from terraform_config import get_runners_resource_names
+        result = get_runners_resource_names()
+        assert isinstance(result, dict)
+
+    def test_contains_idempotency_table_key(self):
+        """Test get_runners_resource_names contains idempotency_table key."""
+        from terraform_config import get_runners_resource_names
+        result = get_runners_resource_names()
+        assert "idempotency_table" in result
+
+    def test_contains_circuit_breaker_state_table_key(self):
+        """Test get_runners_resource_names contains circuit_breaker_state_table key."""
+        from terraform_config import get_runners_resource_names
+        result = get_runners_resource_names()
+        assert "circuit_breaker_state_table" in result
+
+    def test_contains_job_queue_key(self):
+        """Test get_runners_resource_names contains job_queue key."""
+        from terraform_config import get_runners_resource_names
+        result = get_runners_resource_names()
+        assert "job_queue" in result
+
+    def test_contains_job_dlq_key(self):
+        """Test get_runners_resource_names contains job_dlq key."""
+        from terraform_config import get_runners_resource_names
+        result = get_runners_resource_names()
+        assert "job_dlq" in result
+
+    def test_custom_prefix_applies_to_circuit_breaker_state_table(self):
+        """Test get_runners_resource_names applies custom prefix to circuit_breaker_state_table."""
+        from terraform_config import get_runners_resource_names
+        result = get_runners_resource_names(prefix="Custom")
+        assert result["circuit_breaker_state_table"].startswith("Custom")
+
+
+class TestGetTfvarsValues:
+    """Tests for get_tfvars_values function."""
+
+    def test_returns_empty_for_nonexistent_dir(self):
+        """Test returns empty dict for nonexistent directory."""
+        from pathlib import Path
+        from terraform_config import get_tfvars_values
+        result = get_tfvars_values(Path("/nonexistent/path"))
+        assert result == {}
+
+    def test_parses_string_values(self, tmp_path):
+        """Test parses string values from tfvars."""
+        from terraform_config import get_tfvars_values
+        tfvars_file = tmp_path / "terraform.tfvars"
+        tfvars_file.write_text('my_var = "my_value"\n')
+        result = get_tfvars_values(tmp_path)
+        assert result == {"my_var": "my_value"}
+
+    def test_parses_list_values(self, tmp_path):
+        """Test parses list values from tfvars."""
+        from terraform_config import get_tfvars_values
+        tfvars_file = tmp_path / "terraform.tfvars"
+        tfvars_file.write_text('my_list = ["a", "b", "c"]\n')
+        result = get_tfvars_values(tmp_path)
+        assert result == {"my_list": ["a", "b", "c"]}
+
+    def test_ignores_comments(self, tmp_path):
+        """Test ignores comment lines."""
+        from terraform_config import get_tfvars_values
+        tfvars_file = tmp_path / "terraform.tfvars"
+        tfvars_file.write_text('# This is a comment\nmy_var = "value"\n')
+        result = get_tfvars_values(tmp_path)
+        assert result == {"my_var": "value"}
+
+
+class TestGetEndpointLocalValues:
+    """Tests for get_endpoint_local_values function."""
+
+    def test_returns_empty_for_nonexistent_file(self):
+        """Test returns empty dict when locals.tf doesn't exist."""
+        from pathlib import Path
+        from terraform_config import get_endpoint_local_values
+        result = get_endpoint_local_values(Path("/nonexistent/path"))
+        assert result == {}
+
+    def test_parses_local_values(self, tmp_path):
+        """Test parses local values from locals.tf."""
+        from terraform_config import get_endpoint_local_values
+        locals_file = tmp_path / "locals.tf"
+        locals_file.write_text('locals {\n  my_local = "my_value"\n}\n')
+        result = get_endpoint_local_values(tmp_path)
+        assert result.get("my_local") == "my_value"
+
+
+class TestExtractIamRoleNames:
+    """Tests for extract_iam_role_names function."""
+
+    def test_returns_empty_for_nonexistent_file(self):
+        """Test returns empty list when file doesn't exist."""
+        from pathlib import Path
+        from terraform_config import extract_iam_role_names
+        result = extract_iam_role_names(Path("/nonexistent/file.tf"))
+        assert result == []
+
+    def test_extracts_quoted_name_returns_single_result(self, tmp_path):
+        """Test extracts exactly one role from file with one role definition."""
+        from terraform_config import extract_iam_role_names
+        iam_file = tmp_path / "iam.tf"
+        iam_file.write_text('''
+resource "aws_iam_role" "my_role" {
+  name = "MyRoleName"
+  assume_role_policy = jsonencode({})
+}
+''')
+        result = extract_iam_role_names(iam_file)
+        assert len(result) == 1
+
+    def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path):
+        """Test extracts correct resource name and role name tuple."""
+        from terraform_config import extract_iam_role_names
+        iam_file = tmp_path / "iam.tf"
+        iam_file.write_text('''
+resource "aws_iam_role" "my_role" {
+  name = "MyRoleName"
+  assume_role_policy = jsonencode({})
+}
+''')
+        result = extract_iam_role_names(iam_file)
+        assert result[0] == ("my_role", "MyRoleName")
+
+
+class TestExtractLambdaFunctionNames:
+    """Tests for extract_lambda_function_names function."""
+
+    def test_returns_empty_for_nonexistent_file(self):
+        """Test returns empty list when file doesn't exist."""
+        from pathlib import Path
+        from terraform_config import extract_lambda_function_names
+        result = extract_lambda_function_names(Path("/nonexistent/file.tf"))
+        assert result == []
+
+    def test_extracts_quoted_name_returns_single_result(self, tmp_path):
+        """Test extracts exactly one function from file with one function definition."""
+        from terraform_config import extract_lambda_function_names
+        lambda_file = tmp_path / "lambda.tf"
+        lambda_file.write_text('''
+resource "aws_lambda_function" "my_func" {
+  function_name = "MyFunctionName"
+  handler = "index.handler"
+  runtime = "python3.11"
+}
+''')
+        result = extract_lambda_function_names(lambda_file)
+        assert len(result) == 1
+
+    def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path):
+        """Test extracts correct resource name and function name tuple."""
+        from terraform_config import extract_lambda_function_names
+        lambda_file = tmp_path / "lambda.tf"
+        lambda_file.write_text('''
+resource "aws_lambda_function" "my_func" {
+  function_name = "MyFunctionName"
+  handler = "index.handler"
+  runtime = "python3.11"
+}
+''')
+        result = extract_lambda_function_names(lambda_file)
+        assert result[0] == ("my_func", "MyFunctionName")
+
+    def test_with_use_handler_names_returns_single_result(self, tmp_path):
+        """Test with use_handler_names=True returns exactly one result."""
+        from terraform_config import extract_lambda_function_names
+        lambda_file = tmp_path / "lambda.tf"
+        lambda_file.write_text('''
+resource "aws_lambda_function" "my_func" {
+  function_name = "StaticName"
+  runtime = "python3.11"
+}
+''')
+        result = extract_lambda_function_names(lambda_file, use_handler_names=True)
+        assert len(result) == 1
+
+
+class TestExtractSqsQueueNames:
+    """Tests for extract_sqs_queue_names function."""
+
+    def test_returns_empty_for_nonexistent_file(self):
+        """Test returns empty list when file doesn't exist."""
+        from pathlib import Path
+        from terraform_config import extract_sqs_queue_names
+        result = extract_sqs_queue_names(Path("/nonexistent/file.tf"))
+        assert result == []
+
+    def test_extracts_quoted_name_returns_single_result(self, tmp_path):
+        """Test extracts exactly one queue from file with one queue definition."""
+        from terraform_config import extract_sqs_queue_names
+        (tmp_path / "locals.tf").write_text("")  # Empty locals
+        sqs_file = tmp_path / "sqs.tf"
+        sqs_file.write_text('''
+resource "aws_sqs_queue" "my_queue" {
+  name = "MyQueueName"
+}
+''')
+        result = extract_sqs_queue_names(sqs_file)
+        assert len(result) == 1
+
+    def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path):
+        """Test extracts correct resource name and queue name tuple."""
+        from terraform_config import extract_sqs_queue_names
+        (tmp_path / "locals.tf").write_text("")  # Empty locals
+        sqs_file = tmp_path / "sqs.tf"
+        sqs_file.write_text('''
+resource "aws_sqs_queue" "my_queue" {
+  name = "MyQueueName"
+}
+''')
+        result = extract_sqs_queue_names(sqs_file)
+        assert result[0] == ("my_queue", "MyQueueName")
+
+    def test_extracts_local_reference_returns_single_result(self, tmp_path):
+        """Test extracts exactly one queue when name uses local reference."""
+        from terraform_config import extract_sqs_queue_names
+        locals_file = tmp_path / "locals.tf"
+        locals_file.write_text('locals {\n  queue_name = "LocalQueueName"\n}\n')
+        sqs_file = tmp_path / "sqs.tf"
+        sqs_file.write_text('''
+resource "aws_sqs_queue" "my_queue" {
+  name = local.queue_name
+}
+''')
+        result = extract_sqs_queue_names(sqs_file)
+        assert len(result) == 1
+
+    def test_extracts_local_reference_returns_correct_tuple(self, tmp_path):
+        """Test extracts correct tuple when name uses local reference."""
+        from terraform_config import extract_sqs_queue_names
+        locals_file = tmp_path / "locals.tf"
+        locals_file.write_text('locals {\n  queue_name = "LocalQueueName"\n}\n')
+        sqs_file = tmp_path / "sqs.tf"
+        sqs_file.write_text('''
+resource "aws_sqs_queue" "my_queue" {
+  name = local.queue_name
+}
+''')
+        result = extract_sqs_queue_names(sqs_file)
+        assert result[0] == ("my_queue", "LocalQueueName")
