@@ -1,6 +1,6 @@
 """End-to-end tests for DNS records via public DNS queries."""
 import time
-from botocore.exceptions import ClientError
+
 import dns.resolver
 import pytest
 
@@ -36,23 +36,20 @@ def test_can_create_and_resolve_record(
         resolved_value = str(public_dns_resolver.resolve(test_record_name, 'TXT')[0]).strip('"')
         assert resolved_value == test_value
     finally:
-        try:
-            route53_client.change_resource_record_sets(
-                HostedZoneId=hosted_zone['Id'],
-                ChangeBatch={
-                    'Changes': [{
-                        'Action': 'DELETE',
-                        'ResourceRecordSet': {
-                            'Name': test_record_name,
-                            'Type': 'TXT',
-                            'TTL': 60,
-                            'ResourceRecords': [{'Value': f'"{test_value}"'}]
-                        }
-                    }]
-                }
-            )
-        except ClientError:
-            pass
+        route53_client.change_resource_record_sets(
+            HostedZoneId=hosted_zone['Id'],
+            ChangeBatch={
+                'Changes': [{
+                    'Action': 'DELETE',
+                    'ResourceRecordSet': {
+                        'Name': test_record_name,
+                        'Type': 'TXT',
+                        'TTL': 60,
+                        'ResourceRecords': [{'Value': f'"{test_value}"'}]
+                    }
+                }]
+            }
+        )
 
 
 def test_google_verification_record_resolves(public_dns_resolver, config):

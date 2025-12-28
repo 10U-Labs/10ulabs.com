@@ -132,6 +132,36 @@ def test_runner_provisioning():
     # No cleanup! Runner keeps running, costing money
 ```
 
+### Cleanup Must Succeed
+
+**If cleanup fails, the test fails.** No silent exception handling.
+
+Leaked test resources cost money, clutter AWS, and cause confusing failures later. If a test creates something, it must clean it up successfully.
+
+```python
+# CORRECT - cleanup failure = test failure
+def test_can_create_record(client, resource_id):
+    test_id = f"test-{uuid.uuid4()}"
+    try:
+        client.put_item(Id=test_id, Data="test")
+        # ... assertions ...
+    finally:
+        client.delete_item(Id=test_id)  # Let it raise if it fails
+```
+
+```python
+# WRONG - silent cleanup failure
+def test_can_create_record(client, resource_id):
+    test_id = f"test-{uuid.uuid4()}"
+    try:
+        client.put_item(Id=test_id, Data="test")
+    finally:
+        try:
+            client.delete_item(Id=test_id)
+        except ClientError:
+            pass  # NEVER DO THIS - leaked resources are unacceptable
+```
+
 ## Test the Full Path
 
 **E2E tests verify end-to-end behavior that unit and integration tests cannot catch.**

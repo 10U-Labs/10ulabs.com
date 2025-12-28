@@ -3,8 +3,6 @@
 These tests verify that resources were created by Terraform.
 Tests are organized by resource domain for readability.
 """
-import boto3
-from botocore.exceptions import ClientError
 import pytest
 
 pytestmark = pytest.mark.layer(1)
@@ -22,20 +20,13 @@ def test_central_logs_bucket_exists(s3_client, config):
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
 
-def test_terraform_state_exists(config):
+def test_terraform_state_exists(s3_client, config):
     """Test that Terraform state file exists in S3."""
-    s3_client = boto3.client('s3', region_name=config['aws_region'])
-
-    try:
-        s3_client.head_object(
-            Bucket='10ulabs-terraform-state-us-east-2',
-            Key='bootstrap/terraform.tfstate'
-        )
-        state_exists = True
-    except ClientError:
-        state_exists = False
-
-    assert state_exists
+    bucket_name = config['name_for_terraform_state_bucket']
+    s3_client.head_object(
+        Bucket=bucket_name,
+        Key='bootstrap/terraform.tfstate'
+    )
 
 
 # =============================================================================
