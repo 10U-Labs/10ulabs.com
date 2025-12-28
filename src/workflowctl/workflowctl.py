@@ -19,6 +19,7 @@ import cancel
 import compute_roots
 import dispatch_descendants
 import dispatch_roots
+import dispatch_workflow
 import get_changed_files
 import get_running
 
@@ -28,6 +29,7 @@ COMMANDS = {
     "compute-root-workflows": ("Compute root workflows from changed files", compute_roots.main),
     "dispatch-descendant-workflows": ("Dispatch descendant workflows", dispatch_descendants.main),
     "dispatch-root-workflows": ("Dispatch root workflows", dispatch_roots.main),
+    "dispatch-workflow": ("Dispatch a single workflow", dispatch_workflow.main),
     "get-changed-files": ("Get changed files between commits", get_changed_files.main),
     "get-running-workflows": ("Get currently running workflows", get_running.main),
 }

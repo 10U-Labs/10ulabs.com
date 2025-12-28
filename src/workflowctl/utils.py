@@ -7,6 +7,7 @@ to avoid code duplication.
 import argparse
 import fnmatch
 import json
+import os
 import subprocess
 import sys
 from typing import Any
@@ -202,3 +203,20 @@ def dispatch_gh_workflow(
         print(f"    Error: {result.stderr.strip()}", file=sys.stderr)
         return False
     return True
+
+
+def workflow_file_exists(workflow: str) -> bool:
+    """Check if the workflow file exists."""
+    workflow_file = f".github/workflows/{workflow}.yml"
+    return os.path.isfile(workflow_file)
+
+
+def workflow_accepts_input(workflow: str, input_name: str) -> bool:
+    """Check if a workflow accepts a specific input."""
+    workflow_file = f".github/workflows/{workflow}.yml"
+    try:
+        with open(workflow_file, encoding="utf-8") as f:
+            content = f.read()
+            return f"{input_name}:" in content
+    except (OSError, IOError):
+        return False

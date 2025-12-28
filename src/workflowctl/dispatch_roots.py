@@ -32,6 +32,8 @@ from utils import (
     get_all_descendants,
     parse_changed_files,
     parse_running_workflows,
+    workflow_accepts_input,
+    workflow_file_exists,
 )
 
 
@@ -153,23 +155,6 @@ def should_invalidate_cloudfront(
         return True
 
     return False
-
-
-def workflow_file_exists(workflow: str) -> bool:
-    """Check if the workflow file exists."""
-    workflow_file = f".github/workflows/{workflow}.yml"
-    return os.path.isfile(workflow_file)
-
-
-def workflow_accepts_input(workflow: str, input_name: str) -> bool:
-    """Check if a workflow accepts a specific input."""
-    workflow_file = f".github/workflows/{workflow}.yml"
-    try:
-        with open(workflow_file, encoding="utf-8") as f:
-            content = f.read()
-            return f"{input_name}:" in content
-    except (OSError, IOError):
-        return False
 
 
 def dispatch_workflow(

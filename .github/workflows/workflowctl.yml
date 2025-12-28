@@ -214,7 +214,9 @@ jobs:
             --graph etc/workflow-dependencies.json
       - env:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-        if: steps.plan.outputs.root_workflows != ''
+        if: >-
+          steps.plan.outputs.root_workflows != '' &&
+          inputs.start_from == ''
         name: Dispatch root workflows (fire-and-forget)
         run: |
           FLAGS=""
@@ -228,6 +230,20 @@ jobs:
             --repo "${{ github.repository }}" \
             --changed-files "${{ steps.files.outputs.changed }}" \
             --running '${{ steps.running.outputs.workflows }}' \
+            $FLAGS
+      - if: inputs.start_from != ''
+        name: Dispatch workflow (fire-and-forget)
+        run: |
+          FLAGS=""
+          if [ "${{ inputs.trigger_descendants }}" = "true" ]; then
+            FLAGS="$FLAGS --trigger-descendants"
+          fi
+          if [ "${{ inputs.invalidate_cloudfront }}" = "true" ]; then
+            FLAGS="$FLAGS --invalidate-cloudfront"
+          fi
+          python3 src/workflowctl/workflowctl.py dispatch-workflow \
+            --workflow "${{ inputs.start_from }}" \
+            --repo "${{ github.repository }}" \
             $FLAGS
 name: Workflow Controller
 on:
@@ -257,7 +273,7 @@ on:
         required: false
         type: string
       start_from:
-        description: 'Workflow(s) to start from (e.g., "health, bootstrap")'
+        description: 'Workflow to start from (e.g., "bootstrap")'
         type: string
       trigger_descendants:
         default: false
