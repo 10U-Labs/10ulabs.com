@@ -7,8 +7,10 @@ import pytest
 
 LAMBDA_DIR = Path(__file__).parents[5] / "src" / "www" / "shared" / "lambda"
 spec = importlib.util.spec_from_file_location("spa_routing", LAMBDA_DIR / "spa_routing.py")
+assert spec is not None, "Failed to create module spec"
 spa_routing = importlib.util.module_from_spec(spec)
 sys.modules["spa_routing"] = spa_routing
+assert spec.loader is not None, "Module spec has no loader"
 spec.loader.exec_module(spa_routing)
 handler = spa_routing.handler
 

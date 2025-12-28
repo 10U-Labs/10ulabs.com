@@ -120,7 +120,9 @@ jobs:
         name: Install mypy
         run: python3 -m pip install mypy boto3-stubs types-requests
       - name: Run mypy
-        run: MYPYPATH=lib/python python3 -m mypy lib/python/ src/www/shared/lambda/ test/
+        run: |
+          MYPYPATH=lib/python python3 -m mypy \
+            lib/python/ src/www/shared/lambda/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -167,8 +169,10 @@ jobs:
           else
             BASE_COMMIT="HEAD^"
           fi
+          PATTERN='src/www/shared/(cloudfront_s3|lambda_edge)\.tf'
+          PATTERN="$PATTERN|src/www/shared/lambda/"
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/www/shared/(cloudfront_s3|lambda_edge)\.tf|src/www/shared/lambda/'; then
+            if grep -qE "$PATTERN"; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT

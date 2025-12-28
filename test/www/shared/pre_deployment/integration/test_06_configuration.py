@@ -2,9 +2,16 @@
 
 Verify prerequisite resources are configured correctly. Assumes existence tests passed.
 """
+import os
+
 import pytest
 
 pytestmark = pytest.mark.layer(6)
+
+
+def _is_github_actions():
+    """Check if running in GitHub Actions."""
+    return os.environ.get("GITHUB_ACTIONS") == "true"
 
 
 def test_trust_policy_has_github_oidc_principal(
@@ -61,6 +68,7 @@ def test_role_has_administrator_access_policy(iam_client, github_actions_role_na
     )
 
 
+@pytest.mark.skipif(not _is_github_actions(), reason="Only runs in GitHub Actions")
 def test_current_identity_uses_expected_role(current_identity, github_actions_role_arn):
     """Verify current execution context is using the expected role."""
     current_arn = current_identity["Arn"]
