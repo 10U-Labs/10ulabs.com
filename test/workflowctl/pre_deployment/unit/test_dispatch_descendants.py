@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from typing import Any, Tuple
 from unittest.mock import patch, MagicMock
 
+from conftest import DIAMOND_GRAPH
+
 
 def _run_main_with_unmet_deps(dispatch_descendants: Any) -> Tuple[int, MagicMock]:
     """Run main() with unmet dependencies and return (result, mock_dispatch)."""
@@ -12,7 +14,7 @@ def _run_main_with_unmet_deps(dispatch_descendants: Any) -> Tuple[int, MagicMock
     mock_dispatch = MagicMock()
     with patch.object(sys, "argv", argv):
         with patch(
-            "dispatch_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
+            "dispatch_descendants.load_dependency_graph", return_value=DIAMOND_GRAPH
         ):
             with patch(
                 "dispatch_descendants.all_dependencies_met",
@@ -21,14 +23,6 @@ def _run_main_with_unmet_deps(dispatch_descendants: Any) -> Tuple[int, MagicMock
                 with patch("dispatch_descendants.dispatch_workflow", mock_dispatch):
                     result = dispatch_descendants.main()
     return result, mock_dispatch
-
-
-SAMPLE_GRAPH = {
-    "bootstrap": {"name": "Bootstrap", "depends_on": []},
-    "www_shared": {"name": "WWW Shared", "depends_on": ["bootstrap"]},
-    "api_shared": {"name": "API Shared", "depends_on": ["bootstrap"]},
-    "www_app": {"name": "WWW App", "depends_on": ["www_shared", "api_shared"]},
-}
 
 
 class TestParseArgs:
@@ -116,22 +110,22 @@ class TestFindDescendants:
 
     def test_returns_empty_for_leaf_workflow(self, dispatch_descendants) -> None:
         """Test that a leaf workflow has no descendants."""
-        result = dispatch_descendants.find_descendants(SAMPLE_GRAPH, "www_app")
+        result = dispatch_descendants.find_descendants(DIAMOND_GRAPH, "www_app")
         assert result == []
 
     def test_returns_direct_descendants(self, dispatch_descendants) -> None:
         """Test that direct descendants are returned."""
-        result = dispatch_descendants.find_descendants(SAMPLE_GRAPH, "bootstrap")
+        result = dispatch_descendants.find_descendants(DIAMOND_GRAPH, "bootstrap")
         assert set(result) == {"www_shared", "api_shared"}
 
     def test_returns_single_descendant(self, dispatch_descendants) -> None:
         """Test workflow with single descendant."""
-        result = dispatch_descendants.find_descendants(SAMPLE_GRAPH, "www_shared")
+        result = dispatch_descendants.find_descendants(DIAMOND_GRAPH, "www_shared")
         assert result == ["www_app"]
 
     def test_returns_empty_for_unknown_workflow(self, dispatch_descendants) -> None:
         """Test that unknown workflow has no descendants."""
-        result = dispatch_descendants.find_descendants(SAMPLE_GRAPH, "unknown")
+        result = dispatch_descendants.find_descendants(DIAMOND_GRAPH, "unknown")
         assert result == []
 
 
@@ -140,7 +134,7 @@ class TestGetWorkflowName:
 
     def test_returns_name_from_graph(self, dispatch_descendants) -> None:
         """Test that workflow name is returned from graph."""
-        result = dispatch_descendants.get_workflow_name(SAMPLE_GRAPH, "bootstrap")
+        result = dispatch_descendants.get_workflow_name(DIAMOND_GRAPH, "bootstrap")
         assert result == "Bootstrap"
 
     def test_returns_key_if_no_name(self, dispatch_descendants) -> None:
@@ -151,7 +145,7 @@ class TestGetWorkflowName:
 
     def test_returns_key_for_unknown_workflow(self, dispatch_descendants) -> None:
         """Test that workflow key is returned for unknown workflow."""
-        result = dispatch_descendants.get_workflow_name(SAMPLE_GRAPH, "unknown")
+        result = dispatch_descendants.get_workflow_name(DIAMOND_GRAPH, "unknown")
         assert result == "unknown"
 
 
@@ -225,7 +219,7 @@ class TestAllDependenciesMet:
 
         with patch("dispatch_descendants.subprocess.run", return_value=mock_result):
             result, _ = dispatch_descendants.all_dependencies_met(
-                SAMPLE_GRAPH, "www_app", "www_shared", "owner/repo", 24
+                DIAMOND_GRAPH, "www_app", "www_shared", "owner/repo", 24
             )
         assert result is True
 
@@ -238,7 +232,7 @@ class TestAllDependenciesMet:
 
         with patch("dispatch_descendants.subprocess.run", return_value=mock_result):
             _, missing = dispatch_descendants.all_dependencies_met(
-                SAMPLE_GRAPH, "www_app", "www_shared", "owner/repo", 24
+                DIAMOND_GRAPH, "www_app", "www_shared", "owner/repo", 24
             )
         assert missing == []
 
@@ -249,7 +243,7 @@ class TestAllDependenciesMet:
 
         with patch("dispatch_descendants.subprocess.run", return_value=mock_result):
             result, _ = dispatch_descendants.all_dependencies_met(
-                SAMPLE_GRAPH, "www_app", "www_shared", "owner/repo", 24
+                DIAMOND_GRAPH, "www_app", "www_shared", "owner/repo", 24
             )
         assert result is False
 
@@ -260,7 +254,7 @@ class TestAllDependenciesMet:
 
         with patch("dispatch_descendants.subprocess.run", return_value=mock_result):
             _, missing = dispatch_descendants.all_dependencies_met(
-                SAMPLE_GRAPH, "www_app", "www_shared", "owner/repo", 24
+                DIAMOND_GRAPH, "www_app", "www_shared", "owner/repo", 24
             )
         assert missing == ["api_shared"]
 
@@ -346,7 +340,7 @@ class TestMain:
         argv = ["prog", "--workflow", "www_app", "--repo", "o/r"]
         with patch.object(sys, "argv", argv):
             with patch(
-                "dispatch_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
+                "dispatch_descendants.load_dependency_graph", return_value=DIAMOND_GRAPH
             ):
                 result = dispatch_descendants.main()
         assert result == 0
@@ -358,7 +352,7 @@ class TestMain:
         argv = ["prog", "--workflow", "bootstrap", "--repo", "o/r"]
         with patch.object(sys, "argv", argv):
             with patch(
-                "dispatch_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
+                "dispatch_descendants.load_dependency_graph", return_value=DIAMOND_GRAPH
             ):
                 with patch(
                     "dispatch_descendants.dispatch_workflow", return_value=True
@@ -371,7 +365,7 @@ class TestMain:
         argv = ["prog", "--workflow", "bootstrap", "--repo", "o/r"]
         with patch.object(sys, "argv", argv):
             with patch(
-                "dispatch_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
+                "dispatch_descendants.load_dependency_graph", return_value=DIAMOND_GRAPH
             ):
                 with patch(
                     "dispatch_descendants.dispatch_workflow", return_value=False
@@ -386,7 +380,7 @@ class TestMain:
         argv = ["prog", "--workflow", "www_shared", "--repo", "o/r"]
         with patch.object(sys, "argv", argv):
             with patch(
-                "dispatch_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
+                "dispatch_descendants.load_dependency_graph", return_value=DIAMOND_GRAPH
             ):
                 with patch(
                     "dispatch_descendants.all_dependencies_met",

@@ -50,7 +50,7 @@ def temp_graph_file():
 class TestCancelMain:
     """Unit tests for cancel.py main()."""
 
-    def test_no_running_workflows_exits_zero(self, cancel, temp_graph_file):
+    def test_no_running_workflows_exits_zero(self, cancel, temp_graph_file) -> None:
         """Main returns 0 when no workflows are running."""
         test_args = [
             "cancel", "--repo", "owner/repo",
@@ -60,7 +60,7 @@ class TestCancelMain:
         with patch.object(sys, "argv", test_args):
             assert cancel.main() == 0
 
-    def test_invalid_running_json_exits_one(self, cancel, temp_graph_file):
+    def test_invalid_running_json_exits_one(self, cancel, temp_graph_file) -> None:
         """Main returns 1 for invalid --running JSON."""
         test_args = [
             "cancel", "--repo", "owner/repo",
@@ -70,7 +70,7 @@ class TestCancelMain:
         with patch.object(sys, "argv", test_args):
             assert cancel.main() == 1
 
-    def test_missing_graph_exits_one(self, cancel):
+    def test_missing_graph_exits_one(self, cancel) -> None:
         """Main returns 1 when graph file is missing."""
         test_args = [
             "cancel", "--repo", "owner/repo",
@@ -81,7 +81,7 @@ class TestCancelMain:
             assert cancel.main() == 1
 
     @patch("cancel.get_cancelable_runs")
-    def test_no_matching_runs_exits_zero(self, mock_get_runs, cancel, temp_graph_file):
+    def test_no_matching_runs_exits_zero(self, mock_get_runs, cancel, temp_graph_file) -> None:
         """Main returns 0 when no runs match workflows to cancel."""
         mock_get_runs.return_value = []
         test_args = [
@@ -96,7 +96,7 @@ class TestCancelMain:
     @patch("cancel.get_cancelable_runs")
     def test_successful_cancel_exits_zero(
         self, mock_get_runs, mock_cancel, cancel, temp_graph_file
-    ):
+    ) -> None:
         """Main returns 0 when all cancellations succeed."""
         mock_get_runs.side_effect = [[{"id": 123, "name": "WWW Shared", "run_number": 1}], []]
         mock_cancel.return_value = True
@@ -112,7 +112,7 @@ class TestCancelMain:
     @patch("cancel.get_cancelable_runs")
     def test_failed_cancel_exits_one(
         self, mock_get_runs, mock_cancel, cancel, temp_graph_file
-    ):
+    ) -> None:
         """Main returns 1 when a cancellation fails."""
         mock_get_runs.side_effect = [[{"id": 123, "name": "WWW Shared", "run_number": 1}], []]
         mock_cancel.return_value = False
@@ -128,7 +128,7 @@ class TestCancelMain:
 class TestDispatchRootsMain:
     """Unit tests for dispatch_roots.py main()."""
 
-    def test_missing_graph_exits_one(self, dispatch_roots):
+    def test_missing_graph_exits_one(self, dispatch_roots) -> None:
         """Main returns 1 when graph file is missing."""
         test_args = [
             "dispatch_roots", "--repo", "owner/repo",
@@ -138,7 +138,7 @@ class TestDispatchRootsMain:
         with patch.object(sys, "argv", test_args):
             assert dispatch_roots.main() == 1
 
-    def test_invalid_running_json_exits_one(self, dispatch_roots, temp_graph_file):
+    def test_invalid_running_json_exits_one(self, dispatch_roots, temp_graph_file) -> None:
         """Main returns 1 for invalid --running JSON."""
         test_args = [
             "dispatch_roots", "--repo", "owner/repo",
@@ -148,7 +148,7 @@ class TestDispatchRootsMain:
         with patch.object(sys, "argv", test_args):
             assert dispatch_roots.main() == 1
 
-    def test_no_roots_exits_zero(self, dispatch_roots, temp_graph_file):
+    def test_no_roots_exits_zero(self, dispatch_roots, temp_graph_file) -> None:
         """Main returns 0 when no roots need dispatching."""
         test_args = [
             "dispatch_roots", "--repo", "owner/repo",
@@ -161,7 +161,7 @@ class TestDispatchRootsMain:
     @patch("dispatch_roots.dispatch_workflow")
     def test_successful_dispatch_exits_zero(
         self, mock_dispatch, mock_exists, dispatch_roots, temp_graph_file
-    ):
+    ) -> None:
         """Main returns 0 when dispatch succeeds."""
         mock_exists.return_value = True
         mock_dispatch.return_value = True
@@ -176,7 +176,7 @@ class TestDispatchRootsMain:
     @patch("dispatch_roots.dispatch_workflow")
     def test_failed_dispatch_exits_one(
         self, mock_dispatch, mock_exists, dispatch_roots, temp_graph_file
-    ):
+    ) -> None:
         """Main returns 1 when dispatch fails."""
         mock_exists.return_value = True
         mock_dispatch.return_value = False
@@ -190,7 +190,7 @@ class TestDispatchRootsMain:
     @patch("dispatch_roots.workflow_file_exists")
     def test_skips_nonexistent_workflow_file(
         self, mock_exists, dispatch_roots, temp_graph_file
-    ):
+    ) -> None:
         """Main skips workflows whose files don't exist."""
         mock_exists.return_value = False
         test_args = [
@@ -204,7 +204,7 @@ class TestDispatchRootsMain:
     @patch("dispatch_roots.dispatch_workflow")
     def test_trigger_descendants_flag_passes_true(
         self, mock_dispatch, mock_exists, dispatch_roots, temp_graph_file
-    ):
+    ) -> None:
         """Main passes trigger_descendants=True when flag is set."""
         mock_exists.return_value = True
         mock_dispatch.return_value = True
@@ -221,7 +221,7 @@ class TestDispatchRootsMain:
     @patch("dispatch_roots.dispatch_workflow")
     def test_commit_message_triggers_descendants(
         self, mock_dispatch, mock_exists, dispatch_roots, temp_graph_file
-    ):
+    ) -> None:
         """Main triggers descendants when commit message contains directive."""
         mock_exists.return_value = True
         mock_dispatch.return_value = True
@@ -246,7 +246,7 @@ class TestGetRunningMain:
             get_running.main()
         return json.loads(capsys.readouterr().out)
 
-    def test_missing_graph_exits_one(self, get_running):
+    def test_missing_graph_exits_one(self, get_running) -> None:
         """Main returns 1 when graph file is missing."""
         test_args = [
             "get_running", "--repo", "owner/repo", "--graph", "/nonexistent/graph.json",
@@ -257,7 +257,7 @@ class TestGetRunningMain:
     @patch("get_running.get_workflow_runs")
     def test_no_running_workflows_outputs_empty(
         self, mock_get_runs, get_running, temp_graph_file, capsys
-    ):
+    ) -> None:
         """Main outputs empty workflows list when none running."""
         mock_get_runs.return_value = []
         output = self._run_and_parse(get_running, temp_graph_file, capsys)
@@ -266,7 +266,7 @@ class TestGetRunningMain:
     @patch("get_running.get_workflow_runs")
     def test_returns_running_workflow_keys(
         self, mock_get_runs, get_running, temp_graph_file, capsys
-    ):
+    ) -> None:
         """Main returns workflow keys for running workflows."""
         mock_get_runs.side_effect = [[{"name": "WWW Shared"}, {"name": "Bootstrap"}], []]
         output = self._run_and_parse(get_running, temp_graph_file, capsys)
@@ -275,7 +275,7 @@ class TestGetRunningMain:
     @patch("get_running.get_workflow_runs")
     def test_excludes_unknown_workflows(
         self, mock_get_runs, get_running, temp_graph_file, capsys
-    ):
+    ) -> None:
         """Main excludes workflows not in graph."""
         mock_get_runs.side_effect = [[{"name": "Unknown Workflow"}, {"name": "Bootstrap"}], []]
         output = self._run_and_parse(get_running, temp_graph_file, capsys)
@@ -292,7 +292,7 @@ class TestComputeRootsMain:
             compute_roots.main()
         return json.loads(capsys.readouterr().out)
 
-    def test_missing_graph_exits_one(self, compute_roots):
+    def test_missing_graph_exits_one(self, compute_roots) -> None:
         """Main exits 1 when graph file is missing."""
         test_args = [
             "compute_roots", "--changed-files", "src/bootstrap/main.py",
@@ -303,19 +303,19 @@ class TestComputeRootsMain:
                 compute_roots.main()
         assert exc_info.value.code == 1
 
-    def test_no_affected_files_outputs_empty(self, compute_roots, temp_graph_file, capsys):
+    def test_no_affected_files_outputs_empty(self, compute_roots, temp_graph_file, capsys) -> None:
         """Main outputs empty workflows when no files match."""
         args = ["--changed-files", "unrelated/file.txt", "--graph", temp_graph_file]
         output = self._run_and_parse(compute_roots, args, capsys)
         assert output == {"workflows": []}
 
-    def test_outputs_root_workflow(self, compute_roots, temp_graph_file, capsys):
+    def test_outputs_root_workflow(self, compute_roots, temp_graph_file, capsys) -> None:
         """Main outputs root workflow for changed files."""
         args = ["--changed-files", "src/bootstrap/main.py", "--graph", temp_graph_file]
         output = self._run_and_parse(compute_roots, args, capsys)
         assert output == {"workflows": ["bootstrap"]}
 
-    def test_start_from_overrides_file_detection(self, compute_roots, temp_graph_file, capsys):
+    def test_start_from_overrides_file_detection(self, compute_roots, temp_graph_file, capsys) -> None:
         """Main uses --start-from instead of file detection."""
         args = [
             "--changed-files", "src/bootstrap/main.py",
@@ -324,7 +324,7 @@ class TestComputeRootsMain:
         output = self._run_and_parse(compute_roots, args, capsys)
         assert output == {"workflows": ["www_shared"]}
 
-    def test_invalid_start_from_exits_one(self, compute_roots, temp_graph_file):
+    def test_invalid_start_from_exits_one(self, compute_roots, temp_graph_file) -> None:
         """Main exits 1 for unknown --start-from workflow."""
         test_args = [
             "compute_roots", "--changed-files", "src/bootstrap/main.py",
@@ -337,7 +337,7 @@ class TestComputeRootsMain:
 
     def test_execution_plan_includes_all_descendants(
         self, compute_roots, temp_graph_file, capsys
-    ):
+    ) -> None:
         """Main with --execution-plan includes root and all descendants."""
         args = [
             "--changed-files", "src/bootstrap/main.py",
@@ -346,31 +346,31 @@ class TestComputeRootsMain:
         output = self._run_and_parse(compute_roots, args, capsys)
         assert set(output["workflows"]) == {"bootstrap", "www_shared", "api_shared"}
 
-    def test_levels_output_structure(self, compute_roots, temp_graph_file, capsys):
+    def test_levels_output_structure(self, compute_roots, temp_graph_file, capsys) -> None:
         """Main with --levels outputs correct level structure."""
         args = ["--changed-files", "src/bootstrap/main.py", "--levels", "--graph", temp_graph_file]
         output = self._run_and_parse(compute_roots, args, capsys)
         assert "levels" in output and isinstance(output["levels"], list)
 
-    def test_levels_first_level_has_bootstrap(self, compute_roots, temp_graph_file, capsys):
+    def test_levels_first_level_has_bootstrap(self, compute_roots, temp_graph_file, capsys) -> None:
         """Main with --levels has bootstrap in first level."""
         args = ["--changed-files", "src/bootstrap/main.py", "--levels", "--graph", temp_graph_file]
         output = self._run_and_parse(compute_roots, args, capsys)
         assert "bootstrap" in output["levels"][0]
 
-    def test_indexed_output_structure(self, compute_roots, temp_graph_file, capsys):
+    def test_indexed_output_structure(self, compute_roots, temp_graph_file, capsys) -> None:
         """Main with --indexed outputs correct structure."""
         args = ["--changed-files", "src/bootstrap/main.py", "--indexed", "--graph", temp_graph_file]
         output = self._run_and_parse(compute_roots, args, capsys)
         assert "workflows" in output and isinstance(output["workflows"], list)
 
-    def test_indexed_workflow_has_required_fields(self, compute_roots, temp_graph_file, capsys):
+    def test_indexed_workflow_has_required_fields(self, compute_roots, temp_graph_file, capsys) -> None:
         """Main with --indexed outputs workflows with idx and name fields."""
         args = ["--changed-files", "src/bootstrap/main.py", "--indexed", "--graph", temp_graph_file]
         output = self._run_and_parse(compute_roots, args, capsys)
         assert "idx" in output["workflows"][0] and "name" in output["workflows"][0]
 
-    def test_slots_output_has_count_and_keys(self, compute_roots, temp_graph_file, capsys):
+    def test_slots_output_has_count_and_keys(self, compute_roots, temp_graph_file, capsys) -> None:
         """Main with --slots outputs count and key variables."""
         args = [
             "--changed-files", "src/bootstrap/main.py",
@@ -383,7 +383,7 @@ class TestComputeRootsMain:
         has_key = any(line.startswith("key_01=") for line in lines)
         assert has_count and has_key
 
-    def test_running_merges_with_roots(self, compute_roots, temp_graph_file, capsys):
+    def test_running_merges_with_roots(self, compute_roots, temp_graph_file, capsys) -> None:
         """Main with --running merges running workflows with new roots."""
         args = [
             "--changed-files", "src/api/main.py",

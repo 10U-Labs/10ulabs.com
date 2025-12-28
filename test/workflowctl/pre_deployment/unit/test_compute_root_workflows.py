@@ -5,121 +5,52 @@ from unittest.mock import patch
 
 import pytest
 
-
-# Sample dependency graph for testing
-SAMPLE_GRAPH = {
-    "bootstrap": {
-        "name": "Bootstrap",
-        "depends_on": [],
-        "paths": [".github/workflows/bootstrap.yml", "src/bootstrap/**"],
-    },
-    "www_shared": {
-        "name": "WWW Shared",
-        "depends_on": ["bootstrap"],
-        "paths": [".github/workflows/www_shared.yml", "src/www/shared/**"],
-    },
-    "api": {
-        "name": "API",
-        "depends_on": ["www_shared"],
-        "paths": [".github/workflows/api_shared_routing.yml", "src/api/shared/routing/**"],
-    },
-    "health": {
-        "name": "Health",
-        "depends_on": ["api"],
-        "paths": [".github/workflows/api_operational_health.yml", "src/api/operational/health/**"],
-    },
-    "ecr": {
-        "name": "ECR",
-        "depends_on": ["health"],
-        "paths": [".github/workflows/api_shared_ecr.yml", "src/api/shared/ecr/**"],
-    },
-    "ecs_images": {
-        "name": "Image for ECS Runners",
-        "depends_on": ["ecr"],
-        "paths": [
-            ".github/workflows/api_endpoint_v1_runners_ecs_images.yml",
-            "src/api/endpoints/runners/ecs/images/**",
-        ],
-    },
-    "ecs_runner": {
-        "name": "ECS Runner",
-        "depends_on": ["ecs_images"],
-        "paths": [
-            ".github/workflows/api_endpoint_v1_runners_ecs.yml",
-            "src/api/endpoints/runners/ecs/**",
-        ],
-    },
-    "contact": {
-        "name": "Contact",
-        "depends_on": ["ecs_runner"],
-        "paths": [".github/workflows/api_endpoint_v1_contact.yml", "src/api/endpoints/contact/**"],
-    },
-}
+from conftest import EXTENDED_LINEAR_GRAPH
 
 
 class TestFileMatchesPatterns:
     """Tests for file_matches_patterns function."""
 
-    def test_exact_match_returns_true(self, compute_roots) -> None:
-        """Test exact file path matching returns true."""
-        patterns = [".github/workflows/bootstrap.yml"]
-        assert compute_roots.file_matches_patterns(".github/workflows/bootstrap.yml", patterns)
-
-    def test_exact_match_returns_false_for_different_file(self, compute_roots) -> None:
-        """Test exact file path matching returns false for different file."""
-        patterns = [".github/workflows/bootstrap.yml"]
-        assert not compute_roots.file_matches_patterns(
-            ".github/workflows/api_shared_routing.yml", patterns
-        )
-
-    def test_glob_star_match_direct_child(self, compute_roots) -> None:
-        """Test single * glob pattern matches direct child."""
-        patterns = ["src/*.tf"]
-        assert compute_roots.file_matches_patterns("src/main.tf", patterns)
-
-    def test_glob_star_match_nested_child(self, compute_roots) -> None:
-        """Test single * glob pattern matches nested child.
-
-        Note: fnmatch treats * as matching any characters including /,
-        so src/*.tf matches src/sub/main.tf. This is acceptable since
-        we primarily use ** patterns in workflow-dependencies.json.
-        """
-        patterns = ["src/*.tf"]
-        assert compute_roots.file_matches_patterns("src/sub/main.tf", patterns)
-
-    def test_double_star_match_direct_child(self, compute_roots) -> None:
-        """Test ** glob pattern matches direct child."""
-        patterns = ["src/bootstrap/**"]
-        assert compute_roots.file_matches_patterns("src/bootstrap/main.tf", patterns)
-
-    def test_double_star_match_nested_child(self, compute_roots) -> None:
-        """Test ** glob pattern matches nested child."""
-        patterns = ["src/bootstrap/**"]
-        assert compute_roots.file_matches_patterns("src/bootstrap/sub/file.tf", patterns)
-
-    def test_double_star_match_returns_false_for_different_path(self, compute_roots) -> None:
-        """Test ** glob pattern returns false for different path."""
-        patterns = ["src/bootstrap/**"]
-        assert not compute_roots.file_matches_patterns("src/api/main.tf", patterns)
-
-    def test_multiple_patterns_matches_first(self, compute_roots) -> None:
-        """Test matching first of multiple patterns."""
-        patterns = [".github/workflows/bootstrap.yml", "src/bootstrap/**"]
-        assert compute_roots.file_matches_patterns(".github/workflows/bootstrap.yml", patterns)
-
-    def test_multiple_patterns_matches_second(self, compute_roots) -> None:
-        """Test matching second of multiple patterns."""
-        patterns = [".github/workflows/bootstrap.yml", "src/bootstrap/**"]
-        assert compute_roots.file_matches_patterns("src/bootstrap/main.tf", patterns)
-
-    def test_multiple_patterns_returns_false_for_no_match(self, compute_roots) -> None:
-        """Test multiple patterns returns false when none match."""
-        patterns = [".github/workflows/bootstrap.yml", "src/bootstrap/**"]
-        assert not compute_roots.file_matches_patterns("src/api/main.tf", patterns)
-
-    def test_empty_patterns(self, compute_roots) -> None:
-        """Test with empty pattern list."""
-        assert not compute_roots.file_matches_patterns("any/file.txt", [])
+    @pytest.mark.parametrize(
+        "file_path,patterns,expected",
+        [
+            # Exact match cases
+            (".github/workflows/bootstrap.yml", [".github/workflows/bootstrap.yml"], True),
+            (".github/workflows/api_shared_routing.yml", [".github/workflows/bootstrap.yml"], False),
+            # Single glob * cases (matches any characters including /)
+            ("src/main.tf", ["src/*.tf"], True),
+            ("src/sub/main.tf", ["src/*.tf"], True),
+            # Double star ** cases
+            ("src/bootstrap/main.tf", ["src/bootstrap/**"], True),
+            ("src/bootstrap/sub/file.tf", ["src/bootstrap/**"], True),
+            ("src/api/main.tf", ["src/bootstrap/**"], False),
+            # Multiple pattern cases
+            (".github/workflows/bootstrap.yml", [".github/workflows/bootstrap.yml", "src/bootstrap/**"], True),
+            ("src/bootstrap/main.tf", [".github/workflows/bootstrap.yml", "src/bootstrap/**"], True),
+            ("src/api/main.tf", [".github/workflows/bootstrap.yml", "src/bootstrap/**"], False),
+            # Empty patterns
+            ("any/file.txt", [], False),
+        ],
+        ids=[
+            "exact_match_true",
+            "exact_match_false",
+            "glob_star_direct_child",
+            "glob_star_nested_child",
+            "double_star_direct_child",
+            "double_star_nested_child",
+            "double_star_different_path",
+            "multiple_patterns_first",
+            "multiple_patterns_second",
+            "multiple_patterns_no_match",
+            "empty_patterns",
+        ],
+    )
+    def test_file_matches_patterns(
+        self, compute_roots, file_path: str, patterns: list, expected: bool
+    ) -> None:
+        """Test file_matches_patterns with various inputs."""
+        result = compute_roots.file_matches_patterns(file_path, patterns)
+        assert result == expected
 
 
 class TestGetAllAncestors:
@@ -127,22 +58,22 @@ class TestGetAllAncestors:
 
     def test_no_ancestors(self, compute_roots) -> None:
         """Test workflow with no dependencies."""
-        ancestors = compute_roots.get_all_ancestors("bootstrap", SAMPLE_GRAPH)
+        ancestors = compute_roots.get_all_ancestors("bootstrap", EXTENDED_LINEAR_GRAPH)
         assert ancestors == set()
 
     def test_single_ancestor(self, compute_roots) -> None:
         """Test workflow with one direct dependency."""
-        ancestors = compute_roots.get_all_ancestors("www_shared", SAMPLE_GRAPH)
+        ancestors = compute_roots.get_all_ancestors("www_shared", EXTENDED_LINEAR_GRAPH)
         assert ancestors == {"bootstrap"}
 
     def test_transitive_ancestors(self, compute_roots) -> None:
         """Test workflow with transitive dependencies."""
-        ancestors = compute_roots.get_all_ancestors("api", SAMPLE_GRAPH)
+        ancestors = compute_roots.get_all_ancestors("api", EXTENDED_LINEAR_GRAPH)
         assert ancestors == {"bootstrap", "www_shared"}
 
     def test_deep_ancestors(self, compute_roots) -> None:
         """Test workflow deep in the dependency chain."""
-        ancestors = compute_roots.get_all_ancestors("contact", SAMPLE_GRAPH)
+        ancestors = compute_roots.get_all_ancestors("contact", EXTENDED_LINEAR_GRAPH)
         expected = {
             "bootstrap",
             "www_shared",
@@ -157,19 +88,19 @@ class TestGetAllAncestors:
     def test_caching_stores_target_workflow(self, compute_roots) -> None:
         """Test that ancestor computation caches target workflow."""
         cache: dict[str, set[str]] = {}
-        compute_roots.get_all_ancestors("api", SAMPLE_GRAPH, cache)
+        compute_roots.get_all_ancestors("api", EXTENDED_LINEAR_GRAPH, cache)
         assert "api" in cache
 
     def test_caching_stores_direct_ancestor(self, compute_roots) -> None:
         """Test that ancestor computation caches direct ancestor."""
         cache: dict[str, set[str]] = {}
-        compute_roots.get_all_ancestors("api", SAMPLE_GRAPH, cache)
+        compute_roots.get_all_ancestors("api", EXTENDED_LINEAR_GRAPH, cache)
         assert "www_shared" in cache
 
     def test_caching_stores_transitive_ancestor(self, compute_roots) -> None:
         """Test that ancestor computation caches transitive ancestor."""
         cache: dict[str, set[str]] = {}
-        compute_roots.get_all_ancestors("api", SAMPLE_GRAPH, cache)
+        compute_roots.get_all_ancestors("api", EXTENDED_LINEAR_GRAPH, cache)
         assert "bootstrap" in cache
 
 
@@ -179,31 +110,31 @@ class TestGetAffectedWorkflows:
     def test_single_file_single_workflow(self, compute_roots) -> None:
         """Test single file affecting single workflow."""
         changed = ["src/bootstrap/main.tf"]
-        affected = compute_roots.get_affected_workflows(changed, SAMPLE_GRAPH)
+        affected = compute_roots.get_affected_workflows(changed, EXTENDED_LINEAR_GRAPH)
         assert affected == {"bootstrap"}
 
     def test_single_file_workflow_file(self, compute_roots) -> None:
         """Test changing a workflow file itself."""
         changed = [".github/workflows/api_shared_routing.yml"]
-        affected = compute_roots.get_affected_workflows(changed, SAMPLE_GRAPH)
+        affected = compute_roots.get_affected_workflows(changed, EXTENDED_LINEAR_GRAPH)
         assert affected == {"api"}
 
     def test_multiple_files_single_workflow(self, compute_roots) -> None:
         """Test multiple files affecting single workflow."""
         changed = ["src/bootstrap/main.tf", "src/bootstrap/variables.tf"]
-        affected = compute_roots.get_affected_workflows(changed, SAMPLE_GRAPH)
+        affected = compute_roots.get_affected_workflows(changed, EXTENDED_LINEAR_GRAPH)
         assert affected == {"bootstrap"}
 
     def test_multiple_files_multiple_workflows(self, compute_roots) -> None:
         """Test files affecting multiple workflows."""
         changed = ["src/bootstrap/main.tf", "src/api/shared/routing/main.tf"]
-        affected = compute_roots.get_affected_workflows(changed, SAMPLE_GRAPH)
+        affected = compute_roots.get_affected_workflows(changed, EXTENDED_LINEAR_GRAPH)
         assert affected == {"bootstrap", "api"}
 
     def test_no_matching_files(self, compute_roots) -> None:
         """Test with files that don't match any workflow."""
         changed = ["README.md", "docs/guide.md"]
-        affected = compute_roots.get_affected_workflows(changed, SAMPLE_GRAPH)
+        affected = compute_roots.get_affected_workflows(changed, EXTENDED_LINEAR_GRAPH)
         assert affected == set()
 
 
@@ -213,13 +144,13 @@ class TestComputeRootWorkflows:
     def test_single_root_workflow(self, compute_roots) -> None:
         """Test single workflow change returns that workflow as root."""
         changed = ["src/bootstrap/main.tf"]
-        roots = compute_roots.compute_root_workflows(changed, SAMPLE_GRAPH)
+        roots = compute_roots.compute_root_workflows(changed, EXTENDED_LINEAR_GRAPH)
         assert roots == ["bootstrap"]
 
     def test_ancestor_and_descendant_changed(self, compute_roots) -> None:
         """Test that only ancestor is returned when both are changed."""
         changed = ["src/bootstrap/main.tf", "src/www/shared/main.tf"]
-        roots = compute_roots.compute_root_workflows(changed, SAMPLE_GRAPH)
+        roots = compute_roots.compute_root_workflows(changed, EXTENDED_LINEAR_GRAPH)
         # Only bootstrap should be root; www_shared will cascade
         assert roots == ["bootstrap"]
 
@@ -231,7 +162,7 @@ class TestComputeRootWorkflows:
             "src/api/shared/routing/main.tf",
             "src/api/operational/health/main.tf",
         ]
-        roots = compute_roots.compute_root_workflows(changed, SAMPLE_GRAPH)
+        roots = compute_roots.compute_root_workflows(changed, EXTENDED_LINEAR_GRAPH)
         assert roots == ["bootstrap"]
 
     def test_independent_workflows(self, compute_roots) -> None:
@@ -250,24 +181,24 @@ class TestComputeRootWorkflows:
     def test_middle_of_chain(self, compute_roots) -> None:
         """Test changing middle of chain returns that workflow as root."""
         changed = ["src/api/shared/routing/main.tf"]
-        roots = compute_roots.compute_root_workflows(changed, SAMPLE_GRAPH)
+        roots = compute_roots.compute_root_workflows(changed, EXTENDED_LINEAR_GRAPH)
         assert roots == ["api"]
 
     def test_no_changes(self, compute_roots) -> None:
         """Test empty file list returns empty roots."""
-        roots = compute_roots.compute_root_workflows([], SAMPLE_GRAPH)
+        roots = compute_roots.compute_root_workflows([], EXTENDED_LINEAR_GRAPH)
         assert roots == []
 
     def test_unrelated_files(self, compute_roots) -> None:
         """Test files not matching any workflow return empty roots."""
         changed = ["README.md"]
-        roots = compute_roots.compute_root_workflows(changed, SAMPLE_GRAPH)
+        roots = compute_roots.compute_root_workflows(changed, EXTENDED_LINEAR_GRAPH)
         assert roots == []
 
     def test_leaf_workflow_only(self, compute_roots) -> None:
         """Test changing only a leaf workflow returns it as root."""
         changed = ["src/api/endpoints/contact/main.tf"]
-        roots = compute_roots.compute_root_workflows(changed, SAMPLE_GRAPH)
+        roots = compute_roots.compute_root_workflows(changed, EXTENDED_LINEAR_GRAPH)
         assert roots == ["contact"]
 
 
@@ -320,22 +251,22 @@ class TestGetAllDescendants:
 
     def test_no_descendants(self, utils) -> None:
         """Test leaf workflow with no dependents."""
-        descendants = utils.get_all_descendants("contact", SAMPLE_GRAPH)
+        descendants = utils.get_all_descendants("contact", EXTENDED_LINEAR_GRAPH)
         assert descendants == set()
 
     def test_single_descendant(self, utils) -> None:
         """Test workflow with one direct dependent."""
-        descendants = utils.get_all_descendants("ecs_runner", SAMPLE_GRAPH)
+        descendants = utils.get_all_descendants("ecs_runner", EXTENDED_LINEAR_GRAPH)
         assert descendants == {"contact"}
 
     def test_transitive_descendants(self, utils) -> None:
         """Test workflow with transitive dependents."""
-        descendants = utils.get_all_descendants("ecr", SAMPLE_GRAPH)
+        descendants = utils.get_all_descendants("ecr", EXTENDED_LINEAR_GRAPH)
         assert descendants == {"ecs_images", "ecs_runner", "contact"}
 
     def test_root_descendants(self, utils) -> None:
         """Test root workflow has all others as descendants."""
-        descendants = utils.get_all_descendants("bootstrap", SAMPLE_GRAPH)
+        descendants = utils.get_all_descendants("bootstrap", EXTENDED_LINEAR_GRAPH)
         expected = {
             "www_shared",
             "api",
@@ -350,25 +281,25 @@ class TestGetAllDescendants:
     def test_caching_stores_target_workflow(self, utils) -> None:
         """Test that descendant computation caches target workflow."""
         cache: dict[str, set[str]] = {}
-        utils.get_all_descendants("ecr", SAMPLE_GRAPH, cache)
+        utils.get_all_descendants("ecr", EXTENDED_LINEAR_GRAPH, cache)
         assert "ecr" in cache
 
     def test_caching_stores_direct_descendant(self, utils) -> None:
         """Test that descendant computation caches direct descendant."""
         cache: dict[str, set[str]] = {}
-        utils.get_all_descendants("ecr", SAMPLE_GRAPH, cache)
+        utils.get_all_descendants("ecr", EXTENDED_LINEAR_GRAPH, cache)
         assert "ecs_images" in cache
 
     def test_caching_stores_second_level_descendant(self, utils) -> None:
         """Test that descendant computation caches second level descendant."""
         cache: dict[str, set[str]] = {}
-        utils.get_all_descendants("ecr", SAMPLE_GRAPH, cache)
+        utils.get_all_descendants("ecr", EXTENDED_LINEAR_GRAPH, cache)
         assert "ecs_runner" in cache
 
     def test_caching_stores_leaf_descendant(self, utils) -> None:
         """Test that descendant computation caches leaf descendant."""
         cache: dict[str, set[str]] = {}
-        utils.get_all_descendants("ecr", SAMPLE_GRAPH, cache)
+        utils.get_all_descendants("ecr", EXTENDED_LINEAR_GRAPH, cache)
         assert "contact" in cache
 
 
@@ -412,31 +343,31 @@ class TestTopologicalSort:
     def test_single_workflow(self, compute_roots) -> None:
         """Test sorting single workflow."""
         workflows = {"bootstrap"}
-        result = compute_roots.topological_sort(workflows, SAMPLE_GRAPH)
+        result = compute_roots.topological_sort(workflows, EXTENDED_LINEAR_GRAPH)
         assert result == ["bootstrap"]
 
     def test_linear_chain(self, compute_roots) -> None:
         """Test sorting linear dependency chain."""
         workflows = {"bootstrap", "www_shared", "api"}
-        result = compute_roots.topological_sort(workflows, SAMPLE_GRAPH)
+        result = compute_roots.topological_sort(workflows, EXTENDED_LINEAR_GRAPH)
         assert result == ["bootstrap", "www_shared", "api"]
 
     def test_respects_dependencies_bootstrap_before_www_shared(self, compute_roots) -> None:
         """Test that bootstrap comes before www_shared."""
         workflows = {"api", "bootstrap", "www_shared", "health"}
-        result = compute_roots.topological_sort(workflows, SAMPLE_GRAPH)
+        result = compute_roots.topological_sort(workflows, EXTENDED_LINEAR_GRAPH)
         assert result.index("bootstrap") < result.index("www_shared")
 
     def test_respects_dependencies_www_shared_before_api(self, compute_roots) -> None:
         """Test that www_shared comes before api."""
         workflows = {"api", "bootstrap", "www_shared", "health"}
-        result = compute_roots.topological_sort(workflows, SAMPLE_GRAPH)
+        result = compute_roots.topological_sort(workflows, EXTENDED_LINEAR_GRAPH)
         assert result.index("www_shared") < result.index("api")
 
     def test_respects_dependencies_api_before_health(self, compute_roots) -> None:
         """Test that api comes before health."""
         workflows = {"api", "bootstrap", "www_shared", "health"}
-        result = compute_roots.topological_sort(workflows, SAMPLE_GRAPH)
+        result = compute_roots.topological_sort(workflows, EXTENDED_LINEAR_GRAPH)
         assert result.index("api") < result.index("health")
 
     def test_diamond_pattern_ordering(self, compute_roots) -> None:
@@ -453,7 +384,7 @@ class TestTopologicalSort:
     def test_partial_graph(self, compute_roots) -> None:
         """Test sorting subset of graph."""
         workflows = {"api", "health"}
-        result = compute_roots.topological_sort(workflows, SAMPLE_GRAPH)
+        result = compute_roots.topological_sort(workflows, EXTENDED_LINEAR_GRAPH)
         # api must come before health
         assert result == ["api", "health"]
 
@@ -463,13 +394,13 @@ class TestTopologicalSortLevels:
 
     def test_single_workflow(self, compute_roots) -> None:
         """Test single workflow returns single level."""
-        levels = compute_roots.topological_sort_levels({"bootstrap"}, SAMPLE_GRAPH)
+        levels = compute_roots.topological_sort_levels({"bootstrap"}, EXTENDED_LINEAR_GRAPH)
         assert levels == [["bootstrap"]]
 
     def test_linear_chain(self, compute_roots) -> None:
         """Test linear chain returns one workflow per level."""
         levels = compute_roots.topological_sort_levels({"bootstrap", "www_shared", "api"},
-                                         SAMPLE_GRAPH)
+                                         EXTENDED_LINEAR_GRAPH)
         assert levels == [["bootstrap"], ["www_shared"], ["api"]]
 
     def test_parallel_workflows_structure(self, compute_roots) -> None:
@@ -503,7 +434,7 @@ class TestComputeExecutionPlan:
 
     def test_single_root_with_descendants(self, compute_roots) -> None:
         """Test single root includes all descendants."""
-        plan = compute_roots.compute_execution_plan(["bootstrap"], SAMPLE_GRAPH)
+        plan = compute_roots.compute_execution_plan(["bootstrap"], EXTENDED_LINEAR_GRAPH)
         expected = [
             "bootstrap",
             "www_shared",
@@ -518,7 +449,7 @@ class TestComputeExecutionPlan:
 
     def test_middle_root(self, compute_roots) -> None:
         """Test starting from middle of chain."""
-        plan = compute_roots.compute_execution_plan(["ecr"], SAMPLE_GRAPH)
+        plan = compute_roots.compute_execution_plan(["ecr"], EXTENDED_LINEAR_GRAPH)
         expected = ["ecr", "ecs_images", "ecs_runner", "contact"]
         assert plan == expected
 
@@ -543,17 +474,17 @@ class TestComputeExecutionPlanLevels:
 
     def test_single_root_with_descendants_has_eight_levels(self, compute_roots) -> None:
         """Test single root with descendants has 8 levels."""
-        levels = compute_roots.compute_execution_plan_levels(["bootstrap"], SAMPLE_GRAPH)
+        levels = compute_roots.compute_execution_plan_levels(["bootstrap"], EXTENDED_LINEAR_GRAPH)
         assert len(levels) == 8
 
     def test_single_root_with_descendants_bootstrap_first(self, compute_roots) -> None:
         """Test single root with descendants has bootstrap first."""
-        levels = compute_roots.compute_execution_plan_levels(["bootstrap"], SAMPLE_GRAPH)
+        levels = compute_roots.compute_execution_plan_levels(["bootstrap"], EXTENDED_LINEAR_GRAPH)
         assert levels[0] == ["bootstrap"]
 
     def test_single_root_with_descendants_contact_last(self, compute_roots) -> None:
         """Test single root with descendants has contact last."""
-        levels = compute_roots.compute_execution_plan_levels(["bootstrap"], SAMPLE_GRAPH)
+        levels = compute_roots.compute_execution_plan_levels(["bootstrap"], EXTENDED_LINEAR_GRAPH)
         assert levels[-1] == ["contact"]
 
     def test_parallel_branches_level_structure(self, compute_roots) -> None:
@@ -577,89 +508,48 @@ class TestComputeExecutionPlanLevels:
 class TestOutputSlots:
     """Tests for output_slots function."""
 
-    def test_exact_slots_outputs_count(self, compute_roots) -> None:
-        """Test outputting exact number of slots shows correct count."""
+    @pytest.mark.parametrize(
+        "items,num_slots,expected_in_output",
+        [
+            # Exact slots (3 items, 3 slots)
+            (["a", "b", "c"], 3, "count=3"),
+            (["a", "b", "c"], 3, "key_01=a"),
+            (["a", "b", "c"], 3, "key_02=b"),
+            (["a", "b", "c"], 3, "key_03=c"),
+            # More slots than items (2 items, 4 slots)
+            (["a", "b"], 4, "count=2"),
+            (["a", "b"], 4, "key_01=a"),
+            (["a", "b"], 4, "key_02=b"),
+            (["a", "b"], 4, "key_03="),
+            (["a", "b"], 4, "key_04="),
+            # Empty list (0 items, 2 slots)
+            ([], 2, "count=0"),
+            ([], 2, "key_01="),
+            ([], 2, "key_02="),
+        ],
+        ids=[
+            "exact_slots_count",
+            "exact_slots_key_01",
+            "exact_slots_key_02",
+            "exact_slots_key_03",
+            "more_slots_count",
+            "more_slots_key_01",
+            "more_slots_key_02",
+            "more_slots_empty_key_03",
+            "more_slots_empty_key_04",
+            "empty_list_count",
+            "empty_list_empty_key_01",
+            "empty_list_empty_key_02",
+        ],
+    )
+    def test_output_slots(
+        self, compute_roots, items: list, num_slots: int, expected_in_output: str
+    ) -> None:
+        """Test output_slots with various inputs."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots(["a", "b", "c"], 3)
+            compute_roots.output_slots(items, num_slots)
             output = mock_stdout.getvalue()
-        assert "count=3" in output
-
-    def test_exact_slots_outputs_first_key(self, compute_roots) -> None:
-        """Test outputting exact number of slots shows first key."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots(["a", "b", "c"], 3)
-            output = mock_stdout.getvalue()
-        assert "key_01=a" in output
-
-    def test_exact_slots_outputs_second_key(self, compute_roots) -> None:
-        """Test outputting exact number of slots shows second key."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots(["a", "b", "c"], 3)
-            output = mock_stdout.getvalue()
-        assert "key_02=b" in output
-
-    def test_exact_slots_outputs_third_key(self, compute_roots) -> None:
-        """Test outputting exact number of slots shows third key."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots(["a", "b", "c"], 3)
-            output = mock_stdout.getvalue()
-        assert "key_03=c" in output
-
-    def test_more_slots_outputs_count(self, compute_roots) -> None:
-        """Test more slots than items shows correct count."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots(["a", "b"], 4)
-            output = mock_stdout.getvalue()
-        assert "count=2" in output
-
-    def test_more_slots_outputs_first_key(self, compute_roots) -> None:
-        """Test more slots than items shows first key."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots(["a", "b"], 4)
-            output = mock_stdout.getvalue()
-        assert "key_01=a" in output
-
-    def test_more_slots_outputs_second_key(self, compute_roots) -> None:
-        """Test more slots than items shows second key."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots(["a", "b"], 4)
-            output = mock_stdout.getvalue()
-        assert "key_02=b" in output
-
-    def test_more_slots_outputs_empty_third_key(self, compute_roots) -> None:
-        """Test more slots than items shows empty third key."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots(["a", "b"], 4)
-            output = mock_stdout.getvalue()
-        assert "key_03=" in output
-
-    def test_more_slots_outputs_empty_fourth_key(self, compute_roots) -> None:
-        """Test more slots than items shows empty fourth key."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots(["a", "b"], 4)
-            output = mock_stdout.getvalue()
-        assert "key_04=" in output
-
-    def test_empty_list_outputs_count_zero(self, compute_roots) -> None:
-        """Test outputting with no items shows count zero."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots([], 2)
-            output = mock_stdout.getvalue()
-        assert "count=0" in output
-
-    def test_empty_list_outputs_empty_first_key(self, compute_roots) -> None:
-        """Test outputting with no items shows empty first key."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots([], 2)
-            output = mock_stdout.getvalue()
-        assert "key_01=" in output
-
-    def test_empty_list_outputs_empty_second_key(self, compute_roots) -> None:
-        """Test outputting with no items shows empty second key."""
-        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            compute_roots.output_slots([], 2)
-            output = mock_stdout.getvalue()
-        assert "key_02=" in output
+        assert expected_in_output in output
 
 
 class TestOutputResults:
@@ -735,19 +625,19 @@ class TestComputeMergeRoots:
         """Test with no running workflows returns new roots unchanged."""
         new_roots = ["api"]
         running: list[str] = []
-        result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        result = compute_roots.compute_merge_roots(running, new_roots, EXTENDED_LINEAR_GRAPH)
         assert result == ["api"]
 
     def test_no_new_roots(self, compute_roots) -> None:
         """Test with no new roots returns empty (let running workflows finish)."""
         new_roots: list[str] = []
         running = ["api"]
-        result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        result = compute_roots.compute_merge_roots(running, new_roots, EXTENDED_LINEAR_GRAPH)
         assert result == []
 
     def test_both_empty(self, compute_roots) -> None:
         """Test with both empty returns empty."""
-        result = compute_roots.compute_merge_roots([], [], SAMPLE_GRAPH)
+        result = compute_roots.compute_merge_roots([], [], EXTENDED_LINEAR_GRAPH)
         assert result == []
 
     def test_running_downstream_of_new_root(self, compute_roots) -> None:
@@ -758,7 +648,7 @@ class TestComputeMergeRoots:
         """
         running = ["api"]
         new_roots = ["www_shared"]
-        result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        result = compute_roots.compute_merge_roots(running, new_roots, EXTENDED_LINEAR_GRAPH)
         # www_shared is ancestor of api, so www_shared is the merge root
         assert result == ["www_shared"]
 
@@ -770,7 +660,7 @@ class TestComputeMergeRoots:
         """
         running = ["www_shared"]
         new_roots = ["health"]
-        result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        result = compute_roots.compute_merge_roots(running, new_roots, EXTENDED_LINEAR_GRAPH)
         # www_shared is ancestor of health, so www_shared is the merge root
         assert result == ["www_shared"]
 
@@ -782,7 +672,7 @@ class TestComputeMergeRoots:
         """
         running = ["api"]
         new_roots = ["api"]
-        result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        result = compute_roots.compute_merge_roots(running, new_roots, EXTENDED_LINEAR_GRAPH)
         assert result == ["api"]
 
     def test_unrelated_branches(self, compute_roots) -> None:
@@ -810,7 +700,7 @@ class TestComputeMergeRoots:
         """
         running = ["bootstrap"]
         new_roots = ["api"]
-        result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        result = compute_roots.compute_merge_roots(running, new_roots, EXTENDED_LINEAR_GRAPH)
         assert result == ["bootstrap"]
 
     def test_multiple_running_workflows(self, compute_roots) -> None:
@@ -850,14 +740,14 @@ class TestComputeMergeRoots:
         """
         running = ["health"]
         new_roots = ["www_shared"]
-        result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        result = compute_roots.compute_merge_roots(running, new_roots, EXTENDED_LINEAR_GRAPH)
         assert result == ["www_shared"]
 
     def test_unknown_running_workflow_filtered(self, compute_roots) -> None:
         """Test that unknown workflow keys are filtered out."""
         running = ["unknown_workflow"]
         new_roots = ["api"]
-        result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        result = compute_roots.compute_merge_roots(running, new_roots, EXTENDED_LINEAR_GRAPH)
         # Unknown workflow is filtered, only api remains
         assert result == ["api"]
 
@@ -865,6 +755,6 @@ class TestComputeMergeRoots:
         """Test with mix of known and unknown workflows."""
         running = ["api", "unknown_workflow"]
         new_roots = ["www_shared"]
-        result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        result = compute_roots.compute_merge_roots(running, new_roots, EXTENDED_LINEAR_GRAPH)
         # www_shared is ancestor of api, unknown is filtered
         assert result == ["www_shared"]

@@ -80,35 +80,29 @@ class TestAddRunningArg:
 class TestParseChangedFiles:
     """Tests for parse_changed_files function."""
 
-    def test_parses_single_file(self, utils) -> None:
-        """Test parsing a single file."""
-        result = utils.parse_changed_files("file.py")
-        assert result == ["file.py"]
-
-    def test_parses_multiple_files(self, utils) -> None:
-        """Test parsing multiple comma-separated files."""
-        result = utils.parse_changed_files("file1.py,file2.py,file3.py")
-        assert result == ["file1.py", "file2.py", "file3.py"]
-
-    def test_strips_whitespace(self, utils) -> None:
-        """Test that whitespace is stripped from file names."""
-        result = utils.parse_changed_files("file1.py, file2.py , file3.py")
-        assert result == ["file1.py", "file2.py", "file3.py"]
-
-    def test_filters_empty_strings(self, utils) -> None:
-        """Test that empty strings are filtered out."""
-        result = utils.parse_changed_files("file1.py,,file2.py,")
-        assert result == ["file1.py", "file2.py"]
-
-    def test_returns_empty_for_empty_string(self, utils) -> None:
-        """Test that empty string returns empty list."""
-        result = utils.parse_changed_files("")
-        assert result == []
-
-    def test_returns_empty_for_only_commas(self, utils) -> None:
-        """Test that string with only commas returns empty list."""
-        result = utils.parse_changed_files(",,,")
-        assert result == []
+    @pytest.mark.parametrize(
+        "input_str,expected",
+        [
+            ("file.py", ["file.py"]),
+            ("file1.py,file2.py,file3.py", ["file1.py", "file2.py", "file3.py"]),
+            ("file1.py, file2.py , file3.py", ["file1.py", "file2.py", "file3.py"]),
+            ("file1.py,,file2.py,", ["file1.py", "file2.py"]),
+            ("", []),
+            (",,,", []),
+        ],
+        ids=[
+            "single_file",
+            "multiple_files",
+            "strips_whitespace",
+            "filters_empty_strings",
+            "empty_string",
+            "only_commas",
+        ],
+    )
+    def test_parse_changed_files(self, utils, input_str: str, expected: list) -> None:
+        """Test parse_changed_files with various inputs."""
+        result = utils.parse_changed_files(input_str)
+        assert result == expected
 
 
 class TestParseRunningWorkflows:
