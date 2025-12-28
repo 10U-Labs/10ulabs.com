@@ -1,11 +1,11 @@
-"""Layer 4: Existence tests for www_shared pre-deployment validation.
+"""Layer 5: Existence tests for www_shared pre-deployment validation.
 
 Verify prerequisite resources exist. Assumes state tests passed.
 """
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.layer(4)
+pytestmark = pytest.mark.layer(5)
 
 
 def test_github_actions_role_exists(iam_client, github_actions_role_name):

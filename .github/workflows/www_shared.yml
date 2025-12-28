@@ -107,10 +107,10 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pylint
         run: python3 -m pip install pylint
-      - name: Run pylint on tests
+      - name: Run pylint
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/ \
+            lib/python/ src/www/shared/lambda/ test/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - if: >-
@@ -119,18 +119,18 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install mypy
         run: python3 -m pip install mypy boto3-stubs types-requests
-      - name: Run mypy on tests
-        run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/
+      - name: Run mypy
+        run: MYPYPATH=lib/python python3 -m mypy lib/python/ src/www/shared/lambda/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
         run: npm install -g jscpd
-      - name: Check for duplicate code in test Python files
+      - name: Check for duplicate code in Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
+            lib/python/ src/www/shared/lambda/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -168,7 +168,7 @@ jobs:
             BASE_COMMIT="HEAD^"
           fi
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/www/shared/cloudfront_s3\.tf'; then
+            if grep -qE 'src/www/shared/(cloudfront_s3|lambda_edge)\.tf|src/www/shared/lambda/'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT
@@ -198,6 +198,11 @@ jobs:
         run: |
           python3 -m pytest \
             test/www/shared/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
+      - name: Run E2E tests
+        run: |
+          python3 -m pytest \
+            test/www/shared/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

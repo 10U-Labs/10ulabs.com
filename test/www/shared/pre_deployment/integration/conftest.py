@@ -2,13 +2,13 @@
 import boto3
 import pytest
 from repo_utils import REPO_ROOT
+from terraform_config import TEST_AWS_REGION
 from test_fixtures.terraform import terraform_init, terraform_output
 
 pytest_plugins = ['pytest_layers']
 
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
-AWS_REGION_VALUE = "us-east-2"
 
 
 def _get_bootstrap_outputs() -> dict:
@@ -34,31 +34,31 @@ def _get_bootstrap_outputs() -> dict:
 @pytest.fixture(scope="session")
 def aws_region():
     """Provide the AWS region."""
-    return AWS_REGION_VALUE
+    return TEST_AWS_REGION
 
 
 @pytest.fixture(scope="session")
 def s3_client():
     """Create an S3 client."""
-    return boto3.client("s3", region_name=AWS_REGION_VALUE)
+    return boto3.client("s3", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
 def iam_client():
     """Create an IAM client."""
-    return boto3.client("iam", region_name=AWS_REGION_VALUE)
+    return boto3.client("iam", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
 def route53_client():
     """Create a Route53 client."""
-    return boto3.client("route53", region_name=AWS_REGION_VALUE)
+    return boto3.client("route53", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
 def sts_client():
     """Create an STS client."""
-    return boto3.client("sts", region_name=AWS_REGION_VALUE)
+    return boto3.client("sts", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")

@@ -151,7 +151,7 @@
   },
   "api_endpoint_v1_rack_designer": {
     "depends_on": [
-      "www_index"
+      "www_home"
     ],
     "name": "Ensuring /v1/rack-designer API endpoint exists and is properly configured",
     "paths": [
@@ -204,15 +204,15 @@
       "src/rtl/**"
     ]
   },
-  "www_index": {
+  "www_home": {
     "depends_on": [
       "api_endpoint_v1_contact"
     ],
-    "name": "Ensuring www index (home page) exists and is properly configured",
+    "name": "Ensuring www home page exists and is properly configured",
     "paths": [
-      ".github/workflows/www_index.yml",
-      "src/www/paths/index/**",
-      "test/www/paths/index/**"
+      ".github/workflows/www_home.yml",
+      "src/www/paths/home/**",
+      "test/www/paths/home/**"
     ]
   },
   "www_shared": {

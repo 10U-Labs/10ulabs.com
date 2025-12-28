@@ -103,77 +103,11 @@ resource "aws_cloudfront_cache_policy" "website" {
   }
 }
 
-resource "aws_cloudfront_function" "spa_routing" {
-  name    = "${local.resource_prefix}SpaRoutingFunction"
-  runtime = "cloudfront-js-2.0"
-  publish = true
-  code    = <<-EOT
-function handler(event) {
-    var request = event.request;
-    var host = request.headers.host.value;
-    if (host === '${local.apex_fqdn}') {
-        return {
-            statusCode: 301,
-            statusDescription: 'Moved Permanently',
-            headers: {
-                'location': { value: 'https://${local.www_fqdn}' + request.uri }
-            }
-        };
-    }
-    var uri = request.uri;
-    if (uri === '/rack-designer') {
-        return {
-            statusCode: 301,
-            statusDescription: 'Moved Permanently',
-            headers: {
-                'location': { value: 'https://' + host + '/rack-designer/' }
-            }
-        };
-    }
-    if (uri === '/rack-designer/') {
-        request.uri = '/rack-designer/index.html';
-        return request;
-    }
-    var configHashMatch = uri.match(/^\/rack-designer\/[A-Z0-9]{8,9}$/);
-    if (configHashMatch) {
-        request.uri = '/rack-designer/index.html';
-        return request;
-    }
-    if (uri.startsWith('/rack-designer/')) {
-        return request;
-    }
-    if (uri === '/simulations/soc') {
-        return {
-            statusCode: 301,
-            statusDescription: 'Moved Permanently',
-            headers: {
-                'location': { value: 'https://' + host + '/simulations/soc/' }
-            }
-        };
-    }
-    if (uri === '/simulations/soc/') {
-        request.uri = '/simulations/soc/index.html';
-        return request;
-    }
-    if (uri.startsWith('/simulations/soc/')) {
-        return request;
-    }
-    if (uri.endsWith('/')) {
-        request.uri = '/index.html';
-    } else if (!uri.includes('.')) {
-        request.uri = '/index.html';
-    }
-    return request;
-}
-EOT
-}
-
 resource "aws_cloudfront_distribution" "website" {
-  enabled             = true
-  is_ipv6_enabled     = true
-  default_root_object = "index.html"
-  aliases             = [local.www_fqdn, local.apex_fqdn]
-  web_acl_id          = module.website_waf.web_acl_arn
+  enabled         = true
+  is_ipv6_enabled = true
+  aliases         = [local.www_fqdn, local.apex_fqdn]
+  web_acl_id      = module.website_waf.web_acl_arn
 
   logging_config {
     include_cookies = false
@@ -198,22 +132,23 @@ resource "aws_cloudfront_distribution" "website" {
     origin_request_policy_id   = data.aws_cloudfront_origin_request_policy.cors_s3_origin.id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.website.id
 
-    function_association {
+    lambda_function_association {
       event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.spa_routing.arn
+      lambda_arn   = aws_lambda_function.spa_routing.qualified_arn
+      include_body = false
     }
   }
 
   custom_error_response {
     error_code         = 403
     response_code      = 200
-    response_page_path = "/index.html"
+    response_page_path = "/home/index.html"
   }
 
   custom_error_response {
     error_code         = 404
     response_code      = 200
-    response_page_path = "/index.html"
+    response_page_path = "/home/index.html"
   }
 
   viewer_certificate {

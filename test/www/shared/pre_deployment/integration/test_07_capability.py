@@ -1,4 +1,4 @@
-"""Layer 6: Capability tests for www_shared pre-deployment validation.
+"""Layer 7: Capability tests for www_shared pre-deployment validation.
 
 Verify we can perform required operations. Assumes configuration tests passed.
 """
@@ -7,7 +7,7 @@ import uuid
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.layer(6)
+pytestmark = pytest.mark.layer(7)
 
 
 @pytest.fixture(name="test_object_key")

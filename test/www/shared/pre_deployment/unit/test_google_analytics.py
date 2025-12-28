@@ -1,7 +1,7 @@
 """Tests for Google Analytics integration."""
 from repo_utils import REPO_ROOT
 
-HOME_PAGE_SRC = REPO_ROOT / "src" / "www" / "paths" / "index"
+HOME_PAGE_SRC = REPO_ROOT / "src" / "www" / "paths" / "home"
 GOOGLE_ANALYTICS_ID = "G-8YJFQC2EGV"
 GTAG_SCRIPT_URL = f"https://www.googletagmanager.com/gtag/js?id={GOOGLE_ANALYTICS_ID}"
 GTAG_CONFIG = f"gtag('config', '{GOOGLE_ANALYTICS_ID}')"

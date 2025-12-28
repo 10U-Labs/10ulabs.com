@@ -52,7 +52,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/www_index.yml
+            .github/workflows/www_home.yml
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -65,8 +65,8 @@ jobs:
           # which jsonlint doesn't support, so we skip them here
           for file in \
             src/www/api/openapi.json \
-            src/www/paths/index/components.json \
-            src/www/paths/index/package.json
+            src/www/paths/home/components.json \
+            src/www/paths/home/package.json
           do
             echo "Validating $file"
             jsonlint -q "$file"
@@ -100,9 +100,9 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
       - name: Install npm dependencies
-        run: npm ci --prefix src/www/paths/index
+        run: npm ci --prefix src/www/paths/home
       - name: Run unit tests
-        run: npm test --prefix src/www/paths/index
+        run: npm test --prefix src/www/paths/home
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -112,7 +112,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
-            test/www/paths/index/pre_deployment/integration/ \
+            test/www/paths/home/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
       - name: Get bucket name from shared Terraform
         run: |
@@ -122,16 +122,14 @@ jobs:
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
       - name: Build website
         run: |
-          npm ci --prefix src/www/paths/index && \
-            npm run build --prefix src/www/paths/index
+          npm ci --prefix src/www/paths/home && \
+            npm run build --prefix src/www/paths/home
       - name: Sync website to S3
         run: |
-          aws s3 sync src/www/paths/index/dist/ s3://${{ env.BUCKET_NAME }}/ \
+          aws s3 sync src/www/paths/home/dist/ s3://${{ env.BUCKET_NAME }}/home/ \
             --delete \
             --cache-control no-cache \
-            --storage-class ONEZONE_IA \
-            --exclude "rack-designer/*" \
-            --exclude "simulations/*"
+            --storage-class ONEZONE_IA
       - id: check_files
         name: Check if website files changed
         run: |
@@ -143,7 +141,7 @@ jobs:
             BASE_COMMIT="HEAD^"
           fi
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/www/paths/index/'; then
+            if grep -qE 'src/www/paths/home/'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT
@@ -168,17 +166,17 @@ jobs:
           python3 scripts/invalidate_cloudfront.py \
             --fqdn "${{ env.WEBSITE_FQDN }}" \
             --region ${{ vars.AWS_REGION }} \
-            --paths "/*"
+            --paths "/home/*"
       - name: Install Playwright browsers
-        run: npx --prefix src/www/paths/index playwright install chromium
+        run: npx --prefix src/www/paths/home playwright install chromium
       - env:
           BASE_URL: https://10ulabs.com
         name: Run post-deployment integration tests
-        run: npm run test:integration --prefix src/www/paths/index
+        run: npm run test:integration --prefix src/www/paths/home
       - env:
           BASE_URL: https://10ulabs.com
         name: Run E2E tests
-        run: npm run test:e2e --prefix src/www/paths/index
+        run: npm run test:e2e --prefix src/www/paths/home
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
@@ -197,10 +195,10 @@ jobs:
             FLAGS="$FLAGS --invalidate-cloudfront"
           fi
           python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
-            --workflow www_index \
+            --workflow www_home \
             --repo ${{ github.repository }} \
             $FLAGS
-name: Ensuring www index (home page) exists and is properly configured
+name: Ensuring www home page exists and is properly configured
 on:
   workflow_dispatch:
     inputs:

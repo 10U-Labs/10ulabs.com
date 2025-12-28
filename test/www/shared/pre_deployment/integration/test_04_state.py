@@ -1,4 +1,4 @@
-"""Tests to detect Terraform state drift for www/shared infrastructure.
+"""Layer 4: State tests for www_shared pre-deployment validation.
 
 These tests verify that resources Terraform plans to create don't already
 exist in AWS. If they do, it indicates the resource was created outside
@@ -11,7 +11,7 @@ import pytest
 from terraform_config import TEST_AWS_REGION
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
-pytestmark = pytest.mark.layer(3)
+pytestmark = pytest.mark.layer(4)
 
 WWW_SHARED_SRC = (
     Path(__file__).parents[5] / "src" / "www" / "shared"

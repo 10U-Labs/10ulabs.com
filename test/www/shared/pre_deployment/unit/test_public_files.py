@@ -1,7 +1,7 @@
 """Tests for public files in www shared."""
 from repo_utils import REPO_ROOT
 
-PUBLIC_DIR = REPO_ROOT / "src" / "www" / "paths" / "index" / "public"
+PUBLIC_DIR = REPO_ROOT / "src" / "www" / "paths" / "home" / "public"
 GOOGLE_ANALYTICS_ID = "G-8YJFQC2EGV"
 ADS_TXT_CONTENT = "google.com, pub-7173129895205323, DIRECT, f08c47fec0942fa0"
 

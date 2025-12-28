@@ -69,17 +69,3 @@ def fixture_certificate_dns_tf_content(website_src_path):
     """Provide certificate DNS Terraform file content."""
     with open(website_src_path / "certificate_dns.tf", encoding="utf-8") as f:
         return f.read()
-
-
-@pytest.fixture(name="contact_form_tf_content")
-def fixture_contact_form_tf_content(website_src_path):
-    """Provide contact form Terraform file content."""
-    with open(website_src_path / "contact_form.tf", encoding="utf-8") as f:
-        return f.read()
-
-
-@pytest.fixture(name="contact_lambda_content")
-def fixture_contact_lambda_content(website_src_path):
-    """Provide contact Lambda file content."""
-    with open(website_src_path / "lambdas" / "contact.py", encoding="utf-8") as f:
-        return f.read()
