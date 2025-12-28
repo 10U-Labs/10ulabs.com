@@ -9,7 +9,8 @@ _clients: Dict[str, Any] = {}
 def get_client(service_name: str) -> Any:
     """Get or create a cached boto3 client."""
     if service_name not in _clients:
-        _clients[service_name] = boto3.client(service_name)
+        client_factory = getattr(boto3, 'client')
+        _clients[service_name] = client_factory(service_name)
     return _clients[service_name]
 
 
