@@ -32,6 +32,39 @@ def test_catchall_handler_role_exists(iam_client, shared_config):
 
 
 # =============================================================================
+# API Gateway Keys and Usage Plans
+# =============================================================================
+
+
+def test_api_gateway_api_key_exists(apigateway_client, api_gateway_id):
+    """Verify API Gateway API key exists."""
+    if api_gateway_id is None:
+        pytest.skip("API Gateway not found")
+    response = apigateway_client.get_api_keys()
+    assert len(response['items']) > 0
+
+
+def test_api_gateway_usage_plan_exists(apigateway_client, api_gateway_id):
+    """Verify API Gateway usage plan exists."""
+    if api_gateway_id is None:
+        pytest.skip("API Gateway not found")
+    response = apigateway_client.get_usage_plans()
+    assert len(response['items']) > 0
+
+
+def test_api_gateway_usage_plan_key_exists(apigateway_client, api_gateway_id):
+    """Verify API Gateway usage plan key exists."""
+    if api_gateway_id is None:
+        pytest.skip("API Gateway not found")
+    usage_plans = apigateway_client.get_usage_plans()
+    if not usage_plans['items']:
+        pytest.skip("No usage plans found")
+    plan_id = usage_plans['items'][0]['id']
+    response = apigateway_client.get_usage_plan_keys(usagePlanId=plan_id)
+    assert len(response['items']) > 0
+
+
+# =============================================================================
 # S3 Buckets
 # =============================================================================
 
@@ -57,6 +90,20 @@ def test_openapi_json_exists_in_s3(s3_client, config):
     assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
 
 
+def test_404_html_exists_in_s3(s3_client, config):
+    """Verify that 404.html exists in S3 bucket."""
+    bucket_name = config["api_fqdn"]
+    response = s3_client.head_object(Bucket=bucket_name, Key="404.html")
+    assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
+
+
+def test_s3_bucket_policy_exists(s3_client, config):
+    """Verify that S3 bucket policy exists."""
+    bucket_name = config["api_fqdn"]
+    response = s3_client.get_bucket_policy(Bucket=bucket_name)
+    assert 'Policy' in response
+
+
 # =============================================================================
 # CloudFront
 # =============================================================================
@@ -73,6 +120,35 @@ def test_acm_certificate_exists(acm_client):
     """Verify ACM certificate exists for the domain."""
     certificates = acm_client.list_certificates()
     assert certificates['CertificateSummaryList']
+
+
+def test_cloudfront_origin_access_control_exists(cloudfront_client):
+    """Verify CloudFront origin access control exists."""
+    response = cloudfront_client.list_origin_access_controls()
+    oac_list = response['OriginAccessControlList'].get('Items', [])
+    assert len(oac_list) > 0
+
+
+# =============================================================================
+# Route53
+# =============================================================================
+
+
+def test_route53_api_record_exists(config):
+    """Verify Route53 A record for API exists."""
+    route53 = boto3.client('route53')
+    hosted_zones = route53.list_hosted_zones_by_name(DNSName=config['domain'])
+    if not hosted_zones['HostedZones']:
+        pytest.skip("Hosted zone not found")
+    zone_id = hosted_zones['HostedZones'][0]['Id']
+    records = route53.list_resource_record_sets(
+        HostedZoneId=zone_id,
+        StartRecordName=config['api_fqdn'],
+        StartRecordType='A',
+        MaxItems='1'
+    )
+    record_names = [r['Name'].rstrip('.') for r in records['ResourceRecordSets']]
+    assert config['api_fqdn'] in record_names
 
 
 # Note: CloudWatch/EventBridge resources (circuit breaker rules, alarms, WebhookRouter
