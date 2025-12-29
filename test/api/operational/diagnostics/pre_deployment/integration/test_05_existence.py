@@ -1,11 +1,11 @@
-"""Layer 4: Existence tests for diagnostics endpoint pre-deployment.
+"""Layer 5: Existence tests for diagnostics endpoint pre-deployment.
 
 Tests that prerequisite resources exist. Assumes authorization passed.
 These tests verify that resources from OTHER workflows that THIS workflow
 depends on exist before deployment.
 
-Six-layer testing model:
-- Layer 4: Existence - Prerequisite resources exist
+Seven-layer testing model:
+- Layer 5: Existence - Prerequisite resources exist
 """
 
 import pytest
@@ -16,11 +16,11 @@ from test_fixtures.integration import (
 )
 
 
-pytestmark = pytest.mark.layer(4)
+pytestmark = pytest.mark.layer(5)
 
 
 class TestAPIBackendPrerequisites(Layer4APIBackendPrerequisiteTests):
-    """Layer 4: Verify api_shared_routing prerequisites exist.
+    """Layer 5: Verify api_shared_routing prerequisites exist.
 
     All tests inherited from Layer4APIBackendPrerequisiteTests.
     """

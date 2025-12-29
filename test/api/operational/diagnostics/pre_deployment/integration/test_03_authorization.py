@@ -1,10 +1,10 @@
-"""Layer 2: Authorization tests for diagnostics endpoint pre-deployment.
+"""Layer 3: Authorization tests for diagnostics endpoint pre-deployment.
 
 Tests that credentials have permission to INSPECT prerequisite resources.
 Not existence, not capability - just authorization to check.
 
-Six-layer testing model:
-- Layer 2: Authorization - Permission to inspect resources
+Seven-layer testing model:
+- Layer 3: Authorization - Permission to inspect resources
 """
 
 import pytest
@@ -14,18 +14,18 @@ from test_fixtures.integration import (
 )
 
 
-pytestmark = pytest.mark.layer(2)
+pytestmark = pytest.mark.layer(3)
 
 
 class TestAPIGatewayAuthorization(Layer2APIGatewayAuthorizationTests):
-    """Layer 2: Verify permission to inspect API Gateway resources.
+    """Layer 3: Verify permission to inspect API Gateway resources.
 
     All tests inherited from Layer2APIGatewayAuthorizationTests.
     """
 
 
 class TestLambdaAndIAMAuthorization(Layer2LambdaAndIAMAuthorizationTests):
-    """Layer 2: Verify permission to inspect Lambda and IAM resources.
+    """Layer 3: Verify permission to inspect Lambda and IAM resources.
 
     All tests inherited from Layer2LambdaAndIAMAuthorizationTests.
     """

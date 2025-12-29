@@ -1,10 +1,10 @@
-"""Layer 5: Configuration tests for diagnostics endpoint pre-deployment.
+"""Layer 6: Configuration tests for diagnostics endpoint pre-deployment.
 
 Tests that prerequisite resources are configured correctly.
 Assumes existence tests passed.
 
-Six-layer testing model:
-- Layer 5: Configuration - Prerequisites configured correctly
+Seven-layer testing model:
+- Layer 6: Configuration - Prerequisites configured correctly
 """
 
 import pytest
@@ -14,11 +14,11 @@ from test_fixtures.integration import (
 )
 
 
-pytestmark = pytest.mark.layer(5)
+pytestmark = pytest.mark.layer(6)
 
 
 class TestAPIGatewayConfiguration(Layer5APIGatewayRegionalTests):
-    """Layer 5: Verify API Gateway prerequisite is configured correctly."""
+    """Layer 6: Verify API Gateway prerequisite is configured correctly."""
 
     def test_api_gateway_has_diagnostics_resource(self, api_gateway_info):
         """Verify API Gateway has /diagnostics resource path."""

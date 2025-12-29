@@ -7,10 +7,10 @@ from naming_conventions.test_helpers import (
 )
 from terraform_config import extract_iam_role_names, extract_lambda_function_names
 
-ECHO_SRC = Path(__file__).parents[6] / "src" / "api" / "endpoints" / "echo"
+DIAGNOSTICS_SRC = Path(__file__).parents[6] / "src" / "api" / "operational" / "diagnostics"
 
-IAM_ROLES = extract_iam_role_names(ECHO_SRC / "iam.tf")
-LAMBDA_FUNCTIONS = extract_lambda_function_names(ECHO_SRC / "lambda.tf")
+IAM_ROLES = extract_iam_role_names(DIAGNOSTICS_SRC / "iam.tf")
+LAMBDA_FUNCTIONS = extract_lambda_function_names(DIAGNOSTICS_SRC / "lambda.tf")
 
 if IAM_ROLES:
     TestIAMRoleNamingConventions = create_iam_role_tests(IAM_ROLES)
