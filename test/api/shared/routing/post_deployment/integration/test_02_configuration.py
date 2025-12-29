@@ -24,15 +24,14 @@ def test_lambda_catchall_handler_runtime_is_python313(lambda_client, shared_conf
     assert response["Configuration"]["Runtime"] == "python3.13"
 
 
-# Use factory for naming convention tests
-(
-    TestCatchAllHandlerIAMRoleNamingConventions,
-    TestCatchAllHandlerLambdaFunctionNamingConventions,
-) = create_deployed_naming_convention_tests(
+# Use factory for naming convention tests - assigns to class names
+_naming_tests = create_deployed_naming_convention_tests(
     function_name_config_key='catchall_handler_function_name',
     default_function_name='TenULabsCatchAllHandler',
     handler_display_name='CatchAllHandler',
 )
+TestCatchAllHandlerIAMRoleNamingConventions = _naming_tests[0]
+TestCatchAllHandlerLambdaFunctionNamingConventions = _naming_tests[1]
 
 
 # =============================================================================
@@ -186,10 +185,14 @@ def test_cloudfront_health_cache_behavior_uses_api_origin(cloudfront_client, api
     if api_distribution_id is None:
         pytest.skip("API CloudFront distribution not found")
     dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    cache_behaviors = dist_config['DistributionConfig'].get('CacheBehaviors', {}).get('Items', [])
-    health_behavior = next((b for b in cache_behaviors if '/health' in b.get('PathPattern', '')), None)
+    behaviors = dist_config['DistributionConfig'].get('CacheBehaviors', {})
+    cache_behaviors = behaviors.get('Items', [])
+    health_behavior = next(
+        (b for b in cache_behaviors if '/health' in b.get('PathPattern', '')), None
+    )
     if health_behavior:
-        assert 'api' in health_behavior['TargetOriginId'].lower() or 'execute' in health_behavior['TargetOriginId'].lower()
+        origin_id = health_behavior['TargetOriginId'].lower()
+        assert 'api' in origin_id or 'execute' in origin_id
 
 
 def test_cloudfront_v1_api_cache_behavior_uses_api_origin(cloudfront_client, api_distribution_id):
@@ -197,10 +200,14 @@ def test_cloudfront_v1_api_cache_behavior_uses_api_origin(cloudfront_client, api
     if api_distribution_id is None:
         pytest.skip("API CloudFront distribution not found")
     dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    cache_behaviors = dist_config['DistributionConfig'].get('CacheBehaviors', {}).get('Items', [])
-    v1_behavior = next((b for b in cache_behaviors if '/v1' in b.get('PathPattern', '')), None)
+    behaviors = dist_config['DistributionConfig'].get('CacheBehaviors', {})
+    cache_behaviors = behaviors.get('Items', [])
+    v1_behavior = next(
+        (b for b in cache_behaviors if '/v1' in b.get('PathPattern', '')), None
+    )
     if v1_behavior:
-        assert 'api' in v1_behavior['TargetOriginId'].lower() or 'execute' in v1_behavior['TargetOriginId'].lower()
+        origin_id = v1_behavior['TargetOriginId'].lower()
+        assert 'api' in origin_id or 'execute' in origin_id
 
 
 def test_cloudfront_docs_cache_behavior_uses_s3_origin(cloudfront_client, api_distribution_id):
@@ -209,7 +216,10 @@ def test_cloudfront_docs_cache_behavior_uses_s3_origin(cloudfront_client, api_di
         pytest.skip("API CloudFront distribution not found")
     dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
     origins = dist_config['DistributionConfig']['Origins']['Items']
-    has_s3_origin = any('s3' in o['Id'].lower() or 's3' in o.get('DomainName', '').lower() for o in origins)
+    has_s3_origin = any(
+        's3' in o['Id'].lower() or 's3' in o.get('DomainName', '').lower()
+        for o in origins
+    )
     assert has_s3_origin
 
 
@@ -228,7 +238,7 @@ def test_acm_certificate_is_issued(acm_client):
     assert len(certificates['CertificateSummaryList']) > 0
 
 
-def test_acm_certificate_validation_method_is_dns(acm_client, config):
+def test_acm_certificate_validation_method_is_dns(acm_client):
     """Verify ACM certificate validation method is DNS."""
     certificates = acm_client.list_certificates(CertificateStatuses=['ISSUED'])
     if not certificates['CertificateSummaryList']:
@@ -294,50 +304,56 @@ def test_waf_web_acl_scope_is_cloudfront():
 # =============================================================================
 
 
-def test_cloudfront_docs_cache_policy_default_ttl(cloudfront_client):
-    """Verify CloudFront docs cache policy has default TTL configured."""
+def _find_docs_cache_policy(cloudfront_client):
+    """Find the docs cache policy from CloudFront custom policies."""
     response = cloudfront_client.list_cache_policies(Type='custom')
     policies = response['CachePolicyList'].get('Items', [])
-    docs_policy = next((p for p in policies if 'docs' in p['CachePolicy']['CachePolicyConfig']['Name'].lower()), None)
+    for policy in policies:
+        name = policy['CachePolicy']['CachePolicyConfig']['Name'].lower()
+        if 'docs' in name:
+            return policy
+    return None
+
+
+def test_cloudfront_docs_cache_policy_default_ttl(cloudfront_client):
+    """Verify CloudFront docs cache policy has default TTL configured."""
+    docs_policy = _find_docs_cache_policy(cloudfront_client)
     if docs_policy:
-        assert docs_policy['CachePolicy']['CachePolicyConfig']['DefaultTTL'] > 0
+        config = docs_policy['CachePolicy']['CachePolicyConfig']
+        assert config['DefaultTTL'] > 0
 
 
 def test_cloudfront_docs_cache_policy_max_ttl(cloudfront_client):
     """Verify CloudFront docs cache policy has max TTL configured."""
-    response = cloudfront_client.list_cache_policies(Type='custom')
-    policies = response['CachePolicyList'].get('Items', [])
-    docs_policy = next((p for p in policies if 'docs' in p['CachePolicy']['CachePolicyConfig']['Name'].lower()), None)
+    docs_policy = _find_docs_cache_policy(cloudfront_client)
     if docs_policy:
-        assert docs_policy['CachePolicy']['CachePolicyConfig']['MaxTTL'] > 0
+        config = docs_policy['CachePolicy']['CachePolicyConfig']
+        assert config['MaxTTL'] > 0
 
 
 def test_cloudfront_docs_cache_policy_min_ttl(cloudfront_client):
     """Verify CloudFront docs cache policy has min TTL configured."""
-    response = cloudfront_client.list_cache_policies(Type='custom')
-    policies = response['CachePolicyList'].get('Items', [])
-    docs_policy = next((p for p in policies if 'docs' in p['CachePolicy']['CachePolicyConfig']['Name'].lower()), None)
+    docs_policy = _find_docs_cache_policy(cloudfront_client)
     if docs_policy:
-        assert 'MinTTL' in docs_policy['CachePolicy']['CachePolicyConfig']
+        config = docs_policy['CachePolicy']['CachePolicyConfig']
+        assert 'MinTTL' in config
 
 
 def test_cloudfront_docs_cache_policy_gzip_enabled(cloudfront_client):
     """Verify CloudFront docs cache policy has gzip compression enabled."""
-    response = cloudfront_client.list_cache_policies(Type='custom')
-    policies = response['CachePolicyList'].get('Items', [])
-    docs_policy = next((p for p in policies if 'docs' in p['CachePolicy']['CachePolicyConfig']['Name'].lower()), None)
+    docs_policy = _find_docs_cache_policy(cloudfront_client)
     if docs_policy:
-        params = docs_policy['CachePolicy']['CachePolicyConfig']['ParametersInCacheKeyAndForwardedToOrigin']
+        config = docs_policy['CachePolicy']['CachePolicyConfig']
+        params = config['ParametersInCacheKeyAndForwardedToOrigin']
         assert params.get('EnableAcceptEncodingGzip') is True
 
 
 def test_cloudfront_docs_cache_policy_brotli_enabled(cloudfront_client):
     """Verify CloudFront docs cache policy has brotli compression enabled."""
-    response = cloudfront_client.list_cache_policies(Type='custom')
-    policies = response['CachePolicyList'].get('Items', [])
-    docs_policy = next((p for p in policies if 'docs' in p['CachePolicy']['CachePolicyConfig']['Name'].lower()), None)
+    docs_policy = _find_docs_cache_policy(cloudfront_client)
     if docs_policy:
-        params = docs_policy['CachePolicy']['CachePolicyConfig']['ParametersInCacheKeyAndForwardedToOrigin']
+        config = docs_policy['CachePolicy']['CachePolicyConfig']
+        params = config['ParametersInCacheKeyAndForwardedToOrigin']
         assert params.get('EnableAcceptEncodingBrotli') is True
 
 
@@ -345,9 +361,13 @@ def test_cloudfront_docs_cache_policy_cookies_none(cloudfront_client):
     """Verify CloudFront docs cache policy excludes cookies."""
     response = cloudfront_client.list_cache_policies(Type='custom')
     policies = response['CachePolicyList'].get('Items', [])
-    docs_policy = next((p for p in policies if 'docs' in p['CachePolicy']['CachePolicyConfig']['Name'].lower()), None)
+    docs_policy = next(
+        (p for p in policies if 'docs' in p['CachePolicy']['CachePolicyConfig']['Name'].lower()),
+        None
+    )
     if docs_policy:
-        params = docs_policy['CachePolicy']['CachePolicyConfig']['ParametersInCacheKeyAndForwardedToOrigin']
+        policy_config = docs_policy['CachePolicy']['CachePolicyConfig']
+        params = policy_config['ParametersInCacheKeyAndForwardedToOrigin']
         cookies = params.get('CookiesConfig', {})
         assert cookies.get('CookieBehavior') == 'none'
 
@@ -492,45 +512,41 @@ def test_api_audit_log_table_billing_mode_is_pay_per_request(dynamodb_client, sh
     assert response['Table']['BillingModeSummary']['BillingMode'] == 'PAY_PER_REQUEST'
 
 
-def test_dynamodb_endpoint_gsi_projection_type_is_all(dynamodb_client, shared_config):
-    """Verify endpoint-time-index GSI projection type is ALL."""
+def _get_audit_log_gsi(dynamodb_client, shared_config, gsi_name):
+    """Get a GSI by name from the API audit log table."""
     table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
     response = dynamodb_client.describe_table(TableName=table_name)
     gsis = response['Table'].get('GlobalSecondaryIndexes', [])
-    endpoint_gsi = next((g for g in gsis if g['IndexName'] == 'endpoint-time-index'), None)
-    if endpoint_gsi:
-        assert endpoint_gsi['Projection']['ProjectionType'] == 'ALL'
+    return next((g for g in gsis if g['IndexName'] == gsi_name), None)
+
+
+def test_dynamodb_endpoint_gsi_projection_type_is_all(dynamodb_client, shared_config):
+    """Verify endpoint-time-index GSI projection type is ALL."""
+    gsi = _get_audit_log_gsi(dynamodb_client, shared_config, 'endpoint-time-index')
+    if gsi:
+        assert gsi['Projection']['ProjectionType'] == 'ALL'
 
 
 def test_dynamodb_status_gsi_projection_type_is_all(dynamodb_client, shared_config):
     """Verify status-time-index GSI projection type is ALL."""
-    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
-    response = dynamodb_client.describe_table(TableName=table_name)
-    gsis = response['Table'].get('GlobalSecondaryIndexes', [])
-    status_gsi = next((g for g in gsis if g['IndexName'] == 'status-time-index'), None)
-    if status_gsi:
-        assert status_gsi['Projection']['ProjectionType'] == 'ALL'
+    gsi = _get_audit_log_gsi(dynamodb_client, shared_config, 'status-time-index')
+    if gsi:
+        assert gsi['Projection']['ProjectionType'] == 'ALL'
 
 
 def test_dynamodb_endpoint_gsi_range_key_is_request_timestamp(dynamodb_client, shared_config):
     """Verify endpoint-time-index GSI range key is request_timestamp."""
-    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
-    response = dynamodb_client.describe_table(TableName=table_name)
-    gsis = response['Table'].get('GlobalSecondaryIndexes', [])
-    endpoint_gsi = next((g for g in gsis if g['IndexName'] == 'endpoint-time-index'), None)
-    if endpoint_gsi:
-        range_key = next((k for k in endpoint_gsi['KeySchema'] if k['KeyType'] == 'RANGE'), None)
+    gsi = _get_audit_log_gsi(dynamodb_client, shared_config, 'endpoint-time-index')
+    if gsi:
+        range_key = next((k for k in gsi['KeySchema'] if k['KeyType'] == 'RANGE'), None)
         assert range_key['AttributeName'] == 'request_timestamp'
 
 
 def test_dynamodb_status_gsi_range_key_is_request_timestamp(dynamodb_client, shared_config):
     """Verify status-time-index GSI range key is request_timestamp."""
-    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
-    response = dynamodb_client.describe_table(TableName=table_name)
-    gsis = response['Table'].get('GlobalSecondaryIndexes', [])
-    status_gsi = next((g for g in gsis if g['IndexName'] == 'status-time-index'), None)
-    if status_gsi:
-        range_key = next((k for k in status_gsi['KeySchema'] if k['KeyType'] == 'RANGE'), None)
+    gsi = _get_audit_log_gsi(dynamodb_client, shared_config, 'status-time-index')
+    if gsi:
+        range_key = next((k for k in gsi['KeySchema'] if k['KeyType'] == 'RANGE'), None)
         assert range_key['AttributeName'] == 'request_timestamp'
 
 
@@ -696,14 +712,19 @@ def test_firehose_waf_logs_bucket_is_central_logs(shared_config, config):
     assert config['central_logs_bucket'] in s3_config['BucketARN']
 
 
+def _check_firehose_cw_logging_disabled(response):
+    """Check if Firehose stream has CloudWatch logging disabled."""
+    destinations = response['DeliveryStreamDescription']['Destinations']
+    s3_config = destinations[0]['ExtendedS3DestinationDescription']
+    cw_logging = s3_config.get('CloudWatchLoggingOptions', {})
+    return cw_logging.get('Enabled') is False or 'CloudWatchLoggingOptions' not in s3_config
+
+
 def test_firehose_cloudwatch_logs_cloudwatch_logging_disabled(firehose_client, config):
     """Verify Firehose CloudWatch logs stream has CloudWatch logging disabled."""
     stream_name = config['firehose_delivery_stream_name']
     response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    destinations = response['DeliveryStreamDescription']['Destinations']
-    s3_config = destinations[0]['ExtendedS3DestinationDescription']
-    cw_logging = s3_config.get('CloudWatchLoggingOptions', {})
-    assert cw_logging.get('Enabled') is False or 'CloudWatchLoggingOptions' not in s3_config
+    assert _check_firehose_cw_logging_disabled(response)
 
 
 def test_firehose_waf_logs_cloudwatch_logging_disabled(shared_config):
@@ -711,10 +732,7 @@ def test_firehose_waf_logs_cloudwatch_logging_disabled(shared_config):
     firehose_client = boto3.client('firehose', region_name='us-east-1')
     stream_name = f"{shared_config['resource_prefix']}-WafLogs"
     response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    destinations = response['DeliveryStreamDescription']['Destinations']
-    s3_config = destinations[0]['ExtendedS3DestinationDescription']
-    cw_logging = s3_config.get('CloudWatchLoggingOptions', {})
-    assert cw_logging.get('Enabled') is False or 'CloudWatchLoggingOptions' not in s3_config
+    assert _check_firehose_cw_logging_disabled(response)
 
 
 # =============================================================================

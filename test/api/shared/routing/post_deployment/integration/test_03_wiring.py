@@ -19,6 +19,35 @@ TEST_HEADERS = {"x-test-mode": "true"}
 
 
 # =============================================================================
+# Helper Functions
+# =============================================================================
+
+
+def _extract_policy_actions(policy):
+    """Extract all actions from an IAM policy document."""
+    actions = []
+    for stmt in policy.get('Statement', []):
+        stmt_actions = stmt.get('Action', [])
+        if isinstance(stmt_actions, str):
+            actions.append(stmt_actions)
+        else:
+            actions.extend(stmt_actions)
+    return actions
+
+
+def _extract_policy_resources(policy):
+    """Extract all resources from an IAM policy document."""
+    resources = []
+    for stmt in policy.get('Statement', []):
+        stmt_resources = stmt.get('Resource', [])
+        if isinstance(stmt_resources, str):
+            resources.append(stmt_resources)
+        else:
+            resources.extend(stmt_resources)
+    return resources
+
+
+# =============================================================================
 # API Gateway → Lambda Wiring
 # =============================================================================
 
@@ -35,48 +64,45 @@ def test_api_gateway_has_permission_to_invoke_health_lambda(lambda_client, confi
         raise
 
 
-def test_api_gateway_usage_plan_associated_with_prod_stage(apigateway_client, api_gateway_id):
+def test_api_gateway_usage_plan_associated_with_prod_stage(
+    apigateway_client, api_gateway_id, usage_plan_id
+):
     """Verify API Gateway usage plan is associated with prod stage."""
-    if api_gateway_id is None:
-        pytest.skip("API Gateway not found")
-    usage_plans = apigateway_client.get_usage_plans()
-    if not usage_plans['items']:
-        pytest.skip("No usage plans found")
-    for plan in usage_plans['items']:
-        api_stages = plan.get('apiStages', [])
-        for stage in api_stages:
-            if stage.get('apiId') == api_gateway_id and stage.get('stage') == 'prod':
-                return
+    if usage_plan_id is None:
+        pytest.skip("Usage plan not found")
+    plan = apigateway_client.get_usage_plan(usagePlanId=usage_plan_id)
+    api_stages = plan.get('apiStages', [])
+    for stage in api_stages:
+        if stage.get('apiId') == api_gateway_id and stage.get('stage') == 'prod':
+            return
     pytest.fail("Usage plan not associated with prod stage")
 
 
-def test_api_gateway_usage_plan_key_links_key_to_plan(apigateway_client):
+def test_api_gateway_usage_plan_key_links_key_to_plan(apigateway_client, usage_plan_id):
     """Verify API Gateway usage plan key links API key to plan."""
-    usage_plans = apigateway_client.get_usage_plans()
-    if not usage_plans['items']:
-        pytest.skip("No usage plans found")
-    plan_id = usage_plans['items'][0]['id']
-    keys = apigateway_client.get_usage_plan_keys(usagePlanId=plan_id)
+    if usage_plan_id is None:
+        pytest.skip("Usage plan not found")
+    keys = apigateway_client.get_usage_plan_keys(usagePlanId=usage_plan_id)
     assert len(keys['items']) > 0
 
 
-def test_api_gateway_usage_plan_key_type_is_api_key(apigateway_client):
+def test_api_gateway_usage_plan_key_type_is_api_key(apigateway_client, usage_plan_id):
     """Verify API Gateway usage plan key type is API_KEY."""
-    usage_plans = apigateway_client.get_usage_plans()
-    if not usage_plans['items']:
-        pytest.skip("No usage plans found")
-    plan_id = usage_plans['items'][0]['id']
-    keys = apigateway_client.get_usage_plan_keys(usagePlanId=plan_id)
+    if usage_plan_id is None:
+        pytest.skip("Usage plan not found")
+    keys = apigateway_client.get_usage_plan_keys(usagePlanId=usage_plan_id)
     if keys['items']:
         assert keys['items'][0]['type'] == 'API_KEY'
 
 
-def test_api_gateway_cloudwatch_role_has_push_logs_policy(iam_client, shared_config):
+def test_api_gateway_cloudwatch_role_has_push_logs_policy(iam_client, config):
     """Verify API Gateway CloudWatch role has policy for pushing logs."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewayCloudWatch"
+    role_name = config['api_gateway_cloudwatch_role_name']
     response = iam_client.list_attached_role_policies(RoleName=role_name)
     policy_arns = [p['PolicyArn'] for p in response['AttachedPolicies']]
-    has_cloudwatch_policy = any('CloudWatch' in arn or 'cloudwatch' in arn.lower() for arn in policy_arns)
+    has_cloudwatch_policy = any(
+        'CloudWatch' in arn or 'cloudwatch' in arn.lower() for arn in policy_arns
+    )
     assert has_cloudwatch_policy
 
 
@@ -96,68 +122,41 @@ def test_lambda_catchall_permission_source_arn_covers_all_methods(lambda_client,
         raise
 
 
+def _get_sqs_role_policy(iam_client, shared_config):
+    """Get the API Gateway SQS role policy document."""
+    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
+    response = iam_client.get_role_policy(
+        RoleName=role_name, PolicyName='SendToIngressQueues'
+    )
+    return response['PolicyDocument']
+
+
 def test_api_gateway_sqs_policy_targets_webhook_queue(iam_client, shared_config):
     """Verify API Gateway SQS policy targets webhook queue."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
-    response = iam_client.get_role_policy(RoleName=role_name, PolicyName='SendToIngressQueues')
-    policy = response['PolicyDocument']
-    resources = []
-    for stmt in policy.get('Statement', []):
-        stmt_resources = stmt.get('Resource', [])
-        if isinstance(stmt_resources, str):
-            resources.append(stmt_resources)
-        else:
-            resources.extend(stmt_resources)
-    has_webhook = any('webhook' in r.lower() for r in resources)
-    assert has_webhook
+    policy = _get_sqs_role_policy(iam_client, shared_config)
+    resources = _extract_policy_resources(policy)
+    assert any('webhook' in r.lower() for r in resources)
 
 
 def test_api_gateway_sqs_policy_targets_runners_queue(iam_client, shared_config):
     """Verify API Gateway SQS policy targets runners queue."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
-    response = iam_client.get_role_policy(RoleName=role_name, PolicyName='SendToIngressQueues')
-    policy = response['PolicyDocument']
-    resources = []
-    for stmt in policy.get('Statement', []):
-        stmt_resources = stmt.get('Resource', [])
-        if isinstance(stmt_resources, str):
-            resources.append(stmt_resources)
-        else:
-            resources.extend(stmt_resources)
-    has_runners = any('runner' in r.lower() for r in resources)
-    assert has_runners
+    policy = _get_sqs_role_policy(iam_client, shared_config)
+    resources = _extract_policy_resources(policy)
+    assert any('runner' in r.lower() for r in resources)
 
 
 def test_api_gateway_sqs_policy_allows_send_message(iam_client, shared_config):
     """Verify API Gateway SQS policy allows SendMessage action."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
-    response = iam_client.get_role_policy(RoleName=role_name, PolicyName='SendToIngressQueues')
-    policy = response['PolicyDocument']
-    actions = []
-    for stmt in policy.get('Statement', []):
-        stmt_actions = stmt.get('Action', [])
-        if isinstance(stmt_actions, str):
-            actions.append(stmt_actions)
-        else:
-            actions.extend(stmt_actions)
-    has_send_message = any('sqs:SendMessage' in a for a in actions)
-    assert has_send_message
+    policy = _get_sqs_role_policy(iam_client, shared_config)
+    actions = _extract_policy_actions(policy)
+    assert any('sqs:SendMessage' in a for a in actions)
 
 
 def test_api_gateway_sqs_policy_allows_get_queue_url(iam_client, shared_config):
     """Verify API Gateway SQS policy allows GetQueueUrl action."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
-    response = iam_client.get_role_policy(RoleName=role_name, PolicyName='SendToIngressQueues')
-    policy = response['PolicyDocument']
-    actions = []
-    for stmt in policy.get('Statement', []):
-        stmt_actions = stmt.get('Action', [])
-        if isinstance(stmt_actions, str):
-            actions.append(stmt_actions)
-        else:
-            actions.extend(stmt_actions)
-    has_get_queue_url = any('sqs:GetQueueUrl' in a for a in actions)
-    assert has_get_queue_url
+    policy = _get_sqs_role_policy(iam_client, shared_config)
+    actions = _extract_policy_actions(policy)
+    assert any('sqs:GetQueueUrl' in a for a in actions)
 
 
 # =============================================================================
@@ -220,20 +219,11 @@ def test_s3_bucket_policy_allows_cloudfront_oac(s3_client, config):
     assert has_cloudfront_condition
 
 
-def test_route53_api_record_alias_target_is_cloudfront(config):
+def test_route53_api_record_alias_target_is_cloudfront(api_route53_records, config):
     """Verify Route53 API record alias target is CloudFront."""
-    route53 = boto3.client('route53')
-    hosted_zones = route53.list_hosted_zones_by_name(DNSName=config['domain'])
-    if not hosted_zones['HostedZones']:
+    if api_route53_records is None:
         pytest.skip("Hosted zone not found")
-    zone_id = hosted_zones['HostedZones'][0]['Id']
-    records = route53.list_resource_record_sets(
-        HostedZoneId=zone_id,
-        StartRecordName=config['api_fqdn'],
-        StartRecordType='A',
-        MaxItems='1'
-    )
-    for record in records['ResourceRecordSets']:
+    for record in api_route53_records:
         if record['Name'].rstrip('.') == config['api_fqdn']:
             alias_target = record.get('AliasTarget', {})
             assert 'cloudfront.net' in alias_target.get('DNSName', '')
@@ -356,17 +346,11 @@ def test_firehose_role_has_s3_access_policy(iam_client, config):
 
 def test_firehose_s3_policy_has_all_required_actions(iam_client, config):
     """Verify Firehose S3 policy has all required S3 actions."""
-    response = iam_client.get_role_policy(RoleName=config['firehose_role_name'], PolicyName='S3Access')
-    policy = response['PolicyDocument']
-    actions = []
-    for stmt in policy.get('Statement', []):
-        stmt_actions = stmt.get('Action', [])
-        if isinstance(stmt_actions, str):
-            actions.append(stmt_actions)
-        else:
-            actions.extend(stmt_actions)
-    has_put_object = any('s3:PutObject' in a or 's3:*' in a for a in actions)
-    assert has_put_object
+    response = iam_client.get_role_policy(
+        RoleName=config['firehose_role_name'], PolicyName='S3Access'
+    )
+    actions = _extract_policy_actions(response['PolicyDocument'])
+    assert any('s3:PutObject' in a or 's3:*' in a for a in actions)
 
 
 def test_waf_firehose_s3_policy_has_all_required_actions(shared_config):
@@ -375,17 +359,11 @@ def test_waf_firehose_s3_policy_has_all_required_actions(shared_config):
     role_name = f"{shared_config['resource_prefix']}-WafFirehoseRole"
     response = iam_client.list_role_policies(RoleName=role_name)
     if 'S3Access' in response['PolicyNames']:
-        policy_response = iam_client.get_role_policy(RoleName=role_name, PolicyName='S3Access')
-        policy = policy_response['PolicyDocument']
-        actions = []
-        for stmt in policy.get('Statement', []):
-            stmt_actions = stmt.get('Action', [])
-            if isinstance(stmt_actions, str):
-                actions.append(stmt_actions)
-            else:
-                actions.extend(stmt_actions)
-        has_put_object = any('s3:PutObject' in a or 's3:*' in a for a in actions)
-        assert has_put_object
+        policy_response = iam_client.get_role_policy(
+            RoleName=role_name, PolicyName='S3Access'
+        )
+        actions = _extract_policy_actions(policy_response['PolicyDocument'])
+        assert any('s3:PutObject' in a or 's3:*' in a for a in actions)
 
 
 def test_cloudwatch_logs_firehose_role_has_firehose_access_policy(iam_client, config):
@@ -426,16 +404,8 @@ def test_cloudwatch_logs_firehose_policy_allows_put_record(iam_client, config):
     """Verify CloudWatch Logs Firehose policy allows PutRecord action."""
     role_name = config['cloudwatch_logs_firehose_role_name']
     response = iam_client.get_role_policy(RoleName=role_name, PolicyName='FirehoseAccess')
-    policy = response['PolicyDocument']
-    actions = []
-    for stmt in policy.get('Statement', []):
-        stmt_actions = stmt.get('Action', [])
-        if isinstance(stmt_actions, str):
-            actions.append(stmt_actions)
-        else:
-            actions.extend(stmt_actions)
-    has_put_record = any('firehose:PutRecord' in a for a in actions)
-    assert has_put_record
+    actions = _extract_policy_actions(response['PolicyDocument'])
+    assert any('firehose:PutRecord' in a for a in actions)
 
 
 # =============================================================================
@@ -566,9 +536,9 @@ def test_api_gateway_sqs_role_has_sqs_policy(iam_client, shared_config):
 # =============================================================================
 
 
-def test_api_gateway_cloudwatch_role_trusts_apigateway_service(iam_client, shared_config):
+def test_api_gateway_cloudwatch_role_trusts_apigateway_service(iam_client, config):
     """Verify API Gateway CloudWatch role trusts the API Gateway service."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewayCloudWatch"
+    role_name = config['api_gateway_cloudwatch_role_name']
     response = iam_client.get_role(RoleName=role_name)
     assume_role_policy = response['Role']['AssumeRolePolicyDocument']
     statements = assume_role_policy['Statement']
@@ -592,7 +562,7 @@ def test_waf_firehose_role_trusts_firehose_service(shared_config):
     assert service_principal == 'firehose.amazonaws.com'
 
 
-def test_waf_subscription_filter_routes_to_waf_firehose(shared_config):
+def test_waf_subscription_filter_routes_to_waf_firehose():
     """Verify WAF subscription filter routes to WAF-specific Firehose."""
     logs_client = boto3.client('logs', region_name='us-east-1')
     response = logs_client.describe_subscription_filters(logGroupName='aws-waf-logs-api')

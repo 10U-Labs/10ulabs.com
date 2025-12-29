@@ -32,7 +32,9 @@ def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     base = Path(__file__).parent.parent.parent.parent.parent
     locals_path = base / "src" / "api" / "shared" / "routing" / "locals.tf"
     config = parse_locals_file(locals_path, shared_config)
-    config['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
+    domain_name = shared_config.get('domain_name', '')
+    config['domain'] = domain_name
+    config['api_fqdn'] = f"api.{domain_name}"
     github_org = shared_config.get('github_org', '')
     github_repo = shared_config.get('name_for_github_repo', '')
     config['github_repo_full'] = f"{github_org}/{github_repo}"
@@ -42,12 +44,15 @@ def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
 def _add_derived_config(result: Dict[str, str]) -> None:
     """Add derived configuration values based on prefix and lambda function name."""
     prefix = result['resource_prefix']
+    stack_name = result.get('stack_name', prefix)
     lambda_fn = result.get('lambda_function_name', '')
     result['circuit_breaker_state_table_name'] = f"{prefix}-circuit-breaker-state"
     result['workflow_runners_table_name'] = f"{prefix}-workflow-runners"
     result['firehose_delivery_stream_name'] = f"{prefix}-CloudWatchLogs"
     result['firehose_role_name'] = f"{prefix}-FirehoseCloudWatchLogs"
     result['cloudwatch_logs_firehose_role_name'] = f"{prefix}-CloudWatchLogsFirehose"
+    # API Gateway CloudWatch role uses stack_name (not resource_prefix)
+    result['api_gateway_cloudwatch_role_name'] = f"{stack_name}-api-gateway-cloudwatch"
     result['lambda_runners_role_name'] = f"{lambda_fn}-ServiceRole"
     result['webhook_handler_service_role_name'] = f"{lambda_fn}-ServiceRole"
 
@@ -62,10 +67,13 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     result['aws_region'] = shared_config['aws_region']
     result['aws_account_id'] = api_locals.get('aws_account_id', '')
     result['central_logs_bucket'] = shared_config.get('name_for_central_logs_bucket', '')
+    result['domain'] = api_locals.get('domain', '')
     result['api_fqdn'] = api_locals.get('api_fqdn', '')
     result['github_org'] = shared_config.get('github_org', '')
     result['github_repo'] = api_locals.get('github_repo_full', '')
     result['resource_prefix'] = api_locals.get('resource_prefix', '')
+    # stack_name is the terraform tfvars value for API Gateway resources
+    result['stack_name'] = result.get('stack_name', '')
     ssm_param = parse_bootstrap_tfvar('ssm_parameter_name_for_github_pat')
     result['ssm_parameter_name_for_github_pat'] = ssm_param
     _add_derived_config(result)

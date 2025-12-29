@@ -52,15 +52,11 @@ def test_api_gateway_usage_plan_exists(apigateway_client, api_gateway_id):
     assert len(response['items']) > 0
 
 
-def test_api_gateway_usage_plan_key_exists(apigateway_client, api_gateway_id):
+def test_api_gateway_usage_plan_key_exists(apigateway_client, usage_plan_id):
     """Verify API Gateway usage plan key exists."""
-    if api_gateway_id is None:
-        pytest.skip("API Gateway not found")
-    usage_plans = apigateway_client.get_usage_plans()
-    if not usage_plans['items']:
-        pytest.skip("No usage plans found")
-    plan_id = usage_plans['items'][0]['id']
-    response = apigateway_client.get_usage_plan_keys(usagePlanId=plan_id)
+    if usage_plan_id is None:
+        pytest.skip("Usage plan not found")
+    response = apigateway_client.get_usage_plan_keys(usagePlanId=usage_plan_id)
     assert len(response['items']) > 0
 
 
@@ -134,20 +130,11 @@ def test_cloudfront_origin_access_control_exists(cloudfront_client):
 # =============================================================================
 
 
-def test_route53_api_record_exists(config):
+def test_route53_api_record_exists(api_route53_records, config):
     """Verify Route53 A record for API exists."""
-    route53 = boto3.client('route53')
-    hosted_zones = route53.list_hosted_zones_by_name(DNSName=config['domain'])
-    if not hosted_zones['HostedZones']:
+    if api_route53_records is None:
         pytest.skip("Hosted zone not found")
-    zone_id = hosted_zones['HostedZones'][0]['Id']
-    records = route53.list_resource_record_sets(
-        HostedZoneId=zone_id,
-        StartRecordName=config['api_fqdn'],
-        StartRecordType='A',
-        MaxItems='1'
-    )
-    record_names = [r['Name'].rstrip('.') for r in records['ResourceRecordSets']]
+    record_names = [r['Name'].rstrip('.') for r in api_route53_records]
     assert config['api_fqdn'] in record_names
 
 
@@ -246,9 +233,9 @@ def test_api_gateway_stage_exists(apigateway_client, api_gateway_id):
     assert response['stageName'] == 'prod'
 
 
-def test_api_gateway_cloudwatch_role_exists(iam_client, shared_config):
+def test_api_gateway_cloudwatch_role_exists(iam_client, config):
     """Verify API Gateway CloudWatch IAM role exists."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewayCloudWatch"
+    role_name = config['api_gateway_cloudwatch_role_name']
     response = iam_client.get_role(RoleName=role_name)
     assert response['Role']['RoleName'] == role_name
 
@@ -269,7 +256,7 @@ def test_cloudfront_url_rewrite_function_exists(cloudfront_client):
     """Verify CloudFront URL rewrite function exists."""
     response = cloudfront_client.list_functions()
     function_names = [f['Name'] for f in response['FunctionList'].get('Items', [])]
-    assert 'url-rewrite' in function_names
+    assert 'RootUrlRewriteFunction' in function_names
 
 
 # =============================================================================

@@ -111,3 +111,31 @@ def cleanup_test_dynamodb_item(client, table_name, key):
 def ssm_client_fixture(aws_region):
     """Create and return a boto3 SSM client for the specified region."""
     return boto3.client("ssm", region_name=aws_region)
+
+
+@pytest.fixture(name="usage_plan_id", scope="module")
+def usage_plan_id_fixture(apigateway_client, api_gateway_id):
+    """Get the first API Gateway usage plan ID, or None if not found."""
+    if api_gateway_id is None:
+        return None
+    usage_plans = apigateway_client.get_usage_plans()
+    if not usage_plans['items']:
+        return None
+    return usage_plans['items'][0]['id']
+
+
+@pytest.fixture(name="api_route53_records", scope="module")
+def api_route53_records_fixture(config):
+    """Get Route53 A records for the API FQDN."""
+    route53 = boto3.client('route53')
+    hosted_zones = route53.list_hosted_zones_by_name(DNSName=config['domain'])
+    if not hosted_zones['HostedZones']:
+        return None
+    zone_id = hosted_zones['HostedZones'][0]['Id']
+    records = route53.list_resource_record_sets(
+        HostedZoneId=zone_id,
+        StartRecordName=config['api_fqdn'],
+        StartRecordType='A',
+        MaxItems='1'
+    )
+    return records['ResourceRecordSets']
