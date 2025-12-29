@@ -1,21 +1,18 @@
 """Base test classes for pre-deployment integration tests.
 
 These classes implement the 7-layer testing model documented in docs/tenets/tests/.
-The class naming (Layer1-Layer6) is offset by 1 for backward compatibility:
 
     Documentation Layer    Class Prefix    Purpose
     ------------------    ------------    -------
-    Layer 1: Contracts    (no class)      Local file compatibility (unit tests)
-    Layer 2: Authentication    Layer1     Valid credentials exist
-    Layer 3: Authorization     Layer2     Permission to inspect resources
+    Layer 1: Contracts    (no class)      Local file compatibility
+    Layer 2: Authentication    Layer2     Valid credentials exist
+    Layer 3: Authorization     Layer3     Permission to inspect resources
     Layer 4: State             Layer4     Terraform state matches AWS reality
-    Layer 5: Existence         Layer4     Required resources exist
-    Layer 6: Configuration     Layer5     Resources configured correctly
-    Layer 7: Capability        Layer6     Can perform required operations
+    Layer 5: Existence         Layer5     Required resources exist
+    Layer 6: Configuration     Layer6     Resources configured correctly
+    Layer 7: Capability        Layer7     Can perform required operations
 
-New tests should use pytestmark = pytest.mark.layer(N) where N matches the
-documentation layer number (1-7). The base classes are named Layer1-Layer6
-for backward compatibility with existing tests.
+Use pytestmark = pytest.mark.layer(N) where N matches the documentation layer (1-7).
 """
 import uuid
 
@@ -694,3 +691,24 @@ class Layer6DeploymentCapabilityTests:
                     "Cannot get IAM role details - required for deployment"
                 )
             raise
+
+
+# =============================================================================
+# Layer aliases for 7-layer model (Layer 1 = Contracts has no base class)
+# =============================================================================
+
+# Layer 2: Authentication
+Layer2EndpointAuthenticationTests = Layer1EndpointAuthenticationTests
+
+# Layer 3: Authorization
+Layer3APIGatewayAuthorizationTests = Layer2APIGatewayAuthorizationTests
+Layer3LambdaAndIAMAuthorizationTests = Layer2LambdaAndIAMAuthorizationTests
+
+# Layer 5: Existence
+Layer5APIBackendPrerequisiteTests = Layer4APIBackendPrerequisiteTests
+
+# Layer 6: Configuration
+Layer6APIGatewayRegionalTests = Layer5APIGatewayRegionalTests
+
+# Layer 7: Capability
+Layer7DeploymentCapabilityTests = Layer6DeploymentCapabilityTests

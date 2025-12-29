@@ -9,14 +9,11 @@ The 7-layer testing model:
 - Layer 6: Configuration - Resources configured correctly
 - Layer 7: Capability - Can perform required operations
 
-Note: Base classes are named Layer1-Layer6 for backward compatibility with existing
-tests. New tests should use the 7-layer pytestmark numbering (Layer 1 = Contracts).
-
 Usage:
     # In your test file:
-    from test_fixtures.integration import Layer1AuthenticationTests
+    from test_fixtures.integration import Layer2EndpointAuthenticationTests
 
-    class TestAWSAuthentication(Layer1AuthenticationTests):
+    class TestAWSAuthentication(Layer2EndpointAuthenticationTests):
         pass  # Inherits all base tests
 """
 from test_fixtures.integration.base_classes import (
@@ -24,23 +21,29 @@ from test_fixtures.integration.base_classes import (
     Layer1EndpointAuthenticationTests,
     Layer2APIGatewayAuthorizationTests,
     Layer2ECRAuthorizationTests,
+    Layer2EndpointAuthenticationTests,
     Layer2IAMAuthorizationTests,
     Layer2LambdaAndIAMAuthorizationTests,
     Layer2S3AuthorizationTests,
+    Layer3APIGatewayAuthorizationTests,
+    Layer3LambdaAndIAMAuthorizationTests,
     Layer4APIBackendPrerequisiteTests,
     Layer4IAMRoleExistenceTests,
     Layer4PrerequisiteExistenceTests,
     Layer4TerraformStateExistenceTests,
+    Layer5APIBackendPrerequisiteTests,
     Layer5APIGatewayRegionalTests,
     Layer5IAMConfigurationTests,
     Layer5PrerequisiteConfigurationTests,
     Layer5S3ConfigurationTests,
     Layer5S3RegionTests,
+    Layer6APIGatewayRegionalTests,
     Layer6DeploymentCapabilityTests,
     Layer6ECRCapabilityTests,
     Layer6IAMCapabilityTests,
     Layer6S3CapabilityTests,
     Layer6S3WriteCapabilityTests,
+    Layer7DeploymentCapabilityTests,
 )
 from test_fixtures.integration.factories import (
     create_deployed_naming_convention_tests,
@@ -75,7 +78,14 @@ from test_fixtures.integration.helpers import (
 )
 
 __all__ = [
-    # Base classes
+    # Base classes (7-layer model)
+    "Layer2EndpointAuthenticationTests",
+    "Layer3APIGatewayAuthorizationTests",
+    "Layer3LambdaAndIAMAuthorizationTests",
+    "Layer5APIBackendPrerequisiteTests",
+    "Layer6APIGatewayRegionalTests",
+    "Layer7DeploymentCapabilityTests",
+    # Base classes (legacy naming)
     "Layer1AuthenticationTests",
     "Layer1EndpointAuthenticationTests",
     "Layer2APIGatewayAuthorizationTests",

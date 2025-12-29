@@ -83,3 +83,25 @@ def test_health_handler_version_is_1_0_0(
     response = health_handler.handler(health_get_event, lambda_context)
     body = parse_response_body(response)
     assert body['version'] == '1.0.0'
+
+
+def test_handler_returns_404_for_unknown_path(health_handler, lambda_context):
+    """Verify handler returns 404 for unknown path."""
+    event = {'path': '/unknown', 'httpMethod': 'GET'}
+    response = health_handler.handler(event, lambda_context)
+    assert_response_status(response, 404)
+
+
+def test_handler_returns_404_for_unknown_method(health_handler, lambda_context):
+    """Verify handler returns 404 for unknown HTTP method."""
+    event = {'path': '/health', 'httpMethod': 'POST'}
+    response = health_handler.handler(event, lambda_context)
+    assert_response_status(response, 404)
+
+
+def test_handler_404_response_contains_error_field(health_handler, lambda_context):
+    """Verify 404 response body contains error field."""
+    event = {'path': '/unknown', 'httpMethod': 'GET'}
+    response = health_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert 'error' in body
