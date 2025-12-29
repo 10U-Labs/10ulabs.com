@@ -115,7 +115,8 @@ def test_lambda_catchall_permission_source_arn_covers_all_methods(lambda_client,
         for stmt in policy.get('Statement', []):
             source_arn = stmt.get('Condition', {}).get('ArnLike', {}).get('AWS:SourceArn', '')
             if 'execute-api' in source_arn:
-                assert '/*/' in source_arn or '/*/*' in source_arn
+                # Accept /*/, /*/*, or trailing /* (all cover all methods)
+                assert '/*/' in source_arn or '/*/*' in source_arn or source_arn.endswith('/*')
     except ClientError as err:
         if err.response["Error"]["Code"] == "ResourceNotFoundException":
             pytest.skip("Lambda policy not found")
@@ -356,7 +357,7 @@ def test_firehose_s3_policy_has_all_required_actions(iam_client, config):
 def test_waf_firehose_s3_policy_has_all_required_actions(shared_config):
     """Verify WAF Firehose S3 policy has all required S3 actions."""
     iam_client = boto3.client('iam')
-    role_name = f"{shared_config['resource_prefix']}-WafFirehoseRole"
+    role_name = f"{shared_config['resource_prefix']}-FirehoseWafLogs"
     response = iam_client.list_role_policies(RoleName=role_name)
     if 'S3Access' in response['PolicyNames']:
         policy_response = iam_client.get_role_policy(
@@ -554,7 +555,7 @@ def test_api_gateway_cloudwatch_role_trusts_apigateway_service(iam_client, confi
 def test_waf_firehose_role_trusts_firehose_service(shared_config):
     """Verify WAF Firehose role trusts the Firehose service."""
     iam_client = boto3.client('iam')
-    role_name = f"{shared_config['resource_prefix']}-WafFirehoseRole"
+    role_name = f"{shared_config['resource_prefix']}-FirehoseWafLogs"
     response = iam_client.get_role(RoleName=role_name)
     assume_role_policy = response['Role']['AssumeRolePolicyDocument']
     statements = assume_role_policy['Statement']
