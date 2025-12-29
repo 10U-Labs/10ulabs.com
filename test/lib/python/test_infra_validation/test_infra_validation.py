@@ -463,6 +463,16 @@ class TestValidateVpc:
 # === Validate All Dependencies ===
 
 
+def _setup_validation_mocks(mock_sg, mock_subnet, mock_vpc,
+                            sg_valid=True, sg_missing=None,
+                            subnet_valid=True, subnet_missing=None,
+                            vpc_valid=True, vpc_error=None):
+    """Configure validation mocks with the given parameters."""
+    mock_sg.return_value = {"valid": sg_valid, "missing": sg_missing or []}
+    mock_subnet.return_value = {"valid": subnet_valid, "missing": subnet_missing or []}
+    mock_vpc.return_value = {"valid": vpc_valid, "error": vpc_error}
+
+
 class TestValidateAllDependencies:
     """Tests for validate_all_dependencies function."""
 
@@ -471,20 +481,10 @@ class TestValidateAllDependencies:
     @patch("infra_validation.validate_security_groups")
     def test_all_valid_returns_valid(self, mock_sg, mock_subnet, mock_vpc):
         """validate_all_dependencies returns valid when all pass."""
-        mock_sg.return_value = {"valid": True, "missing": []}
-        mock_subnet.return_value = {"valid": True, "missing": []}
-        mock_vpc.return_value = {"valid": True, "error": None}
-
-        with patch.dict(
-            os.environ,
-            {
-                "SECURITY_GROUPS": "sg-1,sg-2",
-                "SUBNETS": "subnet-1,subnet-2",
-                "VPC_ID": "vpc-123",
-            },
-        ):
+        _setup_validation_mocks(mock_sg, mock_subnet, mock_vpc)
+        with patch.dict(os.environ, {"SECURITY_GROUPS": "sg-1,sg-2",
+                                      "SUBNETS": "subnet-1,subnet-2", "VPC_ID": "vpc-123"}):
             result = validate_all_dependencies()
-
         assert result["valid"] is True
 
     @patch("infra_validation.validate_vpc")
@@ -492,37 +492,26 @@ class TestValidateAllDependencies:
     @patch("infra_validation.validate_security_groups")
     def test_all_valid_errors_empty(self, mock_sg, mock_subnet, mock_vpc):
         """validate_all_dependencies returns empty errors when all pass."""
-        mock_sg.return_value = {"valid": True, "missing": []}
-        mock_subnet.return_value = {"valid": True, "missing": []}
-        mock_vpc.return_value = {"valid": True, "error": None}
-
-        with patch.dict(
-            os.environ,
-            {
-                "SECURITY_GROUPS": "sg-1,sg-2",
-                "SUBNETS": "subnet-1,subnet-2",
-                "VPC_ID": "vpc-123",
-            },
-        ):
+        _setup_validation_mocks(mock_sg, mock_subnet, mock_vpc)
+        with patch.dict(os.environ, {"SECURITY_GROUPS": "sg-1,sg-2",
+                                      "SUBNETS": "subnet-1,subnet-2", "VPC_ID": "vpc-123"}):
             result = validate_all_dependencies()
-
         assert result["errors"] == []
+
+    def _run_sg_invalid_scenario(self, mock_sg, mock_subnet, mock_vpc):
+        """Run the security group invalid scenario and return result."""
+        _setup_validation_mocks(mock_sg, mock_subnet, mock_vpc,
+                                sg_valid=False, sg_missing=["sg-1"])
+        with patch.dict(os.environ, {"SECURITY_GROUPS": "sg-1", "SUBNETS": "",
+                                      "VPC_ID": "vpc-123"}):
+            return validate_all_dependencies()
 
     @patch("infra_validation.validate_vpc")
     @patch("infra_validation.validate_subnets")
     @patch("infra_validation.validate_security_groups")
     def test_security_group_invalid_returns_invalid(self, mock_sg, mock_subnet, mock_vpc):
         """validate_all_dependencies returns invalid when security group fails."""
-        mock_sg.return_value = {"valid": False, "missing": ["sg-1"]}
-        mock_subnet.return_value = {"valid": True, "missing": []}
-        mock_vpc.return_value = {"valid": True, "error": None}
-
-        with patch.dict(
-            os.environ,
-            {"SECURITY_GROUPS": "sg-1", "SUBNETS": "", "VPC_ID": "vpc-123"},
-        ):
-            result = validate_all_dependencies()
-
+        result = self._run_sg_invalid_scenario(mock_sg, mock_subnet, mock_vpc)
         assert result["valid"] is False
 
     @patch("infra_validation.validate_vpc")
@@ -530,16 +519,7 @@ class TestValidateAllDependencies:
     @patch("infra_validation.validate_security_groups")
     def test_security_group_invalid_has_one_error(self, mock_sg, mock_subnet, mock_vpc):
         """validate_all_dependencies reports one error for security group failure."""
-        mock_sg.return_value = {"valid": False, "missing": ["sg-1"]}
-        mock_subnet.return_value = {"valid": True, "missing": []}
-        mock_vpc.return_value = {"valid": True, "error": None}
-
-        with patch.dict(
-            os.environ,
-            {"SECURITY_GROUPS": "sg-1", "SUBNETS": "", "VPC_ID": "vpc-123"},
-        ):
-            result = validate_all_dependencies()
-
+        result = self._run_sg_invalid_scenario(mock_sg, mock_subnet, mock_vpc)
         assert len(result["errors"]) == 1
 
     @patch("infra_validation.validate_vpc")
@@ -547,16 +527,7 @@ class TestValidateAllDependencies:
     @patch("infra_validation.validate_security_groups")
     def test_security_group_invalid_error_type(self, mock_sg, mock_subnet, mock_vpc):
         """validate_all_dependencies reports security_group error type."""
-        mock_sg.return_value = {"valid": False, "missing": ["sg-1"]}
-        mock_subnet.return_value = {"valid": True, "missing": []}
-        mock_vpc.return_value = {"valid": True, "error": None}
-
-        with patch.dict(
-            os.environ,
-            {"SECURITY_GROUPS": "sg-1", "SUBNETS": "", "VPC_ID": "vpc-123"},
-        ):
-            result = validate_all_dependencies()
-
+        result = self._run_sg_invalid_scenario(mock_sg, mock_subnet, mock_vpc)
         assert result["errors"][0]["type"] == "security_group"
 
     @patch("infra_validation.validate_vpc")
@@ -564,13 +535,10 @@ class TestValidateAllDependencies:
     @patch("infra_validation.validate_security_groups")
     def test_empty_env_vars_returns_invalid(self, mock_sg, mock_subnet, mock_vpc):
         """validate_all_dependencies returns invalid with empty env vars."""
-        mock_sg.return_value = {"valid": True, "missing": []}
-        mock_subnet.return_value = {"valid": True, "missing": []}
-        mock_vpc.return_value = {"valid": False, "error": "not configured"}
-
+        _setup_validation_mocks(mock_sg, mock_subnet, mock_vpc,
+                                vpc_valid=False, vpc_error="not configured")
         with patch.dict(os.environ, {}, clear=True):
             result = validate_all_dependencies()
-
         assert result["valid"] is False
 
     @patch("infra_validation.validate_vpc")
@@ -578,13 +546,10 @@ class TestValidateAllDependencies:
     @patch("infra_validation.validate_security_groups")
     def test_empty_env_vars_calls_sg_with_empty_list(self, mock_sg, mock_subnet, mock_vpc):
         """validate_all_dependencies calls validate_security_groups with empty list."""
-        mock_sg.return_value = {"valid": True, "missing": []}
-        mock_subnet.return_value = {"valid": True, "missing": []}
-        mock_vpc.return_value = {"valid": False, "error": "not configured"}
-
+        _setup_validation_mocks(mock_sg, mock_subnet, mock_vpc,
+                                vpc_valid=False, vpc_error="not configured")
         with patch.dict(os.environ, {}, clear=True):
             validate_all_dependencies()
-
         mock_sg.assert_called_with([])
 
     @patch("infra_validation.validate_vpc")
@@ -592,13 +557,10 @@ class TestValidateAllDependencies:
     @patch("infra_validation.validate_security_groups")
     def test_empty_env_vars_calls_subnet_with_empty_list(self, mock_sg, mock_subnet, mock_vpc):
         """validate_all_dependencies calls validate_subnets with empty list."""
-        mock_sg.return_value = {"valid": True, "missing": []}
-        mock_subnet.return_value = {"valid": True, "missing": []}
-        mock_vpc.return_value = {"valid": False, "error": "not configured"}
-
+        _setup_validation_mocks(mock_sg, mock_subnet, mock_vpc,
+                                vpc_valid=False, vpc_error="not configured")
         with patch.dict(os.environ, {}, clear=True):
             validate_all_dependencies()
-
         mock_subnet.assert_called_with([])
 
     @patch("infra_validation.validate_vpc")
@@ -606,20 +568,10 @@ class TestValidateAllDependencies:
     @patch("infra_validation.validate_security_groups")
     def test_whitespace_handling_strips_security_groups(self, mock_sg, mock_subnet, mock_vpc):
         """validate_all_dependencies strips whitespace from security groups."""
-        mock_sg.return_value = {"valid": True, "missing": []}
-        mock_subnet.return_value = {"valid": True, "missing": []}
-        mock_vpc.return_value = {"valid": True, "error": None}
-
-        with patch.dict(
-            os.environ,
-            {
-                "SECURITY_GROUPS": " sg-1 , sg-2 ",
-                "SUBNETS": " subnet-1 , , subnet-2 ",
-                "VPC_ID": "vpc-123",
-            },
-        ):
+        _setup_validation_mocks(mock_sg, mock_subnet, mock_vpc)
+        with patch.dict(os.environ, {"SECURITY_GROUPS": " sg-1 , sg-2 ",
+                                      "SUBNETS": " subnet-1 , , subnet-2 ", "VPC_ID": "vpc-123"}):
             validate_all_dependencies()
-
         mock_sg.assert_called_with(["sg-1", "sg-2"])
 
     @patch("infra_validation.validate_vpc")
@@ -627,20 +579,10 @@ class TestValidateAllDependencies:
     @patch("infra_validation.validate_security_groups")
     def test_whitespace_handling_strips_subnets(self, mock_sg, mock_subnet, mock_vpc):
         """validate_all_dependencies strips whitespace and empties from subnets."""
-        mock_sg.return_value = {"valid": True, "missing": []}
-        mock_subnet.return_value = {"valid": True, "missing": []}
-        mock_vpc.return_value = {"valid": True, "error": None}
-
-        with patch.dict(
-            os.environ,
-            {
-                "SECURITY_GROUPS": " sg-1 , sg-2 ",
-                "SUBNETS": " subnet-1 , , subnet-2 ",
-                "VPC_ID": "vpc-123",
-            },
-        ):
+        _setup_validation_mocks(mock_sg, mock_subnet, mock_vpc)
+        with patch.dict(os.environ, {"SECURITY_GROUPS": " sg-1 , sg-2 ",
+                                      "SUBNETS": " subnet-1 , , subnet-2 ", "VPC_ID": "vpc-123"}):
             validate_all_dependencies()
-
         mock_subnet.assert_called_with(["subnet-1", "subnet-2"])
 
 

@@ -408,133 +408,69 @@ class TestGetNameField:
         assert _get_name_field("aws_unknown_type") == "name"
 
 
+def _make_plan_output(action="create", resource_type="aws_lambda_function",
+                      addr="aws_lambda_function.my_func", function_name="MyFunction"):
+    """Create a terraform plan JSON output for testing."""
+    return json.dumps({
+        "type": "planned_change",
+        "change": {
+            "action": action,
+            "resource": {"resource_type": resource_type, "addr": addr},
+            "change": {"after": {"function_name": function_name}},
+        },
+    })
+
+
 class TestGetPlannedCreates:
     """Tests for get_planned_creates function."""
 
     @patch("terraform_drift.subprocess.run")
     def test_parses_create_actions_returns_single_result(self, mock_run):
         """get_planned_creates returns one result for single create action."""
-        plan_output = json.dumps(
-            {
-                "type": "planned_change",
-                "change": {
-                    "action": "create",
-                    "resource": {
-                        "resource_type": "aws_lambda_function",
-                        "addr": "aws_lambda_function.my_func",
-                    },
-                    "change": {"after": {"function_name": "MyFunction"}},
-                },
-            }
-        )
-        mock_run.return_value = MagicMock(stdout=plan_output, returncode=0)
-
+        mock_run.return_value = MagicMock(stdout=_make_plan_output(), returncode=0)
         result = get_planned_creates(Path("/tmp/terraform"))
-
         assert len(result) == 1
 
     @patch("terraform_drift.subprocess.run")
     def test_parses_create_actions_extracts_resource_type(self, mock_run):
         """get_planned_creates extracts correct resource type from plan output."""
-        plan_output = json.dumps(
-            {
-                "type": "planned_change",
-                "change": {
-                    "action": "create",
-                    "resource": {
-                        "resource_type": "aws_lambda_function",
-                        "addr": "aws_lambda_function.my_func",
-                    },
-                    "change": {"after": {"function_name": "MyFunction"}},
-                },
-            }
-        )
-        mock_run.return_value = MagicMock(stdout=plan_output, returncode=0)
-
+        mock_run.return_value = MagicMock(stdout=_make_plan_output(), returncode=0)
         result = get_planned_creates(Path("/tmp/terraform"))
-
         assert result[0]["type"] == "aws_lambda_function"
 
     @patch("terraform_drift.subprocess.run")
     def test_parses_create_actions_extracts_resource_name(self, mock_run):
         """get_planned_creates extracts correct resource name from plan output."""
-        plan_output = json.dumps(
-            {
-                "type": "planned_change",
-                "change": {
-                    "action": "create",
-                    "resource": {
-                        "resource_type": "aws_lambda_function",
-                        "addr": "aws_lambda_function.my_func",
-                    },
-                    "change": {"after": {"function_name": "MyFunction"}},
-                },
-            }
-        )
-        mock_run.return_value = MagicMock(stdout=plan_output, returncode=0)
-
+        mock_run.return_value = MagicMock(stdout=_make_plan_output(), returncode=0)
         result = get_planned_creates(Path("/tmp/terraform"))
-
         assert result[0]["name"] == "MyFunction"
 
     @patch("terraform_drift.subprocess.run")
     def test_ignores_non_create_actions(self, mock_run):
         """get_planned_creates ignores non-create actions."""
-        plan_output = json.dumps(
-            {
-                "type": "planned_change",
-                "change": {
-                    "action": "update",
-                    "resource": {
-                        "resource_type": "aws_lambda_function",
-                        "addr": "aws_lambda_function.my_func",
-                    },
-                },
-            }
+        mock_run.return_value = MagicMock(
+            stdout=_make_plan_output(action="update"), returncode=0
         )
-        mock_run.return_value = MagicMock(stdout=plan_output, returncode=0)
-
         result = get_planned_creates(Path("/tmp/terraform"))
         assert result == []
 
     @patch("terraform_drift.subprocess.run")
     def test_ignores_unsupported_types(self, mock_run):
         """get_planned_creates ignores unsupported resource types."""
-        plan_output = json.dumps(
-            {
-                "type": "planned_change",
-                "change": {
-                    "action": "create",
-                    "resource": {
-                        "resource_type": "aws_ec2_instance",
-                        "addr": "aws_ec2_instance.my_instance",
-                    },
-                },
-            }
+        mock_run.return_value = MagicMock(
+            stdout=_make_plan_output(
+                resource_type="aws_ec2_instance", addr="aws_ec2_instance.my_instance"
+            ),
+            returncode=0,
         )
-        mock_run.return_value = MagicMock(stdout=plan_output, returncode=0)
-
         result = get_planned_creates(Path("/tmp/terraform"))
         assert result == []
 
     @patch("terraform_drift.subprocess.run")
     def test_handles_invalid_json(self, mock_run):
         """get_planned_creates handles invalid JSON lines."""
-        plan_output = "not json\n" + json.dumps(
-            {
-                "type": "planned_change",
-                "change": {
-                    "action": "create",
-                    "resource": {
-                        "resource_type": "aws_lambda_function",
-                        "addr": "aws_lambda_function.my_func",
-                    },
-                    "change": {"after": {"function_name": "MyFunction"}},
-                },
-            }
-        )
+        plan_output = "not json\n" + _make_plan_output()
         mock_run.return_value = MagicMock(stdout=plan_output, returncode=0)
-
         result = get_planned_creates(Path("/tmp/terraform"))
         assert len(result) == 1
 
