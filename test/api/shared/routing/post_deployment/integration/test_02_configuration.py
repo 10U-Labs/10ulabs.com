@@ -664,11 +664,10 @@ def test_cloudfront_url_rewrite_function_runtime(cloudfront_client):
     """Verify CloudFront URL rewrite function uses cloudfront-js-2.0 runtime."""
     response = cloudfront_client.list_functions()
     functions = response['FunctionList'].get('Items', [])
-    url_rewrite = next((f for f in functions if f['Name'] == 'url-rewrite'), None)
-    if url_rewrite is None:
-        pytest.skip("url-rewrite function not found")
-    func_config = url_rewrite['FunctionConfig']
-    assert func_config['Runtime'] == 'cloudfront-js-2.0'
+    url_rewrite = next(
+        f for f in functions if f['Name'] == 'RootUrlRewriteFunction'
+    )
+    assert url_rewrite['FunctionConfig']['Runtime'] == 'cloudfront-js-2.0'
 
 
 # =============================================================================
