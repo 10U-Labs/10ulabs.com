@@ -25,7 +25,6 @@ def test_lambda_catchall_handler_runtime_is_python313(lambda_client, shared_conf
 
 
 # Use factory for naming convention tests
-# pylint: disable=invalid-name
 (
     TestCatchAllHandlerIAMRoleNamingConventions,
     TestCatchAllHandlerLambdaFunctionNamingConventions,
@@ -206,3 +205,143 @@ def test_firehose_buffering_interval_is_300_seconds(firehose_client, config):
     destinations = response['DeliveryStreamDescription']['Destinations']
     s3_config = destinations[0]['ExtendedS3DestinationDescription']
     assert s3_config['BufferingHints']['IntervalInSeconds'] == 300
+
+
+# =============================================================================
+# DynamoDB Configuration
+# =============================================================================
+
+
+def test_api_audit_log_table_has_correct_hash_key(dynamodb_client, shared_config):
+    """Verify API audit log table has correct hash key."""
+    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
+    response = dynamodb_client.describe_table(TableName=table_name)
+    key_schema = response['Table']['KeySchema']
+    hash_key = next((k for k in key_schema if k['KeyType'] == 'HASH'), None)
+    assert hash_key['AttributeName'] == 'request_id'
+
+
+def test_api_audit_log_table_has_correct_range_key(dynamodb_client, shared_config):
+    """Verify API audit log table has correct range key."""
+    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
+    response = dynamodb_client.describe_table(TableName=table_name)
+    key_schema = response['Table']['KeySchema']
+    range_key = next((k for k in key_schema if k['KeyType'] == 'RANGE'), None)
+    assert range_key['AttributeName'] == 'endpoint_timestamp'
+
+
+def test_api_audit_log_table_has_endpoint_time_gsi(dynamodb_client, shared_config):
+    """Verify API audit log table has endpoint-time GSI."""
+    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
+    response = dynamodb_client.describe_table(TableName=table_name)
+    gsi_names = [gsi['IndexName'] for gsi in response['Table'].get('GlobalSecondaryIndexes', [])]
+    assert 'endpoint-time-index' in gsi_names
+
+
+def test_api_audit_log_table_has_status_time_gsi(dynamodb_client, shared_config):
+    """Verify API audit log table has status-time GSI."""
+    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
+    response = dynamodb_client.describe_table(TableName=table_name)
+    gsi_names = [gsi['IndexName'] for gsi in response['Table'].get('GlobalSecondaryIndexes', [])]
+    assert 'status-time-index' in gsi_names
+
+
+def test_api_audit_log_table_has_ttl_enabled(dynamodb_client, shared_config):
+    """Verify API audit log table has TTL enabled."""
+    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
+    response = dynamodb_client.describe_time_to_live(TableName=table_name)
+    assert response['TimeToLiveDescription']['TimeToLiveStatus'] == 'ENABLED'
+
+
+def test_api_audit_log_table_ttl_attribute_is_ttl(dynamodb_client, shared_config):
+    """Verify API audit log table TTL attribute is 'ttl'."""
+    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
+    response = dynamodb_client.describe_time_to_live(TableName=table_name)
+    assert response['TimeToLiveDescription']['AttributeName'] == 'ttl'
+
+
+def test_api_audit_log_table_has_pitr_enabled(dynamodb_client, shared_config):
+    """Verify API audit log table has point-in-time recovery enabled."""
+    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
+    response = dynamodb_client.describe_continuous_backups(TableName=table_name)
+    pitr = response['ContinuousBackupsDescription']['PointInTimeRecoveryDescription']
+    assert pitr['PointInTimeRecoveryStatus'] == 'ENABLED'
+
+
+def test_api_audit_log_table_billing_mode_is_pay_per_request(dynamodb_client, shared_config):
+    """Verify API audit log table uses PAY_PER_REQUEST billing."""
+    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
+    response = dynamodb_client.describe_table(TableName=table_name)
+    assert response['Table']['BillingModeSummary']['BillingMode'] == 'PAY_PER_REQUEST'
+
+
+# =============================================================================
+# SSM Configuration
+# =============================================================================
+
+
+def test_api_key_ssm_parameter_is_secure_string(ssm_client, config):
+    """Verify API key SSM parameter is a SecureString."""
+    param_name = config['ssm_parameter_name_for_api_key']
+    response = ssm_client.get_parameter(Name=param_name, WithDecryption=False)
+    assert response['Parameter']['Type'] == 'SecureString'
+
+
+# =============================================================================
+# API Gateway Configuration
+# =============================================================================
+
+
+def test_api_gateway_stage_has_logging_enabled(apigateway_client, api_gateway_id):
+    """Verify API Gateway prod stage has logging enabled."""
+    if api_gateway_id is None:
+        pytest.skip("API Gateway not found")
+    response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
+    access_log = response.get('accessLogSettings', {})
+    assert 'destinationArn' in access_log
+
+
+def test_api_gateway_stage_has_xray_tracing_disabled(apigateway_client, api_gateway_id):
+    """Verify API Gateway prod stage has X-Ray tracing configured."""
+    if api_gateway_id is None:
+        pytest.skip("API Gateway not found")
+    response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
+    assert 'tracingEnabled' in response
+
+
+# =============================================================================
+# CloudFront Function Configuration
+# =============================================================================
+
+
+def test_cloudfront_url_rewrite_function_runtime(cloudfront_client):
+    """Verify CloudFront URL rewrite function uses cloudfront-js-2.0 runtime."""
+    response = cloudfront_client.list_functions()
+    functions = response['FunctionList'].get('Items', [])
+    url_rewrite = next((f for f in functions if f['Name'] == 'url-rewrite'), None)
+    if url_rewrite is None:
+        pytest.skip("url-rewrite function not found")
+    func_config = url_rewrite['FunctionConfig']
+    assert func_config['Runtime'] == 'cloudfront-js-2.0'
+
+
+# =============================================================================
+# WAF Firehose Configuration (us-east-1)
+# =============================================================================
+
+
+def test_waf_firehose_delivery_stream_is_active(shared_config):
+    """Verify WAF Firehose delivery stream is active."""
+    firehose_client = boto3.client('firehose', region_name='us-east-1')
+    stream_name = f"{shared_config['resource_prefix']}-WafLogs"
+    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
+    assert response['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE'
+
+
+def test_waf_firehose_destination_is_extended_s3(shared_config):
+    """Verify WAF Firehose destination is Extended S3."""
+    firehose_client = boto3.client('firehose', region_name='us-east-1')
+    stream_name = f"{shared_config['resource_prefix']}-WafLogs"
+    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
+    destinations = response['DeliveryStreamDescription']['Destinations']
+    assert destinations[0].get('ExtendedS3DestinationDescription') is not None

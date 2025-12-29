@@ -124,3 +124,86 @@ def test_cloudwatch_logs_firehose_role_exists(iam_client, config):
     role_name = config['cloudwatch_logs_firehose_role_name']
     response = iam_client.get_role(RoleName=role_name)
     assert response['Role']['RoleName'] == role_name
+
+
+# =============================================================================
+# DynamoDB
+# =============================================================================
+
+
+def test_api_audit_log_table_exists(dynamodb_client, shared_config):
+    """Verify API audit log DynamoDB table exists."""
+    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
+    response = dynamodb_client.describe_table(TableName=table_name)
+    assert response['Table']['TableName'] == table_name
+
+
+# =============================================================================
+# SSM Parameter Store
+# =============================================================================
+
+
+def test_api_key_ssm_parameter_exists(ssm_client, config):
+    """Verify API key SSM parameter exists."""
+    param_name = config['ssm_parameter_name_for_api_key']
+    response = ssm_client.get_parameter(Name=param_name, WithDecryption=False)
+    assert response['Parameter']['Name'] == param_name
+
+
+# =============================================================================
+# API Gateway
+# =============================================================================
+
+
+def test_api_gateway_rest_api_exists(apigateway_client, config):
+    """Verify API Gateway REST API exists."""
+    apis = apigateway_client.get_rest_apis()
+    api_names = [api['name'] for api in apis['items']]
+    assert config['api_gateway_name'] in api_names
+
+
+def test_api_gateway_stage_exists(apigateway_client, api_gateway_id):
+    """Verify API Gateway prod stage exists."""
+    if api_gateway_id is None:
+        pytest.skip("API Gateway not found")
+    response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
+    assert response['stageName'] == 'prod'
+
+
+def test_api_gateway_cloudwatch_role_exists(iam_client, shared_config):
+    """Verify API Gateway CloudWatch IAM role exists."""
+    role_name = f"{shared_config['resource_prefix']}ApiGatewayCloudWatch"
+    response = iam_client.get_role(RoleName=role_name)
+    assert response['Role']['RoleName'] == role_name
+
+
+def test_api_gateway_sqs_role_exists(iam_client, shared_config):
+    """Verify API Gateway SQS IAM role exists."""
+    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
+    response = iam_client.get_role(RoleName=role_name)
+    assert response['Role']['RoleName'] == role_name
+
+
+# =============================================================================
+# CloudFront Function
+# =============================================================================
+
+
+def test_cloudfront_url_rewrite_function_exists(cloudfront_client):
+    """Verify CloudFront URL rewrite function exists."""
+    response = cloudfront_client.list_functions()
+    function_names = [f['Name'] for f in response['FunctionList'].get('Items', [])]
+    assert 'url-rewrite' in function_names
+
+
+# =============================================================================
+# WAF Firehose (us-east-1)
+# =============================================================================
+
+
+def test_waf_firehose_delivery_stream_exists(shared_config):
+    """Verify WAF Firehose delivery stream exists in us-east-1."""
+    firehose_client = boto3.client('firehose', region_name='us-east-1')
+    stream_name = f"{shared_config['resource_prefix']}-WafLogs"
+    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
+    assert response['DeliveryStreamDescription']['DeliveryStreamName'] == stream_name

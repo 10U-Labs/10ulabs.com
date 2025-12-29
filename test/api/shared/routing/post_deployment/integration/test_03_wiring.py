@@ -287,6 +287,67 @@ def test_waf_metrics_being_collected():
     assert 'Datapoints' in response
 
 
+# =============================================================================
+# API Gateway → SQS Wiring
+# =============================================================================
+
+
+def test_api_gateway_sqs_role_trusts_apigateway_service(iam_client, shared_config):
+    """Verify API Gateway SQS role trusts the API Gateway service."""
+    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
+    response = iam_client.get_role(RoleName=role_name)
+    assume_role_policy = response['Role']['AssumeRolePolicyDocument']
+    statements = assume_role_policy['Statement']
+    service_principal = statements[0]['Principal']['Service']
+    assert service_principal == 'apigateway.amazonaws.com'
+
+
+def test_api_gateway_sqs_role_has_sqs_policy(iam_client, shared_config):
+    """Verify API Gateway SQS role has SQS access policy attached."""
+    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
+    response = iam_client.list_role_policies(RoleName=role_name)
+    assert 'SendToIngressQueues' in response['PolicyNames']
+
+
+# =============================================================================
+# API Gateway → CloudWatch Wiring
+# =============================================================================
+
+
+def test_api_gateway_cloudwatch_role_trusts_apigateway_service(iam_client, shared_config):
+    """Verify API Gateway CloudWatch role trusts the API Gateway service."""
+    role_name = f"{shared_config['resource_prefix']}ApiGatewayCloudWatch"
+    response = iam_client.get_role(RoleName=role_name)
+    assume_role_policy = response['Role']['AssumeRolePolicyDocument']
+    statements = assume_role_policy['Statement']
+    service_principal = statements[0]['Principal']['Service']
+    assert service_principal == 'apigateway.amazonaws.com'
+
+
+# =============================================================================
+# WAF Firehose Wiring (us-east-1)
+# =============================================================================
+
+
+def test_waf_firehose_role_trusts_firehose_service(shared_config):
+    """Verify WAF Firehose role trusts the Firehose service."""
+    iam_client = boto3.client('iam')
+    role_name = f"{shared_config['resource_prefix']}-WafFirehoseRole"
+    response = iam_client.get_role(RoleName=role_name)
+    assume_role_policy = response['Role']['AssumeRolePolicyDocument']
+    statements = assume_role_policy['Statement']
+    service_principal = statements[0]['Principal']['Service']
+    assert service_principal == 'firehose.amazonaws.com'
+
+
+def test_waf_subscription_filter_routes_to_waf_firehose(shared_config):
+    """Verify WAF subscription filter routes to WAF-specific Firehose."""
+    logs_client = boto3.client('logs', region_name='us-east-1')
+    response = logs_client.describe_subscription_filters(logGroupName='aws-waf-logs-api')
+    destination_arn = response['subscriptionFilters'][0]['destinationArn']
+    assert 'WafLogs' in destination_arn or 'waf' in destination_arn.lower()
+
+
 # Note: WebhookRouter metrics (CircuitBreakerState) and circuit_breaker_state_table
 # DynamoDB metrics are tested in jit_runner_requests post-deployment tests because
 # those resources are created by that module.

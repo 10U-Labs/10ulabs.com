@@ -105,3 +105,9 @@ def create_test_dynamodb_item(client, table_name, item):
 def cleanup_test_dynamodb_item(client, table_name, key):
     """Delete a test item from DynamoDB table."""
     client.delete_item(TableName=table_name, Key=key)
+
+
+@pytest.fixture(name="ssm_client", scope="module")
+def ssm_client_fixture(aws_region):
+    """Create and return a boto3 SSM client for the specified region."""
+    return boto3.client("ssm", region_name=aws_region)
