@@ -37,7 +37,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/operational_diagnostics.yml
+            .github/workflows/api_operational_diagnostics.yml
       - name: Run pylint on source
         run: |
           python3 -m pylint \

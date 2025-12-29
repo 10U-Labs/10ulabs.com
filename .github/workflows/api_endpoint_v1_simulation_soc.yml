@@ -39,7 +39,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/endpoint_v1_simulation_soc.yml
+            .github/workflows/api_endpoint_v1_simulation_soc.yml
       - name: Run pylint on source
         run: |
           python3 -m pylint \
