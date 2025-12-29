@@ -6,12 +6,12 @@
     "name": "Ensuring API shared routing exists and is properly configured",
     "paths": [
       ".github/workflows/api_shared_routing.yml",
-      "lib/python/test_fixtures/**",
+      "lib/python/**",
       "src/api/shared/routing/**",
       "src/www/api/**",
       "test/api/conftest.py",
       "test/api/shared/routing/**",
-      "test/lib/python/test_test_fixtures/**"
+      "test/lib/python/**"
     ]
   },
   "api_shared_docker_repository": {
@@ -21,8 +21,10 @@
     "name": "Ensuring API shared Docker repository exists and is properly configured",
     "paths": [
       ".github/workflows/api_shared_docker_repository.yml",
+      "lib/python/**",
       "src/api/shared/docker_repository/**",
-      "test/api/shared/docker_repository/**"
+      "test/api/shared/docker_repository/**",
+      "test/lib/python/**"
     ]
   },
   "api_shared_networking": {
@@ -32,8 +34,10 @@
     "name": "Ensuring API shared networking infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/api_shared_networking.yml",
+      "lib/python/**",
       "src/api/shared/networking/**",
-      "test/api/shared/networking/**"
+      "test/api/shared/networking/**",
+      "test/lib/python/**"
     ]
   },
   "bootstrap": {
@@ -41,10 +45,11 @@
     "name": "Ensuring bootstrap infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/bootstrap.yml",
-      "lib/python/terraform_config/**",
+      "lib/python/**",
       "lib/terraform/modules/shared/**",
       "src/bootstrap/**",
-      "test/bootstrap/**"
+      "test/bootstrap/**",
+      "test/lib/python/**"
     ]
   },
   "api_endpoint_v1_contact": {
@@ -54,8 +59,10 @@
     "name": "Ensuring the /v1/contact API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_contact.yml",
+      "lib/python/**",
       "src/api/endpoints/contact/**",
-      "test/api/endpoints/contact/**"
+      "test/api/endpoints/contact/**",
+      "test/lib/python/**"
     ]
   },
   "api_endpoint_v1_runners_ec2": {
@@ -65,9 +72,11 @@
     "name": "Ensuring the /v1/runners/ec2 API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2.yml",
+      "lib/python/**",
       "src/api/endpoints/runners/ec2/**",
       "test/api/conftest.py",
-      "test/api/endpoints/runners/ec2/**"
+      "test/api/endpoints/runners/ec2/**",
+      "test/lib/python/**"
     ]
   },
   "api_endpoint_v1_runners": {
@@ -77,12 +86,13 @@
     "name": "Ensuring /v1/runners API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners.yml",
+      "etc/runners.json",
+      "lib/python/**",
       "src/api/endpoints/runners/*.tf",
       "src/api/endpoints/runners/lambda/**",
-      "lib/python/runner_labels/**",
-      "etc/runners.json",
+      "test/api/endpoints/runners/post_deployment/**",
       "test/api/endpoints/runners/pre_deployment/**",
-      "test/api/endpoints/runners/post_deployment/**"
+      "test/lib/python/**"
     ]
   },
   "api_operational_diagnostics": {
@@ -92,10 +102,10 @@
     "name": "Ensuring the /diagnostics/echo API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_operational_diagnostics.yml",
-      "lib/python/test_fixtures/**",
+      "lib/python/**",
       "src/api/operational/diagnostics/**",
       "test/api/operational/diagnostics/**",
-      "test/lib/python/test_test_fixtures/**"
+      "test/lib/python/**"
     ]
   },
   "api_endpoint_v1_runners_ecs": {
@@ -105,9 +115,11 @@
     "name": "Ensuring the /v1/runners/ecs API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs.yml",
+      "lib/python/**",
       "src/api/endpoints/runners/ecs/**",
       "test/api/conftest.py",
-      "test/api/endpoints/runners/ecs/**"
+      "test/api/endpoints/runners/ecs/**",
+      "test/lib/python/**"
     ]
   },
   "api_endpoint_v1_runners_ec2_images": {
@@ -117,9 +129,11 @@
     "name": "Ensuring the /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2_images.yml",
+      "lib/python/**",
       "src/api/endpoints/image_for_runners/ec2s/*.tf",
       "src/api/endpoints/image_for_runners/ec2s/lambda/**",
-      "test/api/endpoints/image_for_runners/ec2s/endpoint/**"
+      "test/api/endpoints/image_for_runners/ec2s/endpoint/**",
+      "test/lib/python/**"
     ]
   },
   "api_endpoint_v1_runners_ec2_images_post": {
@@ -127,9 +141,10 @@
     "name": "Building AMI for EC2 self-hosted runners",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2_images_post.yml",
-      "lib/python/ec2_fleet/**",
+      "lib/python/**",
       "src/api/endpoints/image_for_runners/ec2s/post/**",
-      "test/api/endpoints/image_for_runners/ec2s/post/**"
+      "test/api/endpoints/image_for_runners/ec2s/post/**",
+      "test/lib/python/**"
     ]
   },
   "api_endpoint_v1_runners_ecs_images": {
@@ -139,9 +154,11 @@
     "name": "Ensuring /v1/runners/ecs/images API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs_images.yml",
-      "src/api/endpoints/image_for_runners/ecss/lambda/**",
+      "lib/python/**",
       "src/api/endpoints/image_for_runners/ecss/*.tf",
-      "test/api/endpoints/image_for_runners/ecss/endpoint/**"
+      "src/api/endpoints/image_for_runners/ecss/lambda/**",
+      "test/api/endpoints/image_for_runners/ecss/endpoint/**",
+      "test/lib/python/**"
     ]
   },
   "api_endpoint_v1_runners_ecs_images_post": {
@@ -149,8 +166,10 @@
     "name": "Building Docker image for ECS runners",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs_images_post.yml",
+      "lib/python/**",
       "src/api/endpoints/image_for_runners/ecss/post/**",
-      "test/api/endpoints/image_for_runners/ecss/post/**"
+      "test/api/endpoints/image_for_runners/ecss/post/**",
+      "test/lib/python/**"
     ]
   },
   "api_endpoint_v1_rack_designer": {
@@ -160,9 +179,11 @@
     "name": "Ensuring /v1/rack-designer API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_rack_designer.yml",
+      "lib/python/**",
       "src/api/endpoints/rack_designer/**",
       "src/www/paths/rack_designer/**",
-      "test/api/endpoints/rack_designer/**"
+      "test/api/endpoints/rack_designer/**",
+      "test/lib/python/**"
     ]
   },
   "webhooks_github_jit_runner_requests": {
@@ -172,9 +193,11 @@
     "name": "Ensuring the /v1/webhooks/github/jit-runner-requests API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/webhooks_github_jit_runner_requests.yml",
+      "lib/python/**",
       "src/api/endpoints/webhooks/github/jit_runner_requests/**",
       "test/api/conftest.py",
-      "test/api/endpoints/webhooks/github/jit_runner_requests/**"
+      "test/api/endpoints/webhooks/github/jit_runner_requests/**",
+      "test/lib/python/**"
     ]
   },
   "api_endpoint_v1_simulation_soc": {
@@ -184,11 +207,11 @@
     "name": "Ensuring the /v1/simulation-soc API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_simulation_soc.yml",
-      "lib/python/test_fixtures/**",
+      "lib/python/**",
       "src/api/endpoints/simulation_soc/**",
       "src/www/paths/simulations/soc/**",
       "test/api/endpoints/simulation_soc/**",
-      "test/lib/python/test_test_fixtures/**"
+      "test/lib/python/**"
     ]
   },
   "api_operational_health": {
@@ -198,10 +221,10 @@
     "name": "Ensuring the /health API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_operational_health.yml",
-      "lib/python/test_fixtures/**",
+      "lib/python/**",
       "src/api/operational/health/**",
       "test/api/operational/health/**",
-      "test/lib/python/test_test_fixtures/**"
+      "test/lib/python/**"
     ]
   },
   "rtl_verilator": {
@@ -219,7 +242,9 @@
     "name": "Ensuring www home page exists and is properly configured",
     "paths": [
       ".github/workflows/www_home.yml",
+      "lib/python/**",
       "src/www/paths/home/**",
+      "test/lib/python/**",
       "test/www/paths/home/**"
     ]
   },
@@ -230,11 +255,11 @@
     "name": "Ensuring www shared infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/www_shared.yml",
-      "lib/python/test_fixtures/**",
+      "lib/python/**",
       "lib/terraform/modules/cloudfront_waf/**",
       "lib/terraform/modules/s3_bucket/**",
       "src/www/shared/**",
-      "test/lib/python/test_test_fixtures/**",
+      "test/lib/python/**",
       "test/lib/terraform/modules/cloudfront_waf/**",
       "test/lib/terraform/modules/s3_bucket/**",
       "test/www/shared/**"
