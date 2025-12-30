@@ -7,3 +7,13 @@ data "terraform_remote_state" "api_shared_routing" {
     region = local.aws_region
   }
 }
+
+data "terraform_remote_state" "api_shared_networking" {
+  backend = "s3"
+
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "api/shared/networking/terraform.tfstate"
+    region = local.aws_region
+  }
+}

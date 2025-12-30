@@ -23,7 +23,7 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--graph",
-        default="etc/workflow-dependencies.json",
+        default="etc/workflow_dependencies.json",
         help="Path to the workflow dependency graph file"
     )
     return parser

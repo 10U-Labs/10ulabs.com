@@ -1,4 +1,4 @@
-"""Contract tests for workflow-dependencies.json.
+"""Contract tests for workflow_dependencies.json.
 
 These tests verify that the workflow dependency graph aligns with the actual
 workflow files in .github/workflows/. Per docs/tenets/tests/PRE_DEPLOYMENT_INTEGRATION_TESTS.md,
@@ -15,7 +15,7 @@ import yaml
 from repo_utils import REPO_ROOT
 
 
-GRAPH_PATH = REPO_ROOT / "etc" / "workflow-dependencies.json"
+GRAPH_PATH = REPO_ROOT / "etc" / "workflow_dependencies.json"
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
 

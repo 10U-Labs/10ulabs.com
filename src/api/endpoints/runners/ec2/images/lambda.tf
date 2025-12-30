@@ -31,8 +31,8 @@ resource "aws_lambda_function" "handler" {
       GITHUB_REPO               = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME  = module.shared.ssm_github_pat_name
       SSM_EC2_RUNNER_AMI_LATEST = module.shared.ssm_ec2_runner_ami_latest
-      SUBNETS                   = data.terraform_remote_state.api_shared_routing.outputs.public_subnets_ids
-      VPC_ID                    = data.terraform_remote_state.api_shared_routing.outputs.vpc_id
+      SUBNETS                   = data.terraform_remote_state.api_shared_networking.outputs.public_subnets_ids
+      VPC_ID                    = data.terraform_remote_state.api_shared_networking.outputs.vpc_id
     }
   }
 

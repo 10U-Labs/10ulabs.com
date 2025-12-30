@@ -2,7 +2,7 @@
 """
 Compute root workflows and execution plans based on changed files.
 
-This script reads the workflow dependency graph from etc/workflow-dependencies.json
+This script reads the workflow dependency graph from etc/workflow_dependencies.json
 and determines which workflows should be triggered for a given set of changed files.
 
 A "root" workflow is one whose files were modified but has no ancestors that were
@@ -352,7 +352,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--graph",
-        default="etc/workflow-dependencies.json",
+        default="etc/workflow_dependencies.json",
         help="Path to workflow dependency graph JSON file",
     )
     parser.add_argument(

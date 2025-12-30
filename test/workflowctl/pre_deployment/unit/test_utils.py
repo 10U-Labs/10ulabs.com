@@ -27,7 +27,7 @@ class TestCreateBaseParser:
         parser = utils.create_base_parser("Test")
         with patch.object(sys, "argv", ["prog", "--repo", "o/r"]):
             args = parser.parse_args()
-        assert args.graph == "etc/workflow-dependencies.json"
+        assert args.graph == "etc/workflow_dependencies.json"
 
     def test_graph_argument_can_be_overridden(self, utils) -> None:
         """Test that --graph argument can be overridden."""

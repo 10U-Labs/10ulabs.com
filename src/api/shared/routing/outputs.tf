@@ -34,22 +34,6 @@ output "cloudfront_domain_name" {
   value = aws_cloudfront_distribution.main.domain_name
 }
 
-output "security_group_id_for_runners" {
-  value = data.terraform_remote_state.jit_runner_requests.outputs.security_group_id_for_runners
-}
-
-output "ssm_parameter_name_for_latest_ami" {
-  value = data.terraform_remote_state.jit_runner_requests.outputs.ssm_parameter_name_for_latest_ami
-}
-
-output "public_subnets_ids" {
-  value = data.terraform_remote_state.jit_runner_requests.outputs.public_subnets_ids
-}
-
-output "vpc_id" {
-  value = data.terraform_remote_state.jit_runner_requests.outputs.vpc_id
-}
-
 # Audit infrastructure outputs
 output "api_audit_log_table_name" {
   value = aws_dynamodb_table.api_audit_log.name

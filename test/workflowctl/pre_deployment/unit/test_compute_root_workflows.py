@@ -83,7 +83,7 @@ class TestFileMatchesPatterns:
 
         Note: fnmatch treats * as matching any characters including /,
         so src/*.tf matches src/sub/main.tf. This is acceptable since
-        we primarily use ** patterns in workflow-dependencies.json.
+        we primarily use ** patterns in workflow_dependencies.json.
         """
         patterns = ["src/*.tf"]
         assert compute_roots.file_matches_patterns("src/sub/main.tf", patterns)

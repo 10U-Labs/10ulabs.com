@@ -33,7 +33,7 @@ jobs:
           echo "Checking for workflowctl-related file changes..."
           WORKFLOWCTL_PATHS=(
             ".github/workflows/workflowctl.yml"
-            "etc/workflow-dependencies.json"
+            "etc/workflow_dependencies.json"
             "lib/python/"
             "src/workflowctl/"
             "test/workflowctl/"
@@ -95,7 +95,7 @@ jobs:
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Linting JSON files
-        run: jsonlint -q etc/workflow-dependencies.json
+        run: jsonlint -q etc/workflow_dependencies.json
       - if: >-
           (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -201,14 +201,14 @@ jobs:
           CMD="python3 src/workflowctl/workflowctl.py get-running-workflows"
           OUTPUT=$($CMD \
             --repo ${{ github.repository }} \
-            --graph etc/workflow-dependencies.json)
+            --graph etc/workflow_dependencies.json)
           # Extract workflows array as JSON
           RUNNING=$(echo "$OUTPUT" | jq -c '.workflows')
           echo "workflows=$RUNNING" >> "$GITHUB_OUTPUT"
       - id: plan
         name: Compute root workflows
         run: |
-          GRAPH="etc/workflow-dependencies.json"
+          GRAPH="etc/workflow_dependencies.json"
           START_FROM="${{ inputs.start_from }}"
           if [ -n "$START_FROM" ]; then
             # Manual dispatch: use provided workflows directly (comma-separated)
@@ -238,7 +238,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --changed-files "${{ steps.files.outputs.changed }}" \
             --running '${{ steps.running.outputs.workflows }}' \
-            --graph etc/workflow-dependencies.json
+            --graph etc/workflow_dependencies.json
       - env:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         if: >-

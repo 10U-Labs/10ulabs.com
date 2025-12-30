@@ -10,7 +10,7 @@ Usage:
         --repo owner/repo \
         --changed-files "file1.py,file2.py" \
         --running '["www_shared"]' \
-        --graph etc/workflow-dependencies.json
+        --graph etc/workflow_dependencies.json
 
 Exit codes:
     0: Success (all cancellations succeeded or nothing to cancel)

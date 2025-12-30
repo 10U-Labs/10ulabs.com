@@ -24,9 +24,9 @@ class TestShouldTriggerDescendants:
         ) is True
 
     def test_returns_true_when_dependencies_changed(self, dispatch_roots) -> None:
-        """Test returns True when workflow-dependencies.json changed."""
+        """Test returns True when workflow_dependencies.json changed."""
         assert dispatch_roots.should_trigger_descendants(
-            False, "feat: update deps", ["etc/workflow-dependencies.json"], [], None
+            False, "feat: update deps", ["etc/workflow_dependencies.json"], [], None
         ) is True
 
     def test_returns_false_when_no_conditions_met(self, dispatch_roots) -> None:

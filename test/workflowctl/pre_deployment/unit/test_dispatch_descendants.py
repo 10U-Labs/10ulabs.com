@@ -49,11 +49,11 @@ class TestParseArgs:
         assert args.repo == "owner/repo"
 
     def test_graph_defaults_to_standard_path(self, dispatch_descendants) -> None:
-        """Test that --graph defaults to etc/workflow-dependencies.json."""
+        """Test that --graph defaults to etc/workflow_dependencies.json."""
         argv = ["prog", "--workflow", "test", "--repo", "o/r"]
         with patch.object(sys, "argv", argv):
             args = dispatch_descendants.parse_args()
-        assert args.graph == "etc/workflow-dependencies.json"
+        assert args.graph == "etc/workflow_dependencies.json"
 
     def test_parses_custom_graph_path(self, dispatch_descendants) -> None:
         """Test that --graph argument is parsed correctly."""

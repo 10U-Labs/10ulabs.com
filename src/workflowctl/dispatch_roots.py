@@ -66,7 +66,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--graph",
-        default="etc/workflow-dependencies.json",
+        default="etc/workflow_dependencies.json",
         help="Path to workflow dependency graph JSON file"
     )
     return parser.parse_args()
@@ -117,7 +117,7 @@ def should_trigger_descendants(
     Returns True if:
     1. trigger_flag is True (--trigger-descendants passed), OR
     2. Commit message contains [trigger descendants], OR
-    3. etc/workflow-dependencies.json was changed, OR
+    3. etc/workflow_dependencies.json was changed, OR
     4. Any descendant workflow also has changed files
     """
     if trigger_flag:
@@ -127,8 +127,8 @@ def should_trigger_descendants(
     if re.search(r"\[trigger descendants\]", commit_message, re.IGNORECASE):
         return True
 
-    # Check if workflow-dependencies.json changed
-    if "etc/workflow-dependencies.json" in changed_files:
+    # Check if workflow_dependencies.json changed
+    if "etc/workflow_dependencies.json" in changed_files:
         return True
 
     # Check if any descendants also have changed files
