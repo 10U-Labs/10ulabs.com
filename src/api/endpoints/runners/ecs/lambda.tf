@@ -16,8 +16,8 @@ resource "aws_lambda_function" "handler" {
       ECS_CLUSTER              = aws_ecs_cluster.runner.name
       GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.runners.outputs.github_token_secret_name
       IMAGE_API_ENDPOINT       = data.terraform_remote_state.runners.outputs.api_endpoint
-      SECURITY_GROUPS          = data.terraform_remote_state.api_shared_networking.outputs.runner_security_group_id
-      SUBNETS                  = data.terraform_remote_state.api_shared_networking.outputs.vpc_public_subnet_ids
+      SECURITY_GROUPS          = data.terraform_remote_state.api_shared_networking.outputs.security_group_id_for_runners
+      SUBNETS                  = data.terraform_remote_state.api_shared_networking.outputs.public_subnet_ids
       TASK_DEFINITION          = aws_ecs_task_definition.runner.arn
       USE_SPOT                 = tostring(module.shared.runners_config.fargate.use_spot)
       VPC_ID                   = data.terraform_remote_state.api_shared_networking.outputs.vpc_id

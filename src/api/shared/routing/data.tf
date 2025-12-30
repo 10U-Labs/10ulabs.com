@@ -20,9 +20,9 @@ data "terraform_remote_state" "jit_runner_requests" {
   defaults = {
     lambda_function_arn               = ""
     lambda_function_name              = ""
-    runner_security_group_id          = ""
+    security_group_id_for_runners     = ""
     ssm_parameter_name_for_latest_ami = ""
-    vpc_public_subnet_ids             = ""
+    public_subnet_ids                 = ""
   }
 }
 

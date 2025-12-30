@@ -34,13 +34,13 @@ def get_runners_outputs(directory: Path) -> Dict[str, str]:
         directory: Path to the runners terraform directory.
 
     Returns:
-        Dictionary with vpc_id, vpc_public_subnet_ids, and runner_security_group_id.
+        Dictionary with vpc_id, public_subnet_ids, and security_group_id_for_runners.
     """
     return {
         "vpc_id": terraform_output(directory, "vpc_id"),
-        "vpc_public_subnet_ids": terraform_output(directory, "vpc_public_subnet_ids"),
-        "runner_security_group_id": terraform_output(
-            directory, "runner_security_group_id"
+        "public_subnet_ids": terraform_output(directory, "public_subnet_ids"),
+        "security_group_id_for_runners": terraform_output(
+            directory, "security_group_id_for_runners"
         ),
     }
 

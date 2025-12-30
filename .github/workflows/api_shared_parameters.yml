@@ -1,0 +1,201 @@
+---
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+jobs:
+  deploy:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
+    name: >-
+      Ensuring API shared parameters exist and are properly configured
+    runs-on: >-
+      ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "arm", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Verify OIDC variables
+        uses: ./.github/actions/verify-oidc-vars
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - id: terraform
+        if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Extract Terraform version
+        run: |
+          TF_PROVIDERS="src/api/shared/parameters/providers.tf"
+          TERRAFORM_VERSION=$(grep 'required_version' \
+            $TF_PROVIDERS | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
+      - name: Terraform Format Check
+        run: |
+          cd src/api/shared/parameters
+          terraform fmt -diff -check -recursive
+      - name: Terraform Init
+        run: cd src/api/shared/parameters && terraform init
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: latest
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
+        run: cd src/api/shared/parameters && tflint --init && tflint
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install yamllint
+        run: python3 -m pip install yamllint
+      - name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
+          python3 -m yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/api_shared_parameters.yml
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pylint
+        run: python3 -m pip install pylint
+      - name: Run pylint on tests
+        run: |
+          PYTHONPATH=lib/python python3 -m pylint \
+            lib/python/ test/ \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install mypy
+        run: python3 -m pip install mypy boto3-stubs types-requests
+      - name: Run mypy on tests
+        run: |
+          MYPYPATH=lib/python python3 -m mypy \
+            lib/python/ test/
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install jscpd
+        run: npm install -g jscpd
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pytest dependencies
+        run: python3 -m pip install pytest boto3 boto3-stubs requests
+      - name: Run unit tests
+        run: |
+          python3 -m pytest \
+            test/api/shared/parameters/pre_deployment/unit/ \
+            --verbose --pythonwarnings=error
+      - name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/api/shared/parameters/pre_deployment/integration/ \
+            --capture=no --verbose --pythonwarnings=error
+      - name: Terraform Apply
+        run: cd src/api/shared/parameters && terraform apply -auto-approve
+      - name: Run post-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/api/shared/parameters/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          (
+          github.event.inputs.trigger_descendants == 'true' ||
+           contains(github.event.head_commit.message,
+           '[trigger descendants]'))
+        name: Dispatch descendant workflows
+        run: |
+          FLAGS=""
+          if [ "${{ github.event.inputs.trigger_descendants }}" = "true" ]; then
+            FLAGS="$FLAGS --trigger-descendants"
+          fi
+          INVAL="${{ github.event.inputs.invalidate_cloudfront }}"
+          if [ "$INVAL" = "true" ]; then
+            FLAGS="$FLAGS --invalidate-cloudfront"
+          fi
+          python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
+            --workflow api_shared_parameters \
+            --repo ${{ github.repository }} \
+            $FLAGS
+name: >-
+  Ensuring API shared parameters exist and are properly configured
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
+      invalidate_cloudfront:
+        default: false
+        description: Force CloudFront cache invalidation
+        type: boolean
+      spot_recovery_reason:
+        description: Spot recovery trigger reason
+        required: false
+        type: string
+      trigger_descendants:
+        default: false
+        description: Trigger descendant workflows after this workflow completes
+        type: boolean
+permissions:
+  actions: write
+  contents: read
+  id-token: write

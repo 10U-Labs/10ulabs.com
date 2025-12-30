@@ -10,12 +10,12 @@ output "vpc_id" {
   value = data.terraform_remote_state.api_shared_networking.outputs.vpc_id
 }
 
-output "vpc_public_subnet_ids" {
-  value = data.terraform_remote_state.api_shared_networking.outputs.vpc_public_subnet_ids
+output "public_subnet_ids" {
+  value = data.terraform_remote_state.api_shared_networking.outputs.public_subnet_ids
 }
 
-output "runner_security_group_id" {
-  value = data.terraform_remote_state.api_shared_networking.outputs.runner_security_group_id
+output "security_group_id_for_runners" {
+  value = data.terraform_remote_state.api_shared_networking.outputs.security_group_id_for_runners
 }
 
 output "workflow_runners_table_name" {
@@ -51,7 +51,8 @@ output "ecr_repository_uri" {
 }
 
 output "ssm_parameter_name_for_latest_ami" {
-  value = aws_ssm_parameter.latest_ami.name
+  description = "SSM parameter name for latest EC2 runner AMI (resource in api_shared_parameters)"
+  value       = local.ssm_parameter_name_for_latest_ami
 }
 
 output "api_endpoint" {

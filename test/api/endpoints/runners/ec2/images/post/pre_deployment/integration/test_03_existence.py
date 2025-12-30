@@ -50,17 +50,17 @@ class TestTerraformOutputsExist:
         """Verify ec2_runner_ami_stable_tag output exists."""
         assert terraform_outputs.get("ec2_runner_ami_stable_tag") != ""
 
-    def test_runner_security_group_id_exists(self, terraform_outputs):
-        """Verify runner_security_group_id output exists."""
-        assert terraform_outputs.get("runner_security_group_id") != ""
+    def test_security_group_id_for_runners_exists(self, terraform_outputs):
+        """Verify security_group_id_for_runners output exists."""
+        assert terraform_outputs.get("security_group_id_for_runners") != ""
 
     def test_ssm_parameter_name_for_latest_ami_exists(self, terraform_outputs):
         """Verify ssm_parameter_name_for_latest_ami output exists."""
         assert terraform_outputs.get("ssm_parameter_name_for_latest_ami") != ""
 
-    def test_vpc_public_subnet_ids_exists(self, terraform_outputs):
-        """Verify vpc_public_subnet_ids output exists."""
-        assert terraform_outputs.get("vpc_public_subnet_ids") != ""
+    def test_public_subnet_ids_exists(self, terraform_outputs):
+        """Verify public_subnet_ids output exists."""
+        assert terraform_outputs.get("public_subnet_ids") != ""
 
     def test_ec2_instance_types_exists(self, terraform_outputs):
         """Verify ec2_instance_types output exists."""

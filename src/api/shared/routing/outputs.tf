@@ -34,16 +34,16 @@ output "cloudfront_domain_name" {
   value = aws_cloudfront_distribution.main.domain_name
 }
 
-output "runner_security_group_id" {
-  value = data.terraform_remote_state.jit_runner_requests.outputs.runner_security_group_id
+output "security_group_id_for_runners" {
+  value = data.terraform_remote_state.jit_runner_requests.outputs.security_group_id_for_runners
 }
 
 output "ssm_parameter_name_for_latest_ami" {
   value = data.terraform_remote_state.jit_runner_requests.outputs.ssm_parameter_name_for_latest_ami
 }
 
-output "vpc_public_subnet_ids" {
-  value = data.terraform_remote_state.jit_runner_requests.outputs.vpc_public_subnet_ids
+output "public_subnet_ids" {
+  value = data.terraform_remote_state.jit_runner_requests.outputs.public_subnet_ids
 }
 
 output "vpc_id" {

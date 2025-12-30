@@ -37,7 +37,7 @@ jobs:
           ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/"
           ROLE_ARN="${ROLE_ARN}${RESOURCE_PREFIX}"
           ROLE_ARN="${ROLE_ARN}${GITHUB_ACTIONS_ROLE_SUFFIX}"
-          PROVIDERS=src/api/backend/providers.tf
+          PROVIDERS=src/api/shared/networking/providers.tf
           TERRAFORM_VERSION=$(grep 'required_version' $PROVIDERS \
             | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
@@ -58,23 +58,27 @@ jobs:
           aws-region: ${{ steps.shared.outputs.aws_region }}
           role-to-assume: ${{ steps.shared.outputs.github_actions_role_arn }}
       - id: api
-        name: Get API terraform outputs
+        name: Get configuration and networking outputs
         run: |
-          cd src/api/backend
+          # Read tag config from etc/runners.json (source of truth)
+          RUNNERS_JSON=etc/runners.json
+          AMI_PURPOSE_TAG=$(jq -r '.tags.ec2.ami.purpose_tag' $RUNNERS_JSON)
+          AMI_PURPOSE_VALUE=$(jq -r '.tags.ec2.ami.purpose_value' $RUNNERS_JSON)
+          AMI_STABLE_TAG=$(jq -r '.tags.ec2.ami.stable_tag' $RUNNERS_JSON)
+          SSM_PARAM=$(jq -r '.parameters.ec2.ami.latest' $RUNNERS_JSON)
+
+          # Get instance types from config.json (local to this workflow)
+          CONF=src/api/endpoints/runners/ec2/images/post/config.json
+          INSTANCE_TYPES=$(jq -r '.instance_types // ["m8gd.medium"] | join(",")' $CONF)
+
+          # Get networking resources from src/api/shared/networking remote state
+          cd src/api/shared/networking
           terraform init -backend=true -input=false
-          INSTANCE_TYPES=$(terraform output -json \
-            ec2_instance_types | tr -d '[]" ')
-          AMI_PURPOSE_VALUE=$(terraform output -raw \
-            ec2_runner_ami_purpose_value)
-          AMI_STABLE_TAG=$(terraform output -raw \
-            ec2_runner_ami_stable_tag)
-          SECURITY_GROUP_ID=$(terraform output -raw \
-            runner_security_group_id)
-          SUBNET_IDS=$(terraform output -raw \
-            vpc_public_subnet_ids)
-          SSM_PARAM=$(terraform output -raw \
-            ssm_parameter_name_for_latest_ami)
+          SECURITY_GROUP_ID=$(terraform output -raw security_group_id_for_runners)
+          SUBNET_IDS=$(terraform output -raw public_subnet_ids)
+
           echo "instance_types=$INSTANCE_TYPES" >> $GITHUB_OUTPUT
+          echo "ami_purpose_tag=$AMI_PURPOSE_TAG" >> $GITHUB_OUTPUT
           echo "ami_purpose_value=$AMI_PURPOSE_VALUE" >> $GITHUB_OUTPUT
           echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
           echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
@@ -119,7 +123,7 @@ jobs:
             pylint pytest pyyaml types-paramiko types-PyYAML botocore
       - name: Linting config files
         run: |
-          WF=.github/workflows/endpoint_v1_runners_ec2_images_post.yml
+          WF=.github/workflows/api_endpoint_v1_runners_ec2_images_post.yml
           CONF=src/api/endpoints/runners/ec2/images/post/config.json
           EMPTY='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY='key-ordering: enable'

@@ -162,18 +162,18 @@ def api_shared_networking_outputs(request):
 
     These outputs are REQUIRED (no defaults in runners/data.tf):
     - vpc_id: Used by drift_recovery Lambda and outputs passthrough
-    - vpc_public_subnet_ids: Used by outputs passthrough
-    - runner_security_group_id: Used by outputs passthrough
+    - public_subnet_ids: Used by outputs passthrough
+    - security_group_id_for_runners: Used by outputs passthrough
     """
     if not request.getfixturevalue("api_shared_networking_terraform_initialized"):
         pytest.skip("Terraform init failed for api_shared_networking")
     return {
         "vpc_id": terraform_output(API_SHARED_NETWORKING_DIR, "vpc_id"),
-        "vpc_public_subnet_ids": terraform_output(
-            API_SHARED_NETWORKING_DIR, "vpc_public_subnet_ids"
+        "public_subnet_ids": terraform_output(
+            API_SHARED_NETWORKING_DIR, "public_subnet_ids"
         ),
-        "runner_security_group_id": terraform_output(
-            API_SHARED_NETWORKING_DIR, "runner_security_group_id"
+        "security_group_id_for_runners": terraform_output(
+            API_SHARED_NETWORKING_DIR, "security_group_id_for_runners"
         ),
     }
 
@@ -232,7 +232,7 @@ def subnets_info(request):
     """Fetch subnet details from AWS. Returns empty list if not found."""
     client = request.getfixturevalue("ec2_client")
     outputs = request.getfixturevalue("api_shared_networking_outputs")
-    subnet_ids_str = outputs.get("vpc_public_subnet_ids")
+    subnet_ids_str = outputs.get("public_subnet_ids")
     if not subnet_ids_str:
         return []
     subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]

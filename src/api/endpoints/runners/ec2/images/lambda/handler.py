@@ -135,8 +135,8 @@ def handle_post_request(event: Dict[str, Any], handler_func) -> Dict[str, Any]:
     return response
 
 
-def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
-    """Launch the Packer AMI builder workflow."""
+def launch_ami_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Launch the AMI builder workflow."""
     subnet_ids = os.environ['SUBNETS'].split(',')
     vpc_id = os.environ['VPC_ID']
     region = os.environ['AWS_REGION']
@@ -290,7 +290,7 @@ def handle_ec2_image_delete(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 ROUTE_MAP = {
-    ('/v1/runners/ec2/images', 'POST'): lambda e: handle_post_request(e, launch_packer_builder),
+    ('/v1/runners/ec2/images', 'POST'): lambda e: handle_post_request(e, launch_ami_builder),
     ('/v1/runners/ec2/images', 'GET'): handle_ec2_image_get,
     ('/v1/runners/ec2/images/latest', 'GET'): handle_ec2_image_get,
 }

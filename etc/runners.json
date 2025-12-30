@@ -1,4 +1,21 @@
 {
+  "parameters": {
+    "ec2": {
+      "ami": {
+        "latest": "/ami/ec2-runner/latest"
+      }
+    }
+  },
+  "tags": {
+    "ec2": {
+      "ami": {
+        "purpose_tag": "Purpose",
+        "purpose_value": "GitHub self-hosted EC2 runner",
+        "stable_tag": "Stable",
+        "stable_value": "true"
+      }
+    }
+  },
   "labels": {
     "platforms": [
       "ecs",
@@ -73,8 +90,5 @@
     "use_spot": true,
     "cpu": "4096",
     "memory": "16384"
-  },
-  "ec2": {
-    "use_spot": true
   }
 }

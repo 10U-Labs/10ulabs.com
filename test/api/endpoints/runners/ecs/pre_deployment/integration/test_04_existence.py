@@ -72,14 +72,14 @@ class TestVPCResourcesExistence:
         assert runners_outputs.get("vpc_id"), "vpc_id output not found in runners"
 
     def test_runners_outputs_has_subnet_ids(self, runners_outputs):
-        """Verify vpc_public_subnet_ids output is accessible."""
-        assert runners_outputs.get("vpc_public_subnet_ids"), \
-            "vpc_public_subnet_ids output not found in runners"
+        """Verify public_subnet_ids output is accessible."""
+        assert runners_outputs.get("public_subnet_ids"), \
+            "public_subnet_ids output not found in runners"
 
     def test_runners_outputs_has_security_group_id(self, runners_outputs):
-        """Verify runner_security_group_id output is accessible."""
-        assert runners_outputs.get("runner_security_group_id"), \
-            "runner_security_group_id output not found in runners"
+        """Verify security_group_id_for_runners output is accessible."""
+        assert runners_outputs.get("security_group_id_for_runners"), \
+            "security_group_id_for_runners output not found in runners"
 
     def test_vpc_exists_and_available(self, ec2_client, runners_outputs):
         """Verify the VPC exists and is available."""
@@ -91,17 +91,17 @@ class TestVPCResourcesExistence:
 
     def test_subnets_exist_and_available(self, ec2_client, runners_outputs):
         """Verify all subnets exist and are available."""
-        subnet_ids_str = runners_outputs.get("vpc_public_subnet_ids")
+        subnet_ids_str = runners_outputs.get("public_subnet_ids")
         if not subnet_ids_str:
-            pytest.skip("vpc_public_subnet_ids output not available")
+            pytest.skip("public_subnet_ids output not available")
         subnet_ids = subnet_ids_str.split(",")
         response = ec2_client.describe_subnets(SubnetIds=subnet_ids)
         assert all(s["State"] == "available" for s in response["Subnets"])
 
     def test_security_group_exists(self, ec2_client, runners_outputs):
         """Verify the security group exists."""
-        security_group_id = runners_outputs.get("runner_security_group_id")
+        security_group_id = runners_outputs.get("security_group_id_for_runners")
         if not security_group_id:
-            pytest.skip("runner_security_group_id output not available")
+            pytest.skip("security_group_id_for_runners output not available")
         response = ec2_client.describe_security_groups(GroupIds=[security_group_id])
         assert response["SecurityGroups"][0]["GroupId"] == security_group_id

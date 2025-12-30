@@ -40,6 +40,19 @@
       "test/lib/python/**"
     ]
   },
+  "api_shared_parameters": {
+    "depends_on": [
+      "api_shared_networking"
+    ],
+    "name": "Ensuring API shared parameters exist and are properly configured",
+    "paths": [
+      ".github/workflows/api_shared_parameters.yml",
+      "lib/python/**",
+      "src/api/shared/parameters/**",
+      "test/api/shared/parameters/**",
+      "test/lib/python/**"
+    ]
+  },
   "bootstrap": {
     "depends_on": [],
     "name": "Ensuring bootstrap infrastructure exists and is properly configured",
@@ -124,15 +137,15 @@
   },
   "api_endpoint_v1_runners_ec2_images": {
     "depends_on": [
-      "api_shared_networking"
+      "api_shared_parameters"
     ],
     "name": "Ensuring the /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2_images.yml",
       "lib/python/**",
-      "src/api/endpoints/image_for_runners/ec2s/*.tf",
-      "src/api/endpoints/image_for_runners/ec2s/lambda/**",
-      "test/api/endpoints/image_for_runners/ec2s/endpoint/**",
+      "src/api/endpoints/runners/ec2/images/*.tf",
+      "src/api/endpoints/runners/ec2/images/lambda/**",
+      "test/api/endpoints/runners/ec2/images/endpoint/**",
       "test/lib/python/**"
     ]
   },
@@ -142,8 +155,8 @@
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2_images_post.yml",
       "lib/python/**",
-      "src/api/endpoints/image_for_runners/ec2s/post/**",
-      "test/api/endpoints/image_for_runners/ec2s/post/**",
+      "src/api/endpoints/runners/ec2/images/post/**",
+      "test/api/endpoints/runners/ec2/images/post/**",
       "test/lib/python/**"
     ]
   },
@@ -155,9 +168,9 @@
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs_images.yml",
       "lib/python/**",
-      "src/api/endpoints/image_for_runners/ecss/*.tf",
-      "src/api/endpoints/image_for_runners/ecss/lambda/**",
-      "test/api/endpoints/image_for_runners/ecss/endpoint/**",
+      "src/api/endpoints/runners/ecs/images/*.tf",
+      "src/api/endpoints/runners/ecs/images/lambda/**",
+      "test/api/endpoints/runners/ecs/images/endpoint/**",
       "test/lib/python/**"
     ]
   },
@@ -167,8 +180,8 @@
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs_images_post.yml",
       "lib/python/**",
-      "src/api/endpoints/image_for_runners/ecss/post/**",
-      "test/api/endpoints/image_for_runners/ecss/post/**",
+      "src/api/endpoints/runners/ecs/images/post/**",
+      "test/api/endpoints/runners/ecs/images/post/**",
       "test/lib/python/**"
     ]
   },

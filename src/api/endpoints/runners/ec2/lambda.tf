@@ -67,8 +67,8 @@ resource "aws_lambda_function" "handler" {
       EC2_MANAGED_BY_TAG       = local.ec2_runner_managed_by_tag
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.runners.outputs.github_token_secret_name
-      SECURITY_GROUPS          = data.terraform_remote_state.api_shared_networking.outputs.runner_security_group_id
-      SUBNETS                  = data.terraform_remote_state.api_shared_networking.outputs.vpc_public_subnet_ids
+      SECURITY_GROUPS          = data.terraform_remote_state.api_shared_networking.outputs.security_group_id_for_runners
+      SUBNETS                  = data.terraform_remote_state.api_shared_networking.outputs.public_subnet_ids
       VPC_ID                   = data.terraform_remote_state.api_shared_networking.outputs.vpc_id
       WORKFLOW_RUNNERS_TABLE   = data.terraform_remote_state.runners.outputs.workflow_runners_table_name
     }

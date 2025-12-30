@@ -66,9 +66,9 @@ class TestEC2Authorization:
 
     def test_can_describe_subnets(self, ec2_client, runners_outputs):
         """Verify permission to call ec2:DescribeSubnets."""
-        subnet_ids_str = runners_outputs.get("vpc_public_subnet_ids")
+        subnet_ids_str = runners_outputs.get("public_subnet_ids")
         if not subnet_ids_str:
-            pytest.skip("vpc_public_subnet_ids output not available")
+            pytest.skip("public_subnet_ids output not available")
         subnet_ids = subnet_ids_str.split(",")
         try:
             ec2_client.describe_subnets(SubnetIds=subnet_ids)
@@ -84,9 +84,9 @@ class TestEC2Authorization:
 
     def test_can_describe_security_groups(self, ec2_client, runners_outputs):
         """Verify permission to call ec2:DescribeSecurityGroups."""
-        sg_id = runners_outputs.get("runner_security_group_id")
+        sg_id = runners_outputs.get("security_group_id_for_runners")
         if not sg_id:
-            pytest.skip("runner_security_group_id output not available")
+            pytest.skip("security_group_id_for_runners output not available")
         try:
             ec2_client.describe_security_groups(GroupIds=[sg_id])
         except ClientError as e:

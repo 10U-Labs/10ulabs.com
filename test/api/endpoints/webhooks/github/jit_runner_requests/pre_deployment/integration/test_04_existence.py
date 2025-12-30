@@ -82,16 +82,16 @@ class TestApiSharedNetworkingOutputs:
         )
 
     def test_subnet_ids_output_exists(self, api_shared_networking_outputs):
-        """Verify vpc_public_subnet_ids output exists."""
-        assert api_shared_networking_outputs.get("vpc_public_subnet_ids"), (
-            "vpc_public_subnet_ids output not found in api_shared_networking. "
+        """Verify public_subnet_ids output exists."""
+        assert api_shared_networking_outputs.get("public_subnet_ids"), (
+            "public_subnet_ids output not found in api_shared_networking. "
             "Run: cd src/api/shared/networking && terraform apply"
         )
 
     def test_security_group_id_output_exists(self, api_shared_networking_outputs):
-        """Verify runner_security_group_id output exists."""
-        assert api_shared_networking_outputs.get("runner_security_group_id"), (
-            "runner_security_group_id output not found in api_shared_networking. "
+        """Verify security_group_id_for_runners output exists."""
+        assert api_shared_networking_outputs.get("security_group_id_for_runners"), (
+            "security_group_id_for_runners output not found in api_shared_networking. "
             "Run: cd src/api/shared/networking && terraform apply"
         )
 
@@ -184,9 +184,9 @@ class TestVPCResourceExistence:
 
     def test_subnets_exist(self, subnets_info, api_shared_networking_outputs):
         """Verify all subnets exist."""
-        subnet_ids_str = api_shared_networking_outputs.get("vpc_public_subnet_ids")
+        subnet_ids_str = api_shared_networking_outputs.get("public_subnet_ids")
         if not subnet_ids_str:
-            pytest.skip("vpc_public_subnet_ids output not available")
+            pytest.skip("public_subnet_ids output not available")
         subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
         assert len(subnets_info) == len(subnet_ids), (
             f"Expected {len(subnet_ids)} subnets, found {len(subnets_info)}. "
@@ -196,6 +196,7 @@ class TestVPCResourceExistence:
     # Use factory for security group existence test
     test_security_group_exists = create_security_group_existence_test(
         outputs_fixture="api_shared_networking_outputs",
+        sg_id_key="security_group_id_for_runners",
         terraform_path="src/api/shared/networking",
     )
 

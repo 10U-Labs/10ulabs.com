@@ -48,16 +48,16 @@ class TestRunnersOutputs:
         )
 
     def test_subnet_ids_output_exists(self, runners_outputs):
-        """Verify vpc_public_subnet_ids output exists."""
-        assert runners_outputs.get("vpc_public_subnet_ids"), (
-            "vpc_public_subnet_ids output not found in runners. "
+        """Verify public_subnet_ids output exists."""
+        assert runners_outputs.get("public_subnet_ids"), (
+            "public_subnet_ids output not found in runners. "
             "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
         )
 
     def test_security_group_id_output_exists(self, runners_outputs):
-        """Verify runner_security_group_id output exists."""
-        assert runners_outputs.get("runner_security_group_id"), (
-            "runner_security_group_id output not found in runners. "
+        """Verify security_group_id_for_runners output exists."""
+        assert runners_outputs.get("security_group_id_for_runners"), (
+            "security_group_id_for_runners output not found in runners. "
             "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
         )
 
@@ -99,9 +99,9 @@ class TestVPCResources:
 
     def test_subnets_exist(self, ec2_client, runners_outputs):
         """Verify all subnets exist."""
-        subnet_ids_str = runners_outputs.get("vpc_public_subnet_ids")
+        subnet_ids_str = runners_outputs.get("public_subnet_ids")
         if not subnet_ids_str:
-            pytest.skip("vpc_public_subnet_ids output not found")
+            pytest.skip("public_subnet_ids output not found")
         subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
         try:
             response = ec2_client.describe_subnets(SubnetIds=subnet_ids)
@@ -121,5 +121,6 @@ class TestVPCResources:
     # Use factory for security group existence test
     test_security_group_exists = create_security_group_existence_test(
         outputs_fixture="runners_outputs",
+        sg_id_key="security_group_id_for_runners",
         terraform_path="src/api/endpoints/webhooks/github/jit_runner_requests",
     )

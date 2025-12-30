@@ -1,18 +1,18 @@
-"""Unit tests for launch_packer_builder functionality."""
+"""Unit tests for launch_ami_builder functionality."""
 from unittest.mock import patch
 import pytest
 
 
 @pytest.mark.usefixtures("mock_env_vars")
-class TestLaunchPackerBuilder:
-    """Tests for launch_packer_builder when triggering GitHub workflows."""
+class TestLaunchAmiBuilder:
+    """Tests for launch_ami_builder when triggering GitHub workflows."""
 
     def test_successful_workflow_trigger(self, handler_module):
         """Test that successful workflow trigger returns success."""
         with patch.object(
             handler_module, 'trigger_github_workflow', return_value={'success': True}
         ):
-            result = handler_module.launch_packer_builder({})
+            result = handler_module.launch_ami_builder({})
 
             assert result['success'] is True
 
@@ -21,7 +21,7 @@ class TestLaunchPackerBuilder:
         with patch.object(
             handler_module, 'trigger_github_workflow', return_value={'success': True}
         ) as mock_trigger:
-            handler_module.launch_packer_builder({})
+            handler_module.launch_ami_builder({})
 
             mock_trigger.assert_called_once()
 
@@ -30,7 +30,7 @@ class TestLaunchPackerBuilder:
         with patch.object(
             handler_module, 'trigger_github_workflow', return_value={'success': True}
         ) as mock_trigger:
-            handler_module.launch_packer_builder({})
+            handler_module.launch_ami_builder({})
 
             assert mock_trigger.call_args[0][0] == 'api_endpoint_v1_runners_ec2_images_post.yml'
 
@@ -41,6 +41,6 @@ class TestLaunchPackerBuilder:
             'trigger_github_workflow',
             return_value={'success': False, 'error': 'failed'}
         ):
-            result = handler_module.launch_packer_builder({})
+            result = handler_module.launch_ami_builder({})
 
             assert result['success'] is False

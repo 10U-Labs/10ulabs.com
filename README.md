@@ -11,6 +11,8 @@ api_operational_diagnostics
     ↓
 api_shared_networking
     ↓
+api_shared_parameters
+    ↓
 api_endpoint_v1_runners_ec2_images
     ↓
 api_endpoint_v1_runners_ec2

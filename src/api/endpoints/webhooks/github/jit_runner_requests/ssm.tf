@@ -1,17 +1,4 @@
-resource "aws_ssm_parameter" "latest_ami" {
-  name  = local.ssm_parameter_name_for_latest_ami
-  type  = "String"
-  value = "PLACEHOLDER_UPDATE_AFTER_AMI_BUILD"
-  tier  = "Standard"
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-
-  tags = merge(local.common_tags, {
-    Name = local.ssm_parameter_name_for_latest_ami
-  })
-}
+# Note: aws_ssm_parameter.latest_ami moved to src/api/shared/parameters/
 
 resource "aws_ssm_parameter" "webhook_secret" {
   name        = local.ssm_parameter_name_for_webhook_secret

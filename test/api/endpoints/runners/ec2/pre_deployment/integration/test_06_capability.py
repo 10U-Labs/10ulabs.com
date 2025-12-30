@@ -12,13 +12,13 @@ pytestmark = pytest.mark.layer(6)
 
 def test_can_run_instances_in_subnets(ec2_client, runners_outputs):
     """Verify we can launch EC2 instances in the prerequisite subnets (dry-run)."""
-    subnet_ids_str = runners_outputs.get("vpc_public_subnet_ids")
+    subnet_ids_str = runners_outputs.get("public_subnet_ids")
     if not subnet_ids_str:
-        pytest.skip("vpc_public_subnet_ids output not found")
+        pytest.skip("public_subnet_ids output not found")
     subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
-    sg_id = runners_outputs.get("runner_security_group_id")
+    sg_id = runners_outputs.get("security_group_id_for_runners")
     if not sg_id:
-        pytest.skip("runner_security_group_id output not found")
+        pytest.skip("security_group_id_for_runners output not found")
 
     ami_info = get_stable_ami_info(ec2_client)
     if not ami_info:

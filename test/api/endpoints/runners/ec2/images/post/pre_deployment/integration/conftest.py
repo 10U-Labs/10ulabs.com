@@ -49,14 +49,14 @@ def terraform_outputs(request):
             "ec2_runner_ami_stable_tag": terraform_output(
                 API_BACKEND_DIR, "ec2_runner_ami_stable_tag"
             ),
-            "runner_security_group_id": terraform_output(
-                API_BACKEND_DIR, "runner_security_group_id"
+            "security_group_id_for_runners": terraform_output(
+                API_BACKEND_DIR, "security_group_id_for_runners"
             ),
             "ssm_parameter_name_for_latest_ami": terraform_output(
                 API_BACKEND_DIR, "ssm_parameter_name_for_latest_ami"
             ),
-            "vpc_public_subnet_ids": terraform_output(
-                API_BACKEND_DIR, "vpc_public_subnet_ids"
+            "public_subnet_ids": terraform_output(
+                API_BACKEND_DIR, "public_subnet_ids"
             ),
             "ec2_instance_types": terraform_output_json(
                 API_BACKEND_DIR, "ec2_instance_types"
@@ -69,14 +69,14 @@ def terraform_outputs(request):
 def security_group_id(request):
     """Security group id."""
     outputs = request.getfixturevalue("terraform_outputs")
-    return outputs.get("runner_security_group_id", "")
+    return outputs.get("security_group_id_for_runners", "")
 
 
 @pytest.fixture(scope="session")
 def subnet_ids(request):
     """Subnet ids."""
     outputs = request.getfixturevalue("terraform_outputs")
-    raw = outputs.get("vpc_public_subnet_ids", "")
+    raw = outputs.get("public_subnet_ids", "")
     result = [s.strip() for s in raw.split(",") if s.strip()]
     return result
 
