@@ -530,6 +530,38 @@ class TestValidateAllDependencies:
         result = self._run_sg_invalid_scenario(mock_sg, mock_subnet, mock_vpc)
         assert result["errors"][0]["type"] == "security_group"
 
+    def _run_subnet_invalid_scenario(self, mock_sg, mock_subnet, mock_vpc):
+        """Run the subnet invalid scenario and return result."""
+        _setup_validation_mocks(mock_sg, mock_subnet, mock_vpc,
+                                subnet_valid=False, subnet_missing=["subnet-1"])
+        with patch.dict(os.environ, {"SECURITY_GROUPS": "", "SUBNETS": "subnet-1",
+                                      "VPC_ID": "vpc-123"}):
+            return validate_all_dependencies()
+
+    @patch("infra_validation.validate_vpc")
+    @patch("infra_validation.validate_subnets")
+    @patch("infra_validation.validate_security_groups")
+    def test_subnet_invalid_returns_invalid(self, mock_sg, mock_subnet, mock_vpc):
+        """validate_all_dependencies returns invalid when subnet fails."""
+        result = self._run_subnet_invalid_scenario(mock_sg, mock_subnet, mock_vpc)
+        assert result["valid"] is False
+
+    @patch("infra_validation.validate_vpc")
+    @patch("infra_validation.validate_subnets")
+    @patch("infra_validation.validate_security_groups")
+    def test_subnet_invalid_has_one_error(self, mock_sg, mock_subnet, mock_vpc):
+        """validate_all_dependencies reports one error for subnet failure."""
+        result = self._run_subnet_invalid_scenario(mock_sg, mock_subnet, mock_vpc)
+        assert len(result["errors"]) == 1
+
+    @patch("infra_validation.validate_vpc")
+    @patch("infra_validation.validate_subnets")
+    @patch("infra_validation.validate_security_groups")
+    def test_subnet_invalid_error_type(self, mock_sg, mock_subnet, mock_vpc):
+        """validate_all_dependencies reports subnet error type."""
+        result = self._run_subnet_invalid_scenario(mock_sg, mock_subnet, mock_vpc)
+        assert result["errors"][0]["type"] == "subnet"
+
     @patch("infra_validation.validate_vpc")
     @patch("infra_validation.validate_subnets")
     @patch("infra_validation.validate_security_groups")

@@ -537,6 +537,17 @@ class TestGetEcsConfig:
         )
         assert get_ecs_config(parsed) is None
 
+    def test_returns_none_for_ecs_unknown_compute(self):
+        """get_ecs_config returns None for ECS with unknown compute type."""
+        parsed = ParsedLabels(
+            platform="ecs",
+            compute="unknown-compute",
+            architecture="x86",
+            pricing="spot",
+            runner_id="runner-12345",
+        )
+        assert get_ecs_config(parsed) is None
+
     def test_returns_config_for_fargate(self):
         """get_ecs_config returns config for Fargate."""
         parsed = ParsedLabels(

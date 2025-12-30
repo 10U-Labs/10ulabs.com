@@ -248,6 +248,21 @@ resource "aws_lambda_function" "my_func" {
         result = extract_iam_role_names_from_terraform(content)
         assert result == []
 
+    def test_empty_content_returns_empty(self):
+        """extract_iam_role_names_from_terraform returns empty for empty content."""
+        result = extract_iam_role_names_from_terraform("")
+        assert result == []
+
+    def test_role_without_name_returns_empty(self):
+        """extract_iam_role_names_from_terraform skips roles without name attribute."""
+        content = '''
+resource "aws_iam_role" "my_role" {
+  assume_role_policy = "{}"
+}
+'''
+        result = extract_iam_role_names_from_terraform(content)
+        assert result == []
+
     def test_handles_interpolation_returns_one_item(self):
         """extract_iam_role_names_from_terraform returns one item for interpolated name."""
         content = '''
@@ -356,6 +371,22 @@ resource "aws_lambda_function" "my_func" {
         content = '''
 resource "aws_iam_role" "my_role" {
   name = "MyRole"
+}
+'''
+        result = extract_lambda_function_names_from_terraform(content)
+        assert result == []
+
+    def test_empty_content_returns_empty(self):
+        """extract_lambda_function_names_from_terraform returns empty for empty content."""
+        result = extract_lambda_function_names_from_terraform("")
+        assert result == []
+
+    def test_function_without_name_returns_empty(self):
+        """extract_lambda_function_names_from_terraform skips functions without name."""
+        content = '''
+resource "aws_lambda_function" "my_func" {
+  runtime = "python3.11"
+  handler = "index.handler"
 }
 '''
         result = extract_lambda_function_names_from_terraform(content)

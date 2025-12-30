@@ -928,6 +928,38 @@ class TestAttemptLaunch:
         instance_id, error = _attempt_launch(mock_client, {"ami_id": "ami-123"}, opts)
         assert isinstance(error, RuntimeError)
 
+    def test_attempt_launch_runtime_error_no_instance_id_returns_error(self):
+        """_attempt_launch returns RuntimeError when launch fails before getting instance ID."""
+        mock_client = MagicMock()
+        mock_client.create_launch_template.return_value = {
+            "LaunchTemplate": {"LaunchTemplateId": "lt-123"}
+        }
+        mock_client.create_fleet.side_effect = RuntimeError("Fleet creation failed")
+        opts = LaunchOptions(
+            instance_types=["m5.large"],
+            subnet_ids=["subnet-1"],
+            excluded_azs=[],
+            wait_for_ready=True,
+        )
+        instance_id, error = _attempt_launch(mock_client, {"ami_id": "ami-123"}, opts)
+        assert isinstance(error, RuntimeError)
+
+    def test_attempt_launch_runtime_error_no_instance_id_empty_instance_id(self):
+        """_attempt_launch returns empty instance ID when RuntimeError before getting ID."""
+        mock_client = MagicMock()
+        mock_client.create_launch_template.return_value = {
+            "LaunchTemplate": {"LaunchTemplateId": "lt-123"}
+        }
+        mock_client.create_fleet.side_effect = RuntimeError("Fleet creation failed")
+        opts = LaunchOptions(
+            instance_types=["m5.large"],
+            subnet_ids=["subnet-1"],
+            excluded_azs=[],
+            wait_for_ready=True,
+        )
+        instance_id, error = _attempt_launch(mock_client, {"ami_id": "ami-123"}, opts)
+        assert instance_id == ""
+
     def test_attempt_launch_skip_wait_returns_instance_id(self):
         """_attempt_launch returns instance ID when wait_for_ready is False."""
         mock_client = MagicMock()

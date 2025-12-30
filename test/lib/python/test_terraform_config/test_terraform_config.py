@@ -106,6 +106,17 @@ class TestResolveLocalInterpolations:
         result = _resolve_local_interpolations(value, local_values)
         assert result == "final_value"
 
+    def test_resolves_deeply_nested_locals(self):
+        """Test resolves deeply nested local references requiring multiple iterations."""
+        value = "${local.level1}"
+        local_values = {
+            "level1": "${local.level2}",
+            "level2": "${local.level3}",
+            "level3": "final_value",
+        }
+        result = _resolve_local_interpolations(value, local_values)
+        assert result == "final_value"
+
     def test_returns_unchanged_when_local_not_found(self):
         """Test returns unchanged when local not in dict."""
         value = "${local.missing_var}"
@@ -415,6 +426,21 @@ class TestGetEndpointLocalValues:
         result = get_endpoint_local_values(tmp_path)
         assert result.get("my_local") == "my_value"
 
+    def test_parses_module_shared_handler_reference(self, tmp_path):
+        """Test parses module.shared.lambda_handler_names references."""
+        from unittest.mock import patch
+        from terraform_config import get_endpoint_local_values
+        locals_file = tmp_path / "locals.tf"
+        locals_file.write_text(
+            'locals {\n  handler = module.shared.lambda_handler_names.webhook\n}\n'
+        )
+        with patch("terraform_config.parse_lambda_handler_names") as mock_handlers:
+            mock_handlers.return_value = {"webhook": "TenULabsWebhook"}
+            with patch("terraform_config.get_resource_prefix") as mock_prefix:
+                mock_prefix.return_value = "TenULabs"
+                result = get_endpoint_local_values(tmp_path)
+        assert result.get("handler") == "TenULabsWebhook"
+
 
 class TestExtractIamRoleNames:
     """Tests for extract_iam_role_names function."""
@@ -451,6 +477,37 @@ resource "aws_iam_role" "my_role" {
 ''')
         result = extract_iam_role_names(iam_file)
         assert result[0] == ("my_role", "MyRoleName")
+
+    def test_extracts_var_reference_name(self, tmp_path):
+        """Test extracts role name from var reference when in tfvars."""
+        from terraform_config import extract_iam_role_names
+        iam_file = tmp_path / "iam.tf"
+        iam_file.write_text('''
+resource "aws_iam_role" "my_role" {
+  name = var.role_name
+  assume_role_policy = jsonencode({})
+}
+''')
+        tfvars_file = tmp_path / "terraform.tfvars"
+        tfvars_file.write_text('role_name = "VarRoleName"\n')
+        (tmp_path / "locals.tf").write_text("")
+        result = extract_iam_role_names(iam_file)
+        assert result[0] == ("my_role", "VarRoleName")
+
+    def test_extracts_local_reference_name(self, tmp_path):
+        """Test extracts role name from local reference."""
+        from terraform_config import extract_iam_role_names
+        iam_file = tmp_path / "iam.tf"
+        iam_file.write_text('''
+resource "aws_iam_role" "my_role" {
+  name = local.role_name
+  assume_role_policy = jsonencode({})
+}
+''')
+        locals_file = tmp_path / "locals.tf"
+        locals_file.write_text('locals {\n  role_name = "LocalRoleName"\n}\n')
+        result = extract_iam_role_names(iam_file)
+        assert result[0] == ("my_role", "LocalRoleName")
 
 
 class TestExtractLambdaFunctionNames:

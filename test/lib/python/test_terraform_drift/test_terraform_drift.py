@@ -474,6 +474,23 @@ class TestGetPlannedCreates:
         result = get_planned_creates(Path("/tmp/terraform"))
         assert len(result) == 1
 
+    @patch("terraform_drift.subprocess.run")
+    def test_ignores_non_planned_change_type(self, mock_run):
+        """get_planned_creates ignores entries with type other than planned_change."""
+        non_change = json.dumps({"type": "diagnostic", "message": "some warning"})
+        plan_output = non_change + "\n" + _make_plan_output()
+        mock_run.return_value = MagicMock(stdout=plan_output, returncode=0)
+        result = get_planned_creates(Path("/tmp/terraform"))
+        assert len(result) == 1
+
+    @patch("terraform_drift.subprocess.run")
+    def test_ignores_refresh_type(self, mock_run):
+        """get_planned_creates ignores entries with refresh type."""
+        refresh_entry = json.dumps({"type": "refresh_complete", "resource": {}})
+        mock_run.return_value = MagicMock(stdout=refresh_entry, returncode=0)
+        result = get_planned_creates(Path("/tmp/terraform"))
+        assert result == []
+
 
 class TestGetTerraformStateResources:
     """Tests for get_terraform_state_resources function."""

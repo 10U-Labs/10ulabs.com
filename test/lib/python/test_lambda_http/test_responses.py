@@ -193,3 +193,18 @@ class TestIsCapacityError:
         """Test returns False for list without Capacity."""
         result = {'error': [{'reason': 'Unauthorized'}]}
         assert is_capacity_error(result) is False
+
+    def test_returns_false_for_integer_error(self):
+        """Test returns False when error is an integer."""
+        result = {'error': 500}
+        assert is_capacity_error(result) is False
+
+    def test_returns_false_for_none_error(self):
+        """Test returns False when error is None."""
+        result = {'error': None}
+        assert is_capacity_error(result) is False
+
+    def test_returns_false_for_dict_error(self):
+        """Test returns False when error is a dict (not a list)."""
+        result = {'error': {'code': 'SomeError'}}
+        assert is_capacity_error(result) is False
