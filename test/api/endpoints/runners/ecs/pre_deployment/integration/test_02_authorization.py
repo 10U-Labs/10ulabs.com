@@ -66,9 +66,9 @@ class TestEC2Authorization:
 
     def test_can_describe_subnets(self, ec2_client, runners_outputs):
         """Verify permission to call ec2:DescribeSubnets."""
-        subnet_ids_str = runners_outputs.get("public_subnet_ids")
+        subnet_ids_str = runners_outputs.get("public_subnets_ids")
         if not subnet_ids_str:
-            pytest.skip("public_subnet_ids output not available")
+            pytest.skip("public_subnets_ids output not available")
         subnet_ids = subnet_ids_str.split(",")
         try:
             ec2_client.describe_subnets(SubnetIds=subnet_ids)

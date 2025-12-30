@@ -48,9 +48,9 @@ class TestRunnersOutputs:
         )
 
     def test_subnet_ids_output_exists(self, runners_outputs):
-        """Verify public_subnet_ids output exists."""
-        assert runners_outputs.get("public_subnet_ids"), (
-            "public_subnet_ids output not found in runners. "
+        """Verify public_subnets_ids output exists."""
+        assert runners_outputs.get("public_subnets_ids"), (
+            "public_subnets_ids output not found in runners. "
             "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
         )
 
@@ -99,9 +99,9 @@ class TestVPCResources:
 
     def test_subnets_exist(self, ec2_client, runners_outputs):
         """Verify all subnets exist."""
-        subnet_ids_str = runners_outputs.get("public_subnet_ids")
+        subnet_ids_str = runners_outputs.get("public_subnets_ids")
         if not subnet_ids_str:
-            pytest.skip("public_subnet_ids output not found")
+            pytest.skip("public_subnets_ids output not found")
         subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
         try:
             response = ec2_client.describe_subnets(SubnetIds=subnet_ids)

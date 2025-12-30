@@ -22,7 +22,7 @@ data "terraform_remote_state" "jit_runner_requests" {
     lambda_function_name              = ""
     security_group_id_for_runners     = ""
     ssm_parameter_name_for_latest_ami = ""
-    public_subnet_ids                 = ""
+    public_subnets_ids                 = ""
   }
 }
 

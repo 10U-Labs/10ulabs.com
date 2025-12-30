@@ -4,7 +4,7 @@ output "vpc_id" {
   value       = aws_vpc.main.id
 }
 
-output "public_subnet_ids" {
+output "public_subnets_ids" {
   description = "Comma-separated list of public subnet IDs"
   value       = join(",", aws_subnet.public[*].id)
 }

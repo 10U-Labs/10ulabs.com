@@ -55,8 +55,8 @@ def terraform_outputs(request):
             "ssm_parameter_name_for_latest_ami": terraform_output(
                 API_BACKEND_DIR, "ssm_parameter_name_for_latest_ami"
             ),
-            "public_subnet_ids": terraform_output(
-                API_BACKEND_DIR, "public_subnet_ids"
+            "public_subnets_ids": terraform_output(
+                API_BACKEND_DIR, "public_subnets_ids"
             ),
             "ec2_instance_types": terraform_output_json(
                 API_BACKEND_DIR, "ec2_instance_types"
@@ -76,7 +76,7 @@ def security_group_id(request):
 def subnet_ids(request):
     """Subnet ids."""
     outputs = request.getfixturevalue("terraform_outputs")
-    raw = outputs.get("public_subnet_ids", "")
+    raw = outputs.get("public_subnets_ids", "")
     result = [s.strip() for s in raw.split(",") if s.strip()]
     return result
 

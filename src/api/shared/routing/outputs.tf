@@ -42,8 +42,8 @@ output "ssm_parameter_name_for_latest_ami" {
   value = data.terraform_remote_state.jit_runner_requests.outputs.ssm_parameter_name_for_latest_ami
 }
 
-output "public_subnet_ids" {
-  value = data.terraform_remote_state.jit_runner_requests.outputs.public_subnet_ids
+output "public_subnets_ids" {
+  value = data.terraform_remote_state.jit_runner_requests.outputs.public_subnets_ids
 }
 
 output "vpc_id" {

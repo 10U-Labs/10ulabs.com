@@ -75,7 +75,7 @@ jobs:
           cd src/api/shared/networking
           terraform init -backend=true -input=false
           SECURITY_GROUP_ID=$(terraform output -raw security_group_id_for_runners)
-          SUBNET_IDS=$(terraform output -raw public_subnet_ids)
+          SUBNET_IDS=$(terraform output -raw public_subnets_ids)
 
           echo "instance_types=$INSTANCE_TYPES" >> $GITHUB_OUTPUT
           echo "ami_purpose_tag=$AMI_PURPOSE_TAG" >> $GITHUB_OUTPUT

@@ -29,7 +29,7 @@ def networking_outputs(request):
         pytest.skip("Terraform init failed for networking")
     return {
         "vpc_id": terraform_output(NETWORKING_SRC, "vpc_id"),
-        "public_subnet_ids": terraform_output(NETWORKING_SRC, "public_subnet_ids"),
+        "public_subnets_ids": terraform_output(NETWORKING_SRC, "public_subnets_ids"),
         "security_group_id_for_runners": terraform_output(
             NETWORKING_SRC, "security_group_id_for_runners"
         ),

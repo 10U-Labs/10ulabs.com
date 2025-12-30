@@ -10,8 +10,8 @@ output "vpc_id" {
   value = data.terraform_remote_state.api_shared_networking.outputs.vpc_id
 }
 
-output "public_subnet_ids" {
-  value = data.terraform_remote_state.api_shared_networking.outputs.public_subnet_ids
+output "public_subnets_ids" {
+  value = data.terraform_remote_state.api_shared_networking.outputs.public_subnets_ids
 }
 
 output "security_group_id_for_runners" {

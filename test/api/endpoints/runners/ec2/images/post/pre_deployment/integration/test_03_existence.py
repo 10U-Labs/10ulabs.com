@@ -58,9 +58,9 @@ class TestTerraformOutputsExist:
         """Verify ssm_parameter_name_for_latest_ami output exists."""
         assert terraform_outputs.get("ssm_parameter_name_for_latest_ami") != ""
 
-    def test_public_subnet_ids_exists(self, terraform_outputs):
-        """Verify public_subnet_ids output exists."""
-        assert terraform_outputs.get("public_subnet_ids") != ""
+    def test_public_subnets_ids_exists(self, terraform_outputs):
+        """Verify public_subnets_ids output exists."""
+        assert terraform_outputs.get("public_subnets_ids") != ""
 
     def test_ec2_instance_types_exists(self, terraform_outputs):
         """Verify ec2_instance_types output exists."""

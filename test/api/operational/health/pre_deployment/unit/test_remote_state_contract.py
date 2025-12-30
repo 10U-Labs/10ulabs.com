@@ -13,7 +13,7 @@ TestRemoteStateContract = create_remote_state_contract_tests(
     endpoint_name="health",
     required_outputs=[
         "vpc_id",
-        "public_subnet_ids",
+        "public_subnets_ids",
         "security_group_id_for_runners",
     ],
 )

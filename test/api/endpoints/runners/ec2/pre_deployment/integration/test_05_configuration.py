@@ -39,9 +39,9 @@ class TestVPCConfiguration:
 
     def test_subnets_are_available(self, ec2_client, runners_outputs):
         """Verify all subnets are in available state."""
-        subnet_ids_str = runners_outputs.get("public_subnet_ids")
+        subnet_ids_str = runners_outputs.get("public_subnets_ids")
         if not subnet_ids_str:
-            pytest.skip("public_subnet_ids output not found")
+            pytest.skip("public_subnets_ids output not found")
         subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
         response = ec2_client.describe_subnets(SubnetIds=subnet_ids)
         for subnet in response["Subnets"]:

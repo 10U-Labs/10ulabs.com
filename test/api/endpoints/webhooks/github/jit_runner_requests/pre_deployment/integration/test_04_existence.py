@@ -82,9 +82,9 @@ class TestApiSharedNetworkingOutputs:
         )
 
     def test_subnet_ids_output_exists(self, api_shared_networking_outputs):
-        """Verify public_subnet_ids output exists."""
-        assert api_shared_networking_outputs.get("public_subnet_ids"), (
-            "public_subnet_ids output not found in api_shared_networking. "
+        """Verify public_subnets_ids output exists."""
+        assert api_shared_networking_outputs.get("public_subnets_ids"), (
+            "public_subnets_ids output not found in api_shared_networking. "
             "Run: cd src/api/shared/networking && terraform apply"
         )
 
@@ -184,9 +184,9 @@ class TestVPCResourceExistence:
 
     def test_subnets_exist(self, subnets_info, api_shared_networking_outputs):
         """Verify all subnets exist."""
-        subnet_ids_str = api_shared_networking_outputs.get("public_subnet_ids")
+        subnet_ids_str = api_shared_networking_outputs.get("public_subnets_ids")
         if not subnet_ids_str:
-            pytest.skip("public_subnet_ids output not available")
+            pytest.skip("public_subnets_ids output not available")
         subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
         assert len(subnets_info) == len(subnet_ids), (
             f"Expected {len(subnet_ids)} subnets, found {len(subnets_info)}. "

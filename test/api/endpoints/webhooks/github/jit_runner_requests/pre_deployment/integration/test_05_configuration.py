@@ -50,8 +50,8 @@ class TestVPCConfiguration:
 
     def test_subnets_are_available(self, subnets_info, api_shared_networking_outputs):
         """Verify all subnets are in available state."""
-        if not api_shared_networking_outputs.get("public_subnet_ids"):
-            pytest.skip("public_subnet_ids output not available")
+        if not api_shared_networking_outputs.get("public_subnets_ids"):
+            pytest.skip("public_subnets_ids output not available")
         if not subnets_info:
             pytest.skip("Subnets not found - covered by existence test")
         for subnet in subnets_info:
