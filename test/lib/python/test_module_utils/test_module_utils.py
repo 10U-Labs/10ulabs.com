@@ -4,6 +4,8 @@ import tempfile
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 from module_utils import (
     load_module_from_path,
     reset_module_state,
@@ -88,44 +90,33 @@ class TestResetModuleState:
             reset_module_state(module, nonexistent=0)
             assert not hasattr(module, "nonexistent")
 
-    def test_resets_multiple_attributes_first(self):
+    @pytest.fixture
+    def multi_attr_module_after_reset(self):
+        """Create a module with multiple attributes and reset some."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False
+        ) as f:
+            f.write("a = 1\nb = 2\nc = 3\n")
+            f.flush()
+            module = load_module_from_path("multi_module", Path(f.name))
+            module.a = 100
+            module.b = 200
+            reset_module_state(module, a=0, b=0)
+            return module
+
+    def test_resets_multiple_attributes_first(self, multi_attr_module_after_reset):
         """reset_module_state resets first attribute."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False
-        ) as f:
-            f.write("a = 1\nb = 2\nc = 3\n")
-            f.flush()
-            module = load_module_from_path("multi_module", Path(f.name))
-            module.a = 100
-            module.b = 200
-            reset_module_state(module, a=0, b=0)
-            assert module.a == 0
+        assert multi_attr_module_after_reset.a == 0
 
-    def test_resets_multiple_attributes_second(self):
+    def test_resets_multiple_attributes_second(self, multi_attr_module_after_reset):
         """reset_module_state resets second attribute."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False
-        ) as f:
-            f.write("a = 1\nb = 2\nc = 3\n")
-            f.flush()
-            module = load_module_from_path("multi_module", Path(f.name))
-            module.a = 100
-            module.b = 200
-            reset_module_state(module, a=0, b=0)
-            assert module.b == 0
+        assert multi_attr_module_after_reset.b == 0
 
-    def test_resets_multiple_attributes_leaves_third(self):
+    def test_resets_multiple_attributes_leaves_third(
+        self, multi_attr_module_after_reset
+    ):
         """reset_module_state leaves unreset attribute unchanged."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False
-        ) as f:
-            f.write("a = 1\nb = 2\nc = 3\n")
-            f.flush()
-            module = load_module_from_path("multi_module", Path(f.name))
-            module.a = 100
-            module.b = 200
-            reset_module_state(module, a=0, b=0)
-            assert module.c == 3
+        assert multi_attr_module_after_reset.c == 3
 
     def test_resets_dict_attribute(self):
         """reset_module_state can reset dict attributes."""
