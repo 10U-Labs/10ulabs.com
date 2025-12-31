@@ -353,6 +353,28 @@ jobs:
               --key-pair-id "$KP" || true
           done
           echo "Cleanup complete."
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          (
+          github.event.inputs.trigger_descendants == 'true' ||
+           contains(github.event.head_commit.message,
+           '[trigger descendants]'))
+        name: Dispatch descendant workflows
+        run: |
+          FLAGS=""
+          if [ "${{ github.event.inputs.trigger_descendants }}" = "true" ]; then
+            FLAGS="$FLAGS --trigger-descendants"
+          fi
+          INVAL="${{ github.event.inputs.invalidate_cloudfront }}"
+          if [ "$INVAL" = "true" ]; then
+            FLAGS="$FLAGS --invalidate-cloudfront"
+          fi
+          python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
+            --workflow api_endpoint_v1_runners_ec2_images_post \
+            --repo ${{ github.repository }} \
+            $FLAGS
 name: Building AMI for EC2 self-hosted runners
 on:
   workflow_dispatch:
@@ -361,10 +383,19 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
+      invalidate_cloudfront:
+        default: false
+        description: Force CloudFront cache invalidation
+        type: boolean
       spot_recovery_reason:
         description: Spot recovery trigger reason
         required: false
         type: string
+      trigger_descendants:
+        default: true
+        description: Trigger descendant workflows after this workflow completes
+        type: boolean
 permissions:
+  actions: write
   contents: read
   id-token: write
