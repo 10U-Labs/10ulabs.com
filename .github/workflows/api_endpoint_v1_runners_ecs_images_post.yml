@@ -332,11 +332,6 @@ on:
         description: Spot recovery trigger reason
         required: false
         type: string
-      trigger_descendants:
-        default: true
-        description: Trigger descendant workflows after this workflow completes
-        type: boolean
 permissions:
-  actions: write
   contents: read
   id-token: write
