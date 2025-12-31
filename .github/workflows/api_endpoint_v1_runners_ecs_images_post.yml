@@ -28,6 +28,116 @@ jobs:
         with:
           aws_region: ${{ vars.AWS_REGION }}
           oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install yamllint
+        run: python3 -m pip install yamllint
+      - name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
+          python3 -m yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/api_endpoint_v1_runners_ecs_images_post.yml
+          jsonlint -q src/api/endpoints/runners/ecs/images/post/config.json
+          jsonlint -q \
+            src/api/endpoints/runners/ecs/images/post/cloudwatch-agent-config.json
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pylint
+        run: python3 -m pip install pylint
+      - name: Run pylint on source
+        run: |
+          python3 -m pylint \
+            src/api/endpoints/runners/ecs/images/post/*.py \
+            --fail-on=C,R,W --fail-under=10.0
+      - name: Run pylint on tests
+        run: |
+          PYTHONPATH=lib/python python3 -m pylint \
+            lib/python/ test/ \
+            --fail-on=C,R,W --fail-under=10.0
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install mypy
+        run: >-
+          python3 -m pip install mypy boto3-stubs types-dockerfile-parse
+          types-PyYAML types-requests
+      - name: Run mypy on source
+        run: |
+          python3 -m mypy \
+            src/api/endpoints/runners/ecs/images/post/*.py
+      - name: Run mypy on tests
+        run: |
+          MYPYPATH=lib/python python3 -m mypy \
+            lib/python/ test/
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install jscpd
+        run: npm install -g jscpd
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/api/endpoints/runners/ecs/images/post/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install hadolint
+        run: |
+          HADOLINT_VERSION=$(curl -fsSL \
+            https://api.github.com/repos/hadolint/hadolint/releases/latest | \
+            jq -r '.tag_name')
+          HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download"
+          HADOLINT_URL="${HADOLINT_URL}/${HADOLINT_VERSION}/hadolint-Linux-x86_64"
+          sudo curl -fsSL -o /usr/local/bin/hadolint "$HADOLINT_URL"
+          sudo chmod +x /usr/local/bin/hadolint
+      - name: Validate Dockerfile
+        run: |
+          DOCKERFILE=src/api/endpoints/runners/ecs/images/post/Dockerfile
+          hadolint --ignore DL3008 --ignore DL3013 \
+            --ignore DL3015 --ignore DL3016 $DOCKERFILE
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pytest dependencies
+        run: >-
+          python3 -m pip install pytest boto3 botocore dockerfile-parse pyyaml
+          requests
+      - name: Run unit tests
+        run: |
+          TEST=test/api/endpoints/runners/ecs/images/post/pre_deployment/unit/
+          python3 -m pytest \
+            $TEST --confcutdir=test --verbose --pythonwarnings=error
       - id: config
         name: Extract configuration values
         run: |
@@ -49,104 +159,6 @@ jobs:
           echo "fargate_cpu_architecture=$FARGATE_CPU_ARCHITECTURE" \
             >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
-        run: |
-          pip install pylint mypy yamllint pytest boto3 \
-            boto3-stubs[ecr] botocore dockerfile-parse pyyaml \
-            requests types-dockerfile-parse types-PyYAML types-requests
-      - name: Lint workflow file
-        run: |
-          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
-          KEY_ORDERING='key-ordering: enable'
-          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
-          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING"
-          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
-          yamllint --strict \
-            --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/api_endpoint_v1_runners_ecs_images_post.yml
-      - name: Lint JSON config
-        run: |
-          for file in \
-            src/api/endpoints/runners/ecs/images/post/config.json \
-            src/api/endpoints/runners/ecs/images/post/cloudwatch-agent-config.json
-          do
-            echo "Validating $file"
-            jsonlint -q "$file"
-          done
-      - name: Pylint source files
-        run: |
-          POST_DIR=src/api/endpoints/runners/ecs/images/post
-          for file in $POST_DIR/*.py; do
-            pylint "$file" --fail-on=C,R,W --fail-under=10.0
-          done
-      - name: Pylint test files
-        run: |
-          BASE_DIR=src/api/endpoints/runners/ecs/images
-          TEST_DIR=test/api/endpoints/runners/ecs/images/post/
-          UNIT_DIR=$TEST_DIR/pre_deployment/unit
-          PYTHONPATH=lib/python:$BASE_DIR:$BASE_DIR/post:$UNIT_DIR pylint \
-            $TEST_DIR --fail-on=C,R,W --fail-under=10.0
-      - name: Mypy source files
-        run: |
-          POST_DIR=src/api/endpoints/runners/ecs/images/post
-          for file in $POST_DIR/*.py; do
-            python3 -m mypy "$file"
-          done
-      - name: Mypy test files
-        run: |
-          BASE_DIR=src/api/endpoints/runners/ecs/images
-          TEST_DIR=test/api/endpoints/runners/ecs/images/post/
-          UNIT_DIR=$TEST_DIR/pre_deployment/unit
-          MYPYPATH=lib/python:$BASE_DIR:$BASE_DIR/post:$UNIT_DIR \
-            python3 -m mypy --explicit-package-bases $TEST_DIR
-      - name: Check for duplicate code in source Python files
-        run: |
-          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/api/endpoints/runners/ecs/images/post/
-      - name: Check for duplicate code in test Python files
-        run: |
-          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install hadolint
-        run: |
-          HADOLINT_VERSION=$(curl -fsSL \
-            https://api.github.com/repos/hadolint/hadolint/releases/latest | \
-            jq -r '.tag_name')
-          HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64"
-          sudo curl -fsSL -o /usr/local/bin/hadolint "$HADOLINT_URL"
-          sudo chmod +x /usr/local/bin/hadolint
-      - name: Validate Dockerfile
-        run: |
-          DOCKERFILE=src/api/endpoints/runners/ecs/images/post/Dockerfile
-          hadolint --ignore DL3008 --ignore DL3013 \
-            --ignore DL3015 --ignore DL3016 $DOCKERFILE
-      - name: Run unit tests
-        run: |
-          TEST=test/api/endpoints/runners/ecs/images/post/pre_deployment/unit/
-          pytest \
-            $TEST --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -159,18 +171,9 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/ecs/images/post/pre_deployment
-          pytest \
+          python3 -m pytest \
             $TEST/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install yq
-        run: |
-          sudo wget -qO /usr/local/bin/yq \
-            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
       - id: docker_config
         name: Load Docker build configuration
         run: |
@@ -286,7 +289,7 @@ jobs:
       - name: Run post-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/ecs/images/post/post_deployment
-          pytest \
+          python3 -m pytest \
             $TEST/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Get GitHub PAT from Parameter Store
@@ -302,7 +305,7 @@ jobs:
       - name: Run E2E tests
         run: |
           TEST=test/api/endpoints/runners/ecs/images/post/post_deployment
-          pytest \
+          python3 -m pytest \
             $TEST/e2e/ --confcutdir=test --verbose --pythonwarnings=error
       - name: Promote image
         run: |
