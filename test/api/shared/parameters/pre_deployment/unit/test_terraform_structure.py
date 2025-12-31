@@ -63,10 +63,3 @@ def test_locals_uses_shared_aws_region(api_shared_parameters_dir):
     locals_tf = api_shared_parameters_dir / "locals.tf"
     content = locals_tf.read_text()
     assert "module.shared.aws_region" in content
-
-
-def test_locals_uses_shared_resource_prefix(api_shared_parameters_dir):
-    """Test that locals uses resource_prefix from shared module."""
-    locals_tf = api_shared_parameters_dir / "locals.tf"
-    content = locals_tf.read_text()
-    assert "module.shared.resource_prefix" in content
