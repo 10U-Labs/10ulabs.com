@@ -4,16 +4,15 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   deploy:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      github.event.inputs.dry_run != 'true'
+    if: github.ref == 'refs/heads/main'
     name: Deploy diagnostics endpoint
-    runs-on:
-      - ecs
-      - fargate
-      - arm
-      - spot
-      - runner-${{ github.run_id }}
+    runs-on: >-
+      ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "arm", "spot", "runner-{0}"]',
+            github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,6 +26,20 @@ jobs:
         with:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install yamllint
+        run: python3 -m pip install yamllint
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -38,6 +51,12 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_operational_diagnostics.yml
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pylint
+        run: python3 -m pip install pylint
       - name: Run pylint on source
         run: |
           python3 -m pylint \
@@ -48,12 +67,14 @@ jobs:
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ \
-            test/conftest.py \
-            test/api/conftest.py \
-            test/api/operational/conftest.py \
-            test/api/operational/diagnostics/ \
+            lib/python/ test/ \
             --fail-on=C,R,W --fail-under=10.0
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install mypy
+        run: python3 -m pip install mypy boto3-stubs types-requests
       - name: Run mypy on source
         run: |
           python3 -m mypy \
@@ -62,11 +83,13 @@ jobs:
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy \
-            lib/python/ \
-            test/conftest.py \
-            test/api/conftest.py \
-            test/api/operational/conftest.py \
-            test/api/operational/diagnostics/
+            lib/python/ test/
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install jscpd
+        run: npm install -g jscpd
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -117,6 +140,12 @@ jobs:
           cd src/api/operational/diagnostics && \
             tflint --init && \
             tflint
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pytest dependencies
+        run: python3 -m pip install pytest boto3 boto3-stubs requests
       - name: Run unit tests
         run: |
           python3 -m pytest \
@@ -167,10 +196,9 @@ on:
   workflow_call:
   workflow_dispatch:
     inputs:
-      dry_run:
+      github_hosted:
         default: false
-        description: Dry run mode (show structure without executing)
-        required: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
       invalidate_cloudfront:
         default: false

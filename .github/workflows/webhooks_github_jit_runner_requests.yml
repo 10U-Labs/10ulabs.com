@@ -109,10 +109,9 @@ jobs:
           python3 -m pylint lib/python/ $SRC/lambdas/ --fail-under=10.0
       - name: Run pylint on tests
         run: |
-          TEST=test/api/endpoints/webhooks/github/jit_runner_requests
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py $TEST/ --fail-under=10.0
+            lib/python/ test/ \
+            --fail-on=C,R,W --fail-under=10.0
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -125,10 +124,8 @@ jobs:
           python3 -m mypy lib/python/ $SRC/lambdas/
       - name: Run mypy on tests
         run: |
-          TEST=test/api/endpoints/webhooks/github/jit_runner_requests
           MYPYPATH=lib/python python3 -m mypy \
-            lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py $TEST/
+            lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||

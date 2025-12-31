@@ -341,11 +341,6 @@ name: Building AMI for EC2 self-hosted runners
 on:
   workflow_dispatch:
     inputs:
-      dry_run:
-        default: false
-        description: Dry run mode (show structure without executing)
-        required: false
-        type: boolean
       github_hosted:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
