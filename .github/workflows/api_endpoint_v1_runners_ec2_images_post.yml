@@ -150,7 +150,6 @@ jobs:
           AMI_PURPOSE_TAG=$(jq -r '.tags.ec2.ami.purpose_tag' $RUNNERS_JSON)
           AMI_PURPOSE_VALUE=$(jq -r '.tags.ec2.ami.purpose_value' $RUNNERS_JSON)
           AMI_STABLE_TAG=$(jq -r '.tags.ec2.ami.stable_tag' $RUNNERS_JSON)
-          SSM_PARAM=$(jq -r '.parameters.ec2.ami.latest' $RUNNERS_JSON)
           # Get instance types from config.json (local to this workflow)
           CONF=src/api/endpoints/runners/ec2/images/post/config.json
           DEFAULT='["m8gd.medium"]'
@@ -166,7 +165,6 @@ jobs:
           echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
           echo "security_group_id=$SG_ID" >> $GITHUB_OUTPUT
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
-          echo "ssm_param=$SSM_PARAM" >> $GITHUB_OUTPUT
       - id: config
         name: Extract configuration values
         run: |
@@ -286,24 +284,24 @@ jobs:
           SCRIPT="${SCRIPT}/promote_ami.py"
           AMI_ID="${{ steps.build.outputs.ami_id }}"
           REGION="${{ vars.AWS_REGION }}"
-          RUN_ID="${{ github.run_id }}"
-          SSM="${{ steps.api.outputs.ssm_param }}"
           TAG="${{ steps.api.outputs.ami_stable_tag }}"
           python3 $SCRIPT \
             --ami-id "$AMI_ID" \
             --region "$REGION" \
-            --run-id "$RUN_ID" \
-            --ssm-parameter-name "$SSM" \
             --tag-key "$TAG"
       - name: Clean up old AMIs
         run: |
           BASE=src/api/endpoints/runners/ec2/images/post
           REGION="${{ vars.AWS_REGION }}"
-          SSM="${{ steps.api.outputs.ssm_param }}"
+          PURPOSE_TAG="${{ steps.api.outputs.ami_purpose_tag }}"
+          PURPOSE_VALUE="${{ steps.api.outputs.ami_purpose_value }}"
+          STABLE_TAG="${{ steps.api.outputs.ami_stable_tag }}"
           python3 $BASE/cleanup.py \
             --config $BASE/config.json \
             --region "$REGION" \
-            --ssm-parameter-name "$SSM"
+            --purpose-tag "$PURPOSE_TAG" \
+            --purpose-value "$PURPOSE_VALUE" \
+            --stable-tag "$STABLE_TAG"
       - if: cancelled()
         name: Clean up on cancellation
         run: |

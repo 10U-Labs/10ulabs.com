@@ -44,11 +44,6 @@ def get_ec2_client():
     return _clients['ec2']
 
 
-def get_ssm_client():
-    """Get or create an SSM client."""
-    if 'ssm' not in _clients:
-        _clients['ssm'] = boto3.client('ssm')
-    return _clients['ssm']
 
 
 def set_client(name, client):
@@ -186,39 +181,23 @@ def list_amis() -> Dict[str, Any]:
 
 
 def get_latest_ami_details() -> Dict[str, Any]:
-    """Get details of the latest available AMI."""
+    """Get details of the latest available AMI by querying EC2 directly."""
     ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
     ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
     ami_stable_tag = os.environ['EC2_AMI_STABLE_TAG']
-    ssm_param_name = os.environ['SSM_EC2_RUNNER_AMI_LATEST']
     try:
-        try:
-            param_response = get_ssm_client().get_parameter(Name=ssm_param_name)
-            ami_id = param_response['Parameter']['Value']
-            logger.info("Retrieved latest AMI from SSM Parameter Store: %s", ami_id)
-        except ClientError as ssm_error:
-            if ssm_error.response['Error']['Code'] == 'ParameterNotFound':
-                logger.warning("SSM parameter not found, falling back to EC2 query")
-                response = get_ec2_client().describe_images(
-                    Owners=['self'],
-                    Filters=[
-                        {'Name': f'tag:{ami_purpose_tag}', 'Values': [ami_purpose_value]},
-                        {'Name': f'tag:{ami_stable_tag}', 'Values': ['true']}
-                    ]
-                )
-                if not response['Images']:
-                    return {'success': False, 'error': 'No available AMI found'}
-                images = sorted(response['Images'], key=lambda x: x['CreationDate'], reverse=True)
-                ami_id = images[0]['ImageId']
-                logger.info("Retrieved latest AMI from EC2 query: %s", ami_id)
-            else:
-                raise
-
-        image_response = get_ec2_client().describe_images(ImageIds=[ami_id])
-        if not image_response['Images']:
-            return {'success': False, 'error': f'AMI {ami_id} not found'}
-
-        latest_image = image_response['Images'][0]
+        response = get_ec2_client().describe_images(
+            Owners=['self'],
+            Filters=[
+                {'Name': f'tag:{ami_purpose_tag}', 'Values': [ami_purpose_value]},
+                {'Name': f'tag:{ami_stable_tag}', 'Values': ['true']},
+                {'Name': 'state', 'Values': ['available']}
+            ]
+        )
+        if not response['Images']:
+            return {'success': False, 'error': 'No available AMI found'}
+        images = sorted(response['Images'], key=lambda x: x['CreationDate'], reverse=True)
+        latest_image = images[0]
         result = {
             'success': True,
             'ami_id': latest_image['ImageId'],

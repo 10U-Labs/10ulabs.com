@@ -1,11 +1,4 @@
 {
-  "parameters": {
-    "ec2": {
-      "ami": {
-        "latest": "/ami/ec2-runner/latest"
-      }
-    }
-  },
   "tags": {
     "ec2": {
       "ami": {

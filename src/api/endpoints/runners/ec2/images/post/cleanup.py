@@ -34,17 +34,27 @@ def has_excluded_tags(resource_tags, exclude_tags):
     return False
 
 
-def get_latest_ami_id(ssm_client, ssm_parameter_name):
-    """Get the latest AMI ID from SSM parameter."""
+def get_latest_ami_id(ec2_client, purpose_tag, purpose_value, stable_tag):
+    """Get the latest stable AMI ID by querying EC2 directly."""
     result = None
     try:
-        response = ssm_client.get_parameter(Name=ssm_parameter_name)
-        result = response['Parameter']['Value']
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ParameterNotFound':
-            print(f"SSM Parameter {ssm_parameter_name} not found")
+        response = ec2_client.describe_images(
+            Owners=['self'],
+            Filters=[
+                {'Name': f'tag:{purpose_tag}', 'Values': [purpose_value]},
+                {'Name': f'tag:{stable_tag}', 'Values': ['true']},
+                {'Name': 'state', 'Values': ['available']}
+            ]
+        )
+        images = response.get('Images', [])
+        if images:
+            sorted_images = sorted(images, key=lambda x: x['CreationDate'], reverse=True)
+            result = sorted_images[0]['ImageId']
+            print(f"Found latest stable AMI: {result}")
         else:
-            print(f"Error retrieving latest AMI from SSM: {e}")
+            print("No stable AMI found matching tag filters")
+    except ClientError as e:
+        print(f"Error querying EC2 for latest AMI: {e}")
     return result
 
 
@@ -358,7 +368,8 @@ def print_header(args, resource_types_set, tags, exclude_tags, ami_name_prefix):
     print("EC2 RUNNER IMAGE CLEANUP")
     print("=" * 80)
     print(f"Region: {args.region}")
-    print(f"SSM Parameter: {args.ssm_parameter_name}")
+    print(f"Purpose Tag: {args.purpose_tag}={args.purpose_value}")
+    print(f"Stable Tag: {args.stable_tag}")
     if tags:
         print(f"Tag Filters: {', '.join(f'{k}={v}' for k, v in tags.items())}")
     if ami_name_prefix:
@@ -375,7 +386,7 @@ def print_protected_resources(latest_ami_id, latest_snapshot_ids):
     if latest_ami_id:
         print(f"Protected latest AMI: {latest_ami_id}")
     else:
-        print("No latest AMI found in SSM Parameter Store")
+        print("No stable AMI found matching tag filters")
     print()
     if latest_snapshot_ids:
         print(f"Protected latest snapshots: {', '.join(sorted(latest_snapshot_ids))}")
@@ -418,7 +429,6 @@ def get_resource_types(args):
 def handle_ami_cleanup(args):
     """Handle the main cleanup process based on command line arguments."""
     ec2_client = boto3.client('ec2', region_name=args.region)
-    ssm_client = boto3.client('ssm', region_name=args.region)
 
     file_config = load_config(args.config)
     tags = {**file_config.get('tags', {}), **parse_tags(args.tag)}
@@ -432,7 +442,9 @@ def handle_ami_cleanup(args):
 
     print_header(args, resource_types_set, tags, exclude_tags, ami_name_prefix)
 
-    latest_ami_id = get_latest_ami_id(ssm_client, args.ssm_parameter_name)
+    latest_ami_id = get_latest_ami_id(
+        ec2_client, args.purpose_tag, args.purpose_value, args.stable_tag
+    )
     latest_snapshot_ids = get_latest_snapshot_ids(ec2_client, latest_ami_id)
     print_protected_resources(latest_ami_id, latest_snapshot_ids)
 
@@ -510,9 +522,19 @@ def main():
         help='AWS region to clean up'
     )
     parser.add_argument(
-        '--ssm-parameter-name',
+        '--purpose-tag',
         required=True,
-        help='SSM parameter name containing latest AMI ID'
+        help='Tag key identifying AMI purpose (e.g., Purpose)'
+    )
+    parser.add_argument(
+        '--purpose-value',
+        required=True,
+        help='Tag value identifying AMI purpose (e.g., GitHub self-hosted EC2 runner)'
+    )
+    parser.add_argument(
+        '--stable-tag',
+        required=True,
+        help='Tag key identifying stable AMIs (e.g., Stable)'
     )
     parser.add_argument(
         '--dry-run',

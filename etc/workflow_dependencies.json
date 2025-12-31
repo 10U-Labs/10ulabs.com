@@ -40,19 +40,6 @@
       "test/lib/python/**"
     ]
   },
-  "api_common_parameters": {
-    "depends_on": [
-      "api_common_networking"
-    ],
-    "name": "Ensuring API common parameters exist and are properly configured",
-    "paths": [
-      ".github/workflows/api_common_parameters.yml",
-      "lib/python/**",
-      "src/api/common/parameters/**",
-      "test/api/common/parameters/**",
-      "test/lib/python/**"
-    ]
-  },
   "bootstrap": {
     "depends_on": [],
     "name": "Ensuring bootstrap infrastructure exists and is properly configured",
@@ -151,7 +138,7 @@
   },
   "api_endpoint_v1_runners_ec2_images_post": {
     "depends_on": [
-      "api_common_parameters"
+      "api_common_networking"
     ],
     "name": "Building AMI for EC2 self-hosted runners",
     "paths": [

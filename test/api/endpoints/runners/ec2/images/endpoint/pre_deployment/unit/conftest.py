@@ -25,7 +25,6 @@ def _get_handler_env_vars() -> dict[str, str]:
         'EC2_AMI_STABLE_TAG': 'Stable',
         'GITHUB_REPO': get_github_repo(),
         'GITHUB_TOKEN_SECRET_NAME': '/test/github-pat',
-        'SSM_EC2_RUNNER_AMI_LATEST': '/ami/ec2-runner/latest',
         'SUBNETS': 'subnet-test1,subnet-test2',
         'VPC_ID': 'vpc-test',
     }
@@ -61,14 +60,6 @@ def _mock_ec2_fixture(handler_module: ModuleType) -> Generator[MagicMock, None, 
     ec2_mock = MagicMock()
     handler_module.set_client('ec2', ec2_mock)
     yield ec2_mock
-
-
-@pytest.fixture(name="mock_ssm")
-def _mock_ssm_fixture(handler_module: ModuleType) -> Generator[MagicMock, None, None]:
-    """Provide a mock SSM client."""
-    mock_ssm_client = MagicMock()
-    handler_module.set_client('ssm', mock_ssm_client)
-    yield mock_ssm_client
 
 
 @pytest.fixture(name="mock_env_vars")
@@ -107,22 +98,11 @@ def _make_ami_image_fixture():
     return _make_ami_image
 
 
-@pytest.fixture(name="ssm_parameter_not_found")
-def _ssm_parameter_not_found_fixture():
-    """Return a ParameterNotFound ClientError for SSM mocking."""
-    return ClientError(
-        {'Error': {'Code': 'ParameterNotFound'}}, 'get_parameter'
-    )
-
-
-@pytest.fixture(name="mock_ssm_not_found_with_ami")
-def _mock_ssm_not_found_with_ami_fixture(mock_ec2, mock_ssm, single_ami_response):
-    """Configure mocks for SSM parameter not found with single AMI available."""
-    mock_ssm.get_parameter.side_effect = ClientError(
-        {'Error': {'Code': 'ParameterNotFound'}}, 'get_parameter'
-    )
+@pytest.fixture(name="mock_ec2_with_ami")
+def _mock_ec2_with_ami_fixture(mock_ec2, single_ami_response):
+    """Configure mock EC2 client with single AMI available."""
     mock_ec2.describe_images.return_value = single_ami_response
-    return mock_ec2, mock_ssm
+    return mock_ec2
 
 
 @pytest.fixture

@@ -56,8 +56,7 @@ resource "aws_iam_role_policy" "ssm_access" {
           "ssm:GetParameter"
         ]
         Resource = [
-          module.common.ssm_github_pat_arn,
-          "arn:aws:ssm:${local.aws_region}:${module.common.aws_account_id}:parameter${module.common.ssm_ec2_runner_ami_latest}"
+          module.common.ssm_github_pat_arn
         ]
       }
     ]
