@@ -10,13 +10,13 @@ from repo_utils import REPO_ROOT
 ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2" / "images"
 POST_DIR = ENDPOINT_SRC / "post"
 CONFIG_PATH = POST_DIR / "config.json"
-SHARED_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
+COMMON_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "common" / "outputs.tf"
 TFVARS_PATH = REPO_ROOT / "src" / "api" / "shared" / "routing" / "terraform.tfvars"
 
 
 def _parse_locals() -> dict:
     """Parse locals from shared module locals.tf."""
-    locals_path = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "locals.tf"
+    locals_path = REPO_ROOT / "lib" / "terraform" / "common" / "locals.tf"
     with open(locals_path, 'r', encoding='utf-8') as f:
         content = f.read()
     values = {}
@@ -29,7 +29,7 @@ def _parse_locals() -> dict:
 
 def _get_terraform_output_value(output_name: str) -> str:
     """ get terraform output value."""
-    with open(SHARED_MODULE_PATH, 'r', encoding='utf-8') as f:
+    with open(COMMON_MODULE_PATH, 'r', encoding='utf-8') as f:
         content = f.read()
     # Try literal string value first
     pattern = rf'output\s+"{output_name}"\s*\{{\s*value\s*=\s*"([^"]+)"'

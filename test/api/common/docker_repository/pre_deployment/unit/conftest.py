@@ -4,7 +4,7 @@ import pytest
 from repo_utils import REPO_ROOT
 
 API_SHARED_DOCKER_REPOSITORY_DIR = REPO_ROOT / "src" / "api" / "shared" / "docker_repository"
-SHARED_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
+COMMON_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "common"
 
 
 @pytest.fixture(name="api_common_docker_repository_dir")
@@ -16,4 +16,4 @@ def api_common_docker_repository_dir_fixture():
 @pytest.fixture(name="shared_module_dir")
 def shared_module_dir_fixture():
     """Provide path to shared terraform module (single source of truth)."""
-    return SHARED_MODULE_DIR
+    return COMMON_MODULE_DIR

@@ -21,7 +21,7 @@ from typing import Any, Dict, Optional
 
 from repo_utils import REPO_ROOT as _REPO_ROOT, extract_brace_block
 
-SHARED_MODULE_DIR = _REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
+COMMON_MODULE_DIR = _REPO_ROOT / "lib" / "terraform" / "common"
 
 
 def _parse_map_block(content: str, map_name: str) -> Dict[str, str]:
@@ -55,7 +55,7 @@ def parse_locals() -> Dict[str, str]:
         Dict mapping local variable names to their string values.
         Only simple string assignments are parsed (key = "value").
     """
-    locals_path = SHARED_MODULE_DIR / "locals.tf"
+    locals_path = COMMON_MODULE_DIR / "locals.tf"
     with open(locals_path, encoding="utf-8") as f:
         content = f.read()
 
@@ -73,7 +73,7 @@ def parse_lambda_handler_names() -> Dict[str, str]:
     Returns:
         Dict mapping handler keys (e.g., 'ecs_runner') to function names.
     """
-    locals_path = SHARED_MODULE_DIR / "locals.tf"
+    locals_path = COMMON_MODULE_DIR / "locals.tf"
     with open(locals_path, encoding="utf-8") as f:
         content = f.read()
 
@@ -97,7 +97,7 @@ def parse_outputs() -> Dict[str, str]:
     Returns:
         Dict mapping output names to their resolved string values.
     """
-    outputs_path = SHARED_MODULE_DIR / "outputs.tf"
+    outputs_path = COMMON_MODULE_DIR / "outputs.tf"
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
 

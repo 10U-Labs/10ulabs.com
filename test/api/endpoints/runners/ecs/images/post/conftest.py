@@ -14,7 +14,7 @@ DOCKERFILE_PATH = POST_DIR / "Dockerfile"
 
 def _get_terraform_output_value(output_name: str) -> str:
     """Extract a value from terraform outputs.tf file."""
-    shared_outputs = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
+    shared_outputs = REPO_ROOT / "lib" / "terraform" / "common" / "outputs.tf"
     with open(shared_outputs, 'r', encoding='utf-8') as f:
         content = f.read()
     pattern = rf'output\s+"{output_name}"\s*\{{\s*value\s*=\s*"([^"]+)"'
@@ -25,7 +25,7 @@ def _get_terraform_output_value(output_name: str) -> str:
 
 def _get_terraform_local_value(local_name: str) -> str:
     """Extract a value from terraform locals.tf file."""
-    shared_locals = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "locals.tf"
+    shared_locals = REPO_ROOT / "lib" / "terraform" / "common" / "locals.tf"
     with open(shared_locals, 'r', encoding='utf-8') as f:
         content = f.read()
     pattern = rf'{local_name}\s*=\s*"([^"]+)"'

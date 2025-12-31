@@ -6,12 +6,12 @@ from repo_utils import REPO_ROOT
 
 ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2" / "images"
 POST_DIR = ENDPOINT_SRC / "post"
-SHARED_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
+COMMON_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "common" / "outputs.tf"
 
 
 def _get_terraform_output_value(output_name: str) -> str:
     """Extract a value from terraform outputs.tf file."""
-    with open(SHARED_MODULE_PATH, 'r', encoding='utf-8') as f:
+    with open(COMMON_MODULE_PATH, 'r', encoding='utf-8') as f:
         content = f.read()
     pattern = rf'output\s+"{output_name}"\s*\{{\s*value\s*=\s*"([^"]+)"'
     match = re.search(pattern, content)

@@ -12,13 +12,13 @@ from repo_utils import REPO_ROOT
 pytest_plugins = ['pytest_layers', 'test_fixtures.aws']
 
 
-SHARED_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
+COMMON_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "common"
 
 
 @pytest.fixture(scope="module")
 def expected_ecr_name():
     """Get expected ECR repository name from shared module (single source of truth)."""
-    shared_outputs = (SHARED_MODULE_DIR / "outputs.tf").read_text()
+    shared_outputs = (COMMON_MODULE_DIR / "outputs.tf").read_text()
     pattern = r'output "ecr_repository_name_runners"[^}]+value\s*=\s*"([^"]+)"'
     match = re.search(pattern, shared_outputs)
     if not match:
