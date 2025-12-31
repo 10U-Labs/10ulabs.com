@@ -8,7 +8,7 @@ locals {
   ssm_ec2_runner_ami_latest = "/ami/ec2-runner/latest"
 
   # Runner configuration for self-hosted GitHub Actions runners
-  runners_config = jsondecode(file("${path.module}/../../../../etc/runners.json"))
+  runners_config = jsondecode(file("${path.module}/../../../etc/runners.json"))
 
   # AgentCore shared infrastructure
   agentcore = {

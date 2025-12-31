@@ -10,7 +10,7 @@ from repo_utils import REPO_ROOT
 pytestmark = pytest.mark.layer(1)
 
 
-SRC_DIR = REPO_ROOT / "src" / "www" / "shared"
+SRC_DIR = REPO_ROOT / "src" / "www" / "common"
 
 
 def _read_file(filename: str) -> str:

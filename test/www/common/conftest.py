@@ -22,7 +22,7 @@ def _get_hosted_zone_id(domain_name: str) -> str:
 @pytest.fixture(name="config", scope="module")
 def config_fixture(shared_config) -> Dict[str, str]:
     """Provide website configuration for tests."""
-    locals_path = REPO_ROOT / "src" / "www" / "shared" / "locals.tf"
+    locals_path = REPO_ROOT / "src" / "www" / "common" / "locals.tf"
     hosted_zone_id = _get_hosted_zone_id(shared_config.get('domain_name', ''))
     return create_website_config(locals_path, shared_config, hosted_zone_id)
 
@@ -30,7 +30,7 @@ def config_fixture(shared_config) -> Dict[str, str]:
 @pytest.fixture(name="website_src_path")
 def fixture_website_src_path():
     """Provide path to website source directory."""
-    return REPO_ROOT / "src" / "www" / "shared"
+    return REPO_ROOT / "src" / "www" / "common"
 
 
 @pytest.fixture(name="cloudfront_s3_tf_content")

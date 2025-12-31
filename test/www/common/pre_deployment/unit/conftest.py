@@ -4,7 +4,7 @@ import pytest
 from repo_utils import REPO_ROOT
 
 
-SRC_DIR = REPO_ROOT / "src" / "www" / "shared"
+SRC_DIR = REPO_ROOT / "src" / "www" / "common"
 
 
 @pytest.fixture
