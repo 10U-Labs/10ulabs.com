@@ -48,7 +48,6 @@ def config_fixture(shared_config) -> Dict[str, Any]:
         'ssm_parameter_name_for_api_key', '/api/key'
     )
     result['ecr_repository_name'] = shared_config['ecr_repository_name_runners']
-    result['workflow_runners_table_name'] = f"{shared_config['resource_prefix']}-workflow-runners"
     ecs_tfvars = get_tfvars_values(ECS_RUNNER_SRC)
     result['cluster_name'] = ecs_tfvars.get('cluster_name', '')
     result['container_name'] = ecs_tfvars.get('container_name', '')

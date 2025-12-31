@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 
 from botocore.exceptions import ClientError
 
-from aws_clients import get_dynamodb_client, get_ec2_client
+from aws_clients import get_ec2_client
 from github_runner_api import (
     cleanup_offline_runners,
     get_existing_runner_for_workflow,
@@ -39,40 +39,6 @@ def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
     if run_id:
         base_labels.append(f'runner-{run_id}')
     return base_labels
-
-
-def store_workflow_runner(
-        run_id: int, runner_type: str, resource_id: str,
-        runner_name: str, github_repo: str) -> bool:
-    """Store workflow runner information in DynamoDB."""
-    table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
-    if not table_name:
-        logger.warning("WORKFLOW_RUNNERS_TABLE not set, skipping runner storage")
-        return False
-    if not run_id:
-        logger.warning("run_id not provided, skipping runner storage")
-        return False
-    try:
-        ttl = int(time.time()) + 86400
-        get_dynamodb_client().put_item(
-            TableName=table_name,
-            Item={
-                'run_id': {'S': str(run_id)},
-                'runner_type': {'S': runner_type},
-                'resource_id': {'S': resource_id},
-                'runner_name': {'S': runner_name},
-                'github_repo': {'S': github_repo},
-                'ttl': {'N': str(ttl)},
-                'created_at': {'N': str(int(time.time()))}
-            }
-        )
-        logger.info(
-            "Stored workflow runner: run_id=%s, type=%s, resource=%s",
-            run_id, runner_type, resource_id)
-        return True
-    except ClientError as e:
-        logger.error("Failed to store workflow runner: %s", e)
-        return False
 
 
 def create_ec2_user_data(
@@ -153,8 +119,8 @@ def get_latest_ami() -> str:
 
 def trigger_ami_creation() -> Dict[str, Any]:
     """Trigger AMI creation via the image-for-ec2-runners endpoint."""
-    api_domain = os.environ['API_DOMAIN']
-    ami_creation_url = f"https://{api_domain}/v1/runners/ec2/images"
+    api_fqdn = os.environ['API_FQDN']
+    ami_creation_url = f"https://{api_fqdn}/v1/runners/ec2/images"
 
     try:
         api_key = get_api_key()
@@ -403,9 +369,6 @@ def _handle_ec2_fleet_success(
         "Launched EC2 runner for job %s: %s (%s in %s)",
         job_id, instance_id, instance['InstanceType'], az
     )
-    if run_id:
-        store_workflow_runner(
-            run_id, cfg['runner_type'], instance_id, runner_name, cfg['github_repo'])
     return {
         'success': True,
         'instance_id': instance_id,

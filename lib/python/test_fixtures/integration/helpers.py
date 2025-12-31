@@ -149,7 +149,7 @@ def skip_if_api_gateway_unavailable(api_gateway_info):
         True if the test should continue, False if skipped
     """
     if api_gateway_info.get("id") is None:
-        pytest.skip("api_gateway_rest_api_id output not available")
+        pytest.skip("api_gateway_id output not available")
         return False
     if not api_gateway_info.get("exists"):
         pytest.skip("API Gateway does not exist")
@@ -186,7 +186,7 @@ def check_state_file_readable(s3_client, bucket_name: str, state_key: str):
         raise
 
 
-def assert_api_gateway_exists(api_gateway_info, terraform_path: str = "src/api/backend/"):
+def assert_api_gateway_exists(api_gateway_info, terraform_path: str = "src/api/shared/routing/"):
     """Assert that API Gateway exists, skipping if ID is not available.
 
     Use this in Layer 4/5 existence tests to verify API Gateway presence.
@@ -196,11 +196,11 @@ def assert_api_gateway_exists(api_gateway_info, terraform_path: str = "src/api/b
         terraform_path: Path to terraform for error message
 
     Raises:
-        pytest.skip: If api_gateway_rest_api_id output is not available
+        pytest.skip: If api_gateway_id output is not available
         AssertionError: If API Gateway doesn't exist
     """
     if api_gateway_info.get("id") is None:
-        pytest.skip("api_gateway_rest_api_id output not available")
+        pytest.skip("api_gateway_id output not available")
     assert api_gateway_info.get("exists"), (
         f"API Gateway '{api_gateway_info['id']}' does not exist. "
         f"Run terraform apply in {terraform_path}"

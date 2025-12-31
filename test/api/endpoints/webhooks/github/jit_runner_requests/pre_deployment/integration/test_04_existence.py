@@ -53,7 +53,7 @@ class TestApiBackendFirehoseResources:
             firehose_delivery_stream_name
         ), (
             f"Firehose delivery stream '{firehose_delivery_stream_name}' not found. "
-            "Run: cd src/api/backend && terraform apply"
+            "Run: cd src/api/shared/routing && terraform apply"
         )
 
     def test_cloudwatch_logs_firehose_role_exists(
@@ -67,7 +67,7 @@ class TestApiBackendFirehoseResources:
         response = iam_client.get_role(RoleName=cloudwatch_logs_firehose_role_name)
         assert response["Role"]["RoleName"] == cloudwatch_logs_firehose_role_name, (
             f"IAM role '{cloudwatch_logs_firehose_role_name}' not found. "
-            "Run: cd src/api/backend && terraform apply"
+            "Run: cd src/api/shared/routing && terraform apply"
         )
 
 

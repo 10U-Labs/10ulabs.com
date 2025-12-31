@@ -5,7 +5,6 @@ import os
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from botocore.exceptions import ClientError
@@ -13,7 +12,6 @@ from botocore.exceptions import ClientError
 from aws_clients import (
     get_ecs_client,
     get_ecr_client,
-    get_dynamodb_client,
 )
 from github_runner_api import (
     get_github_token,
@@ -32,17 +30,6 @@ from runner_labels import (
 )
 
 logger = logging.getLogger()
-
-
-@dataclass
-class WorkflowRunner:
-    """Data class representing a workflow runner instance."""
-    run_id: int
-    runner_type: str
-    resource_id: str
-    runner_name: str
-    github_repo: str
-    state: str = 'requested'
 
 
 FARGATE_SPOT_MAX_RETRIES = 3
@@ -98,8 +85,8 @@ def get_latest_ecr_image() -> Dict[str, Any]:
 
 def trigger_image_creation() -> Dict[str, Any]:
     """Trigger ECR image creation via the image API."""
-    api_endpoint = os.environ['IMAGE_API_ENDPOINT']
-    image_endpoint = f'{api_endpoint}/v1/runners/ecs/images'
+    api_fqdn = os.environ['API_FQDN']
+    image_endpoint = f'https://{api_fqdn}/v1/runners/ecs/images'
 
     try:
         req = urllib.request.Request(
@@ -117,38 +104,6 @@ def trigger_image_creation() -> Dict[str, Any]:
         logger.error("Failed to trigger image creation: %s", e)
         result = {'success': False, 'error': str(e)}
     return result
-
-
-def store_workflow_runner(runner: WorkflowRunner) -> bool:
-    """Store workflow runner metadata in DynamoDB."""
-    table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
-    if not table_name:
-        logger.warning("WORKFLOW_RUNNERS_TABLE not set, skipping runner storage")
-        return False
-    if not runner.run_id:
-        logger.warning("run_id not provided, skipping runner storage")
-        return False
-    try:
-        ttl = int(time.time()) + 86400
-        get_dynamodb_client().put_item(
-            TableName=table_name,
-            Item={
-                'run_id': {'S': str(runner.run_id)},
-                'runner_type': {'S': runner.runner_type},
-                'resource_id': {'S': runner.resource_id},
-                'runner_name': {'S': runner.runner_name},
-                'github_repo': {'S': runner.github_repo},
-                'state': {'S': runner.state},
-                'ttl': {'N': str(ttl)},
-                'created_at': {'N': str(int(time.time()))}
-            }
-        )
-        log_msg = "Stored workflow runner: run_id=%s, type=%s, resource=%s"
-        logger.info(log_msg, runner.run_id, runner.runner_type, runner.resource_id)
-        return True
-    except ClientError as e:
-        logger.error("Failed to store workflow runner: %s", e)
-        return False
 
 
 def get_default_capacity_provider() -> str:
@@ -287,15 +242,6 @@ def _try_launch_in_subnet(cfg: Dict[str, Any], subnet: str, cluster: str) -> Dic
             return result
         task_arn = response['tasks'][0]['taskArn']
         logger.info("Launched Fargate runner for job %s: %s", cfg['job_id'], task_arn)
-        if cfg['run_id']:
-            runner = WorkflowRunner(
-                run_id=cfg['run_id'],
-                runner_type=cfg['runner_type'],
-                resource_id=task_arn,
-                runner_name=runner_name,
-                github_repo=cfg['github_repo']
-            )
-            store_workflow_runner(runner)
         provision_result = wait_for_fargate_task_provisioned(cluster, task_arn)
         if provision_result['spot_interrupted']:
             logger.warning("Task %s spot interrupted, will retry in different AZ", task_arn)

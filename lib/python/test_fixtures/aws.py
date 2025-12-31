@@ -202,7 +202,7 @@ def api_gateway_info(request):
     client = request.getfixturevalue("apigateway_client")
     api_shared_routing_outputs = request.getfixturevalue("api_shared_routing_outputs")
 
-    api_id = api_shared_routing_outputs.get("api_gateway_rest_api_id")
+    api_id = api_shared_routing_outputs.get("api_gateway_id")
     if not api_id:
         return {"id": None, "exists": False, "accessible": False}
 

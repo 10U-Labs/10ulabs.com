@@ -560,7 +560,7 @@ class Layer2APIGatewayAuthorizationTests:
     def test_can_access_specific_rest_api(self, api_gateway_info):
         """Verify permission to describe specific REST API."""
         if api_gateway_info["id"] is None:
-            pytest.skip("api_gateway_rest_api_id output not available")
+            pytest.skip("api_gateway_id output not available")
         assert api_gateway_info["accessible"], (
             f"No permission to describe API Gateway '{api_gateway_info['id']}'"
         )
@@ -597,18 +597,18 @@ class Layer4APIBackendPrerequisiteTests:
     Requires `api_shared_routing_outputs` and `apigateway_client` fixtures.
     """
 
-    def test_api_gateway_rest_api_id_output_exists(self, api_shared_routing_outputs):
-        """Verify api_gateway_rest_api_id output is available from api_shared_routing."""
-        assert api_shared_routing_outputs.get("api_gateway_rest_api_id"), (
-            "api_gateway_rest_api_id output not found in api_shared_routing. "
-            "Run terraform apply in src/api/backend/"
+    def test_api_gateway_id_output_exists(self, api_shared_routing_outputs):
+        """Verify api_gateway_id output is available from api_shared_routing."""
+        assert api_shared_routing_outputs.get("api_gateway_id"), (
+            "api_gateway_id output not found in api_shared_routing. "
+            "Run terraform apply in src/api/shared/routing/"
         )
 
     def test_api_gateway_exists_in_aws(self, apigateway_client, api_shared_routing_outputs):
         """Verify the API Gateway exists in AWS."""
-        api_id = api_shared_routing_outputs.get("api_gateway_rest_api_id")
+        api_id = api_shared_routing_outputs.get("api_gateway_id")
         if not api_id:
-            pytest.skip("api_gateway_rest_api_id output not available")
+            pytest.skip("api_gateway_id output not available")
         try:
             response = apigateway_client.get_rest_api(restApiId=api_id)
             assert response["id"] == api_id, (
@@ -618,7 +618,7 @@ class Layer4APIBackendPrerequisiteTests:
             if e.response["Error"]["Code"] == "NotFoundException":
                 pytest.fail(
                     f"API Gateway '{api_id}' does not exist. "
-                    "Run terraform apply in src/api/backend/"
+                    "Run terraform apply in src/api/shared/routing/"
                 )
             raise
 
@@ -632,7 +632,7 @@ class Layer5APIGatewayRegionalTests:
     def test_api_gateway_is_regional(self, api_gateway_info):
         """Verify API Gateway endpoint type is REGIONAL."""
         if api_gateway_info["id"] is None:
-            pytest.skip("api_gateway_rest_api_id output not available")
+            pytest.skip("api_gateway_id output not available")
         if not api_gateway_info["exists"]:
             pytest.skip("API Gateway does not exist")
         types = api_gateway_info.get("endpoint_types", [])

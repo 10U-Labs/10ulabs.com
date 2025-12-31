@@ -57,8 +57,8 @@ resource "aws_lambda_function" "handler" {
 
   environment {
     variables = {
-      API_DOMAIN               = data.terraform_remote_state.runners.outputs.api_endpoint
-      API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
+      API_FQDN                 = data.terraform_remote_state.api_shared_routing.outputs.api_fqdn
+      API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api_shared_routing.outputs.api_key_ssm_parameter
       EC2_AMI_PURPOSE_TAG      = local.ec2_runner_ami_purpose_tag
       EC2_AMI_PURPOSE_VALUE    = local.ec2_runner_ami_purpose_value
       EC2_AMI_STABLE_TAG       = local.ec2_runner_ami_stable_tag
@@ -66,11 +66,10 @@ resource "aws_lambda_function" "handler" {
       EC2_INSTANCE_TYPES       = join(",", var.ec2_instance_types)
       EC2_MANAGED_BY_TAG       = local.ec2_runner_managed_by_tag
       GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.runners.outputs.github_token_secret_name
+      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
       SECURITY_GROUPS          = data.terraform_remote_state.api_shared_networking.outputs.security_group_id_for_runners
       SUBNETS                  = data.terraform_remote_state.api_shared_networking.outputs.public_subnets_ids
       VPC_ID                   = data.terraform_remote_state.api_shared_networking.outputs.vpc_id
-      WORKFLOW_RUNNERS_TABLE   = data.terraform_remote_state.runners.outputs.workflow_runners_table_name
     }
   }
 
@@ -103,7 +102,7 @@ resource "aws_lambda_permission" "api_gateway" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.handler.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api.outputs.api_gateway_rest_api_id}/*"
+  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api_shared_routing.outputs.api_gateway_id}/*"
 }
 
 # SQS event source mapping for requests from /v1/runners endpoint

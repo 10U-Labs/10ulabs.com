@@ -14,14 +14,13 @@ resource "aws_lambda_function" "handler" {
       CONTAINER_NAME           = var.container_name
       ECR_REPOSITORY           = data.terraform_remote_state.api_shared_docker_repository.outputs.ecr_repository_name
       ECS_CLUSTER              = aws_ecs_cluster.runner.name
-      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.runners.outputs.github_token_secret_name
-      IMAGE_API_ENDPOINT       = data.terraform_remote_state.runners.outputs.api_endpoint
+      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      API_FQDN                 = data.terraform_remote_state.api_shared_routing.outputs.api_fqdn
       SECURITY_GROUPS          = data.terraform_remote_state.api_shared_networking.outputs.security_group_id_for_runners
       SUBNETS                  = data.terraform_remote_state.api_shared_networking.outputs.public_subnets_ids
       TASK_DEFINITION          = aws_ecs_task_definition.runner.arn
       USE_SPOT                 = tostring(module.shared.runners_config.fargate.use_spot)
       VPC_ID                   = data.terraform_remote_state.api_shared_networking.outputs.vpc_id
-      WORKFLOW_RUNNERS_TABLE   = data.terraform_remote_state.runners.outputs.workflow_runners_table_name
     }
   }
 
@@ -45,7 +44,7 @@ resource "aws_lambda_permission" "api_gateway" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.handler.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api.outputs.api_gateway_rest_api_id}/*"
+  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api_shared_routing.outputs.api_gateway_id}/*"
 }
 
 # SQS event source mapping for requests from /v1/runners endpoint

@@ -63,7 +63,7 @@ def create_remote_state_contract_tests(
 
             assert not missing, (
                 f"{endpoint_name}/{lambda_file} references api backend outputs that "
-                f"don't exist: {missing}. Add these outputs to src/api/backend/outputs.tf"
+                f"don't exist: {missing}. Add these outputs to src/api/shared/routing/outputs.tf"
             )
 
         def test_lambda_file_exists(self):

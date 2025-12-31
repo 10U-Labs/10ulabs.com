@@ -89,16 +89,6 @@ def terminate_instance(ec2_client, instance_id):
     ec2_client.terminate_instances(InstanceIds=[instance_id])
 
 
-def query_workflow_runners_by_run_id(dynamodb_client, table_name, run_id):
-    """Query DynamoDB for workflow runners by run ID."""
-    response = dynamodb_client.query(
-        TableName=table_name,
-        KeyConditionExpression='run_id = :rid',
-        ExpressionAttributeValues={':rid': {'S': str(run_id)}}
-    )
-    return response.get('Items', [])
-
-
 @pytest.fixture(name="test_ec2_runner_instance", scope="module")
 def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client, config):
     """Create and yield an EC2 runner instance for testing, then terminate it."""
@@ -237,14 +227,3 @@ def test_ec2_runner_instance_has_run_id_tag(
     tag_dict = _get_instance_tags(ec2_client, instance_id)
     has_correct_run_id = tag_dict.get("RunId") == str(run_id)
     assert has_correct_run_id
-
-
-def test_ec2_runner_stored_in_dynamodb(
-    test_ec2_runner_instance, dynamodb_client, workflow_runners_table_name, latest_ami_exists
-):
-    """Test that the EC2 runner is stored in DynamoDB."""
-    _skip_if_no_ami_or_instance(latest_ami_exists, test_ec2_runner_instance)
-    run_id = test_ec2_runner_instance.get("run_id")
-    items = query_workflow_runners_by_run_id(dynamodb_client, workflow_runners_table_name, run_id)
-    has_items = len(items) > 0
-    assert has_items

@@ -8,7 +8,7 @@ data "terraform_remote_state" "api" {
   }
 
   defaults = {
-    api_gateway_rest_api_id   = ""
+    api_gateway_id   = ""
     api_key_ssm_parameter     = ""
     api_key_ssm_parameter_arn = ""
   }

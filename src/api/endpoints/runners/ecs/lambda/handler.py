@@ -38,12 +38,10 @@ from lambda_http import (
     is_capacity_error,
 )
 from fargate_ops import (
-    WorkflowRunner,
     get_latest_ecr_image,
     trigger_image_creation,
     launch_fargate_runner,
     get_ecs_runner_status,
-    store_workflow_runner,
     get_fargate_task_status,
     is_fargate_spot_interruption,
     wait_for_fargate_task_provisioned,

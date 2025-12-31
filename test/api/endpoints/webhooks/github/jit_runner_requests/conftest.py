@@ -68,7 +68,6 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     prefix = result['resource_prefix']
     lambda_fn = result.get('webhook_handler_function_name', '')
     result['circuit_breaker_state_table_name'] = f"{prefix}-circuit-breaker-state"
-    result['workflow_runners_table_name'] = f"{prefix}-workflow-runners"
     result['lambda_runners_role_name'] = f"{lambda_fn}ServiceRole"
     result['webhook_handler_service_role_name'] = f"{lambda_fn}ServiceRole"
     # SQS queue names (PascalCase naming convention, single source of truth: terraform_config)

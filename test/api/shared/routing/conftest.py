@@ -47,7 +47,6 @@ def _add_derived_config(result: Dict[str, str]) -> None:
     stack_name = result.get('stack_name', prefix)
     lambda_fn = result.get('lambda_function_name', '')
     result['circuit_breaker_state_table_name'] = f"{prefix}-circuit-breaker-state"
-    result['workflow_runners_table_name'] = f"{prefix}-workflow-runners"
     result['firehose_delivery_stream_name'] = f"{prefix}-CloudWatchLogs"
     result['firehose_role_name'] = f"{prefix}-FirehoseCloudWatchLogs"
     result['cloudwatch_logs_firehose_role_name'] = f"{prefix}-CloudWatchLogsFirehose"

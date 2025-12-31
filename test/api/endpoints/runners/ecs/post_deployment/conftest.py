@@ -67,18 +67,6 @@ def github_run_id_fixture():
     return os.environ.get("GITHUB_RUN_ID")
 
 
-@pytest.fixture(name="dynamodb_client", scope="module")
-def dynamodb_client_fixture(aws_region):
-    """Provide a DynamoDB client for the configured region."""
-    return boto3.client("dynamodb", region_name=aws_region)
-
-
-@pytest.fixture(name="workflow_runners_table_name", scope="module")
-def workflow_runners_table_name_fixture(config):
-    """Provide the workflow runners table name from config."""
-    return config.get("workflow_runners_table_name", "TenULabs-workflow-runners")
-
-
 @pytest.fixture(name="ecr_image_count", scope="module")
 def ecr_image_count_fixture(ecr_client, config):
     """Count stable ECR images available for testing."""
@@ -124,16 +112,6 @@ def test_context_fixture(api_credentials, github_repo, github_run_id):
         "github_repo": github_repo,
         "github_run_id": github_run_id
     }
-
-
-def query_workflow_runners_by_run_id(dynamodb_client, table_name, run_id):
-    """Query workflow runners by run_id from DynamoDB."""
-    response = dynamodb_client.query(
-        TableName=table_name,
-        KeyConditionExpression='run_id = :rid',
-        ExpressionAttributeValues={':rid': {'S': str(run_id)}}
-    )
-    return response.get('Items', [])
 
 
 @pytest.fixture(name="ecr_has_latest_tag", scope="module")

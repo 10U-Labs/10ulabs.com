@@ -23,10 +23,10 @@ class TestAPIBackendPrerequisites:
     """Layer 4: Verify api_shared_routing resources exist."""
 
     def test_api_shared_routing_outputs_provides_gateway_id(self, api_shared_routing_outputs):
-        """Verify api_shared_routing terraform outputs provide api_gateway_rest_api_id."""
-        assert api_shared_routing_outputs.get("api_gateway_rest_api_id"), (
-            "api_gateway_rest_api_id output not found in api_shared_routing. "
-            "Run terraform apply in src/api/backend/"
+        """Verify api_shared_routing terraform outputs provide api_gateway_id."""
+        assert api_shared_routing_outputs.get("api_gateway_id"), (
+            "api_gateway_id output not found in api_shared_routing. "
+            "Run terraform apply in src/api/shared/routing/"
         )
 
     def test_api_gateway_rest_api_exists(self, api_gateway_info):

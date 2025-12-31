@@ -44,7 +44,6 @@ from fleet_ops import (
     get_ec2_runner_status,
     get_latest_ami,
     launch_ec2_runner,
-    store_workflow_runner,
     trigger_ami_creation,
 )
 

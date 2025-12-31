@@ -28,12 +28,6 @@ def config_fixture(shared_config):
     return result
 
 
-@pytest.fixture(name="workflow_runners_table_name", scope="module")
-def workflow_runners_table_name_fixture(config):
-    """Provide the DynamoDB table name for workflow runners."""
-    return f"{config['resource_prefix']}-workflow-runners"
-
-
 @pytest.fixture(name="test_context", scope="module")
 def test_context_fixture(api_url, api_key, config):
     """Provide test context with API credentials and GitHub info."""

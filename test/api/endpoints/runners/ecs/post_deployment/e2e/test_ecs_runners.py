@@ -10,7 +10,6 @@ from ..conftest import (
     get_ecs_task_tags,
     make_e2e_get,
     make_e2e_post,
-    query_workflow_runners_by_run_id,
 )
 
 
@@ -204,14 +203,3 @@ def test_ecs_runner_task_has_run_id_tag(test_fargate_task, ecs_context, stable_e
     assert tag_dict.get("RunId") == str(run_id)
 
 
-def test_ecs_runner_stored_in_dynamodb(
-    test_fargate_task, dynamodb_client, workflow_runners_table_name, stable_ecr_image_exists
-):
-    """Test that ECS runner is stored in DynamoDB."""
-    if not stable_ecr_image_exists:
-        pytest.skip("No stable ECR image available")
-    if test_fargate_task is None:
-        pytest.fail("Test task not created")
-    run_id = test_fargate_task.get("run_id")
-    items = query_workflow_runners_by_run_id(dynamodb_client, workflow_runners_table_name, run_id)
-    assert len(items) > 0

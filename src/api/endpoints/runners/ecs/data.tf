@@ -1,3 +1,12 @@
+data "terraform_remote_state" "bootstrap" {
+  backend = "s3"
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "bootstrap/terraform.tfstate"
+    region = module.shared.aws_region
+  }
+}
+
 data "terraform_remote_state" "api_shared_networking" {
   backend = "s3"
   config = {
@@ -16,19 +25,17 @@ data "terraform_remote_state" "api_shared_docker_repository" {
   }
 }
 
-data "terraform_remote_state" "runners" {
+data "terraform_remote_state" "api_shared_routing" {
   backend = "s3"
   config = {
     bucket = module.shared.name_for_terraform_state_bucket
-    key    = "runners/terraform.tfstate"
+    key    = "api/terraform.tfstate"
     region = module.shared.aws_region
   }
 
   defaults = {
-    api_endpoint                = ""
-    github_token_secret_name    = ""
-    workflow_runners_table_arn  = ""
-    workflow_runners_table_name = ""
+    api_fqdn                = ""
+    api_gateway_id = ""
   }
 }
 

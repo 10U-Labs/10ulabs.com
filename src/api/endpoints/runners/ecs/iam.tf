@@ -81,13 +81,6 @@ resource "aws_iam_role_policy" "lambda_execution" {
       {
         Effect = "Allow"
         Action = [
-          "dynamodb:PutItem"
-        ]
-        Resource = data.terraform_remote_state.runners.outputs.workflow_runners_table_arn
-      },
-      {
-        Effect = "Allow"
-        Action = [
           "iam:PassRole"
         ]
         Resource = [

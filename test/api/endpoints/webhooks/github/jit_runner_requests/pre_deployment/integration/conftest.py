@@ -48,7 +48,6 @@ def config(shared_config):
         'aws_region': shared_config['aws_region'],
         'idempotency_table_name': resource_names['idempotency_table'],
         'circuit_breaker_state_table_name': resource_names['circuit_breaker_state_table'],
-        'workflow_runners_table_name': resource_names['workflow_runners_table'],
         'incidents_table_name': resource_names['incidents_table'],
         'job_queue_name': resource_names['job_queue'],
         'job_dlq_name': resource_names['job_dlq'],

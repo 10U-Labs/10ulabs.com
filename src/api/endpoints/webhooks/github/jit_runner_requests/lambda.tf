@@ -474,7 +474,7 @@ resource "aws_lambda_permission" "circuit_breaker_reset_api_gateway" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.circuit_breaker_reset.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api.outputs.api_gateway_rest_api_id}/*"
+  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api.outputs.api_gateway_id}/*"
 }
 
 data "archive_file" "circuit_breaker_remediation" {
@@ -927,7 +927,6 @@ resource "aws_lambda_function" "spot_interruption_handler" {
       ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
-      WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
     }
   }
 
@@ -1069,5 +1068,5 @@ resource "aws_lambda_permission" "api_gateway" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.runners_handler.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api.outputs.api_gateway_rest_api_id}/*"
+  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api.outputs.api_gateway_id}/*"
 }

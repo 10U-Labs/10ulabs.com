@@ -52,11 +52,10 @@ def ecs_runner_handler(config: Dict[str, str]) -> Any:
         'ECS_CLUSTER': config['cluster_name'],
         'CONTAINER_NAME': config['container_name'],
         'TASK_DEFINITION': config['task_family'],
-        'IMAGE_API_ENDPOINT': f"https://{config['api_fqdn']}/{config['api_version']}",
+        'API_FQDN': config['api_fqdn'],
         'SUBNETS': 'subnet-test1,subnet-test2',
         'SECURITY_GROUPS': 'sg-test',
-        'VPC_ID': 'vpc-test',
-        'WORKFLOW_RUNNERS_TABLE': 'test-workflow-runners'
+        'VPC_ID': 'vpc-test'
     }
     with patch.dict('os.environ', env_vars):
         module = load_handler_module()

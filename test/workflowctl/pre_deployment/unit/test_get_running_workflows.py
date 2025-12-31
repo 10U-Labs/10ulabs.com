@@ -18,9 +18,9 @@ SAMPLE_GRAPH = {
         "paths": ["src/www/shared/**"],
     },
     "api_shared_routing": {
-        "name": "Ensuring API backend exists and is properly configured",
+        "name": "Ensuring API shared routing exists and is properly configured",
         "depends_on": ["www_shared"],
-        "paths": ["src/api/backend/**"],
+        "paths": ["src/api/shared/routing/**"],
     },
 }
 

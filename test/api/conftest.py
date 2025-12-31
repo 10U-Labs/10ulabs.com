@@ -60,8 +60,8 @@ def api_shared_routing_outputs(request):
     if not request.getfixturevalue("api_shared_routing_terraform_initialized"):
         pytest.skip("Terraform init failed for api_shared_routing")
     return {
-        "api_gateway_rest_api_id": terraform_output(
-            API_SHARED_ROUTING_DIR, "api_gateway_rest_api_id"
+        "api_gateway_id": terraform_output(
+            API_SHARED_ROUTING_DIR, "api_gateway_id"
         ),
     }
 

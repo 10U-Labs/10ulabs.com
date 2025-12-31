@@ -207,7 +207,7 @@ def test_launch_ec2_runner_no_ami(mock_boto_client, ec2_runner_handler):
         'SECURITY_GROUPS': 'sg-1',
         'EC2_INSTANCE_TYPES': 't3.small',
         'EC2_IAM_INSTANCE_PROFILE': 'profile',
-        'API_DOMAIN': 'api.test.com'
+        'API_FQDN': 'api.test.com'
     }):
         with patch.object(
             ec2_runner_handler, 'trigger_ami_creation', return_value={'success': True}

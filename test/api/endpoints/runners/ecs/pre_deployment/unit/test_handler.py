@@ -258,7 +258,7 @@ def test_get_latest_ecr_image_no_stable(mock_boto_client, ecs_runner_handler):
 
 def test_trigger_image_creation_success(ecs_runner_handler, mock_urllib_response_factory):
     """Test trigger image creation success."""
-    with patch.dict('os.environ', {'IMAGE_API_ENDPOINT': 'https://api.test.com'}):
+    with patch.dict('os.environ', {'API_FQDN': 'api.test.com'}):
         with patch('urllib.request.urlopen') as mock_urlopen:
             mock_response = mock_urllib_response_factory(json_data={'success': True})
             mock_urlopen.return_value = mock_response
@@ -268,7 +268,7 @@ def test_trigger_image_creation_success(ecs_runner_handler, mock_urllib_response
 
 def test_trigger_image_creation_url_error(ecs_runner_handler):
     """Test trigger image creation url error."""
-    with patch.dict('os.environ', {'IMAGE_API_ENDPOINT': 'https://api.test.com'}):
+    with patch.dict('os.environ', {'API_FQDN': 'api.test.com'}):
         with patch('urllib.request.urlopen') as mock_urlopen:
             mock_urlopen.side_effect = urllib.error.URLError('Connection failed')
             result = ecs_runner_handler.trigger_image_creation()
@@ -519,78 +519,6 @@ def test_wait_for_fargate_task_provisioned_sets_spot_interrupted_flag(ecs_runner
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['spot_interrupted'] is True
-
-
-def _create_test_workflow_runner(handler, run_id=123, state=None):
-    """Create a test WorkflowRunner instance."""
-    kwargs = {
-        'run_id': run_id, 'runner_type': 'fargate', 'resource_id': 'arn:task',
-        'runner_name': 'runner-123', 'github_repo': 'test/repo'
-    }
-    if state is not None:
-        kwargs['state'] = state
-    return handler.WorkflowRunner(**kwargs)
-
-
-def test_store_workflow_runner_stores_state_field(ecs_runner_handler):
-    """Test store workflow runner stores state field."""
-    mock_dynamodb = MagicMock()
-    with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        with patch('fargate_ops.get_dynamodb_client', return_value=mock_dynamodb):
-            runner = _create_test_workflow_runner(ecs_runner_handler, state='requested')
-            ecs_runner_handler.store_workflow_runner(runner)
-            item = mock_dynamodb.put_item.call_args[1]['Item']
-            assert item['state']['S'] == 'requested'
-
-
-def test_store_workflow_runner_defaults_state_to_requested(ecs_runner_handler):
-    """Test store workflow runner defaults state to requested."""
-    mock_dynamodb = MagicMock()
-    with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        with patch('fargate_ops.get_dynamodb_client', return_value=mock_dynamodb):
-            runner = _create_test_workflow_runner(ecs_runner_handler)
-            ecs_runner_handler.store_workflow_runner(runner)
-            item = mock_dynamodb.put_item.call_args[1]['Item']
-            assert item['state']['S'] == 'requested'
-
-
-def test_store_workflow_runner_returns_false_when_table_not_set(ecs_runner_handler):
-    """Test store workflow runner returns false when table not set."""
-    with patch.dict('os.environ', {}, clear=True):
-        runner = _create_test_workflow_runner(ecs_runner_handler)
-        result = ecs_runner_handler.store_workflow_runner(runner)
-        assert result is False
-
-
-def test_store_workflow_runner_returns_false_when_run_id_not_provided(ecs_runner_handler):
-    """Test store workflow runner returns false when run id not provided."""
-    with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        runner = _create_test_workflow_runner(ecs_runner_handler, run_id=None)
-        result = ecs_runner_handler.store_workflow_runner(runner)
-        assert result is False
-
-
-def test_store_workflow_runner_returns_true_on_success(ecs_runner_handler):
-    """Test store workflow runner returns true on success."""
-    mock_dynamodb = MagicMock()
-    with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        with patch('fargate_ops.get_dynamodb_client', return_value=mock_dynamodb):
-            runner = _create_test_workflow_runner(ecs_runner_handler)
-            result = ecs_runner_handler.store_workflow_runner(runner)
-            assert result is True
-
-
-def test_store_workflow_runner_returns_false_on_client_error(ecs_runner_handler):
-    """Test store workflow runner returns false on client error."""
-    mock_dynamodb = MagicMock()
-    mock_dynamodb.put_item.side_effect = ClientError(
-        {'Error': {'Code': 'TestError', 'Message': 'Test error'}}, 'put_item'
-    )
-    with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        with patch('fargate_ops.get_dynamodb_client', return_value=mock_dynamodb):
-            runner = _create_test_workflow_runner(ecs_runner_handler)
-            result = ecs_runner_handler.store_workflow_runner(runner)
-            assert result is False
 
 
 def _get_github_token_from_run_task(mock_ecs):

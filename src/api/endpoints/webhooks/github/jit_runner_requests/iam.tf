@@ -110,8 +110,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_dynamodb" {
         "dynamodb:Scan"
       ]
       Resource = [
-        aws_dynamodb_table.idempotency.arn,
-        aws_dynamodb_table.workflow_runners.arn
+        aws_dynamodb_table.idempotency.arn
       ]
     }]
   })
@@ -684,14 +683,6 @@ resource "aws_iam_role_policy" "spot_interruption_handler_permissions" {
         {
           Effect = "Allow"
           Action = [
-            "dynamodb:GetItem",
-            "dynamodb:Query"
-          ]
-          Resource = [aws_dynamodb_table.workflow_runners.arn]
-        },
-        {
-          Effect = "Allow"
-          Action = [
             "ec2:DescribeInstances"
           ]
           Resource = ["*"]
@@ -754,14 +745,6 @@ resource "aws_iam_role_policy" "stale_runner_cleanup_permissions" {
             "ssm:GetParameter"
           ]
           Resource = [module.shared.ssm_github_pat_arn]
-        },
-        {
-          Effect = "Allow"
-          Action = [
-            "dynamodb:Scan",
-            "dynamodb:DeleteItem"
-          ]
-          Resource = [aws_dynamodb_table.workflow_runners.arn]
         },
         {
           Effect = "Allow"

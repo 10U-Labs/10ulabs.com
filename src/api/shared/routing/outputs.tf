@@ -1,4 +1,4 @@
-output "api_domain_name" {
+output "api_fqdn" {
   value = local.api_fqdn
 }
 
@@ -6,7 +6,7 @@ output "api_endpoint" {
   value = "https://${local.api_fqdn}"
 }
 
-output "api_gateway_rest_api_id" {
+output "api_gateway_id" {
   value = aws_api_gateway_rest_api.main.id
 }
 

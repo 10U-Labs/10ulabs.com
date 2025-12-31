@@ -11,14 +11,14 @@ class TestTerraformOutputsConfiguration:
         """Verify ec2_runner_ami_purpose_value output is accessible."""
         assert api_shared_routing_outputs.get("ec2_runner_ami_purpose_value"), (
             "Missing ec2_runner_ami_purpose_value output from api_shared_routing. "
-            "Run terraform apply in src/api/backend/"
+            "Run terraform apply in src/api/shared/routing/"
         )
 
     def test_ami_stable_tag_output_exists(self, api_shared_routing_outputs):
         """Verify ec2_runner_ami_stable_tag output is accessible."""
         assert api_shared_routing_outputs.get("ec2_runner_ami_stable_tag"), (
             "Missing ec2_runner_ami_stable_tag output from api_shared_routing. "
-            "Run terraform apply in src/api/backend/"
+            "Run terraform apply in src/api/shared/routing/"
         )
 
     def test_ami_purpose_value_is_valid(self, ami_purpose_value):

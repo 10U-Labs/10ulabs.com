@@ -178,7 +178,7 @@ jobs:
         name: Get API domain from Terraform output
         run: |
           API_FQDN=$(cd src/api/shared/routing && \
-            terraform output -raw api_domain_name)
+            terraform output -raw api_fqdn)
           echo "API_FQDN=$API_FQDN" >> "$GITHUB_ENV"
       - if: >-
           github.event.inputs.invalidate_cloudfront == 'true' ||

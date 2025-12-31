@@ -167,7 +167,6 @@ def get_runners_resource_names(prefix: str | None = None) -> Dict[str, str]:
         # DynamoDB tables (idempotency uses webhook handler name per locals.tf)
         'idempotency_table': f"{webhook_handler}-idempotency",
         'circuit_breaker_state_table': f"{prefix}-circuit-breaker-state",
-        'workflow_runners_table': f"{prefix}-workflow-runners",
         'incidents_table': f"{prefix}-incidents",
         # SQS queues (PascalCase naming convention)
         'job_queue': f"{webhook_handler}Jobs",

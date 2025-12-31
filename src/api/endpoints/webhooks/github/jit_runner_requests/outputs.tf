@@ -18,14 +18,6 @@ output "security_group_id_for_runners" {
   value = data.terraform_remote_state.api_shared_networking.outputs.security_group_id_for_runners
 }
 
-output "workflow_runners_table_name" {
-  value = aws_dynamodb_table.workflow_runners.name
-}
-
-output "workflow_runners_table_arn" {
-  value = aws_dynamodb_table.workflow_runners.arn
-}
-
 output "github_token_secret_name" {
   value = module.shared.ssm_github_pat_name
 }

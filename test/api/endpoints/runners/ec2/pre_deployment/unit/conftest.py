@@ -54,13 +54,12 @@ def ec2_runner_handler(config: Dict[str, str]) -> Any:
         'GITHUB_REPO': config['github_repo'],
         'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
         'EC2_INSTANCE_TYPES': ','.join(ec2_instance_types),
-        'API_DOMAIN': config['api_fqdn'],
+        'API_FQDN': config['api_fqdn'],
         'SUBNETS': 'subnet-test1,subnet-test2',
         'SECURITY_GROUPS': 'sg-test',
         'VPC_ID': 'vpc-test',
         'EC2_IAM_INSTANCE_PROFILE': 'test-profile',
-        'API_KEY_PARAMETER_NAME': '/test/api-key',
-        'WORKFLOW_RUNNERS_TABLE': 'test-workflow-runners'
+        'API_KEY_PARAMETER_NAME': '/test/api-key'
     }
     with patch.dict('os.environ', env_vars):
         module = load_handler_module()
