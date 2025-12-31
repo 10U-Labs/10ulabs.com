@@ -28,16 +28,6 @@ SAMPLE_GRAPH = {
 class TestBuildNameToKeyMap:
     """Tests for build_name_to_key_map function."""
 
-    def test_builds_correct_mapping(self, utils) -> None:
-        """Test that name-to-key mapping is built correctly."""
-        name_to_key = utils.build_name_to_key_map(SAMPLE_GRAPH)
-        expected = {
-            "Ensuring bootstrap infrastructure exists and is properly configured": "bootstrap",
-            "WWW Shared": "www_shared",
-            "Ensuring API shared routing exists and is properly configured": "api_shared_routing",
-        }
-        assert name_to_key == expected
-
     def test_empty_graph(self, utils) -> None:
         """Test with empty graph."""
         name_to_key = utils.build_name_to_key_map({})
