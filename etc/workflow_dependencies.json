@@ -137,7 +137,7 @@
   },
   "api_endpoint_v1_runners_ec2_images": {
     "depends_on": [
-      "api_shared_parameters"
+      "api_endpoint_v1_runners_ec2_images_post"
     ],
     "name": "Ensuring the /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [
@@ -164,7 +164,7 @@
   },
   "api_endpoint_v1_runners_ecs_images": {
     "depends_on": [
-      "api_shared_docker_repository"
+      "api_endpoint_v1_runners_ecs_images_post"
     ],
     "name": "Ensuring /v1/runners/ecs/images API endpoint exists and is properly configured",
     "paths": [
