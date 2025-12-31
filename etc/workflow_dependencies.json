@@ -269,7 +269,7 @@
     "depends_on": [
       "api_endpoint_v1_contact"
     ],
-    "name": "Ensuring www shared infrastructure exists and is properly configured",
+    "name": "Ensuring www common infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/www_common.yml",
       "lib/python/**",
