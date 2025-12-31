@@ -16,7 +16,7 @@ def handler_function_name_fixture(config):
     """Get the Lambda function name from config."""
     return config.get(
         'ec2_images_handler_function_name',
-        'TenULabsRunnersEC2ImagesHandler'
+        'TenULabsImageForEC2RunnersHandler'
     )
 
 
