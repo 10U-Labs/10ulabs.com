@@ -203,7 +203,7 @@ on:
         required: false
         type: string
       trigger_descendants:
-        default: false
+        default: true
         description: Trigger descendant workflows after this workflow completes
         type: boolean
 permissions:

@@ -303,7 +303,7 @@ on:
         description: 'Workflow to start from (e.g., "bootstrap")'
         type: string
       trigger_descendants:
-        default: false
+        default: true
         description: Trigger descendant workflows after root workflows complete
         type: boolean
 permissions:
