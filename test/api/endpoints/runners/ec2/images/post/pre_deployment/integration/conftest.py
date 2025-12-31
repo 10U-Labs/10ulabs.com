@@ -6,22 +6,38 @@ test_fixtures.terraform.
 """
 import json
 
-from test.api.conftest import (
-    API_BACKEND_DIR,
-    terraform_init,
-    terraform_output,
-)
-from test_fixtures.terraform import terraform_output_json
+from repo_utils import REPO_ROOT
+from test_fixtures.terraform import terraform_init, terraform_output
 
 import boto3
 import pytest
 from botocore.exceptions import ClientError
 
+# Directory paths for terraform state and config files
+API_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "shared" / "networking"
+RUNNERS_JSON_PATH = REPO_ROOT / "etc" / "runners.json"
+EC2_IMAGES_CONFIG_PATH = (
+    REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2" / "images"
+    / "post" / "config.json"
+)
+
+
+def _load_runners_json():
+    """Load and parse the runners.json config file."""
+    with open(RUNNERS_JSON_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _load_ec2_images_config():
+    """Load and parse the EC2 images config.json file."""
+    with open(EC2_IMAGES_CONFIG_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
 
 @pytest.fixture(scope="session")
 def terraform_initialized():
     """Terraform initialized."""
-    return terraform_init(API_BACKEND_DIR)
+    return terraform_init(API_NETWORKING_DIR)
 
 
 @pytest.fixture(scope="session")
@@ -38,28 +54,34 @@ def iam_client(aws_region):
 
 @pytest.fixture(scope="session")
 def terraform_outputs(request):
-    """Terraform outputs."""
+    """Terraform outputs combined with JSON config values."""
     initialized = request.getfixturevalue("terraform_initialized")
     result = {}
     if initialized:
+        # Load values from etc/runners.json
+        runners_config = _load_runners_json()
+        ec2_ami_tags = runners_config.get("tags", {}).get("ec2", {}).get("ami", {})
+        ec2_ami_params = (
+            runners_config.get("parameters", {}).get("ec2", {}).get("ami", {})
+        )
+
+        # Load instance types from config.json
+        ec2_images_config = _load_ec2_images_config()
+        instance_types = ec2_images_config.get("instance_types", [])
+
         result = {
-            "ec2_runner_ami_purpose_value": terraform_output(
-                API_BACKEND_DIR, "ec2_runner_ami_purpose_value"
-            ),
-            "ec2_runner_ami_stable_tag": terraform_output(
-                API_BACKEND_DIR, "ec2_runner_ami_stable_tag"
-            ),
+            # Values from etc/runners.json
+            "ec2_runner_ami_purpose_value": ec2_ami_tags.get("purpose_value", ""),
+            "ec2_runner_ami_stable_tag": ec2_ami_tags.get("stable_tag", ""),
+            "ssm_parameter_name_for_latest_ami": ec2_ami_params.get("latest", ""),
+            # Values from config.json
+            "ec2_instance_types": json.dumps(instance_types),
+            # Values from terraform networking state
             "security_group_id_for_runners": terraform_output(
-                API_BACKEND_DIR, "security_group_id_for_runners"
-            ),
-            "ssm_parameter_name_for_latest_ami": terraform_output(
-                API_BACKEND_DIR, "ssm_parameter_name_for_latest_ami"
+                API_NETWORKING_DIR, "security_group_id_for_runners"
             ),
             "public_subnets_ids": terraform_output(
-                API_BACKEND_DIR, "public_subnets_ids"
-            ),
-            "ec2_instance_types": terraform_output_json(
-                API_BACKEND_DIR, "ec2_instance_types"
+                API_NETWORKING_DIR, "public_subnets_ids"
             ),
         }
     return result

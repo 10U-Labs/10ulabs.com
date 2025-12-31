@@ -26,17 +26,17 @@ def _handle_ecr_client_error(error, operation, repository_name):
 class TestECRAuthorization:
     """Test authorization to inspect ECR resources."""
 
-    def test_can_describe_ecr_repositories(self, ecr_client, api_shared_ecr_outputs):
+    def test_can_describe_ecr_repositories(self, ecr_client, api_common_ecr_outputs):
         """Verify permission to call ecr:DescribeRepositories."""
-        repository_name = get_repository_name_or_skip(api_shared_ecr_outputs)
+        repository_name = get_repository_name_or_skip(api_common_ecr_outputs)
         try:
             ecr_client.describe_repositories(repositoryNames=[repository_name])
         except ClientError as e:
             _handle_ecr_client_error(e, "ecr:DescribeRepositories", repository_name)
 
-    def test_can_list_ecr_images(self, ecr_client, api_shared_ecr_outputs):
+    def test_can_list_ecr_images(self, ecr_client, api_common_ecr_outputs):
         """Verify permission to call ecr:ListImages."""
-        repository_name = get_repository_name_or_skip(api_shared_ecr_outputs)
+        repository_name = get_repository_name_or_skip(api_common_ecr_outputs)
         try:
             ecr_client.list_images(repositoryName=repository_name, maxResults=1)
         except ClientError as e:

@@ -20,7 +20,7 @@ resource "aws_lambda_function" "handler" {
     variables = {
       ECR_REPOSITORY           = local.ecr_repository_name
       GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
+      GITHUB_TOKEN_SECRET_NAME = module.common.ssm_github_pat_name
     }
   }
 

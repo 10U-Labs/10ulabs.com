@@ -164,7 +164,7 @@ jobs:
         run: cd src/api/endpoints/rack_designer && terraform apply -auto-approve
       - name: Get website bucket name
         run: |
-          WWW="-chdir=src/www/shared"
+          WWW="-chdir=src/www/common"
           terraform $WWW init -backend=true -input=false > /dev/null
           BUCKET_NAME=$(terraform $WWW output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
@@ -197,7 +197,7 @@ jobs:
           steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
-          WWW="-chdir=src/www/shared"
+          WWW="-chdir=src/www/common"
           FQDN=$(terraform $WWW output -raw website_domain_name)
           python3 scripts/invalidate_cloudfront.py \
             --fqdn "$FQDN" \

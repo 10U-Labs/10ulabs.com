@@ -8,7 +8,7 @@ Usage:
     python3 src/workflowctl/workflowctl.py get-running-workflows --repo owner/repo
 
 Output:
-    {"workflows": ["api_shared_routing", "www_shared"]}
+    {"workflows": ["api_common_routing", "www_common"]}
 """
 import argparse
 import json

@@ -46,19 +46,19 @@ def get_runners_outputs(directory: Path) -> Dict[str, str]:
 
 
 @pytest.fixture(scope="session")
-def api_shared_routing_terraform_initialized():
-    """Initialize terraform for api_shared_routing state access."""
+def api_common_routing_terraform_initialized():
+    """Initialize terraform for api_common_routing state access."""
     return terraform_init(API_SHARED_ROUTING_DIR)
 
 
 @pytest.fixture(scope="session")
-def api_shared_routing_outputs(request):
-    """Get api_shared_routing terraform outputs.
+def api_common_routing_outputs(request):
+    """Get api_common_routing terraform outputs.
 
-    Single source of truth for api_shared_routing output names.
+    Single source of truth for api_common_routing output names.
     """
-    if not request.getfixturevalue("api_shared_routing_terraform_initialized"):
-        pytest.skip("Terraform init failed for api_shared_routing")
+    if not request.getfixturevalue("api_common_routing_terraform_initialized"):
+        pytest.skip("Terraform init failed for api_common_routing")
     return {
         "api_gateway_id": terraform_output(
             API_SHARED_ROUTING_DIR, "api_gateway_id"

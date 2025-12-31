@@ -14,8 +14,8 @@ Usage:
         --changed-files "file1.py,file2.py"
 
 Output:
-    Default: {"workflows": ["bootstrap", "www_shared"]}
-    With --levels: {"levels": [["bootstrap"], ["www_shared", "api_shared_routing"]]}
+    Default: {"workflows": ["bootstrap", "www_common"]}
+    With --levels: {"levels": [["bootstrap"], ["www_common", "api_common_routing"]]}
     With --levels --indexed: {"workflows": [{"idx": "01", "level": 1, "name": "bootstrap"}]}
 """
 
@@ -293,19 +293,19 @@ def compute_merge_roots(
     3. Find workflows with no affected ancestors (these are the merge roots)
 
     Examples:
-    - Running: [api_shared_routing], New: [api_operational_health]
-      api_operational_health is downstream of api_shared_routing
-      Merge roots: [api_shared_routing] (let it finish, it will trigger api_operational_health)
+    - Running: [api_common_routing], New: [api_operational_health]
+      api_operational_health is downstream of api_common_routing
+      Merge roots: [api_common_routing] (let it finish, it will trigger api_operational_health)
 
-    - Running: [api_shared_routing], New: [www_shared]
-      www_shared is upstream of api_shared_routing
-      Merge roots: [www_shared] (need to restart from here)
+    - Running: [api_common_routing], New: [www_common]
+      www_common is upstream of api_common_routing
+      Merge roots: [www_common] (need to restart from here)
 
-    - Running: [api_shared_routing], New: [bootstrap]
+    - Running: [api_common_routing], New: [bootstrap]
       Different branches of dependency tree
-      Merge roots: [bootstrap, ...] (depends on api_shared_routing's original root)
+      Merge roots: [bootstrap, ...] (depends on api_common_routing's original root)
 
-    - Running: [www_shared], New: []
+    - Running: [www_common], New: []
       No new changes, let running workflow finish
       Merge roots: [] (nothing to dispatch)
     """

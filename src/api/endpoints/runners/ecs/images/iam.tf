@@ -57,7 +57,7 @@ resource "aws_iam_role_policy" "ssm_access" {
         Action = [
           "ssm:GetParameter"
         ]
-        Resource = [module.shared.ssm_github_pat_arn]
+        Resource = [module.common.ssm_github_pat_arn]
       }
     ]
   })
@@ -75,7 +75,7 @@ resource "aws_iam_role_policy" "kms_access" {
         "kms:Decrypt",
         "kms:DescribeKey"
       ]
-      Resource = module.shared.kms_lambda_key_arn
+      Resource = module.common.kms_lambda_key_arn
     }]
   })
 }

@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 
 def _run_main_with_unmet_deps(dispatch_descendants: Any) -> Tuple[int, MagicMock]:
     """Run main() with unmet dependencies and return (result, mock_dispatch)."""
-    argv = ["prog", "--workflow", "www_shared", "--repo", "o/r"]
+    argv = ["prog", "--workflow", "www_common", "--repo", "o/r"]
     mock_dispatch = MagicMock()
     with patch.object(sys, "argv", argv):
         with patch(
@@ -16,7 +16,7 @@ def _run_main_with_unmet_deps(dispatch_descendants: Any) -> Tuple[int, MagicMock
         ):
             with patch(
                 "dispatch_descendants.all_dependencies_met",
-                return_value=(False, ["api_shared"])
+                return_value=(False, ["api_common"])
             ):
                 with patch("dispatch_descendants.dispatch_workflow", mock_dispatch):
                     result = dispatch_descendants.main()
@@ -25,9 +25,9 @@ def _run_main_with_unmet_deps(dispatch_descendants: Any) -> Tuple[int, MagicMock
 
 SAMPLE_GRAPH = {
     "bootstrap": {"name": "Bootstrap", "depends_on": []},
-    "www_shared": {"name": "WWW Shared", "depends_on": ["bootstrap"]},
-    "api_shared": {"name": "API Shared", "depends_on": ["bootstrap"]},
-    "www_app": {"name": "WWW App", "depends_on": ["www_shared", "api_shared"]},
+    "www_common": {"name": "WWW Common", "depends_on": ["bootstrap"]},
+    "api_common": {"name": "API Common", "depends_on": ["bootstrap"]},
+    "www_app": {"name": "WWW App", "depends_on": ["www_common", "api_common"]},
 }
 
 
@@ -122,11 +122,11 @@ class TestFindDescendants:
     def test_returns_direct_descendants(self, dispatch_descendants) -> None:
         """Test that direct descendants are returned."""
         result = dispatch_descendants.find_descendants(SAMPLE_GRAPH, "bootstrap")
-        assert set(result) == {"www_shared", "api_shared"}
+        assert set(result) == {"www_common", "api_common"}
 
     def test_returns_single_descendant(self, dispatch_descendants) -> None:
         """Test workflow with single descendant."""
-        result = dispatch_descendants.find_descendants(SAMPLE_GRAPH, "www_shared")
+        result = dispatch_descendants.find_descendants(SAMPLE_GRAPH, "www_common")
         assert result == ["www_app"]
 
     def test_returns_empty_for_unknown_workflow(self, dispatch_descendants) -> None:
@@ -225,7 +225,7 @@ class TestAllDependenciesMet:
 
         with patch("dispatch_descendants.subprocess.run", return_value=mock_result):
             result, _ = dispatch_descendants.all_dependencies_met(
-                SAMPLE_GRAPH, "www_app", "www_shared", "owner/repo", 24
+                SAMPLE_GRAPH, "www_app", "www_common", "owner/repo", 24
             )
         assert result is True
 
@@ -238,7 +238,7 @@ class TestAllDependenciesMet:
 
         with patch("dispatch_descendants.subprocess.run", return_value=mock_result):
             _, missing = dispatch_descendants.all_dependencies_met(
-                SAMPLE_GRAPH, "www_app", "www_shared", "owner/repo", 24
+                SAMPLE_GRAPH, "www_app", "www_common", "owner/repo", 24
             )
         assert missing == []
 
@@ -249,7 +249,7 @@ class TestAllDependenciesMet:
 
         with patch("dispatch_descendants.subprocess.run", return_value=mock_result):
             result, _ = dispatch_descendants.all_dependencies_met(
-                SAMPLE_GRAPH, "www_app", "www_shared", "owner/repo", 24
+                SAMPLE_GRAPH, "www_app", "www_common", "owner/repo", 24
             )
         assert result is False
 
@@ -260,9 +260,9 @@ class TestAllDependenciesMet:
 
         with patch("dispatch_descendants.subprocess.run", return_value=mock_result):
             _, missing = dispatch_descendants.all_dependencies_met(
-                SAMPLE_GRAPH, "www_app", "www_shared", "owner/repo", 24
+                SAMPLE_GRAPH, "www_app", "www_common", "owner/repo", 24
             )
-        assert missing == ["api_shared"]
+        assert missing == ["api_common"]
 
 
 class TestDispatchWorkflow:
@@ -383,7 +383,7 @@ class TestMain:
         self, dispatch_descendants
     ) -> None:
         """Test that all_dependencies_met is called for multi-dependency workflow."""
-        argv = ["prog", "--workflow", "www_shared", "--repo", "o/r"]
+        argv = ["prog", "--workflow", "www_common", "--repo", "o/r"]
         with patch.object(sys, "argv", argv):
             with patch(
                 "dispatch_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
@@ -414,7 +414,7 @@ class TestMain:
         self, dispatch_descendants
     ) -> None:
         """Test returns 1 when dispatch fails for workflow with all deps met."""
-        argv = ["prog", "--workflow", "www_shared", "--repo", "o/r"]
+        argv = ["prog", "--workflow", "www_common", "--repo", "o/r"]
         with patch.object(sys, "argv", argv):
             with patch(
                 "dispatch_descendants.load_dependency_graph",

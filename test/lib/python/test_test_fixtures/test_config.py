@@ -108,26 +108,26 @@ class TestParseLocalsFile:
         assert len(result) == 1
 
     def test_resolves_module_shared_reference(self, tf_file):
-        """Test that module.shared.* references are resolved."""
+        """Test that module.common.* references are resolved."""
         shared_config = {'aws_region': 'us-east-2'}
         result = parse_locals_file(
-            tf_file('  region = module.shared.aws_region\n'),
+            tf_file('  region = module.common.aws_region\n'),
             shared_config
         )
         assert result['region'] == 'us-east-2'
 
     def test_returns_empty_for_unresolved_reference(self, tf_file):
-        """Test that unresolved module.shared.* returns empty string."""
+        """Test that unresolved module.common.* returns empty string."""
         shared_config = {'other_key': 'value'}
         result = parse_locals_file(
-            tf_file('  region = module.shared.missing_key\n'),
+            tf_file('  region = module.common.missing_key\n'),
             shared_config
         )
         assert result['region'] == ''
 
     def test_ignores_module_reference_without_shared_config(self, tf_file):
-        """Test that module.shared.* is ignored when shared_config is None."""
-        result = parse_locals_file(tf_file('  region = module.shared.aws_region\n'), None)
+        """Test that module.common.* is ignored when shared_config is None."""
+        result = parse_locals_file(tf_file('  region = module.common.aws_region\n'), None)
         assert 'region' not in result
 
     def test_returns_empty_dict_for_empty_file(self, tf_file):

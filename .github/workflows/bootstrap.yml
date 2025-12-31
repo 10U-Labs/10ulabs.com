@@ -35,7 +35,7 @@ jobs:
         name: Extract AWS region (cold start)
         run: |
           AWS_REGION=$(grep 'aws_region' \
-            lib/terraform/modules/shared/locals.tf \
+            lib/terraform/common/locals.tf \
             | grep -v '\$' | cut -d'"' -f2)
           echo "aws_region=$AWS_REGION" >> $GITHUB_ENV
       - if: steps.oidc.outputs.is_available != 'true'
@@ -174,7 +174,7 @@ jobs:
         name: Set GitHub variables for OIDC authentication
         run: |
           AWS_REGION=$(grep 'aws_region' \
-            lib/terraform/modules/shared/locals.tf \
+            lib/terraform/common/locals.tf \
             | grep -v '\$' | cut -d'"' -f2)
           ROLE_ARN=$(cd src/bootstrap && \
             terraform output -raw arn_for_github_actions_role)

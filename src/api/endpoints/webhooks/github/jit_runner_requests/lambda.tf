@@ -72,7 +72,7 @@ resource "aws_lambda_function" "runners_handler" {
       CANCELLATION_QUEUE_URL     = aws_sqs_queue.cancellation.url
       CIRCUIT_BREAKER_TABLE_NAME = aws_dynamodb_table.circuit_breaker_state.name
       GITHUB_REPO                = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME   = module.shared.ssm_github_pat_name
+      GITHUB_TOKEN_SECRET_NAME   = module.common.ssm_github_pat_name
       IDEMPOTENCY_TABLE_NAME     = aws_dynamodb_table.idempotency.name
       IGNORED_EVENTS_QUEUE_URL   = aws_sqs_queue.ignored_events.url
       WEBHOOK_SECRET_NAME        = aws_ssm_parameter.webhook_secret.name
@@ -606,7 +606,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
       WEBHOOK_DLQ_URL = aws_sqs_queue.webhook_dlq.url
       # Note: JOB_DLQ_URL and JOB_QUEUE_URL removed - routing logic moved to /v1/runners
       SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
-      GITHUB_TOKEN_PARAMETER_NAME = module.shared.ssm_github_pat_name
+      GITHUB_TOKEN_PARAMETER_NAME = module.common.ssm_github_pat_name
     }
   }
 
@@ -813,9 +813,9 @@ resource "aws_lambda_function" "drift_recovery" {
   environment {
     variables = {
       GITHUB_REPO                 = local.github_repo_full
-      GITHUB_TOKEN_PARAMETER_NAME = module.shared.ssm_github_pat_name
+      GITHUB_TOKEN_PARAMETER_NAME = module.common.ssm_github_pat_name
       SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
-      MANAGED_VPC_ID              = data.terraform_remote_state.api_shared_networking.outputs.vpc_id
+      MANAGED_VPC_ID              = data.terraform_remote_state.api_common_networking.outputs.vpc_id
     }
   }
 
@@ -926,7 +926,7 @@ resource "aws_lambda_function" "spot_interruption_handler" {
       API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
       ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
+      GITHUB_TOKEN_SECRET_NAME = module.common.ssm_github_pat_name
     }
   }
 
@@ -1030,7 +1030,7 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
       EC2_MANAGED_BY_TAG       = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag
       ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
+      GITHUB_TOKEN_SECRET_NAME = module.common.ssm_github_pat_name
     }
   }
 

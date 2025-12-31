@@ -34,10 +34,10 @@ def bootstrap_dir_fixture() -> Path:
     return REPO_ROOT / "src" / "bootstrap"
 
 
-@pytest.fixture(name="shared_module_dir")
-def shared_module_dir_fixture() -> Path:
-    """Get the shared module directory."""
-    return REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
+@pytest.fixture(name="common_module_dir")
+def common_module_dir_fixture() -> Path:
+    """Get the common module directory."""
+    return REPO_ROOT / "lib" / "terraform" / "common"
 
 
 @pytest.fixture(name="locals_content")
@@ -52,10 +52,10 @@ def outputs_content_fixture(bootstrap_dir: Path) -> str:
     return (bootstrap_dir / "outputs.tf").read_text()
 
 
-@pytest.fixture(name="shared_outputs")
-def shared_outputs_fixture(shared_module_dir: Path) -> set[str]:
-    """Get output names from shared module."""
-    content = (shared_module_dir / "outputs.tf").read_text()
+@pytest.fixture(name="common_outputs")
+def common_outputs_fixture(common_module_dir: Path) -> set[str]:
+    """Get output names from common module."""
+    content = (common_module_dir / "outputs.tf").read_text()
     return _extract_output_names(content)
 
 

@@ -2,16 +2,16 @@
 # This queue receives requests from /v1/runners endpoint
 
 resource "aws_sqs_queue" "dlq" {
-  name                      = "${module.shared.lambda_handler_names.ec2_runner}Dlq"
+  name                      = "${module.common.lambda_handler_names.ec2_runner}Dlq"
   message_retention_seconds = 1209600 # 14 days
 
   tags = merge(local.common_tags, {
-    Name = "${module.shared.lambda_handler_names.ec2_runner}Dlq"
+    Name = "${module.common.lambda_handler_names.ec2_runner}Dlq"
   })
 }
 
 resource "aws_sqs_queue" "main" {
-  name                       = module.shared.lambda_handler_names.ec2_runner
+  name                       = module.common.lambda_handler_names.ec2_runner
   visibility_timeout_seconds = 300   # 5 minutes (Lambda timeout * 5)
   message_retention_seconds  = 28800 # 8 hours
 
@@ -21,7 +21,7 @@ resource "aws_sqs_queue" "main" {
   })
 
   tags = merge(local.common_tags, {
-    Name = module.shared.lambda_handler_names.ec2_runner
+    Name = module.common.lambda_handler_names.ec2_runner
   })
 }
 

@@ -62,8 +62,8 @@ from test_fixtures.integration.factories import (
     create_security_group_existence_test,
     create_simple_layer1_authentication_tests,
     create_sqs_fifo_queue_tests,
-    create_www_shared_fixtures,
-    create_www_shared_s3_existence_tests,
+    create_www_common_fixtures,
+    create_www_common_s3_existence_tests,
     handle_ecr_error,
 )
 from test_fixtures.integration.helpers import (
@@ -124,8 +124,8 @@ __all__ = [
     "create_security_group_existence_test",
     "create_simple_layer1_authentication_tests",
     "create_sqs_fifo_queue_tests",
-    "create_www_shared_fixtures",
-    "create_www_shared_s3_existence_tests",
+    "create_www_common_fixtures",
+    "create_www_common_s3_existence_tests",
     "handle_ecr_error",
     # Helper functions
     "assert_api_gateway_exists",

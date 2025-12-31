@@ -34,7 +34,7 @@ resource "aws_iam_role_policy" "lambda_health_handler_kms" {
         "kms:Decrypt",
         "kms:DescribeKey"
       ]
-      Resource = module.shared.kms_lambda_key_arn
+      Resource = module.common.kms_lambda_key_arn
     }]
   })
 }

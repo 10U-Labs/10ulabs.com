@@ -1,0 +1,15 @@
+"""Layer 6: Configuration tests for api_common_routing pre-deployment validation.
+
+Verify prerequisite resources are configured correctly (assumes existence passed).
+"""
+import pytest
+from test_fixtures.integration import Layer5IAMConfigurationTests
+
+pytestmark = pytest.mark.layer(6)
+
+
+class TestIAMConfiguration(Layer5IAMConfigurationTests):
+    """Layer 6: Verify IAM role configuration.
+
+    All tests inherited from base class.
+    """

@@ -47,9 +47,9 @@ class TestECRCapability:
                 "This is required to push Docker images to ECR."
             )
 
-    def test_can_list_images_in_repository(self, ecr_client, api_shared_ecr_outputs):
+    def test_can_list_images_in_repository(self, ecr_client, api_common_ecr_outputs):
         """Verify we can list images in the ECR repository."""
-        repository_name = api_shared_ecr_outputs.get("repository_name")
+        repository_name = api_common_ecr_outputs.get("repository_name")
         if not repository_name:
             pytest.skip("repository_name output not available")
         try:

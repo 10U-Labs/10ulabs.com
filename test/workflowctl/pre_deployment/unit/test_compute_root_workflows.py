@@ -14,15 +14,15 @@ SAMPLE_GRAPH = {
         "depends_on": [],
         "paths": [".github/workflows/bootstrap.yml", "src/bootstrap/**"],
     },
-    "www_shared": {
-        "name": "WWW Shared",
+    "www_common": {
+        "name": "WWW Common",
         "depends_on": ["bootstrap"],
-        "paths": [".github/workflows/www_shared.yml", "src/www/shared/**"],
+        "paths": [".github/workflows/www_common.yml", "src/www/common/**"],
     },
     "api": {
         "name": "API",
-        "depends_on": ["www_shared"],
-        "paths": [".github/workflows/api_shared_routing.yml", "src/api/shared/routing/**"],
+        "depends_on": ["www_common"],
+        "paths": [".github/workflows/api_common_routing.yml", "src/api/common/routing/**"],
     },
     "health": {
         "name": "Health",
@@ -32,7 +32,7 @@ SAMPLE_GRAPH = {
     "ecr": {
         "name": "ECR",
         "depends_on": ["health"],
-        "paths": [".github/workflows/api_shared_ecr.yml", "src/api/shared/ecr/**"],
+        "paths": [".github/workflows/api_common_ecr.yml", "src/api/common/ecr/**"],
     },
     "ecs_images": {
         "name": "Image for ECS Runners",
@@ -70,7 +70,7 @@ class TestFileMatchesPatterns:
         """Test exact file path matching returns false for different file."""
         patterns = [".github/workflows/bootstrap.yml"]
         assert not compute_roots.file_matches_patterns(
-            ".github/workflows/api_shared_routing.yml", patterns
+            ".github/workflows/api_common_routing.yml", patterns
         )
 
     def test_glob_star_match_direct_child(self, compute_roots) -> None:
@@ -133,20 +133,20 @@ class TestGetAllAncestors:
 
     def test_single_ancestor(self, compute_roots) -> None:
         """Test workflow with one direct dependency."""
-        ancestors = compute_roots.get_all_ancestors("www_shared", SAMPLE_GRAPH)
+        ancestors = compute_roots.get_all_ancestors("www_common", SAMPLE_GRAPH)
         assert ancestors == {"bootstrap"}
 
     def test_transitive_ancestors(self, compute_roots) -> None:
         """Test workflow with transitive dependencies."""
         ancestors = compute_roots.get_all_ancestors("api", SAMPLE_GRAPH)
-        assert ancestors == {"bootstrap", "www_shared"}
+        assert ancestors == {"bootstrap", "www_common"}
 
     def test_deep_ancestors(self, compute_roots) -> None:
         """Test workflow deep in the dependency chain."""
         ancestors = compute_roots.get_all_ancestors("contact", SAMPLE_GRAPH)
         expected = {
             "bootstrap",
-            "www_shared",
+            "www_common",
             "api",
             "health",
             "ecr",
@@ -165,7 +165,7 @@ class TestGetAllAncestors:
         """Test that ancestor computation caches direct ancestor."""
         cache: dict[str, set[str]] = {}
         compute_roots.get_all_ancestors("api", SAMPLE_GRAPH, cache)
-        assert "www_shared" in cache
+        assert "www_common" in cache
 
     def test_caching_stores_transitive_ancestor(self, compute_roots) -> None:
         """Test that ancestor computation caches transitive ancestor."""
@@ -185,7 +185,7 @@ class TestGetAffectedWorkflows:
 
     def test_single_file_workflow_file(self, compute_roots) -> None:
         """Test changing a workflow file itself."""
-        changed = [".github/workflows/api_shared_routing.yml"]
+        changed = [".github/workflows/api_common_routing.yml"]
         affected = compute_roots.get_affected_workflows(changed, SAMPLE_GRAPH)
         assert affected == {"api"}
 
@@ -197,7 +197,7 @@ class TestGetAffectedWorkflows:
 
     def test_multiple_files_multiple_workflows(self, compute_roots) -> None:
         """Test files affecting multiple workflows."""
-        changed = ["src/bootstrap/main.tf", "src/api/shared/routing/main.tf"]
+        changed = ["src/bootstrap/main.tf", "src/api/common/routing/main.tf"]
         affected = compute_roots.get_affected_workflows(changed, SAMPLE_GRAPH)
         assert affected == {"bootstrap", "api"}
 
@@ -219,17 +219,17 @@ class TestComputeRootWorkflows:
 
     def test_ancestor_and_descendant_changed(self, compute_roots) -> None:
         """Test that only ancestor is returned when both are changed."""
-        changed = ["src/bootstrap/main.tf", "src/www/shared/main.tf"]
+        changed = ["src/bootstrap/main.tf", "src/www/common/main.tf"]
         roots = compute_roots.compute_root_workflows(changed, SAMPLE_GRAPH)
-        # Only bootstrap should be root; www_shared will cascade
+        # Only bootstrap should be root; www_common will cascade
         assert roots == ["bootstrap"]
 
     def test_deep_chain_only_root(self, compute_roots) -> None:
         """Test deep chain returns only the root."""
         changed = [
             "src/bootstrap/main.tf",
-            "src/www/shared/main.tf",
-            "src/api/shared/routing/main.tf",
+            "src/www/common/main.tf",
+            "src/api/common/routing/main.tf",
             "src/api/operational/health/main.tf",
         ]
         roots = compute_roots.compute_root_workflows(changed, SAMPLE_GRAPH)
@@ -250,7 +250,7 @@ class TestComputeRootWorkflows:
 
     def test_middle_of_chain(self, compute_roots) -> None:
         """Test changing middle of chain returns that workflow as root."""
-        changed = ["src/api/shared/routing/main.tf"]
+        changed = ["src/api/common/routing/main.tf"]
         roots = compute_roots.compute_root_workflows(changed, SAMPLE_GRAPH)
         assert roots == ["api"]
 
@@ -338,7 +338,7 @@ class TestGetAllDescendants:
         """Test root workflow has all others as descendants."""
         descendants = utils.get_all_descendants("bootstrap", SAMPLE_GRAPH)
         expected = {
-            "www_shared",
+            "www_common",
             "api",
             "health",
             "ecr",
@@ -418,25 +418,25 @@ class TestTopologicalSort:
 
     def test_linear_chain(self, compute_roots) -> None:
         """Test sorting linear dependency chain."""
-        workflows = {"bootstrap", "www_shared", "api"}
+        workflows = {"bootstrap", "www_common", "api"}
         result = compute_roots.topological_sort(workflows, SAMPLE_GRAPH)
-        assert result == ["bootstrap", "www_shared", "api"]
+        assert result == ["bootstrap", "www_common", "api"]
 
-    def test_respects_dependencies_bootstrap_before_www_shared(self, compute_roots) -> None:
-        """Test that bootstrap comes before www_shared."""
-        workflows = {"api", "bootstrap", "www_shared", "health"}
+    def test_respects_dependencies_bootstrap_before_www_common(self, compute_roots) -> None:
+        """Test that bootstrap comes before www_common."""
+        workflows = {"api", "bootstrap", "www_common", "health"}
         result = compute_roots.topological_sort(workflows, SAMPLE_GRAPH)
-        assert result.index("bootstrap") < result.index("www_shared")
+        assert result.index("bootstrap") < result.index("www_common")
 
-    def test_respects_dependencies_www_shared_before_api(self, compute_roots) -> None:
-        """Test that www_shared comes before api."""
-        workflows = {"api", "bootstrap", "www_shared", "health"}
+    def test_respects_dependencies_www_common_before_api(self, compute_roots) -> None:
+        """Test that www_common comes before api."""
+        workflows = {"api", "bootstrap", "www_common", "health"}
         result = compute_roots.topological_sort(workflows, SAMPLE_GRAPH)
-        assert result.index("www_shared") < result.index("api")
+        assert result.index("www_common") < result.index("api")
 
     def test_respects_dependencies_api_before_health(self, compute_roots) -> None:
         """Test that api comes before health."""
-        workflows = {"api", "bootstrap", "www_shared", "health"}
+        workflows = {"api", "bootstrap", "www_common", "health"}
         result = compute_roots.topological_sort(workflows, SAMPLE_GRAPH)
         assert result.index("api") < result.index("health")
 
@@ -469,9 +469,9 @@ class TestTopologicalSortLevels:
 
     def test_linear_chain(self, compute_roots) -> None:
         """Test linear chain returns one workflow per level."""
-        levels = compute_roots.topological_sort_levels({"bootstrap", "www_shared", "api"},
+        levels = compute_roots.topological_sort_levels({"bootstrap", "www_common", "api"},
                                          SAMPLE_GRAPH)
-        assert levels == [["bootstrap"], ["www_shared"], ["api"]]
+        assert levels == [["bootstrap"], ["www_common"], ["api"]]
 
     def test_parallel_workflows_structure(self, compute_roots) -> None:
         """Test parallel workflows are grouped correctly by level."""
@@ -507,7 +507,7 @@ class TestComputeExecutionPlan:
         plan = compute_roots.compute_execution_plan(["bootstrap"], SAMPLE_GRAPH)
         expected = [
             "bootstrap",
-            "www_shared",
+            "www_common",
             "api",
             "health",
             "ecr",
@@ -754,26 +754,26 @@ class TestComputeMergeRoots:
     def test_running_downstream_of_new_root(self, compute_roots) -> None:
         """Test when running workflow is downstream of new changes.
 
-        Scenario: Chain at api, new changes affect www_shared
-        www_shared is upstream of api, so merge root is www_shared.
+        Scenario: Chain at api, new changes affect www_common
+        www_common is upstream of api, so merge root is www_common.
         """
         running = ["api"]
-        new_roots = ["www_shared"]
+        new_roots = ["www_common"]
         result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
-        # www_shared is ancestor of api, so www_shared is the merge root
-        assert result == ["www_shared"]
+        # www_common is ancestor of api, so www_common is the merge root
+        assert result == ["www_common"]
 
     def test_running_upstream_of_new_root(self, compute_roots) -> None:
         """Test when running workflow is upstream of new changes.
 
-        Scenario: Chain at www_shared, new changes affect health
-        www_shared is upstream of health, so merge root is www_shared.
+        Scenario: Chain at www_common, new changes affect health
+        www_common is upstream of health, so merge root is www_common.
         """
-        running = ["www_shared"]
+        running = ["www_common"]
         new_roots = ["health"]
         result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
-        # www_shared is ancestor of health, so www_shared is the merge root
-        assert result == ["www_shared"]
+        # www_common is ancestor of health, so www_common is the merge root
+        assert result == ["www_common"]
 
     def test_running_and_new_same_level(self, compute_roots) -> None:
         """Test when running and new are at the same workflow.
@@ -846,13 +846,13 @@ class TestComputeMergeRoots:
     def test_deep_chain_merge(self, compute_roots) -> None:
         """Test merge in deep dependency chain.
 
-        Scenario: Running at health, new changes affect www_shared
-        Should restart from www_shared.
+        Scenario: Running at health, new changes affect www_common
+        Should restart from www_common.
         """
         running = ["health"]
-        new_roots = ["www_shared"]
+        new_roots = ["www_common"]
         result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
-        assert result == ["www_shared"]
+        assert result == ["www_common"]
 
     def test_unknown_running_workflow_filtered(self, compute_roots) -> None:
         """Test that unknown workflow keys are filtered out."""
@@ -865,10 +865,10 @@ class TestComputeMergeRoots:
     def test_mix_of_known_and_unknown(self, compute_roots) -> None:
         """Test with mix of known and unknown workflows."""
         running = ["api", "unknown_workflow"]
-        new_roots = ["www_shared"]
+        new_roots = ["www_common"]
         result = compute_roots.compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
-        # www_shared is ancestor of api, unknown is filtered
-        assert result == ["www_shared"]
+        # www_common is ancestor of api, unknown is filtered
+        assert result == ["www_common"]
 
     def test_returns_empty_when_both_inputs_empty(self, compute_roots) -> None:
         """Test returns [] when running and new_roots are both empty."""

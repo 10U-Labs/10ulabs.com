@@ -26,19 +26,19 @@ SAMPLE_GRAPH: Dict[str, Dict[str, Any]] = {
         "depends_on": [],
         "paths": [".github/workflows/bootstrap.yml", "src/bootstrap/**"],
     },
-    "www_shared": {
-        "name": "WWW Shared",
+    "www_common": {
+        "name": "WWW Common",
         "depends_on": ["bootstrap"],
-        "paths": [".github/workflows/www_shared.yml", "src/www/shared/**"],
+        "paths": [".github/workflows/www_common.yml", "src/www/common/**"],
     },
-    "api_shared_routing": {
-        "name": "API Shared Routing",
-        "depends_on": ["www_shared"],
-        "paths": [".github/workflows/api_shared_routing.yml", "src/api/shared/routing/**"],
+    "api_common_routing": {
+        "name": "API Common Routing",
+        "depends_on": ["www_common"],
+        "paths": [".github/workflows/api_common_routing.yml", "src/api/common/routing/**"],
     },
     "api_operational_health": {
         "name": "API Operational Health",
-        "depends_on": ["api_shared_routing"],
+        "depends_on": ["api_common_routing"],
         "paths": [
             ".github/workflows/api_operational_health.yml",
             "src/api/operational/health/**",
@@ -133,7 +133,7 @@ def sample_graph() -> Dict[str, Dict[str, Any]]:
     """Provide a standard dependency graph for testing.
 
     This graph represents a linear chain:
-    bootstrap -> www_shared -> api_shared_routing -> api_operational_health
+    bootstrap -> www_common -> api_common_routing -> api_operational_health
 
     Each workflow has name, depends_on, and paths fields.
     """

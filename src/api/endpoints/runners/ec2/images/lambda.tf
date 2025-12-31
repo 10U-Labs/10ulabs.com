@@ -13,7 +13,7 @@ data "archive_file" "handler" {
 
 resource "aws_lambda_function" "handler" {
   filename         = data.archive_file.handler.output_path
-  function_name    = module.shared.lambda_handler_names.image_for_ec2_runners
+  function_name    = module.common.lambda_handler_names.image_for_ec2_runners
   role             = aws_iam_role.lambda.arn
   handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.handler.output_base64sha256
@@ -29,10 +29,10 @@ resource "aws_lambda_function" "handler" {
       EC2_AMI_PURPOSE_VALUE     = local.ami_purpose_value
       EC2_AMI_STABLE_TAG        = local.ami_stable_tag
       GITHUB_REPO               = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME  = module.shared.ssm_github_pat_name
-      SSM_EC2_RUNNER_AMI_LATEST = module.shared.ssm_ec2_runner_ami_latest
-      SUBNETS                   = data.terraform_remote_state.api_shared_networking.outputs.public_subnets_ids
-      VPC_ID                    = data.terraform_remote_state.api_shared_networking.outputs.vpc_id
+      GITHUB_TOKEN_SECRET_NAME  = module.common.ssm_github_pat_name
+      SSM_EC2_RUNNER_AMI_LATEST = module.common.ssm_ec2_runner_ami_latest
+      SUBNETS                   = data.terraform_remote_state.api_common_networking.outputs.public_subnets_ids
+      VPC_ID                    = data.terraform_remote_state.api_common_networking.outputs.vpc_id
     }
   }
 
@@ -42,7 +42,7 @@ resource "aws_lambda_function" "handler" {
   }
 
   tags = merge(local.common_tags, {
-    Name = module.shared.lambda_handler_names.image_for_ec2_runners
+    Name = module.common.lambda_handler_names.image_for_ec2_runners
   })
 
   # Force Lambda replacement when IAM role is recreated to refresh KMS grant
@@ -52,11 +52,11 @@ resource "aws_lambda_function" "handler" {
 }
 
 resource "aws_cloudwatch_log_group" "handler" {
-  name              = "/aws/lambda/${module.shared.lambda_handler_names.image_for_ec2_runners}"
+  name              = "/aws/lambda/${module.common.lambda_handler_names.image_for_ec2_runners}"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${module.shared.lambda_handler_names.image_for_ec2_runners}Logs"
+    Name = "${module.common.lambda_handler_names.image_for_ec2_runners}Logs"
   })
 }
 
@@ -65,5 +65,5 @@ resource "aws_lambda_permission" "api_gateway" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.handler.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api_shared_routing.outputs.api_gateway_id}/*"
+  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api_common_routing.outputs.api_gateway_id}/*"
 }

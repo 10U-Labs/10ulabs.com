@@ -6,7 +6,7 @@ data "archive_file" "contact_handler" {
 
 resource "aws_lambda_function" "contact_handler" {
   filename         = data.archive_file.contact_handler.output_path
-  function_name    = module.shared.lambda_handler_names.contact
+  function_name    = module.common.lambda_handler_names.contact
   role             = aws_iam_role.lambda_contact_handler.arn
   handler          = "handler.handler"
   source_code_hash = data.archive_file.contact_handler.output_base64sha256
@@ -28,7 +28,7 @@ resource "aws_lambda_function" "contact_handler" {
   }
 
   tags = merge(local.common_tags, {
-    Name = module.shared.lambda_handler_names.contact
+    Name = module.common.lambda_handler_names.contact
   })
 
   depends_on = [
@@ -45,11 +45,11 @@ resource "aws_lambda_function" "contact_handler" {
 }
 
 resource "aws_cloudwatch_log_group" "contact_handler" {
-  name              = "/aws/lambda/${module.shared.lambda_handler_names.contact}"
+  name              = "/aws/lambda/${module.common.lambda_handler_names.contact}"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${module.shared.lambda_handler_names.contact}Logs"
+    Name = "${module.common.lambda_handler_names.contact}Logs"
   })
 }
 

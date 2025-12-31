@@ -1,4 +1,4 @@
-# Note: aws_ssm_parameter.latest_ami moved to src/api/shared/parameters/
+# Note: aws_ssm_parameter.latest_ami moved to src/api/common/parameters/
 
 resource "aws_ssm_parameter" "webhook_secret" {
   name        = local.ssm_parameter_name_for_webhook_secret

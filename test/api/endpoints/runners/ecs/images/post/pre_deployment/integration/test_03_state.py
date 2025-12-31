@@ -15,14 +15,14 @@ pytestmark = pytest.mark.layer(3)
 class TestECRImageState:
     """Verify ECR image tags are in a consistent state."""
 
-    def test_available_tag_not_orphaned(self, ecr_client, api_shared_ecr_outputs):
+    def test_available_tag_not_orphaned(self, ecr_client, api_common_ecr_outputs):
         """Verify 'available' tag is not orphaned from a failed build.
 
         If 'available' exists but 'stable' doesn't, it indicates a build
         completed but promotion failed, leaving the repository in an
         inconsistent state.
         """
-        repository_name = api_shared_ecr_outputs.get("repository_name")
+        repository_name = api_common_ecr_outputs.get("repository_name")
         if not repository_name:
             pytest.skip("repository_name output not available")
 
@@ -52,12 +52,12 @@ class TestECRImageState:
                 "Run the promote_docker_image.py script to fix this state."
             )
 
-    def test_no_duplicate_stable_digests(self, ecr_client, api_shared_ecr_outputs):
+    def test_no_duplicate_stable_digests(self, ecr_client, api_common_ecr_outputs):
         """Verify only one image has the 'stable' tag.
 
         Multiple images with 'stable' tag would indicate a corrupt state.
         """
-        repository_name = api_shared_ecr_outputs.get("repository_name")
+        repository_name = api_common_ecr_outputs.get("repository_name")
         if not repository_name:
             pytest.skip("repository_name output not available")
 

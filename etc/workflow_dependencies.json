@@ -1,55 +1,55 @@
 {
-  "api_shared_routing": {
+  "api_common_routing": {
     "depends_on": [
       "bootstrap"
     ],
-    "name": "Ensuring API shared routing exists and is properly configured",
+    "name": "Ensuring API common routing exists and is properly configured",
     "paths": [
-      ".github/workflows/api_shared_routing.yml",
+      ".github/workflows/api_common_routing.yml",
       "lib/python/**",
-      "src/api/shared/routing/**",
+      "src/api/common/routing/**",
       "src/www/api/**",
       "test/api/conftest.py",
-      "test/api/shared/routing/**",
+      "test/api/common/routing/**",
       "test/lib/python/**"
     ]
   },
-  "api_shared_docker_repository": {
+  "api_common_docker_repository": {
     "depends_on": [
       "api_endpoint_v1_runners_ec2"
     ],
-    "name": "Ensuring API shared Docker repository exists and is properly configured",
+    "name": "Ensuring API common Docker repository exists and is properly configured",
     "paths": [
-      ".github/workflows/api_shared_docker_repository.yml",
+      ".github/workflows/api_common_docker_repository.yml",
       "lib/python/**",
-      "src/api/shared/docker_repository/**",
-      "test/api/shared/docker_repository/**",
+      "src/api/common/docker_repository/**",
+      "test/api/common/docker_repository/**",
       "test/lib/python/**"
     ]
   },
-  "api_shared_networking": {
+  "api_common_networking": {
     "depends_on": [
       "api_operational_diagnostics"
     ],
-    "name": "Ensuring API shared networking infrastructure exists and is properly configured",
+    "name": "Ensuring API common networking infrastructure exists and is properly configured",
     "paths": [
-      ".github/workflows/api_shared_networking.yml",
+      ".github/workflows/api_common_networking.yml",
       "lib/python/**",
-      "src/api/shared/networking/**",
-      "test/api/shared/networking/**",
+      "src/api/common/networking/**",
+      "test/api/common/networking/**",
       "test/lib/python/**"
     ]
   },
-  "api_shared_parameters": {
+  "api_common_parameters": {
     "depends_on": [
-      "api_shared_networking"
+      "api_common_networking"
     ],
-    "name": "Ensuring API shared parameters exist and are properly configured",
+    "name": "Ensuring API common parameters exist and are properly configured",
     "paths": [
-      ".github/workflows/api_shared_parameters.yml",
+      ".github/workflows/api_common_parameters.yml",
       "lib/python/**",
-      "src/api/shared/parameters/**",
-      "test/api/shared/parameters/**",
+      "src/api/common/parameters/**",
+      "test/api/common/parameters/**",
       "test/lib/python/**"
     ]
   },
@@ -59,7 +59,7 @@
     "paths": [
       ".github/workflows/bootstrap.yml",
       "lib/python/**",
-      "lib/terraform/modules/shared/**",
+      "lib/terraform/common/**",
       "src/bootstrap/**",
       "test/bootstrap/**",
       "test/lib/python/**"
@@ -151,7 +151,7 @@
   },
   "api_endpoint_v1_runners_ec2_images_post": {
     "depends_on": [
-      "api_shared_parameters"
+      "api_common_parameters"
     ],
     "name": "Building AMI for EC2 self-hosted runners",
     "paths": [
@@ -178,7 +178,7 @@
   },
   "api_endpoint_v1_runners_ecs_images_post": {
     "depends_on": [
-      "api_shared_docker_repository"
+      "api_common_docker_repository"
     ],
     "name": "Building Docker image for ECS runners",
     "paths": [
@@ -233,7 +233,7 @@
   },
   "api_operational_health": {
     "depends_on": [
-      "api_shared_routing"
+      "api_common_routing"
     ],
     "name": "Ensuring the /health API endpoint exists and is properly configured",
     "paths": [
@@ -254,7 +254,7 @@
   },
   "www_home": {
     "depends_on": [
-      "www_shared"
+      "www_common"
     ],
     "name": "Ensuring www home page exists and is properly configured",
     "paths": [
@@ -265,21 +265,21 @@
       "test/www/paths/home/**"
     ]
   },
-  "www_shared": {
+  "www_common": {
     "depends_on": [
       "api_endpoint_v1_contact"
     ],
     "name": "Ensuring www shared infrastructure exists and is properly configured",
     "paths": [
-      ".github/workflows/www_shared.yml",
+      ".github/workflows/www_common.yml",
       "lib/python/**",
-      "lib/terraform/modules/cloudfront_waf/**",
-      "lib/terraform/modules/s3_bucket/**",
-      "src/www/shared/**",
+      "lib/terraform/cloudfront_waf/**",
+      "lib/terraform/s3_bucket/**",
+      "src/www/common/**",
       "test/lib/python/**",
-      "test/lib/terraform/modules/cloudfront_waf/**",
-      "test/lib/terraform/modules/s3_bucket/**",
-      "test/www/shared/**"
+      "test/lib/terraform/cloudfront_waf/**",
+      "test/lib/terraform/s3_bucket/**",
+      "test/www/common/**"
     ]
   }
 }

@@ -6,7 +6,7 @@
 locals {
   firehose_arn      = data.terraform_remote_state.api.outputs.firehose_cloudwatch_logs_arn
   firehose_role_arn = data.terraform_remote_state.api.outputs.cloudwatch_logs_firehose_role_arn
-  # Only create subscription filters if Firehose exists (api_shared_routing deployed)
+  # Only create subscription filters if Firehose exists (api_common_routing deployed)
   create_subscriptions = local.firehose_arn != ""
 }
 

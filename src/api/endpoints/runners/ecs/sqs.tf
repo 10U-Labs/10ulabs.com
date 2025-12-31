@@ -2,18 +2,18 @@
 # This queue receives requests from /v1/runners endpoint
 
 resource "aws_sqs_queue" "dlq" {
-  name                      = "${module.shared.lambda_handler_names.ecs_runner}Dlq"
+  name                      = "${module.common.lambda_handler_names.ecs_runner}Dlq"
   message_retention_seconds = 1209600 # 14 days
 
   tags = {
-    Name      = "${module.shared.lambda_handler_names.ecs_runner}Dlq"
+    Name      = "${module.common.lambda_handler_names.ecs_runner}Dlq"
     ManagedBy = "terraform"
     Purpose   = "ecs-runner"
   }
 }
 
 resource "aws_sqs_queue" "main" {
-  name                       = module.shared.lambda_handler_names.ecs_runner
+  name                       = module.common.lambda_handler_names.ecs_runner
   visibility_timeout_seconds = 180   # 3 minutes (Lambda timeout * 6)
   message_retention_seconds  = 14400 # 4 hours
 
@@ -23,7 +23,7 @@ resource "aws_sqs_queue" "main" {
   })
 
   tags = {
-    Name      = module.shared.lambda_handler_names.ecs_runner
+    Name      = module.common.lambda_handler_names.ecs_runner
     ManagedBy = "terraform"
     Purpose   = "ecs-runner"
   }

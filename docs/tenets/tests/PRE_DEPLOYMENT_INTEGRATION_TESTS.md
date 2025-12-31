@@ -526,7 +526,7 @@ Pre-deployment integration tests require a specific position in the workflow:
 
 | Workflow | Prerequisites to Test | NOT Test (created by this workflow) |
 |----------|----------------------|-------------------------------------|
-| `webhooks_github_jit_runner_requests` | IAM role from bootstrap, API Gateway from api_shared_routing | SQS queues, DynamoDB tables, Lambda functions |
-| `api_shared_routing` | S3 buckets from bootstrap, Route53 zone | API Gateway, Lambda functions |
-| `api_operational_health` | API Gateway from api_shared_routing | Lambda function |
+| `webhooks_github_jit_runner_requests` | IAM role from bootstrap, API Gateway from api_common_routing | SQS queues, DynamoDB tables, Lambda functions |
+| `api_common_routing` | S3 buckets from bootstrap, Route53 zone | API Gateway, Lambda functions |
+| `api_operational_health` | API Gateway from api_common_routing | Lambda function |
 | `image_for_ecs_runners` | ECR repository from bootstrap | Docker image |

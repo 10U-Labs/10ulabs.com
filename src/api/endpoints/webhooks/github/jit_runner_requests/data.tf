@@ -1,20 +1,20 @@
-data "terraform_remote_state" "api_shared_networking" {
+data "terraform_remote_state" "api_common_networking" {
   backend = "s3"
 
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
-    key    = "api/shared/networking/terraform.tfstate"
-    region = module.shared.aws_region
+    bucket = module.common.name_for_terraform_state_bucket
+    key    = "api/common/networking/terraform.tfstate"
+    region = module.common.aws_region
   }
 }
 
-data "terraform_remote_state" "api_shared_docker_repository" {
+data "terraform_remote_state" "api_common_docker_repository" {
   backend = "s3"
 
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
-    key    = "api/shared/docker_repository/terraform.tfstate"
-    region = module.shared.aws_region
+    bucket = module.common.name_for_terraform_state_bucket
+    key    = "api/common/docker_repository/terraform.tfstate"
+    region = module.common.aws_region
   }
 }
 
@@ -22,9 +22,9 @@ data "terraform_remote_state" "api" {
   backend = "s3"
 
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
+    bucket = module.common.name_for_terraform_state_bucket
     key    = "api/terraform.tfstate"
-    region = module.shared.aws_region
+    region = module.common.aws_region
   }
 
   defaults = {
@@ -38,9 +38,9 @@ data "terraform_remote_state" "ec2_runner" {
   backend = "s3"
 
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
+    bucket = module.common.name_for_terraform_state_bucket
     key    = "api/endpoints/runners/ec2/terraform.tfstate"
-    region = module.shared.aws_region
+    region = module.common.aws_region
   }
 
   defaults = {
@@ -52,9 +52,9 @@ data "terraform_remote_state" "ecs_runner" {
   backend = "s3"
 
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
+    bucket = module.common.name_for_terraform_state_bucket
     key    = "api/endpoints/runners/ecs/terraform.tfstate"
-    region = module.shared.aws_region
+    region = module.common.aws_region
   }
 
   defaults = {
@@ -72,9 +72,9 @@ data "terraform_remote_state" "runners" {
   backend = "s3"
 
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
+    bucket = module.common.name_for_terraform_state_bucket
     key    = "api/endpoints/runners/terraform.tfstate"
-    region = module.shared.aws_region
+    region = module.common.aws_region
   }
 
   defaults = {
@@ -83,6 +83,6 @@ data "terraform_remote_state" "runners" {
 }
 
 data "aws_ssm_parameter" "github_pat" {
-  name            = module.shared.ssm_github_pat_name
+  name            = module.common.ssm_github_pat_name
   with_decryption = true
 }

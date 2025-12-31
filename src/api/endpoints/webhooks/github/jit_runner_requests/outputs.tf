@@ -7,19 +7,19 @@ output "lambda_function_name" {
 }
 
 output "vpc_id" {
-  value = data.terraform_remote_state.api_shared_networking.outputs.vpc_id
+  value = data.terraform_remote_state.api_common_networking.outputs.vpc_id
 }
 
 output "public_subnets_ids" {
-  value = data.terraform_remote_state.api_shared_networking.outputs.public_subnets_ids
+  value = data.terraform_remote_state.api_common_networking.outputs.public_subnets_ids
 }
 
 output "security_group_id_for_runners" {
-  value = data.terraform_remote_state.api_shared_networking.outputs.security_group_id_for_runners
+  value = data.terraform_remote_state.api_common_networking.outputs.security_group_id_for_runners
 }
 
 output "github_token_secret_name" {
-  value = module.shared.ssm_github_pat_name
+  value = module.common.ssm_github_pat_name
 }
 
 output "webhook_parameter_name" {
@@ -31,19 +31,19 @@ output "webhook_parameter_arn" {
 }
 
 output "ecr_repository_arn" {
-  value = data.terraform_remote_state.api_shared_docker_repository.outputs.ecr_repository_arn
+  value = data.terraform_remote_state.api_common_docker_repository.outputs.ecr_repository_arn
 }
 
 output "ecr_repository_name" {
-  value = data.terraform_remote_state.api_shared_docker_repository.outputs.ecr_repository_name
+  value = data.terraform_remote_state.api_common_docker_repository.outputs.ecr_repository_name
 }
 
 output "ecr_repository_uri" {
-  value = data.terraform_remote_state.api_shared_docker_repository.outputs.ecr_repository_url
+  value = data.terraform_remote_state.api_common_docker_repository.outputs.ecr_repository_url
 }
 
 output "ssm_parameter_name_for_latest_ami" {
-  description = "SSM parameter name for latest EC2 runner AMI (resource in api_shared_parameters)"
+  description = "SSM parameter name for latest EC2 runner AMI (resource in api_common_parameters)"
   value       = local.ssm_parameter_name_for_latest_ami
 }
 

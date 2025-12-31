@@ -36,16 +36,16 @@ class TestImageForECSRunnersOutputs:
 class TestECRRepositoryExistence:
     """Verify ECR repository exists."""
 
-    def test_repository_name_output_exists(self, api_shared_ecr_outputs):
+    def test_repository_name_output_exists(self, api_common_ecr_outputs):
         """Verify repository_name output is available."""
-        assert api_shared_ecr_outputs.get("repository_name"), (
-            "repository_name output not found in api_shared_ecr. "
-            "Run terraform apply in src/api/shared/ecr/"
+        assert api_common_ecr_outputs.get("repository_name"), (
+            "repository_name output not found in api_common_ecr. "
+            "Run terraform apply in src/api/common/ecr/"
         )
 
-    def test_ecr_repository_exists(self, ecr_client, api_shared_ecr_outputs):
+    def test_ecr_repository_exists(self, ecr_client, api_common_ecr_outputs):
         """Verify the ECR repository exists in AWS."""
-        repository_name = api_shared_ecr_outputs.get("repository_name")
+        repository_name = api_common_ecr_outputs.get("repository_name")
         if not repository_name:
             pytest.skip("repository_name output not available")
         try:
@@ -59,7 +59,7 @@ class TestECRRepositoryExistence:
             if e.response["Error"]["Code"] == "RepositoryNotFoundException":
                 pytest.fail(
                     f"ECR repository '{repository_name}' does not exist. "
-                    "Run terraform apply in src/api/shared/ecr/"
+                    "Run terraform apply in src/api/common/ecr/"
                 )
             raise
 

@@ -16,7 +16,7 @@ resource "aws_iam_role" "lambda_execution" {
 }
 
 resource "aws_iam_role_policy" "lambda_execution" {
-  name = "${module.shared.resource_prefix}EcsRunnerHandlerPolicy"
+  name = "${module.common.resource_prefix}EcsRunnerHandlerPolicy"
   role = aws_iam_role.lambda_execution.id
 
   policy = jsonencode({
@@ -67,7 +67,7 @@ resource "aws_iam_role_policy" "lambda_execution" {
         Action = [
           "ssm:GetParameter"
         ]
-        Resource = module.shared.ssm_github_pat_arn
+        Resource = module.common.ssm_github_pat_arn
       },
       {
         Effect = "Allow"

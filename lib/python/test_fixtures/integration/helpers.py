@@ -186,7 +186,7 @@ def check_state_file_readable(s3_client, bucket_name: str, state_key: str):
         raise
 
 
-def assert_api_gateway_exists(api_gateway_info, terraform_path: str = "src/api/shared/routing/"):
+def assert_api_gateway_exists(api_gateway_info, terraform_path: str = "src/api/common/routing/"):
     """Assert that API Gateway exists, skipping if ID is not available.
 
     Use this in Layer 4/5 existence tests to verify API Gateway presence.

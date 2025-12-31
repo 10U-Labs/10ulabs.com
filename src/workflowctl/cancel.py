@@ -9,7 +9,7 @@ Usage:
     python3 src/workflowctl/workflowctl.py cancel-workflows \
         --repo owner/repo \
         --changed-files "file1.py,file2.py" \
-        --running '["www_shared"]' \
+        --running '["www_common"]' \
         --graph etc/workflow_dependencies.json
 
 Exit codes:

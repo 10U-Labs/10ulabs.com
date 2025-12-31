@@ -141,18 +141,18 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          TF_SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
+          TF_SHARED_LOCALS=lib/terraform/common/locals.tf
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
           ECR_REPOSITORY_NAME=$( \
             grep -A1 'output "ecr_repository_name_runners"' \
-            lib/terraform/modules/shared/outputs.tf | \
+            lib/terraform/common/outputs.tf | \
             grep 'value' | cut -d'"' -f2)
           FARGATE_CPU_ARCHITECTURE=$(grep 'fargate_cpu_architecture' \
             src/api/endpoints/runners/ecs/terraform.tfvars | \
             cut -d'"' -f2 | tr '[:upper:]' '[:lower:]')
           TERRAFORM_VERSION=$(grep 'required_version' \
-            src/api/shared/runners/ecs/providers.tf | \
+            src/api/common/runners/ecs/providers.tf | \
             cut -d'"' -f2 | sed 's/>= //')
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "ecr_repository_name=$ECR_REPOSITORY_NAME" >> $GITHUB_OUTPUT

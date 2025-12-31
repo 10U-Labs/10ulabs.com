@@ -97,7 +97,7 @@ def firehose_client(aws_region):
 def firehose_delivery_stream_name(shared_config):
     """Get the Firehose delivery stream name for CloudWatch Logs.
 
-    This is a prerequisite resource created by api_shared_routing that runners
+    This is a prerequisite resource created by api_common_routing that runners
     depends on for subscription filters.
     """
     prefix = shared_config.get('resource_prefix', 'TenULabs')
@@ -108,7 +108,7 @@ def firehose_delivery_stream_name(shared_config):
 def cloudwatch_logs_firehose_role_name(shared_config):
     """Get the CloudWatch Logs Firehose role name.
 
-    This is a prerequisite resource created by api_shared_routing that runners
+    This is a prerequisite resource created by api_common_routing that runners
     depends on for subscription filters.
     """
     prefix = shared_config.get('resource_prefix', 'TenULabs')
@@ -150,22 +150,22 @@ def ec2_client(aws_region):
 
 
 @pytest.fixture(scope="session")
-def api_shared_networking_terraform_initialized():
-    """Initialize terraform for api_shared_networking state access."""
+def api_common_networking_terraform_initialized():
+    """Initialize terraform for api_common_networking state access."""
     return terraform_init(API_SHARED_NETWORKING_DIR)
 
 
 @pytest.fixture(scope="session")
-def api_shared_networking_outputs(request):
-    """Get api_shared_networking terraform outputs.
+def api_common_networking_outputs(request):
+    """Get api_common_networking terraform outputs.
 
     These outputs are REQUIRED (no defaults in runners/data.tf):
     - vpc_id: Used by drift_recovery Lambda and outputs passthrough
     - public_subnets_ids: Used by outputs passthrough
     - security_group_id_for_runners: Used by outputs passthrough
     """
-    if not request.getfixturevalue("api_shared_networking_terraform_initialized"):
-        pytest.skip("Terraform init failed for api_shared_networking")
+    if not request.getfixturevalue("api_common_networking_terraform_initialized"):
+        pytest.skip("Terraform init failed for api_common_networking")
     return {
         "vpc_id": terraform_output(API_SHARED_NETWORKING_DIR, "vpc_id"),
         "public_subnets_ids": terraform_output(
@@ -178,22 +178,22 @@ def api_shared_networking_outputs(request):
 
 
 @pytest.fixture(scope="session")
-def api_shared_docker_repository_terraform_initialized():
-    """Initialize terraform for api_shared_docker_repository state access."""
+def api_common_docker_repository_terraform_initialized():
+    """Initialize terraform for api_common_docker_repository state access."""
     return terraform_init(API_SHARED_DOCKER_REPOSITORY_DIR)
 
 
 @pytest.fixture(scope="session")
-def api_shared_docker_repository_outputs(request):
-    """Get api_shared_docker_repository terraform outputs.
+def api_common_docker_repository_outputs(request):
+    """Get api_common_docker_repository terraform outputs.
 
     These outputs are REQUIRED (no defaults in runners/data.tf):
     - ecr_repository_arn: Used by outputs passthrough
     - ecr_repository_name: Used by outputs passthrough
     - ecr_repository_url: Used by outputs passthrough
     """
-    if not request.getfixturevalue("api_shared_docker_repository_terraform_initialized"):
-        pytest.skip("Terraform init failed for api_shared_docker_repository")
+    if not request.getfixturevalue("api_common_docker_repository_terraform_initialized"):
+        pytest.skip("Terraform init failed for api_common_docker_repository")
     return {
         "ecr_repository_arn": terraform_output(
             API_SHARED_DOCKER_REPOSITORY_DIR, "ecr_repository_arn"
@@ -215,7 +215,7 @@ def api_shared_docker_repository_outputs(request):
 def vpc_info(request):
     """Fetch VPC details from AWS. Returns None if VPC not found."""
     client = request.getfixturevalue("ec2_client")
-    outputs = request.getfixturevalue("api_shared_networking_outputs")
+    outputs = request.getfixturevalue("api_common_networking_outputs")
     vpc_id = outputs.get("vpc_id")
     if not vpc_id:
         return None
@@ -230,7 +230,7 @@ def vpc_info(request):
 def subnets_info(request):
     """Fetch subnet details from AWS. Returns empty list if not found."""
     client = request.getfixturevalue("ec2_client")
-    outputs = request.getfixturevalue("api_shared_networking_outputs")
+    outputs = request.getfixturevalue("api_common_networking_outputs")
     subnet_ids_str = outputs.get("public_subnets_ids")
     if not subnet_ids_str:
         return []
@@ -246,7 +246,7 @@ def subnets_info(request):
 def ecr_repository_info(request):
     """Fetch ECR repository details from AWS. Returns None if not found."""
     client = request.getfixturevalue("ecr_client")
-    outputs = request.getfixturevalue("api_shared_docker_repository_outputs")
+    outputs = request.getfixturevalue("api_common_docker_repository_outputs")
     repo_name = outputs.get("ecr_repository_name")
     if not repo_name:
         return None

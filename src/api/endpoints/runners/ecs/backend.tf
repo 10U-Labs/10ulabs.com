@@ -22,5 +22,5 @@ terraform {
 }
 
 provider "aws" {
-  region = module.shared.aws_region
+  region = module.common.aws_region
 }

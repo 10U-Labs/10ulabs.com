@@ -13,36 +13,36 @@ pytestmark = pytest.mark.layer(4)
 
 
 class TestTerraformOutputsExist:
-    """Verify terraform outputs from api_shared_ecr are accessible."""
+    """Verify terraform outputs from api_common_ecr are accessible."""
 
-    def test_repository_name_output_exists(self, api_shared_ecr_outputs):
+    def test_repository_name_output_exists(self, api_common_ecr_outputs):
         """Verify repository_name output is available."""
-        assert api_shared_ecr_outputs.get("repository_name"), (
-            "repository_name output not found in api_shared_ecr. "
-            "Run terraform apply in src/api/shared/ecr/"
+        assert api_common_ecr_outputs.get("repository_name"), (
+            "repository_name output not found in api_common_ecr. "
+            "Run terraform apply in src/api/common/ecr/"
         )
 
-    def test_repository_url_output_exists(self, api_shared_ecr_outputs):
+    def test_repository_url_output_exists(self, api_common_ecr_outputs):
         """Verify repository_url output is available."""
-        assert api_shared_ecr_outputs.get("repository_url"), (
-            "repository_url output not found in api_shared_ecr. "
-            "Run terraform apply in src/api/shared/ecr/"
+        assert api_common_ecr_outputs.get("repository_url"), (
+            "repository_url output not found in api_common_ecr. "
+            "Run terraform apply in src/api/common/ecr/"
         )
 
-    def test_repository_arn_output_exists(self, api_shared_ecr_outputs):
+    def test_repository_arn_output_exists(self, api_common_ecr_outputs):
         """Verify repository_arn output is available."""
-        assert api_shared_ecr_outputs.get("repository_arn"), (
-            "repository_arn output not found in api_shared_ecr. "
-            "Run terraform apply in src/api/shared/ecr/"
+        assert api_common_ecr_outputs.get("repository_arn"), (
+            "repository_arn output not found in api_common_ecr. "
+            "Run terraform apply in src/api/common/ecr/"
         )
 
 
 class TestECRRepositoryExists:
     """Verify ECR repository exists."""
 
-    def test_ecr_repository_exists(self, ecr_repository_details, api_shared_ecr_outputs):
+    def test_ecr_repository_exists(self, ecr_repository_details, api_common_ecr_outputs):
         """Verify the ECR repository exists in AWS."""
-        assert ecr_repository_details["repositoryName"] == api_shared_ecr_outputs["repository_name"]
+        assert ecr_repository_details["repositoryName"] == api_common_ecr_outputs["repository_name"]
 
     def test_ecr_repository_is_accessible(self, ecr_repository_details):
         """Verify the ECR repository is accessible."""

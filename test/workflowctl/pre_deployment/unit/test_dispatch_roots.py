@@ -39,11 +39,11 @@ class TestShouldTriggerDescendants:
         """Test returns True when a descendant workflow has changed files."""
         graph = {
             "bootstrap": {"paths": ["src/bootstrap/**"], "depends_on": []},
-            "www_shared": {"paths": ["src/www/shared/**"], "depends_on": ["bootstrap"]},
+            "www_common": {"paths": ["src/www/common/**"], "depends_on": ["bootstrap"]},
         }
         assert dispatch_roots.should_trigger_descendants(
             False, "feat: update both",
-            ["src/bootstrap/main.tf", "src/www/shared/main.tf"],
+            ["src/bootstrap/main.tf", "src/www/common/main.tf"],
             ["bootstrap"], graph
         ) is True
 
@@ -51,7 +51,7 @@ class TestShouldTriggerDescendants:
         """Test returns False when only the root workflow has changed files."""
         graph = {
             "bootstrap": {"paths": ["src/bootstrap/**"], "depends_on": []},
-            "www_shared": {"paths": ["src/www/shared/**"], "depends_on": ["bootstrap"]},
+            "www_common": {"paths": ["src/www/common/**"], "depends_on": ["bootstrap"]},
         }
         assert dispatch_roots.should_trigger_descendants(
             False, "feat: update bootstrap only",

@@ -15,7 +15,7 @@ from terraform_config import extract_iam_role_names, extract_lambda_function_nam
 API_BACKEND_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "shared" / "routing" / "outputs.tf"
 
 
-def get_api_shared_routing_outputs() -> set:
+def get_api_common_routing_outputs() -> set:
     """Extract all output names from api/backend/outputs.tf."""
     with open(API_BACKEND_OUTPUTS_FILE, encoding="utf-8") as f:
         content = f.read()
@@ -58,12 +58,12 @@ def create_remote_state_contract_tests(
         def test_all_api_remote_state_references_exist_in_backend_outputs(self):
             """Verify all api remote state references exist in backend outputs."""
             references = get_api_remote_state_references()
-            outputs = get_api_shared_routing_outputs()
+            outputs = get_api_common_routing_outputs()
             missing = references - outputs
 
             assert not missing, (
                 f"{endpoint_name}/{lambda_file} references api backend outputs that "
-                f"don't exist: {missing}. Add these outputs to src/api/shared/routing/outputs.tf"
+                f"don't exist: {missing}. Add these outputs to src/api/common/routing/outputs.tf"
             )
 
         def test_lambda_file_exists(self):
@@ -76,7 +76,7 @@ def create_remote_state_contract_tests(
 
             def make_test(name):
                 def test_output_exists(_self):
-                    outputs = get_api_shared_routing_outputs()
+                    outputs = get_api_common_routing_outputs()
                     assert name in outputs, (
                         f"{name} output missing from api/backend/outputs.tf. "
                         f"This is required by the {endpoint_name} endpoint."

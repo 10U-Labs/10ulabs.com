@@ -36,14 +36,14 @@ SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"
 
 
 class TestApiBackendFirehoseResources:
-    """Layer 4: Verify api_shared_routing Firehose resources exist in AWS."""
+    """Layer 4: Verify api_common_routing Firehose resources exist in AWS."""
 
     def test_firehose_delivery_stream_exists(
         self, firehose_client, firehose_delivery_stream_name
     ):
         """Verify Firehose delivery stream exists.
 
-        This resource is created by api_shared_routing and required for runners
+        This resource is created by api_common_routing and required for runners
         subscription filters to route logs to S3.
         """
         response = firehose_client.describe_delivery_stream(
@@ -53,7 +53,7 @@ class TestApiBackendFirehoseResources:
             firehose_delivery_stream_name
         ), (
             f"Firehose delivery stream '{firehose_delivery_stream_name}' not found. "
-            "Run: cd src/api/shared/routing && terraform apply"
+            "Run: cd src/api/common/routing && terraform apply"
         )
 
     def test_cloudwatch_logs_firehose_role_exists(
@@ -61,63 +61,63 @@ class TestApiBackendFirehoseResources:
     ):
         """Verify CloudWatch Logs Firehose IAM role exists.
 
-        This role is created by api_shared_routing and required for subscription
+        This role is created by api_common_routing and required for subscription
         filters to write to Firehose.
         """
         response = iam_client.get_role(RoleName=cloudwatch_logs_firehose_role_name)
         assert response["Role"]["RoleName"] == cloudwatch_logs_firehose_role_name, (
             f"IAM role '{cloudwatch_logs_firehose_role_name}' not found. "
-            "Run: cd src/api/shared/routing && terraform apply"
+            "Run: cd src/api/common/routing && terraform apply"
         )
 
 
 class TestApiSharedNetworkingOutputs:
-    """Layer 4: Verify api_shared_networking terraform outputs are accessible."""
+    """Layer 4: Verify api_common_networking terraform outputs are accessible."""
 
-    def test_vpc_id_output_exists(self, api_shared_networking_outputs):
+    def test_vpc_id_output_exists(self, api_common_networking_outputs):
         """Verify vpc_id output exists."""
-        assert api_shared_networking_outputs.get("vpc_id"), (
-            "vpc_id output not found in api_shared_networking. "
-            "Run: cd src/api/shared/networking && terraform apply"
+        assert api_common_networking_outputs.get("vpc_id"), (
+            "vpc_id output not found in api_common_networking. "
+            "Run: cd src/api/common/networking && terraform apply"
         )
 
-    def test_subnet_ids_output_exists(self, api_shared_networking_outputs):
+    def test_subnet_ids_output_exists(self, api_common_networking_outputs):
         """Verify public_subnets_ids output exists."""
-        assert api_shared_networking_outputs.get("public_subnets_ids"), (
-            "public_subnets_ids output not found in api_shared_networking. "
-            "Run: cd src/api/shared/networking && terraform apply"
+        assert api_common_networking_outputs.get("public_subnets_ids"), (
+            "public_subnets_ids output not found in api_common_networking. "
+            "Run: cd src/api/common/networking && terraform apply"
         )
 
-    def test_security_group_id_output_exists(self, api_shared_networking_outputs):
+    def test_security_group_id_output_exists(self, api_common_networking_outputs):
         """Verify security_group_id_for_runners output exists."""
-        assert api_shared_networking_outputs.get("security_group_id_for_runners"), (
-            "security_group_id_for_runners output not found in api_shared_networking. "
-            "Run: cd src/api/shared/networking && terraform apply"
+        assert api_common_networking_outputs.get("security_group_id_for_runners"), (
+            "security_group_id_for_runners output not found in api_common_networking. "
+            "Run: cd src/api/common/networking && terraform apply"
         )
 
 
 class TestApiSharedEcsRunnerOutputs:
-    """Layer 4: Verify api_shared_docker_repository terraform outputs are accessible."""
+    """Layer 4: Verify api_common_docker_repository terraform outputs are accessible."""
 
-    def test_ecr_repository_arn_output_exists(self, api_shared_docker_repository_outputs):
+    def test_ecr_repository_arn_output_exists(self, api_common_docker_repository_outputs):
         """Verify ecr_repository_arn output exists."""
-        assert api_shared_docker_repository_outputs.get("ecr_repository_arn"), (
-            "ecr_repository_arn output not found in api_shared_docker_repository. "
-            "Run: cd src/api/shared/docker_repository && terraform apply"
+        assert api_common_docker_repository_outputs.get("ecr_repository_arn"), (
+            "ecr_repository_arn output not found in api_common_docker_repository. "
+            "Run: cd src/api/common/docker_repository && terraform apply"
         )
 
-    def test_ecr_repository_name_output_exists(self, api_shared_docker_repository_outputs):
+    def test_ecr_repository_name_output_exists(self, api_common_docker_repository_outputs):
         """Verify ecr_repository_name output exists."""
-        assert api_shared_docker_repository_outputs.get("ecr_repository_name"), (
-            "ecr_repository_name output not found in api_shared_docker_repository. "
-            "Run: cd src/api/shared/docker_repository && terraform apply"
+        assert api_common_docker_repository_outputs.get("ecr_repository_name"), (
+            "ecr_repository_name output not found in api_common_docker_repository. "
+            "Run: cd src/api/common/docker_repository && terraform apply"
         )
 
-    def test_ecr_repository_url_output_exists(self, api_shared_docker_repository_outputs):
+    def test_ecr_repository_url_output_exists(self, api_common_docker_repository_outputs):
         """Verify ecr_repository_url output exists."""
-        assert api_shared_docker_repository_outputs.get("ecr_repository_url"), (
-            "ecr_repository_url output not found in api_shared_docker_repository. "
-            "Run: cd src/api/shared/docker_repository && terraform apply"
+        assert api_common_docker_repository_outputs.get("ecr_repository_url"), (
+            "ecr_repository_url output not found in api_common_docker_repository. "
+            "Run: cd src/api/common/docker_repository && terraform apply"
         )
 
 
@@ -172,19 +172,19 @@ class TestECSRunnerOutputs:
 class TestVPCResourceExistence:
     """Layer 4: Verify VPC resources exist in AWS."""
 
-    def test_vpc_exists(self, vpc_info, api_shared_networking_outputs):
+    def test_vpc_exists(self, vpc_info, api_common_networking_outputs):
         """Verify the VPC exists."""
-        vpc_id = api_shared_networking_outputs.get("vpc_id")
+        vpc_id = api_common_networking_outputs.get("vpc_id")
         if not vpc_id:
             pytest.skip("vpc_id output not available")
         assert vpc_info is not None, (
             f"VPC {vpc_id} not found. "
-            "Run: cd src/api/shared/networking && terraform apply"
+            "Run: cd src/api/common/networking && terraform apply"
         )
 
-    def test_subnets_exist(self, subnets_info, api_shared_networking_outputs):
+    def test_subnets_exist(self, subnets_info, api_common_networking_outputs):
         """Verify all subnets exist."""
-        subnet_ids_str = api_shared_networking_outputs.get("public_subnets_ids")
+        subnet_ids_str = api_common_networking_outputs.get("public_subnets_ids")
         if not subnet_ids_str:
             pytest.skip("public_subnets_ids output not available")
         subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
@@ -195,20 +195,20 @@ class TestVPCResourceExistence:
 
     # Use factory for security group existence test
     test_security_group_exists = create_security_group_existence_test(
-        outputs_fixture="api_shared_networking_outputs",
+        outputs_fixture="api_common_networking_outputs",
         sg_id_key="security_group_id_for_runners",
-        terraform_path="src/api/shared/networking",
+        terraform_path="src/api/common/networking",
     )
 
 
-def test_ecr_repository_exists(ecr_repository_info, api_shared_docker_repository_outputs):
+def test_ecr_repository_exists(ecr_repository_info, api_common_docker_repository_outputs):
     """Verify the ECR repository exists."""
-    repo_name = api_shared_docker_repository_outputs.get("ecr_repository_name")
+    repo_name = api_common_docker_repository_outputs.get("ecr_repository_name")
     if not repo_name:
         pytest.skip("ecr_repository_name output not available")
     assert ecr_repository_info is not None, (
         f"ECR repository '{repo_name}' not found. "
-        "Run: cd src/api/shared/docker_repository && terraform apply"
+        "Run: cd src/api/common/docker_repository && terraform apply"
     )
 
 

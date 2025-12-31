@@ -35,11 +35,11 @@ def parse_locals_file(
 ) -> Dict[str, str]:
     """Parse a Terraform locals.tf file and return key-value pairs.
 
-    Handles both quoted string values and module.shared.* references.
+    Handles both quoted string values and module.common.* references.
 
     Args:
         locals_path: Path to the locals.tf file
-        shared_config: Optional shared_config for resolving module.shared.* refs
+        shared_config: Optional shared_config for resolving module.common.* refs
 
     Returns:
         Dictionary of parsed values
@@ -55,8 +55,8 @@ def parse_locals_file(
                     value = value.strip()
                     if value.startswith('"') and value.endswith('"'):
                         config[key] = value[1:-1]
-                    elif shared_config and 'module.shared.' in value:
-                        ref = value.replace('module.shared.', '').strip()
+                    elif shared_config and 'module.common.' in value:
+                        ref = value.replace('module.common.', '').strip()
                         config[key] = shared_config.get(ref, '')
     return config
 
@@ -87,10 +87,10 @@ def create_website_config(
 ) -> Dict[str, str]:
     """Create a website config dict from locals.tf and shared config.
 
-    Used by www_shared tests to build configuration from Terraform locals.
+    Used by www_common tests to build configuration from Terraform locals.
 
     Args:
-        locals_path: Path to the www/shared/locals.tf file
+        locals_path: Path to the www/common/locals.tf file
         shared_config: The shared_config fixture value
         hosted_zone_id: Route53 hosted zone ID (optional, can be looked up separately)
 

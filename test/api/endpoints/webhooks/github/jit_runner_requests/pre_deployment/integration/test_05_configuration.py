@@ -37,9 +37,9 @@ SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"
 class TestVPCConfiguration:
     """Layer 5: Verify VPC resources are properly configured."""
 
-    def test_vpc_is_available(self, vpc_info, api_shared_networking_outputs):
+    def test_vpc_is_available(self, vpc_info, api_common_networking_outputs):
         """Verify the VPC is in available state."""
-        vpc_id = api_shared_networking_outputs.get("vpc_id")
+        vpc_id = api_common_networking_outputs.get("vpc_id")
         if not vpc_id:
             pytest.skip("vpc_id output not available")
         if vpc_info is None:
@@ -48,9 +48,9 @@ class TestVPCConfiguration:
             f"VPC {vpc_id} is in state '{vpc_info['State']}', not 'available'."
         )
 
-    def test_subnets_are_available(self, subnets_info, api_shared_networking_outputs):
+    def test_subnets_are_available(self, subnets_info, api_common_networking_outputs):
         """Verify all subnets are in available state."""
-        if not api_shared_networking_outputs.get("public_subnets_ids"):
+        if not api_common_networking_outputs.get("public_subnets_ids"):
             pytest.skip("public_subnets_ids output not available")
         if not subnets_info:
             pytest.skip("Subnets not found - covered by existence test")

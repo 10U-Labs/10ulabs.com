@@ -34,15 +34,15 @@ def ecr_client():
 
 @pytest.fixture(scope="session")
 def terraform_initialized():
-    """Initialize terraform for api_shared_ecr state access."""
+    """Initialize terraform for api_common_ecr state access."""
     return terraform_init(API_SHARED_ECR_DIR)
 
 
 @pytest.fixture(scope="session")
-def api_shared_ecr_outputs(request):
-    """Get api_shared_ecr terraform outputs."""
+def api_common_ecr_outputs(request):
+    """Get api_common_ecr terraform outputs."""
     assert request.getfixturevalue("terraform_initialized"), (
-        "Terraform init failed for api_shared_ecr"
+        "Terraform init failed for api_common_ecr"
     )
     return {
         "repository_name": terraform_output(API_SHARED_ECR_DIR, "ecr_repository_name"),
@@ -55,7 +55,7 @@ def api_shared_ecr_outputs(request):
 def ecr_repository_details(request):
     """Get ECR repository details, skipping if not available."""
     client = request.getfixturevalue("ecr_client")
-    outputs = request.getfixturevalue("api_shared_ecr_outputs")
+    outputs = request.getfixturevalue("api_common_ecr_outputs")
     repository_name = outputs.get("repository_name")
     if not repository_name:
         pytest.skip("repository_name output not available")

@@ -20,7 +20,7 @@ pytestmark = pytest.mark.layer(5)
 
 
 class TestAPIBackendPrerequisites(Layer4APIBackendPrerequisiteTests):
-    """Layer 5: Verify api_shared_routing prerequisites exist.
+    """Layer 5: Verify api_common_routing prerequisites exist.
 
     All tests inherited from Layer4APIBackendPrerequisiteTests.
     """

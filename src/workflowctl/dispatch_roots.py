@@ -8,7 +8,7 @@ Usage:
     python3 src/workflowctl/workflowctl.py dispatch-root-workflows \
         --repo owner/repo \
         --changed-files "file1.py,file2.py" \
-        --running '["www_shared"]' \
+        --running '["www_common"]' \
         --trigger-descendants \
         --invalidate-cloudfront
 

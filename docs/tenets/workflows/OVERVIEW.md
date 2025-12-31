@@ -4,10 +4,10 @@ This document defines the standard patterns for GitHub Actions workflows in this
 repository. These patterns are derived from the following reference workflows:
 
 - `bootstrap.yml`
-- `www_shared.yml`
-- `api_shared_routing.yml`
+- `www_common.yml`
+- `api_common_routing.yml`
 - `api_operational_health.yml`
-- `api_shared_networking.yml`
+- `api_common_networking.yml`
 
 ## 1. Static Analysis Step Ordering
 
@@ -25,7 +25,7 @@ Static analysis steps must follow this order:
 10. Check for duplicate code in test Python files
 
 For workflows without source Python files (e.g., infrastructure-only workflows like
-`www_shared.yml`), omit source steps (5, 7, 9). See sections 2-4 for details.
+`www_common.yml`), omit source steps (5, 7, 9). See sections 2-4 for details.
 
 ## 2. Pylint Separation: Source vs Tests
 
@@ -45,7 +45,7 @@ Pylint must run in two separate steps when source code exists:
 ```
 
 For workflows without source Python files (e.g., infrastructure-only workflows like
-`www_shared.yml`), use only the test step:
+`www_common.yml`), use only the test step:
 
 ```yaml
 - name: Run pylint on tests
@@ -81,7 +81,7 @@ Mypy must run in two separate steps when source code exists:
 ```
 
 For workflows without source Python files (e.g., infrastructure-only workflows like
-`www_shared.yml`), use only the test step:
+`www_common.yml`), use only the test step:
 
 ```yaml
 - name: Run mypy on tests
@@ -114,7 +114,7 @@ Duplicate code detection must run in two separate steps when source code exists:
 ```
 
 For workflows without source Python files (e.g., infrastructure-only workflows like
-`www_shared.yml`), use only the test step:
+`www_common.yml`), use only the test step:
 
 ```yaml
 - name: Check for duplicate code in test Python files

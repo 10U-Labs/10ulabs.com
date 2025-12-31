@@ -114,11 +114,11 @@ jobs:
           python3 -m pytest \
             test/www/paths/home/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
-      - name: Get bucket name from shared Terraform
+      - name: Get bucket name from common Terraform
         run: |
-          terraform -chdir=src/www/shared init \
+          terraform -chdir=src/www/common init \
             -backend=true -input=false > /dev/null
-          BUCKET_NAME=$(terraform -chdir=src/www/shared output -raw bucket_name)
+          BUCKET_NAME=$(terraform -chdir=src/www/common output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
       - name: Build website
         run: |
@@ -153,7 +153,7 @@ jobs:
           steps.check_files.outputs.changed == 'true'
         name: Get website domain from Terraform output
         run: |
-          WEBSITE_FQDN=$(terraform -chdir=src/www/shared \
+          WEBSITE_FQDN=$(terraform -chdir=src/www/common \
             output -raw website_domain_name)
           echo "WEBSITE_FQDN=$WEBSITE_FQDN" >> $GITHUB_ENV
       - if: >-

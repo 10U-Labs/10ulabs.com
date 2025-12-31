@@ -15,9 +15,9 @@ pytestmark = pytest.mark.layer(2)
 class TestECRAuthorization:
     """Verify permission to inspect ECR repository."""
 
-    def test_can_describe_ecr_repositories(self, ecr_client, api_shared_ecr_outputs):
+    def test_can_describe_ecr_repositories(self, ecr_client, api_common_ecr_outputs):
         """Verify permission to call ecr:DescribeRepositories."""
-        repository_name = api_shared_ecr_outputs.get("repository_name")
+        repository_name = api_common_ecr_outputs.get("repository_name")
         if not repository_name:
             pytest.skip("repository_name output not available")
         try:

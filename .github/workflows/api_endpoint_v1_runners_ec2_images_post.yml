@@ -130,7 +130,7 @@ jobs:
         name: Extract Terraform version
         run: |
           TERRAFORM_VERSION=$(grep 'required_version' \
-            src/api/shared/networking/providers.tf | cut -d'"' -f2 | \
+            src/api/common/networking/providers.tf | cut -d'"' -f2 | \
             sed 's/>= //')
           echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - if: >-
@@ -155,8 +155,8 @@ jobs:
           CONF=src/api/endpoints/runners/ec2/images/post/config.json
           DEFAULT='["m8gd.medium"]'
           ITYPES=$(jq -r ".instance_types // $DEFAULT | join(\",\")" $CONF)
-          # Get networking resources from src/api/shared/networking remote state
-          cd src/api/shared/networking
+          # Get networking resources from src/api/common/networking remote state
+          cd src/api/common/networking
           terraform init -backend=true -input=false
           SG_ID=$(terraform output -raw security_group_id_for_runners)
           SUBNET_IDS=$(terraform output -raw public_subnets_ids)

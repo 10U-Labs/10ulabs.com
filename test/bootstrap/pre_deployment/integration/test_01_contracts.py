@@ -10,9 +10,9 @@ import pytest
 pytestmark = pytest.mark.layer(1)
 
 
-def _extract_module_shared_refs(content: str) -> set[str]:
-    """Extract all module.shared.* references from Terraform content."""
-    pattern = r"module\.shared\.([a-zA-Z_][a-zA-Z0-9_]*)"
+def _extract_module_common_refs(content: str) -> set[str]:
+    """Extract all module.common.* references from Terraform content."""
+    pattern = r"module\.common\.([a-zA-Z_][a-zA-Z0-9_]*)"
     return set(re.findall(pattern, content))
 
 
@@ -34,24 +34,24 @@ def test_outputs_tf_exists(bootstrap_dir: Path):
     assert path.exists(), f"outputs.tf not found at {path}"
 
 
-def test_shared_module_outputs_tf_exists(shared_module_dir: Path):
-    """Verify shared module outputs.tf file exists."""
-    path = shared_module_dir / "outputs.tf"
-    assert path.exists(), f"shared module outputs.tf not found at {path}"
+def test_common_module_outputs_tf_exists(common_module_dir: Path):
+    """Verify common module outputs.tf file exists."""
+    path = common_module_dir / "outputs.tf"
+    assert path.exists(), f"common module outputs.tf not found at {path}"
 
 
-def test_locals_shared_refs_exist_in_shared_module(
-    locals_content: str, shared_outputs: set[str]
+def test_locals_common_refs_exist_in_common_module(
+    locals_content: str, common_outputs: set[str]
 ):
-    """Verify all module.shared.* references in locals.tf exist in shared module."""
-    shared_refs = _extract_module_shared_refs(locals_content)
+    """Verify all module.common.* references in locals.tf exist in common module."""
+    common_refs = _extract_module_common_refs(locals_content)
 
-    missing = shared_refs - shared_outputs
+    missing = common_refs - common_outputs
     assert not missing, (
-        f"module.shared.* references in locals.tf are missing from shared module:\n"
+        f"module.common.* references in locals.tf are missing from common module:\n"
         f"  Missing: {sorted(missing)}\n"
-        f"  locals.tf references: {sorted(shared_refs)}\n"
-        f"  shared module provides: {sorted(shared_outputs)}"
+        f"  locals.tf references: {sorted(common_refs)}\n"
+        f"  common module provides: {sorted(common_outputs)}"
     )
 
 

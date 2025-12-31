@@ -1,13 +1,13 @@
-module "shared" {
-  source = "../../../../lib/terraform/modules/shared"
+module "common" {
+  source = "../../../../lib/terraform/common"
 }
 
 data "terraform_remote_state" "api" {
   backend = "s3"
 
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
+    bucket = module.common.name_for_terraform_state_bucket
     key    = "api/terraform.tfstate"
-    region = module.shared.aws_region
+    region = module.common.aws_region
   }
 }

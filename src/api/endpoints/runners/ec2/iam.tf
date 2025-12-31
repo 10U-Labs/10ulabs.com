@@ -71,7 +71,7 @@ resource "aws_iam_role_policy" "ec2_runner_cloudwatch_logs" {
           "logs:DescribeLogStreams"
         ]
         Resource = [
-          "arn:aws:logs:${module.shared.aws_region}:${module.shared.aws_account_id}:log-group:/github-runner/diag:*"
+          "arn:aws:logs:${module.common.aws_region}:${module.common.aws_account_id}:log-group:/github-runner/diag:*"
         ]
       },
       {
@@ -181,7 +181,7 @@ resource "aws_iam_role_policy" "ssm_access" {
         "ssm:GetParameter"
       ]
       Resource = compact([
-        module.shared.ssm_github_pat_arn,
+        module.common.ssm_github_pat_arn,
         data.terraform_remote_state.api.outputs.api_key_ssm_parameter_arn
       ])
     }]

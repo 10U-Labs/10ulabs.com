@@ -3,15 +3,15 @@
 ```
 bootstrap
     ↓
-api_shared_routing
+api_common_routing
     ↓
 api_operational_health
     ↓
 api_operational_diagnostics
     ↓
-api_shared_networking
+api_common_networking
     ↓
-api_shared_parameters
+api_common_parameters
     ↓
 api_endpoint_v1_runners_ec2_images_post
     ↓
@@ -19,7 +19,7 @@ api_endpoint_v1_runners_ec2_images
     ↓
 api_endpoint_v1_runners_ec2
     ↓
-api_shared_docker_repository
+api_common_docker_repository
     ↓
 api_endpoint_v1_runners_ecs_images_post
     ↓
@@ -33,7 +33,7 @@ webhooks_github_jit_runner_requests
     ↓
 api_endpoint_v1_contact
     ↓
-www_shared
+www_common
     ↓
 www_home
     ↓

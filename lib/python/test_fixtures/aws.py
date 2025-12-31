@@ -197,12 +197,12 @@ def state_bucket_region(request):
 def api_gateway_info(request):
     """Get API Gateway info, handling missing/not-found cases gracefully.
 
-    Requires `apigateway_client` and `api_shared_routing_outputs` fixtures.
+    Requires `apigateway_client` and `api_common_routing_outputs` fixtures.
     """
     client = request.getfixturevalue("apigateway_client")
-    api_shared_routing_outputs = request.getfixturevalue("api_shared_routing_outputs")
+    api_common_routing_outputs = request.getfixturevalue("api_common_routing_outputs")
 
-    api_id = api_shared_routing_outputs.get("api_gateway_id")
+    api_id = api_common_routing_outputs.get("api_gateway_id")
     if not api_id:
         return {"id": None, "exists": False, "accessible": False}
 

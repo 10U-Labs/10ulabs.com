@@ -2,7 +2,6 @@
 
 These functions dynamically create test classes with specific configurations.
 """
-# pylint: disable=too-many-lines
 from botocore.exceptions import ClientError
 import pytest
 from naming_conventions import validate_name
@@ -443,13 +442,13 @@ def create_lambda_iam_wiring_tests(
     return TestIAMPolicyWiring
 
 
-def create_www_shared_fixtures(
+def create_www_common_fixtures(
     include_cloudfront: bool = False,
     include_website_domain: bool = False,
 ):
-    """Create www_shared terraform fixtures.
+    """Create www_common terraform fixtures.
 
-    Creates fixtures for accessing www_shared terraform outputs including
+    Creates fixtures for accessing www_common terraform outputs including
     bucket information and optionally CloudFront/website domain info.
 
     Args:
@@ -457,60 +456,60 @@ def create_www_shared_fixtures(
         include_website_domain: Include website domain name in outputs
 
     Returns:
-        Tuple of (www_shared_terraform_initialized, www_shared_outputs) fixtures
+        Tuple of (www_common_terraform_initialized, www_common_outputs) fixtures
     """
-    www_shared_dir = REPO_ROOT / "src" / "www" / "shared"
+    www_common_dir = REPO_ROOT / "src" / "www" / "shared"
 
     @pytest.fixture(scope="session")
-    def www_shared_terraform_initialized():
-        """Initialize terraform for www_shared state access."""
-        return terraform_init(www_shared_dir)
+    def www_common_terraform_initialized():
+        """Initialize terraform for www_common state access."""
+        return terraform_init(www_common_dir)
 
     @pytest.fixture(scope="session")
-    def www_shared_outputs(request):
-        """Get www_shared terraform outputs."""
-        if not request.getfixturevalue("www_shared_terraform_initialized"):
-            pytest.skip("Terraform init failed for www_shared")
+    def www_common_outputs(request):
+        """Get www_common terraform outputs."""
+        if not request.getfixturevalue("www_common_terraform_initialized"):
+            pytest.skip("Terraform init failed for www_common")
         outputs = {
-            "bucket_name": terraform_output(www_shared_dir, "bucket_name"),
-            "bucket_arn": terraform_output(www_shared_dir, "bucket_arn"),
+            "bucket_name": terraform_output(www_common_dir, "bucket_name"),
+            "bucket_arn": terraform_output(www_common_dir, "bucket_arn"),
         }
         if include_website_domain:
             outputs["website_domain_name"] = terraform_output(
-                www_shared_dir, "website_domain_name"
+                www_common_dir, "website_domain_name"
             )
         if include_cloudfront:
             outputs["cloudfront_distribution_id"] = terraform_output(
-                www_shared_dir, "cloudfront_distribution_id"
+                www_common_dir, "cloudfront_distribution_id"
             )
         return outputs
 
-    return www_shared_terraform_initialized, www_shared_outputs
+    return www_common_terraform_initialized, www_common_outputs
 
 
-def create_www_shared_s3_existence_tests():
-    """Create S3 bucket existence tests for www_shared.
+def create_www_common_s3_existence_tests():
+    """Create S3 bucket existence tests for www_common.
 
-    Creates a test class that verifies the www_shared S3 bucket exists.
-    Requires `s3_client` and `www_shared_outputs` fixtures.
+    Creates a test class that verifies the www_common S3 bucket exists.
+    Requires `s3_client` and `www_common_outputs` fixtures.
 
     Returns:
         Test class with S3 bucket existence tests
     """
 
     class TestWWWSharedS3Existence:
-        """Verify www_shared S3 bucket exists."""
+        """Verify www_common S3 bucket exists."""
 
-        def test_bucket_name_output_exists(self, www_shared_outputs):
+        def test_bucket_name_output_exists(self, www_common_outputs):
             """Verify bucket_name output is available."""
-            assert www_shared_outputs.get("bucket_name"), (
-                "bucket_name output not found in www_shared. "
-                "Run terraform apply in src/www/shared/"
+            assert www_common_outputs.get("bucket_name"), (
+                "bucket_name output not found in www_common. "
+                "Run terraform apply in src/www/common/"
             )
 
-        def test_s3_bucket_exists(self, s3_client, www_shared_outputs):
+        def test_s3_bucket_exists(self, s3_client, www_common_outputs):
             """Verify the S3 bucket exists in AWS."""
-            bucket_name = www_shared_outputs.get("bucket_name")
+            bucket_name = www_common_outputs.get("bucket_name")
             if not bucket_name:
                 pytest.skip("bucket_name output not available")
             try:
@@ -519,7 +518,7 @@ def create_www_shared_s3_existence_tests():
                 if e.response["Error"]["Code"] == "404":
                     pytest.fail(
                         f"S3 bucket '{bucket_name}' does not exist. "
-                        "Run terraform apply in src/www/shared/"
+                        "Run terraform apply in src/www/common/"
                     )
                 raise
 
@@ -707,7 +706,7 @@ def create_simple_layer1_authentication_tests():
     """Create simple Layer 1 authentication tests.
 
     Simpler version with just two basic credential checks.
-    Used by bootstrap, www_shared, and similar modules.
+    Used by bootstrap, www_common, and similar modules.
 
     Returns:
         Test class with simple authentication tests
@@ -756,7 +755,7 @@ def handle_ecr_error(error: ClientError, operation: str, repository_name: str) -
 def create_security_group_existence_test(
     outputs_fixture: str,
     sg_id_key: str = "runner_security_group_id",
-    terraform_path: str = "src/api/shared/networking",
+    terraform_path: str = "src/api/common/networking",
 ):
     """Create a security group existence test method.
 

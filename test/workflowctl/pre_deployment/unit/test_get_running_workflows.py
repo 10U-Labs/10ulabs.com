@@ -12,15 +12,15 @@ SAMPLE_GRAPH = {
         "depends_on": [],
         "paths": ["src/bootstrap/**"],
     },
-    "www_shared": {
-        "name": "WWW Shared",
+    "www_common": {
+        "name": "WWW Common",
         "depends_on": ["bootstrap"],
-        "paths": ["src/www/shared/**"],
+        "paths": ["src/www/common/**"],
     },
-    "api_shared_routing": {
-        "name": "Ensuring API shared routing exists and is properly configured",
-        "depends_on": ["www_shared"],
-        "paths": ["src/api/shared/routing/**"],
+    "api_common_routing": {
+        "name": "Ensuring API common routing exists and is properly configured",
+        "depends_on": ["www_common"],
+        "paths": ["src/api/common/routing/**"],
     },
 }
 

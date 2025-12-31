@@ -62,8 +62,8 @@ class TestResolvePrefixRefs:
     """Tests for _resolve_prefix_refs function."""
 
     def test_resolves_module_shared_resource_prefix(self):
-        """Test resolves module.shared.resource_prefix."""
-        value = "${module.shared.resource_prefix}MyFunction"
+        """Test resolves module.common.resource_prefix."""
+        value = "${module.common.resource_prefix}MyFunction"
         result = _resolve_prefix_refs(value, "TenULabs")
         assert result == "TenULabsMyFunction"
 
@@ -75,7 +75,7 @@ class TestResolvePrefixRefs:
 
     def test_resolves_multiple_refs(self):
         """Test resolves multiple references in same string."""
-        value = "${local.resource_prefix}-${module.shared.resource_prefix}"
+        value = "${local.resource_prefix}-${module.common.resource_prefix}"
         result = _resolve_prefix_refs(value, "Prefix")
         assert result == "Prefix-Prefix"
 
@@ -137,22 +137,22 @@ class TestResolveAllRefs:
 
     def test_resolves_prefix_and_handler_names(self):
         """Test resolves both prefix and handler name references."""
-        value = "${module.shared.resource_prefix}-${module.shared.lambda_handler_names.webhook}"
+        value = "${module.common.resource_prefix}-${module.common.lambda_handler_names.webhook}"
         handler_names = {"webhook": "TenULabsWebhook"}
         result = _resolve_all_refs(value, "TenULabs", handler_names)
         assert result == "TenULabs-TenULabsWebhook"
 
     def test_resolves_only_prefix_when_no_handlers(self):
         """Test resolves prefix when handler_names is empty."""
-        value = "${module.shared.resource_prefix}Function"
+        value = "${module.common.resource_prefix}Function"
         result = _resolve_all_refs(value, "TenULabs", {})
         assert result == "TenULabsFunction"
 
     def test_returns_unchanged_when_handler_not_found(self):
         """Test returns partial resolution when handler not in dict."""
-        value = "${module.shared.lambda_handler_names.missing}"
+        value = "${module.common.lambda_handler_names.missing}"
         result = _resolve_all_refs(value, "TenULabs", {"webhook": "Handler"})
-        assert result == "${module.shared.lambda_handler_names.missing}"
+        assert result == "${module.common.lambda_handler_names.missing}"
 
 
 class TestResolveLambdaFunctionName:
@@ -161,7 +161,7 @@ class TestResolveLambdaFunctionName:
     def test_resolves_quoted_string(self):
         """Test resolves function_name from quoted string."""
         block = '''
-        function_name = "${module.shared.resource_prefix}MyFunction"
+        function_name = "${module.common.resource_prefix}MyFunction"
         runtime       = "python3.11"
         '''
         result = _resolve_lambda_function_name(block, "TenULabs", {}, {}, {})
@@ -188,9 +188,9 @@ class TestResolveLambdaFunctionName:
         assert result == "VarHandler"
 
     def test_resolves_module_shared_handler_reference(self):
-        """Test resolves function_name from module.shared.lambda_handler_names."""
+        """Test resolves function_name from module.common.lambda_handler_names."""
         block = '''
-        function_name = module.shared.lambda_handler_names.webhook
+        function_name = module.common.lambda_handler_names.webhook
         runtime       = "python3.11"
         '''
         handlers = {"webhook": "TenULabsWebhookHandler"}
@@ -225,7 +225,7 @@ class TestResolveLambdaFunctionName:
     def test_returns_none_for_handler_not_in_map(self):
         """Test returns None when handler reference not in map."""
         block = '''
-        function_name = module.shared.lambda_handler_names.missing
+        function_name = module.common.lambda_handler_names.missing
         '''
         result = _resolve_lambda_function_name(block, "TenULabs", {}, {}, {"other": "value"})
         assert result is None
@@ -427,12 +427,12 @@ class TestGetEndpointLocalValues:
         assert result.get("my_local") == "my_value"
 
     def test_parses_module_shared_handler_reference(self, tmp_path):
-        """Test parses module.shared.lambda_handler_names references."""
+        """Test parses module.common.lambda_handler_names references."""
         from unittest.mock import patch
         from terraform_config import get_endpoint_local_values
         locals_file = tmp_path / "locals.tf"
         locals_file.write_text(
-            'locals {\n  handler = module.shared.lambda_handler_names.webhook\n}\n'
+            'locals {\n  handler = module.common.lambda_handler_names.webhook\n}\n'
         )
         with patch("terraform_config.parse_lambda_handler_names") as mock_handlers:
             mock_handlers.return_value = {"webhook": "TenULabsWebhook"}

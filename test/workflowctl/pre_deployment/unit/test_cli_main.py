@@ -22,15 +22,15 @@ TEST_GRAPH = {
         "depends_on": [],
         "paths": [".github/workflows/bootstrap.yml", "src/bootstrap/**"],
     },
-    "www_shared": {
-        "name": "WWW Shared",
+    "www_common": {
+        "name": "WWW Common",
         "depends_on": ["bootstrap"],
-        "paths": [".github/workflows/www_shared.yml", "src/www/**"],
+        "paths": [".github/workflows/www_common.yml", "src/www/**"],
     },
-    "api_shared": {
-        "name": "API Shared",
-        "depends_on": ["www_shared"],
-        "paths": [".github/workflows/api_shared.yml", "src/api/**"],
+    "api_common": {
+        "name": "API Common",
+        "depends_on": ["www_common"],
+        "paths": [".github/workflows/api_common.yml", "src/api/**"],
     },
 }
 
@@ -75,7 +75,7 @@ class TestCancelMain:
         test_args = [
             "cancel", "--repo", "owner/repo",
             "--changed-files", "src/bootstrap/main.py",
-            "--running", '["www_shared"]', "--graph", "/nonexistent/graph.json",
+            "--running", '["www_common"]', "--graph", "/nonexistent/graph.json",
         ]
         with patch.object(sys, "argv", test_args):
             assert cancel.main() == 1
@@ -87,7 +87,7 @@ class TestCancelMain:
         test_args = [
             "cancel", "--repo", "owner/repo",
             "--changed-files", "src/bootstrap/main.py",
-            "--running", '["www_shared"]', "--graph", temp_graph_file,
+            "--running", '["www_common"]', "--graph", temp_graph_file,
         ]
         with patch.object(sys, "argv", test_args):
             assert cancel.main() == 0
@@ -98,12 +98,12 @@ class TestCancelMain:
         self, mock_get_runs, mock_cancel, cancel, temp_graph_file
     ) -> None:
         """Main returns 0 when all cancellations succeed."""
-        mock_get_runs.side_effect = [[{"id": 123, "name": "WWW Shared", "run_number": 1}], []]
+        mock_get_runs.side_effect = [[{"id": 123, "name": "WWW Common", "run_number": 1}], []]
         mock_cancel.return_value = True
         test_args = [
             "cancel", "--repo", "owner/repo",
             "--changed-files", "src/www/test.py",
-            "--running", '["www_shared"]', "--graph", temp_graph_file,
+            "--running", '["www_common"]', "--graph", temp_graph_file,
         ]
         with patch.object(sys, "argv", test_args):
             assert cancel.main() == 0
@@ -114,12 +114,12 @@ class TestCancelMain:
         self, mock_get_runs, mock_cancel, cancel, temp_graph_file
     ) -> None:
         """Main returns 1 when a cancellation fails."""
-        mock_get_runs.side_effect = [[{"id": 123, "name": "WWW Shared", "run_number": 1}], []]
+        mock_get_runs.side_effect = [[{"id": 123, "name": "WWW Common", "run_number": 1}], []]
         mock_cancel.return_value = False
         test_args = [
             "cancel", "--repo", "owner/repo",
             "--changed-files", "src/www/test.py",
-            "--running", '["www_shared"]', "--graph", temp_graph_file,
+            "--running", '["www_common"]', "--graph", temp_graph_file,
         ]
         with patch.object(sys, "argv", test_args):
             assert cancel.main() == 1
@@ -268,9 +268,9 @@ class TestGetRunningMain:
         self, mock_get_runs, get_running, temp_graph_file, capsys
     ) -> None:
         """Main returns workflow keys for running workflows."""
-        mock_get_runs.side_effect = [[{"name": "WWW Shared"}, {"name": "Bootstrap"}], []]
+        mock_get_runs.side_effect = [[{"name": "WWW Common"}, {"name": "Bootstrap"}], []]
         output = self._run_and_parse(get_running, temp_graph_file, capsys)
-        assert set(output["workflows"]) == {"bootstrap", "www_shared"}
+        assert set(output["workflows"]) == {"bootstrap", "www_common"}
 
     @patch("get_running.get_workflow_runs")
     def test_excludes_unknown_workflows(
@@ -319,10 +319,10 @@ class TestComputeRootsMain:
         """Main uses --start-from instead of file detection."""
         args = [
             "--changed-files", "src/bootstrap/main.py",
-            "--start-from", "www_shared", "--graph", temp_graph_file,
+            "--start-from", "www_common", "--graph", temp_graph_file,
         ]
         output = self._run_and_parse(compute_roots, args, capsys)
-        assert output == {"workflows": ["www_shared"]}
+        assert output == {"workflows": ["www_common"]}
 
     def test_invalid_start_from_exits_one(self, compute_roots, temp_graph_file) -> None:
         """Main exits 1 for unknown --start-from workflow."""
@@ -344,7 +344,7 @@ class TestComputeRootsMain:
             "--execution-plan", "--graph", temp_graph_file,
         ]
         output = self._run_and_parse(compute_roots, args, capsys)
-        assert set(output["workflows"]) == {"bootstrap", "www_shared", "api_shared"}
+        assert set(output["workflows"]) == {"bootstrap", "www_common", "api_common"}
 
     def test_levels_output_structure(self, compute_roots, temp_graph_file, capsys) -> None:
         """Main with --levels outputs correct level structure."""

@@ -1,8 +1,8 @@
 locals {
-  aws_account_id    = module.shared.aws_account_id
-  aws_region        = module.shared.aws_region
-  github_repo_full  = "${module.shared.github_org}/${module.shared.name_for_github_repo}"
-  resource_prefix   = module.shared.resource_prefix
+  aws_account_id    = module.common.aws_account_id
+  aws_region        = module.common.aws_region
+  github_repo_full  = "${module.common.github_org}/${module.common.name_for_github_repo}"
+  resource_prefix   = module.common.resource_prefix
   ami_purpose_tag   = "Purpose"
   ami_purpose_value = "GitHub self-hosted EC2 runner"
   ami_stable_tag    = "Stable"

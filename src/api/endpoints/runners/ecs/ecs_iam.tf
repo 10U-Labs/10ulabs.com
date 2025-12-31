@@ -32,7 +32,7 @@ resource "aws_iam_role_policy" "ecs_task_cloudwatch_logs" {
         "logs:DescribeLogStreams"
       ]
       Resource = [
-        "arn:aws:logs:${module.shared.aws_region}:${module.shared.aws_account_id}:log-group:/github-runner/diag:*"
+        "arn:aws:logs:${module.common.aws_region}:${module.common.aws_account_id}:log-group:/github-runner/diag:*"
       ]
     }]
   })
@@ -75,7 +75,7 @@ resource "aws_iam_role_policy" "ecs_execution_ssm_access" {
         "ssm:GetParameters"
       ]
       Resource = [
-        module.shared.ssm_github_pat_arn
+        module.common.ssm_github_pat_arn
       ]
     }]
   })

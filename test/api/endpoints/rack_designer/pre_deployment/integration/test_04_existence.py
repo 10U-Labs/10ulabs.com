@@ -12,7 +12,7 @@ from test_fixtures.integration import (
     assert_api_gateway_exists,
     create_ecs_runner_outputs_tests,
     create_ecs_runner_lambda_existence_tests,
-    create_www_shared_s3_existence_tests,
+    create_www_common_s3_existence_tests,
 )
 
 
@@ -20,13 +20,13 @@ pytestmark = pytest.mark.layer(4)
 
 
 class TestAPIBackendPrerequisites:
-    """Layer 4: Verify api_shared_routing resources exist."""
+    """Layer 4: Verify api_common_routing resources exist."""
 
-    def test_api_shared_routing_outputs_provides_gateway_id(self, api_shared_routing_outputs):
-        """Verify api_shared_routing terraform outputs provide api_gateway_id."""
-        assert api_shared_routing_outputs.get("api_gateway_id"), (
-            "api_gateway_id output not found in api_shared_routing. "
-            "Run terraform apply in src/api/shared/routing/"
+    def test_api_common_routing_outputs_provides_gateway_id(self, api_common_routing_outputs):
+        """Verify api_common_routing terraform outputs provide api_gateway_id."""
+        assert api_common_routing_outputs.get("api_gateway_id"), (
+            "api_gateway_id output not found in api_common_routing. "
+            "Run terraform apply in src/api/common/routing/"
         )
 
     def test_api_gateway_rest_api_exists(self, api_gateway_info):
@@ -36,4 +36,4 @@ class TestAPIBackendPrerequisites:
 
 TestECSRunnerOutputs = create_ecs_runner_outputs_tests()
 TestECSRunnerLambdaExistence = create_ecs_runner_lambda_existence_tests()
-TestWWWSharedPrerequisites = create_www_shared_s3_existence_tests()
+TestWWWSharedPrerequisites = create_www_common_s3_existence_tests()

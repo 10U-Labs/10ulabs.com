@@ -19,45 +19,45 @@ class TestGetAllDescendants:
         self, utils, sample_graph: Dict[str, Dict[str, Any]]
     ) -> None:
         """Test workflow with single direct descendant."""
-        descendants = utils.get_all_descendants("api_shared_routing", sample_graph)
+        descendants = utils.get_all_descendants("api_common_routing", sample_graph)
         assert descendants == {"api_operational_health"}
 
     def test_transitive_descendants(
         self, utils, sample_graph: Dict[str, Dict[str, Any]]
     ) -> None:
         """Test workflow with transitive descendants."""
-        descendants = utils.get_all_descendants("www_shared", sample_graph)
-        assert descendants == {"api_shared_routing", "api_operational_health"}
+        descendants = utils.get_all_descendants("www_common", sample_graph)
+        assert descendants == {"api_common_routing", "api_operational_health"}
 
     def test_root_has_all_descendants(
         self, utils, sample_graph: Dict[str, Dict[str, Any]]
     ) -> None:
         """Test root workflow has all others as descendants."""
         descendants = utils.get_all_descendants("bootstrap", sample_graph)
-        assert descendants == {"www_shared", "api_shared_routing", "api_operational_health"}
+        assert descendants == {"www_common", "api_common_routing", "api_operational_health"}
 
-    def test_caching_stores_www_shared(
+    def test_caching_stores_www_common(
         self, utils, sample_graph: Dict[str, Dict[str, Any]]
     ) -> None:
-        """Test that caching stores www_shared."""
+        """Test that caching stores www_common."""
         cache: dict[str, set[str]] = {}
-        utils.get_all_descendants("www_shared", sample_graph, cache)
-        assert "www_shared" in cache
+        utils.get_all_descendants("www_common", sample_graph, cache)
+        assert "www_common" in cache
 
-    def test_caching_stores_api_shared_routing(
+    def test_caching_stores_api_common_routing(
         self, utils, sample_graph: Dict[str, Dict[str, Any]]
     ) -> None:
-        """Test that caching stores api_shared_routing transitively."""
+        """Test that caching stores api_common_routing transitively."""
         cache: dict[str, set[str]] = {}
-        utils.get_all_descendants("www_shared", sample_graph, cache)
-        assert "api_shared_routing" in cache
+        utils.get_all_descendants("www_common", sample_graph, cache)
+        assert "api_common_routing" in cache
 
     def test_caching_stores_api_operational_health(
         self, utils, sample_graph: Dict[str, Dict[str, Any]]
     ) -> None:
         """Test that caching stores api_operational_health transitively."""
         cache: dict[str, set[str]] = {}
-        utils.get_all_descendants("www_shared", sample_graph, cache)
+        utils.get_all_descendants("www_common", sample_graph, cache)
         assert "api_operational_health" in cache
 
 
@@ -68,8 +68,8 @@ class TestGetWorkflowsToCancel:
         self, cancel, sample_graph: Dict[str, Dict[str, Any]]
     ) -> None:
         """Test single merge root includes all descendants."""
-        to_cancel = cancel.get_workflows_to_cancel(["www_shared"], sample_graph)
-        expected = {"www_shared", "api_shared_routing", "api_operational_health"}
+        to_cancel = cancel.get_workflows_to_cancel(["www_common"], sample_graph)
+        expected = {"www_common", "api_common_routing", "api_operational_health"}
         assert to_cancel == expected
 
     def test_leaf_root_includes_only_itself(
@@ -105,8 +105,8 @@ class TestBuildNameToKeyMap:
         name_to_key = utils.build_name_to_key_map(sample_graph)
         expected = {
             "Bootstrap": "bootstrap",
-            "WWW Shared": "www_shared",
-            "API Shared Routing": "api_shared_routing",
+            "WWW Common": "www_common",
+            "API Common Routing": "api_common_routing",
             "API Operational Health": "api_operational_health",
         }
         assert name_to_key == expected

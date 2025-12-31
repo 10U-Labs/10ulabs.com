@@ -89,9 +89,9 @@ class TestECRCapability:
                 "This is required to pull Docker images for ECS tasks."
             )
 
-    def test_can_describe_images_in_repository(self, ecr_client, api_shared_ecr_outputs):
+    def test_can_describe_images_in_repository(self, ecr_client, api_common_ecr_outputs):
         """Verify we can describe images in the ECR repository."""
-        repository_name = get_repository_name_or_skip(api_shared_ecr_outputs)
+        repository_name = get_repository_name_or_skip(api_common_ecr_outputs)
         try:
             ecr_client.describe_images(
                 repositoryName=repository_name,

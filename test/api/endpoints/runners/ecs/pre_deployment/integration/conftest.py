@@ -76,8 +76,8 @@ def ecs_images_terraform_initialized():
 
 
 @pytest.fixture(scope="session")
-def api_shared_ecr_terraform_initialized():
-    """Initialize terraform for api_shared_ecr state access."""
+def api_common_ecr_terraform_initialized():
+    """Initialize terraform for api_common_ecr state access."""
     return terraform_init(API_SHARED_ECR_DIR)
 
 
@@ -106,10 +106,10 @@ def ecs_images_outputs(request):
 
 
 @pytest.fixture(scope="session")
-def api_shared_ecr_outputs(request):
-    """Get api_shared_ecr terraform outputs."""
-    if not request.getfixturevalue("api_shared_ecr_terraform_initialized"):
-        pytest.skip("Terraform init failed for api_shared_ecr")
+def api_common_ecr_outputs(request):
+    """Get api_common_ecr terraform outputs."""
+    if not request.getfixturevalue("api_common_ecr_terraform_initialized"):
+        pytest.skip("Terraform init failed for api_common_ecr")
     return {
         "repository_name": terraform_output(
             API_SHARED_ECR_DIR, "ecr_repository_name"

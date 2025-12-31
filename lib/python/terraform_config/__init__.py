@@ -183,7 +183,7 @@ def get_runners_resource_names(prefix: str | None = None) -> Dict[str, str]:
 
 def _resolve_prefix_refs(value: str, prefix: str) -> str:
     """Resolve resource_prefix references in a Terraform string value."""
-    value = value.replace("${module.shared.resource_prefix}", prefix)
+    value = value.replace("${module.common.resource_prefix}", prefix)
     value = value.replace("${local.resource_prefix}", prefix)
     return value
 
@@ -239,12 +239,12 @@ def get_tfvars_values(tf_dir: Path) -> Dict[str, Any]:
 
 
 def _resolve_all_refs(value: str, prefix: str, handler_names: Dict[str, str]) -> str:
-    """Resolve all module.shared references in a Terraform string value."""
+    """Resolve all module.common references in a Terraform string value."""
     value = _resolve_prefix_refs(value, prefix)
-    # Resolve ${module.shared.lambda_handler_names.X} interpolations
+    # Resolve ${module.common.lambda_handler_names.X} interpolations
     for handler_key, handler_value in handler_names.items():
         value = value.replace(
-            f"${{module.shared.lambda_handler_names.{handler_key}}}",
+            f"${{module.common.lambda_handler_names.{handler_key}}}",
             handler_value
         )
     return value
@@ -253,9 +253,9 @@ def _resolve_all_refs(value: str, prefix: str, handler_names: Dict[str, str]) ->
 def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
     """Extract local values from locals.tf in the given endpoint directory.
 
-    Resolves ${module.shared.resource_prefix} and ${local.resource_prefix}
+    Resolves ${module.common.resource_prefix} and ${local.resource_prefix}
     references using the shared module's resource_prefix. Also resolves
-    module.shared.lambda_handler_names.X references (both direct and interpolated).
+    module.common.lambda_handler_names.X references (both direct and interpolated).
 
     Args:
         tf_dir: Path to the endpoint's Terraform directory (e.g., src/api/endpoints/foo)
@@ -276,7 +276,7 @@ def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
     for match in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', content):
         locals_dict[match.group(1)] = _resolve_all_refs(match.group(2), prefix, handler_names)
 
-    # Parse module.shared.lambda_handler_names references (direct, not interpolated)
+    # Parse module.common.lambda_handler_names references (direct, not interpolated)
     for match in re.finditer(r'(\w+)\s*=\s*module\.shared\.lambda_handler_names\.(\w+)', content):
         local_name, handler_key = match.groups()
         if handler_key in handler_names:
@@ -363,7 +363,7 @@ def _resolve_lambda_function_name(
     if match and match.group(1) in tfvars:
         return tfvars[match.group(1)]
 
-    # Try module.shared.lambda_handler_names reference
+    # Try module.common.lambda_handler_names reference
     match = re.search(
         r'^\s*function_name\s*=\s*module\.shared\.lambda_handler_names\.(\w+)',
         block, re.MULTILINE
@@ -378,11 +378,11 @@ def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False
     """Extract Lambda function names from a Terraform file.
 
     Handles quoted strings, local references, var references (via tfvars),
-    and optionally module.shared references.
+    and optionally module.common references.
 
     Args:
         tf_file: Path to the Terraform file (typically lambda.tf)
-        use_handler_names: If True, also resolve module.shared.lambda_handler_names refs
+        use_handler_names: If True, also resolve module.common.lambda_handler_names refs
 
     Returns:
         List of (resource_name, resolved_function_name) tuples.

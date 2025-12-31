@@ -1,36 +1,36 @@
 data "terraform_remote_state" "bootstrap" {
   backend = "s3"
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
+    bucket = module.common.name_for_terraform_state_bucket
     key    = "bootstrap/terraform.tfstate"
-    region = module.shared.aws_region
+    region = module.common.aws_region
   }
 }
 
-data "terraform_remote_state" "api_shared_networking" {
+data "terraform_remote_state" "api_common_networking" {
   backend = "s3"
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
-    key    = "api/shared/networking/terraform.tfstate"
-    region = module.shared.aws_region
+    bucket = module.common.name_for_terraform_state_bucket
+    key    = "api/common/networking/terraform.tfstate"
+    region = module.common.aws_region
   }
 }
 
-data "terraform_remote_state" "api_shared_docker_repository" {
+data "terraform_remote_state" "api_common_docker_repository" {
   backend = "s3"
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
-    key    = "api/shared/docker_repository/terraform.tfstate"
-    region = module.shared.aws_region
+    bucket = module.common.name_for_terraform_state_bucket
+    key    = "api/common/docker_repository/terraform.tfstate"
+    region = module.common.aws_region
   }
 }
 
-data "terraform_remote_state" "api_shared_routing" {
+data "terraform_remote_state" "api_common_routing" {
   backend = "s3"
   config = {
-    bucket = module.shared.name_for_terraform_state_bucket
+    bucket = module.common.name_for_terraform_state_bucket
     key    = "api/terraform.tfstate"
-    region = module.shared.aws_region
+    region = module.common.aws_region
   }
 
   defaults = {

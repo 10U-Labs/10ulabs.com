@@ -30,6 +30,6 @@ def ecr_repo_fixture(ecr_client, request):
         if e.response["Error"]["Code"] == "RepositoryNotFoundException":
             pytest.fail(
                 f"ECR repository '{repo_name}' does not exist. "
-                "Run terraform apply in src/api/shared/ecs_runner/"
+                "Run terraform apply in src/api/common/ecs_runner/"
             )
         raise
