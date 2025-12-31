@@ -12,7 +12,7 @@ from naming_conventions import validate_name
 from repo_utils import REPO_ROOT
 from terraform_config import extract_iam_role_names, extract_lambda_function_names
 
-API_BACKEND_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "shared" / "routing" / "outputs.tf"
+API_BACKEND_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "common" / "routing" / "outputs.tf"
 
 
 def get_api_common_routing_outputs() -> set:

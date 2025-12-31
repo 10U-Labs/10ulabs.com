@@ -15,7 +15,7 @@ from repo_utils import REPO_ROOT
 pytest_plugins = ['pytest_layers', 'test_fixtures.aws']
 
 
-API_SHARED_DOCKER_REPOSITORY_SRC = REPO_ROOT / "src" / "api" / "shared" / "docker_repository"
+API_COMMON_DOCKER_REPOSITORY_SRC = REPO_ROOT / "src" / "api" / "common" / "docker_repository"
 
 STATE_KEY = "api/common/docker_repository/terraform.tfstate"
 
@@ -29,7 +29,7 @@ def docker_repository_state_key():
 @pytest.fixture(scope="session")
 def api_common_docker_repository_src():
     """Provide path to api_common_docker_repository source directory."""
-    return API_SHARED_DOCKER_REPOSITORY_SRC
+    return API_COMMON_DOCKER_REPOSITORY_SRC
 
 
 @pytest.fixture(scope="session")

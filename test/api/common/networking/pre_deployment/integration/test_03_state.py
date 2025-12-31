@@ -16,9 +16,9 @@ from terraform_drift.test_helpers import create_orphaned_resource_tests
 pytestmark = pytest.mark.layer(3)
 
 
-API_SHARED_NETWORKING_SRC = REPO_ROOT / "src" / "api" / "shared" / "networking"
+API_COMMON_NETWORKING_SRC = REPO_ROOT / "src" / "api" / "common" / "networking"
 
 TestOrphanedResources = create_orphaned_resource_tests(
-    terraform_dir=API_SHARED_NETWORKING_SRC,
+    terraform_dir=API_COMMON_NETWORKING_SRC,
     region=get_shared_config()["aws_region"],
 )

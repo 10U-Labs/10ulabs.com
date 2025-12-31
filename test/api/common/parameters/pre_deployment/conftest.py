@@ -6,8 +6,8 @@ from test_fixtures.terraform import terraform_init, terraform_output
 
 import pytest
 
-PARAMETERS_SRC = REPO_ROOT / "src" / "api" / "shared" / "parameters"
-NETWORKING_SRC = REPO_ROOT / "src" / "api" / "shared" / "networking"
+PARAMETERS_SRC = REPO_ROOT / "src" / "api" / "common" / "parameters"
+NETWORKING_SRC = REPO_ROOT / "src" / "api" / "common" / "networking"
 
 
 @pytest.fixture(scope="session")

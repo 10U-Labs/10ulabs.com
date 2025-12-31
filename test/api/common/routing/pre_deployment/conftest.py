@@ -15,4 +15,4 @@ def openapi_path_fixture() -> Path:
 @pytest.fixture(name="apigateway_path")
 def apigateway_path_fixture() -> Path:
     """Get the apigateway.tf path."""
-    return REPO_ROOT / "src" / "api" / "shared" / "routing" / "apigateway.tf"
+    return REPO_ROOT / "src" / "api" / "common" / "routing" / "apigateway.tf"

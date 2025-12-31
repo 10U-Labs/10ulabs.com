@@ -15,7 +15,7 @@ from repo_utils import REPO_ROOT
 pytest_plugins = ['test_fixtures.aws']
 
 
-API_SHARED_NETWORKING_SRC = REPO_ROOT / "src" / "api" / "shared" / "networking"
+API_COMMON_NETWORKING_SRC = REPO_ROOT / "src" / "api" / "common" / "networking"
 
 STATE_KEY = "api/common/networking/terraform.tfstate"
 
@@ -29,7 +29,7 @@ def networking_state_key():
 @pytest.fixture(scope="session")
 def api_common_networking_src():
     """Provide path to api_common_networking source directory."""
-    return API_SHARED_NETWORKING_SRC
+    return API_COMMON_NETWORKING_SRC
 
 
 @pytest.fixture(scope="session")

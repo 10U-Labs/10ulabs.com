@@ -8,7 +8,7 @@ from test_fixtures.terraform import terraform_init
 import boto3
 import pytest
 
-PARAMETERS_SRC = REPO_ROOT / "src" / "api" / "shared" / "parameters"
+PARAMETERS_SRC = REPO_ROOT / "src" / "api" / "common" / "parameters"
 
 
 @pytest.fixture(scope="session")

@@ -16,9 +16,9 @@ from terraform_drift.test_helpers import create_orphaned_resource_tests
 pytestmark = pytest.mark.layer(3)
 
 
-API_SHARED_DOCKER_REPOSITORY_SRC = REPO_ROOT / "src" / "api" / "shared" / "docker_repository"
+API_COMMON_DOCKER_REPOSITORY_SRC = REPO_ROOT / "src" / "api" / "common" / "docker_repository"
 
 TestOrphanedResources = create_orphaned_resource_tests(
-    terraform_dir=API_SHARED_DOCKER_REPOSITORY_SRC,
+    terraform_dir=API_COMMON_DOCKER_REPOSITORY_SRC,
     region=get_shared_config()["aws_region"],
 )

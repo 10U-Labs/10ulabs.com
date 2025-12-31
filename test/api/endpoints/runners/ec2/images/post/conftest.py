@@ -11,7 +11,7 @@ ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2" / "im
 POST_DIR = ENDPOINT_SRC / "post"
 CONFIG_PATH = POST_DIR / "config.json"
 COMMON_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "common" / "outputs.tf"
-TFVARS_PATH = REPO_ROOT / "src" / "api" / "shared" / "routing" / "terraform.tfvars"
+TFVARS_PATH = REPO_ROOT / "src" / "api" / "common" / "routing" / "terraform.tfvars"
 
 
 def _parse_locals() -> dict:

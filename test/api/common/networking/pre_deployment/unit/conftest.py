@@ -3,14 +3,14 @@
 import pytest
 from repo_utils import REPO_ROOT
 
-API_SHARED_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "shared" / "networking"
+API_COMMON_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "common" / "networking"
 COMMON_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "common"
 
 
 @pytest.fixture(name="api_common_networking_dir")
 def api_common_networking_dir_fixture():
     """Provide path to api/common/networking directory."""
-    return API_SHARED_NETWORKING_DIR
+    return API_COMMON_NETWORKING_DIR
 
 
 @pytest.fixture(name="shared_module_dir")

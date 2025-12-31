@@ -10,7 +10,7 @@ from event_factories import create_ecs_runner_post_event
 from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
 
-BACKEND_LAMBDAS_PATH = REPO_ROOT / "src" / "api" / "shared" / "routing" / "lambdas"
+BACKEND_LAMBDAS_PATH = REPO_ROOT / "src" / "api" / "common" / "routing" / "lambdas"
 
 # Create lambda loader for backend lambdas
 load_lambda_module = create_lambda_loader(BACKEND_LAMBDAS_PATH)

@@ -14,7 +14,7 @@ import pytest
 from botocore.exceptions import ClientError
 
 # Directory paths for terraform state and config files
-API_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "shared" / "networking"
+API_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "common" / "networking"
 RUNNERS_JSON_PATH = REPO_ROOT / "etc" / "runners.json"
 EC2_IMAGES_CONFIG_PATH = (
     REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2" / "images"

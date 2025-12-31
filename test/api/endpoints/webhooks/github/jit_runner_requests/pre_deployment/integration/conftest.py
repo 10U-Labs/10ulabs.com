@@ -25,9 +25,9 @@ import pytest
 pytest_plugins = ['pytest_layers']
 
 
-API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "shared" / "routing"
-API_SHARED_DOCKER_REPOSITORY_DIR = REPO_ROOT / "src" / "api" / "shared" / "docker_repository"
-API_SHARED_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "shared" / "networking"
+API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"
+API_COMMON_DOCKER_REPOSITORY_DIR = REPO_ROOT / "src" / "api" / "common" / "docker_repository"
+API_COMMON_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "common" / "networking"
 EC2_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
 RUNNERS_DIR = (
     REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
@@ -152,7 +152,7 @@ def ec2_client(aws_region):
 @pytest.fixture(scope="session")
 def api_common_networking_terraform_initialized():
     """Initialize terraform for api_common_networking state access."""
-    return terraform_init(API_SHARED_NETWORKING_DIR)
+    return terraform_init(API_COMMON_NETWORKING_DIR)
 
 
 @pytest.fixture(scope="session")
@@ -167,12 +167,12 @@ def api_common_networking_outputs(request):
     if not request.getfixturevalue("api_common_networking_terraform_initialized"):
         pytest.skip("Terraform init failed for api_common_networking")
     return {
-        "vpc_id": terraform_output(API_SHARED_NETWORKING_DIR, "vpc_id"),
+        "vpc_id": terraform_output(API_COMMON_NETWORKING_DIR, "vpc_id"),
         "public_subnets_ids": terraform_output(
-            API_SHARED_NETWORKING_DIR, "public_subnets_ids"
+            API_COMMON_NETWORKING_DIR, "public_subnets_ids"
         ),
         "security_group_id_for_runners": terraform_output(
-            API_SHARED_NETWORKING_DIR, "security_group_id_for_runners"
+            API_COMMON_NETWORKING_DIR, "security_group_id_for_runners"
         ),
     }
 
@@ -180,7 +180,7 @@ def api_common_networking_outputs(request):
 @pytest.fixture(scope="session")
 def api_common_docker_repository_terraform_initialized():
     """Initialize terraform for api_common_docker_repository state access."""
-    return terraform_init(API_SHARED_DOCKER_REPOSITORY_DIR)
+    return terraform_init(API_COMMON_DOCKER_REPOSITORY_DIR)
 
 
 @pytest.fixture(scope="session")
@@ -196,13 +196,13 @@ def api_common_docker_repository_outputs(request):
         pytest.skip("Terraform init failed for api_common_docker_repository")
     return {
         "ecr_repository_arn": terraform_output(
-            API_SHARED_DOCKER_REPOSITORY_DIR, "ecr_repository_arn"
+            API_COMMON_DOCKER_REPOSITORY_DIR, "ecr_repository_arn"
         ),
         "ecr_repository_name": terraform_output(
-            API_SHARED_DOCKER_REPOSITORY_DIR, "ecr_repository_name"
+            API_COMMON_DOCKER_REPOSITORY_DIR, "ecr_repository_name"
         ),
         "ecr_repository_url": terraform_output(
-            API_SHARED_DOCKER_REPOSITORY_DIR, "ecr_repository_url"
+            API_COMMON_DOCKER_REPOSITORY_DIR, "ecr_repository_url"
         ),
     }
 

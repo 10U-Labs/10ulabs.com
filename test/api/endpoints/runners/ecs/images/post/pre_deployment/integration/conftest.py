@@ -14,7 +14,7 @@ from botocore.exceptions import ClientError
 pytest_plugins = ['pytest_layers']
 
 
-API_SHARED_ECR_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
+API_COMMON_ECR_DIR = REPO_ROOT / "src" / "api" / "common" / "ecs_runner"
 AWS_REGION = "us-east-1"
 BASE_IMAGE = "debian"
 BASE_TAG = "stable-slim"
@@ -35,7 +35,7 @@ def ecr_client():
 @pytest.fixture(scope="session")
 def terraform_initialized():
     """Initialize terraform for api_common_ecr state access."""
-    return terraform_init(API_SHARED_ECR_DIR)
+    return terraform_init(API_COMMON_ECR_DIR)
 
 
 @pytest.fixture(scope="session")
@@ -45,9 +45,9 @@ def api_common_ecr_outputs(request):
         "Terraform init failed for api_common_ecr"
     )
     return {
-        "repository_name": terraform_output(API_SHARED_ECR_DIR, "ecr_repository_name"),
-        "repository_url": terraform_output(API_SHARED_ECR_DIR, "ecr_repository_url"),
-        "repository_arn": terraform_output(API_SHARED_ECR_DIR, "ecr_repository_arn"),
+        "repository_name": terraform_output(API_COMMON_ECR_DIR, "ecr_repository_name"),
+        "repository_url": terraform_output(API_COMMON_ECR_DIR, "ecr_repository_url"),
+        "repository_arn": terraform_output(API_COMMON_ECR_DIR, "ecr_repository_arn"),
     }
 
 

@@ -47,8 +47,8 @@ def ecr_client():
 
 
 IMAGE_FOR_ECS_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ecs" / "images"
-API_SHARED_ECR_DIR = REPO_ROOT / "src" / "api" / "shared" / "docker_repository"
-RUNNERS_DIR = REPO_ROOT / "src" / "api" / "shared" / "networking"
+API_COMMON_ECR_DIR = REPO_ROOT / "src" / "api" / "common" / "docker_repository"
+RUNNERS_DIR = REPO_ROOT / "src" / "api" / "common" / "networking"
 
 
 @pytest.fixture(scope="session")
@@ -78,7 +78,7 @@ def ecs_images_terraform_initialized():
 @pytest.fixture(scope="session")
 def api_common_ecr_terraform_initialized():
     """Initialize terraform for api_common_ecr state access."""
-    return terraform_init(API_SHARED_ECR_DIR)
+    return terraform_init(API_COMMON_ECR_DIR)
 
 
 @pytest.fixture(scope="session")
@@ -112,13 +112,13 @@ def api_common_ecr_outputs(request):
         pytest.skip("Terraform init failed for api_common_ecr")
     return {
         "repository_name": terraform_output(
-            API_SHARED_ECR_DIR, "ecr_repository_name"
+            API_COMMON_ECR_DIR, "ecr_repository_name"
         ),
         "repository_url": terraform_output(
-            API_SHARED_ECR_DIR, "ecr_repository_url"
+            API_COMMON_ECR_DIR, "ecr_repository_url"
         ),
         "repository_arn": terraform_output(
-            API_SHARED_ECR_DIR, "ecr_repository_arn"
+            API_COMMON_ECR_DIR, "ecr_repository_arn"
         ),
     }
 

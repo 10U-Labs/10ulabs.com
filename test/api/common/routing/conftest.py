@@ -30,7 +30,7 @@ def parse_health_tfvars() -> Dict[str, str]:
 def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     """Parse API backend locals.tf file for configuration values."""
     base = Path(__file__).parent.parent.parent.parent.parent
-    locals_path = base / "src" / "api" / "shared" / "routing" / "locals.tf"
+    locals_path = base / "src" / "api" / "common" / "routing" / "locals.tf"
     config = parse_locals_file(locals_path, shared_config)
     domain_name = shared_config.get('domain_name', '')
     config['domain'] = domain_name
@@ -60,7 +60,7 @@ def _add_derived_config(result: Dict[str, str]) -> None:
 def config_fixture(shared_config) -> Dict[str, Any]:
     """Provide merged configuration from terraform files."""
     base = Path(__file__).parent.parent.parent.parent.parent
-    tfvars_path = base / "src" / "api" / "shared" / "routing" / "terraform.tfvars"
+    tfvars_path = base / "src" / "api" / "common" / "routing" / "terraform.tfvars"
     result: Dict[str, Any] = dict(parse_tfvars_file(tfvars_path))
     api_locals = _parse_api_locals(shared_config)
     result['aws_region'] = shared_config['aws_region']

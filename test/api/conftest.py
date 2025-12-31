@@ -22,8 +22,8 @@ from test_fixtures.terraform import terraform_init, terraform_output
 pytest_plugins = ['test_fixtures.aws']
 
 # Common directory constants
-API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "shared" / "routing"
-API_SHARED_ROUTING_DIR = REPO_ROOT / "src" / "api" / "shared" / "routing"
+API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"
+API_COMMON_ROUTING_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"
 ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ecs"
 
 
@@ -48,7 +48,7 @@ def get_runners_outputs(directory: Path) -> Dict[str, str]:
 @pytest.fixture(scope="session")
 def api_common_routing_terraform_initialized():
     """Initialize terraform for api_common_routing state access."""
-    return terraform_init(API_SHARED_ROUTING_DIR)
+    return terraform_init(API_COMMON_ROUTING_DIR)
 
 
 @pytest.fixture(scope="session")
@@ -61,7 +61,7 @@ def api_common_routing_outputs(request):
         pytest.skip("Terraform init failed for api_common_routing")
     return {
         "api_gateway_id": terraform_output(
-            API_SHARED_ROUTING_DIR, "api_gateway_id"
+            API_COMMON_ROUTING_DIR, "api_gateway_id"
         ),
     }
 

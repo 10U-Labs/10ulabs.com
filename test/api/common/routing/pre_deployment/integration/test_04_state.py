@@ -9,7 +9,7 @@ from terraform_drift.test_helpers import create_orphaned_resource_tests
 
 pytestmark = pytest.mark.layer(4)
 
-API_BACKEND_SRC = REPO_ROOT / "src" / "api" / "shared" / "routing"
+API_BACKEND_SRC = REPO_ROOT / "src" / "api" / "common" / "routing"
 
 TestOrphanedResources = create_orphaned_resource_tests(
     terraform_dir=API_BACKEND_SRC,
