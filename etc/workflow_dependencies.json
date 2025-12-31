@@ -150,9 +150,7 @@
     ]
   },
   "api_endpoint_v1_runners_ec2_images_post": {
-    "depends_on": [
-      "api_shared_parameters"
-    ],
+    "depends_on": [],
     "name": "Building AMI for EC2 self-hosted runners",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2_images_post.yml",
@@ -177,9 +175,7 @@
     ]
   },
   "api_endpoint_v1_runners_ecs_images_post": {
-    "depends_on": [
-      "api_shared_docker_repository"
-    ],
+    "depends_on": [],
     "name": "Building Docker image for ECS runners",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs_images_post.yml",
