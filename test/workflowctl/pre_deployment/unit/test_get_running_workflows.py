@@ -34,7 +34,7 @@ class TestBuildNameToKeyMap:
         expected = {
             "Ensuring bootstrap infrastructure exists and is properly configured": "bootstrap",
             "WWW Shared": "www_shared",
-            "Ensuring API backend exists and is properly configured": "api_shared_routing",
+            "Ensuring API shared routing exists and is properly configured": "api_shared_routing",
         }
         assert name_to_key == expected
 
