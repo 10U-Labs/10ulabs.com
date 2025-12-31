@@ -66,22 +66,20 @@ jobs:
           AMI_PURPOSE_VALUE=$(jq -r '.tags.ec2.ami.purpose_value' $RUNNERS_JSON)
           AMI_STABLE_TAG=$(jq -r '.tags.ec2.ami.stable_tag' $RUNNERS_JSON)
           SSM_PARAM=$(jq -r '.parameters.ec2.ami.latest' $RUNNERS_JSON)
-
           # Get instance types from config.json (local to this workflow)
           CONF=src/api/endpoints/runners/ec2/images/post/config.json
-          INSTANCE_TYPES=$(jq -r '.instance_types // ["m8gd.medium"] | join(",")' $CONF)
-
+          DEFAULT='["m8gd.medium"]'
+          ITYPES=$(jq -r ".instance_types // $DEFAULT | join(\",\")" $CONF)
           # Get networking resources from src/api/shared/networking remote state
           cd src/api/shared/networking
           terraform init -backend=true -input=false
-          SECURITY_GROUP_ID=$(terraform output -raw security_group_id_for_runners)
+          SG_ID=$(terraform output -raw security_group_id_for_runners)
           SUBNET_IDS=$(terraform output -raw public_subnets_ids)
-
-          echo "instance_types=$INSTANCE_TYPES" >> $GITHUB_OUTPUT
+          echo "instance_types=$ITYPES" >> $GITHUB_OUTPUT
           echo "ami_purpose_tag=$AMI_PURPOSE_TAG" >> $GITHUB_OUTPUT
           echo "ami_purpose_value=$AMI_PURPOSE_VALUE" >> $GITHUB_OUTPUT
           echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
-          echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
+          echo "security_group_id=$SG_ID" >> $GITHUB_OUTPUT
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
           echo "ssm_param=$SSM_PARAM" >> $GITHUB_OUTPUT
       - id: config
