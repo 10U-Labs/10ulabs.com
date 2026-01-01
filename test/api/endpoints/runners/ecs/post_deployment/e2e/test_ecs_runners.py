@@ -2,7 +2,6 @@
 import time
 
 import pytest
-from botocore.exceptions import ClientError
 
 from ..conftest import (
     create_runner_job_payload,
@@ -201,5 +200,3 @@ def test_ecs_runner_task_has_run_id_tag(test_fargate_task, ecs_context, stable_e
         test_fargate_task.get("task_arn")
     )
     assert tag_dict.get("RunId") == str(run_id)
-
-

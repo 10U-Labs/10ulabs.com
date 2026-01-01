@@ -5,7 +5,11 @@ These tests focus on specific deployment capabilities, not just API authorizatio
 """
 import pytest
 from botocore.exceptions import ClientError
-from test_fixtures.integration import Layer6IAMCapabilityTests, Layer6S3CapabilityTests
+from test_fixtures.integration import (
+    Layer6IAMCapabilityTests,
+    Layer6S3CapabilityTests,
+    check_state_file_readable,
+)
 
 pytestmark = pytest.mark.layer(7)
 
@@ -18,19 +22,9 @@ class TestS3StateCapabilities(Layer6S3CapabilityTests):
 
     def test_can_read_runners_state_file(self, s3_client, state_bucket_name):
         """Verify we can read the runners state file specifically."""
-        state_key = "api/endpoints/runners/terraform.tfstate"
-        try:
-            s3_client.head_object(Bucket=state_bucket_name, Key=state_key)
-        except ClientError as e:
-            error_code = e.response["Error"]["Code"]
-            if error_code == "403":
-                pytest.fail(
-                    f"No permission to read '{state_key}' from '{state_bucket_name}'. "
-                    "Check IAM permissions for s3:GetObject."
-                )
-            if error_code == "404":
-                pytest.skip("State file does not exist yet (first deployment)")
-            raise
+        check_state_file_readable(
+            s3_client, state_bucket_name, "api/endpoints/runners/terraform.tfstate"
+        )
 
 
 class TestIAMCapabilities(Layer6IAMCapabilityTests):

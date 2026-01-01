@@ -13,6 +13,77 @@ NO_CREDENTIALS_MESSAGE = (
 )
 
 
+def check_lambda_function_exists(lambda_client, function_name: str, terraform_path: str):
+    """Check that a Lambda function exists.
+
+    Args:
+        lambda_client: boto3 Lambda client
+        function_name: Name of the Lambda function to check
+        terraform_path: Path for terraform apply in error message
+
+    Raises:
+        pytest.fail: If the function does not exist
+    """
+    try:
+        response = lambda_client.get_function(FunctionName=function_name)
+        assert response["Configuration"]["FunctionName"] == function_name
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ResourceNotFoundException":
+            pytest.fail(
+                f"Lambda function '{function_name}' does not exist. "
+                f"Run terraform apply in {terraform_path}"
+            )
+        raise
+
+
+def check_iam_role_exists(iam_client, role_name: str, terraform_path: str):
+    """Check that an IAM role exists.
+
+    Args:
+        iam_client: boto3 IAM client
+        role_name: Name of the IAM role to check
+        terraform_path: Path for terraform apply in error message
+
+    Raises:
+        pytest.fail: If the role does not exist
+    """
+    try:
+        response = iam_client.get_role(RoleName=role_name)
+        assert response.get("Role") is not None
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "NoSuchEntity":
+            pytest.fail(
+                f"Lambda execution role '{role_name}' does not exist. "
+                f"Run terraform apply in {terraform_path}"
+            )
+        raise
+
+
+def check_lambda_role_has_policy(iam_client, role_name: str, policy_name: str):
+    """Check that a Lambda role has a specific inline policy attached.
+
+    Args:
+        iam_client: boto3 IAM client
+        role_name: Name of the Lambda role
+        policy_name: Name of the inline policy to check
+
+    Raises:
+        pytest.fail: If the policy is not attached
+        pytest.skip: If the role does not exist
+    """
+    try:
+        response = iam_client.list_role_policies(RoleName=role_name)
+        policy_names = response.get("PolicyNames", [])
+        assert policy_name in policy_names, (
+            f"Lambda role '{role_name}' missing {policy_name} inline policy. "
+            f"Found policies: {policy_names}"
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "NoSuchEntity":
+            pytest.skip(f"Lambda role '{role_name}' does not exist")
+        raise
+
+
 def fail_no_credentials():
     """Fail the test with a standard no-credentials message."""
     pytest.fail(NO_CREDENTIALS_MESSAGE)

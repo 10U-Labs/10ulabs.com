@@ -4,6 +4,8 @@ import pytest
 from naming_conventions import validate_name
 from test_fixtures.integration.helpers import (
     assert_iam_role_name_is_pascalcase,
+    check_iam_role_exists,
+    check_lambda_function_exists,
     check_service_can_assume_role,
 )
 
@@ -206,16 +208,7 @@ def create_lambda_execution_role_wiring_tests(fixture_name: str = "lambda_functi
             if not role_name:
                 pytest.fail("Could not extract role name from Lambda configuration")
 
-            try:
-                response = iam_client.get_role(RoleName=role_name)
-                assert response.get("Role") is not None
-            except ClientError as e:
-                if e.response["Error"]["Code"] == "NoSuchEntity":
-                    pytest.fail(
-                        f"Lambda execution role '{role_name}' does not exist in IAM. "
-                        "The Lambda is configured with a non-existent role."
-                    )
-                raise
+            check_iam_role_exists(iam_client, role_name, "the Lambda's deployment")
 
         def test_lambda_role_can_be_assumed_by_lambda(self, iam_client, request):
             """Verify the Lambda execution role has a trust policy for Lambda."""
@@ -270,16 +263,7 @@ def create_lambda_existence_tests(
         def test_handler_lambda_exists(self, lambda_client, config):
             """Verify Lambda function exists."""
             function_name = config.get(function_name_config_key, default_function_name)
-            try:
-                response = lambda_client.get_function(FunctionName=function_name)
-                assert response["Configuration"]["FunctionName"] == function_name
-            except ClientError as e:
-                if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                    pytest.fail(
-                        f"Lambda function '{function_name}' does not exist. "
-                        f"Run terraform apply in {terraform_path}"
-                    )
-                raise
+            check_lambda_function_exists(lambda_client, function_name, terraform_path)
 
         def test_handler_iam_role_exists(self, iam_client, config):
             """Verify IAM role exists."""

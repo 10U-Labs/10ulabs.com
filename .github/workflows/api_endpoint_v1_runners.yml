@@ -108,8 +108,7 @@ jobs:
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py test/api/endpoints/runners/ \
+            lib/python/ test/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - if: >-
@@ -124,9 +123,8 @@ jobs:
             lib/python/ src/api/endpoints/runners/lambda/handler.py
       - name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python python3 -m mypy \
-            lib/python/ test/conftest.py test/api/conftest.py \
-            test/api/endpoints/conftest.py test/api/endpoints/runners/
+          MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
+            lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -140,15 +138,21 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/api/endpoints/runners/
+            lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pytest dependencies
-        run: >-
-          python3 -m pip install pytest pytest-dependency boto3 botocore requests
-          dnspython python-hcl2
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            dnspython \
+            pytest \
+            pytest-dependency \
+            python-hcl2 \
+            requests
       - name: Run unit tests
         run: |
           python3 -m pytest \

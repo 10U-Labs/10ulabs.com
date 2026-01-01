@@ -2,6 +2,7 @@
 from botocore.exceptions import ClientError
 import pytest
 from repo_utils import REPO_ROOT
+from test_fixtures.integration.helpers import check_iam_role_exists, check_lambda_role_has_policy
 from test_fixtures.terraform import terraform_init, terraform_output
 
 
@@ -360,3 +361,36 @@ def create_log_group_configuration_tests(
             )
 
     return TestCloudWatchLogsConfiguration
+
+
+def create_lambda_role_existence_test(role_name_fixture: str, terraform_path: str):
+    """Create a Lambda execution role existence test function.
+
+    Args:
+        role_name_fixture: Name of fixture providing the role name
+        terraform_path: Path for terraform apply in error message
+
+    Returns:
+        Test function that checks IAM role exists
+    """
+    def test_lambda_execution_role_exists(_self, iam_client, request):
+        """Verify the Lambda execution role exists."""
+        role_name = request.getfixturevalue(role_name_fixture)
+        check_iam_role_exists(iam_client, role_name, terraform_path)
+    return test_lambda_execution_role_exists
+
+
+def create_kms_policy_test(role_name_fixture: str):
+    """Create a KMS policy existence test function.
+
+    Args:
+        role_name_fixture: Name of fixture providing the role name
+
+    Returns:
+        Test function that checks KMS policy exists
+    """
+    def test_lambda_role_has_kms_policy(_self, iam_client, request):
+        """Verify the Lambda role has KMS policy attached."""
+        role_name = request.getfixturevalue(role_name_fixture)
+        check_lambda_role_has_policy(iam_client, role_name, "KMSDecrypt")
+    return test_lambda_role_has_kms_policy

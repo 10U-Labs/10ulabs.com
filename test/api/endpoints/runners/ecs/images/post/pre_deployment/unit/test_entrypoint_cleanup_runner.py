@@ -1,6 +1,5 @@
 """Tests for entrypoint cleanup_runner function."""
 from unittest.mock import patch
-import pytest
 
 
 @patch('entrypoint.subprocess.run')

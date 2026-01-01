@@ -6,6 +6,10 @@ import pytest
 from botocore.exceptions import ClientError
 
 from naming_conventions import validate_name
+from test_fixtures.integration import (
+    check_lambda_role_has_policy,
+    create_log_group_configuration_tests,
+)
 
 from .conftest import get_inline_policy_actions
 
@@ -51,17 +55,7 @@ class TestLambdaRoleKmsPolicy:
 
     def test_lambda_role_has_kms_policy(self, iam_client, lambda_role_name):
         """Verify the Lambda role has a KMS policy attached."""
-        try:
-            response = iam_client.list_role_policies(RoleName=lambda_role_name)
-            policy_names = response.get("PolicyNames", [])
-            assert "KMSDecrypt" in policy_names, (
-                f"Lambda role '{lambda_role_name}' missing KMSDecrypt inline policy. "
-                f"Found policies: {policy_names}"
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchEntity":
-                pytest.skip(f"Lambda role '{lambda_role_name}' does not exist")
-            raise
+        check_lambda_role_has_policy(iam_client, lambda_role_name, "KMSDecrypt")
 
     def test_kms_policy_allows_decrypt(self, iam_client, lambda_role_name):
         """Verify the KMS policy allows kms:Decrypt action."""
@@ -89,22 +83,11 @@ class TestLambdaRoleKmsPolicy:
             raise
 
 
-class TestHandlerLogGroupConfiguration:
-    """Verify Lambda handler CloudWatch log group is configured correctly."""
-
-    def test_handler_log_group_has_retention_set(self, handler_log_group):
-        """Verify log group has retention policy configured."""
-        assert handler_log_group["retention"] is not None, (
-            f"Log group '{handler_log_group['name']}' has no retention policy set"
-        )
-
-    def test_handler_log_group_retention_is_7_days(self, handler_log_group):
-        """Verify log group retention is set to 7 days."""
-        retention = handler_log_group["retention"]
-        assert retention == 7, (
-            f"Log group '{handler_log_group['name']}' retention is {retention} days, "
-            "expected 7 days"
-        )
+# Use factory for log group configuration tests
+TestHandlerLogGroupConfiguration = create_log_group_configuration_tests(
+    log_group_fixture="handler_log_group",
+    expected_retention=7,
+)
 
 
 class TestEC2RunnerCloudWatchLogsPolicy:

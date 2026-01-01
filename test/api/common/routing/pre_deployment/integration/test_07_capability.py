@@ -10,6 +10,7 @@ from test_fixtures.integration import (
     Layer6IAMCapabilityTests,
     Layer6S3CapabilityTests,
     Layer6S3WriteCapabilityTests,
+    check_state_file_readable,
 )
 
 pytestmark = pytest.mark.layer(7)
@@ -27,19 +28,7 @@ class TestS3StateCapabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTe
 
     def test_can_read_state_file(self, s3_client, state_bucket_name):
         """Verify we can read the api_common_routing state file."""
-        state_key = "api/terraform.tfstate"
-        try:
-            s3_client.head_object(Bucket=state_bucket_name, Key=state_key)
-        except ClientError as e:
-            error_code = e.response["Error"]["Code"]
-            if error_code == "403":
-                pytest.fail(
-                    f"No permission to read '{state_key}' from '{state_bucket_name}'. "
-                    "Check IAM permissions for s3:GetObject."
-                )
-            if error_code == "404":
-                pytest.skip("State file does not exist yet (first deployment)")
-            raise
+        check_state_file_readable(s3_client, state_bucket_name, "api/terraform.tfstate")
 
 
 class TestCentralLogsBucketCapabilities:
@@ -65,7 +54,10 @@ class TestCentralLogsBucketCapabilities:
                 )
             raise
         finally:
-            s3_client.delete_object(Bucket=central_logs_bucket_name, Key=test_key)
+            try:
+                s3_client.delete_object(Bucket=central_logs_bucket_name, Key=test_key)
+            except ClientError:
+                pass
 
     def test_can_delete_from_central_logs_bucket(
         self, s3_client, central_logs_bucket_name

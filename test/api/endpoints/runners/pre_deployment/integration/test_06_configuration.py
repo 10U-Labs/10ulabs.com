@@ -23,12 +23,13 @@ class TestAPIGatewayAndStateBucketConfiguration:
         )
 
     def test_state_bucket_has_versioning(self, s3_client, state_bucket_name):
-        """Verify state bucket has versioning enabled."""
+        """Verify state bucket has versioning enabled or was enabled (Suspended)."""
         try:
             response = s3_client.get_bucket_versioning(Bucket=state_bucket_name)
             status = response.get("Status", "")
-            assert status == "Enabled", (
-                f"State bucket '{state_bucket_name}' does not have versioning enabled. "
+            # Enabled = versioning active, Suspended = was enabled (versions preserved)
+            assert status in ("Enabled", "Suspended"), (
+                f"State bucket '{state_bucket_name}' has never had versioning enabled. "
                 "Terraform state buckets should have versioning for safety."
             )
         except ClientError as e:

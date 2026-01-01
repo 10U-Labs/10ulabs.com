@@ -1,7 +1,6 @@
 """Tests for request handler functions."""
 from test.api.endpoints.runners.ecs.images.endpoint.test_data import (
     make_ecr_describe_response,
-    make_ecr_image_detail,
     make_stable_image,
 )
 

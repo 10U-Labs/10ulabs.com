@@ -2,36 +2,22 @@
 
 Verify AWS credentials are valid before testing authorization or state.
 """
+import os
+
 import pytest
-from botocore.exceptions import NoCredentialsError
+from test_fixtures.integration import Layer2EndpointAuthenticationTests
 
 pytestmark = pytest.mark.layer(2)
 
 
-def test_aws_credentials_available(sts_client):
-    """Verify AWS credentials are configured."""
-    try:
-        sts_client.get_caller_identity()
-    except NoCredentialsError:
-        pytest.fail(
-            "No AWS credentials found. "
-            "Configure credentials via environment variables, "
-            "~/.aws/credentials, or IAM role."
-        )
+class TestAuthentication(Layer2EndpointAuthenticationTests):
+    """Inherit standard authentication tests."""
 
 
-def test_aws_credentials_valid(sts_client):
-    """Verify AWS credentials are valid."""
-    response = sts_client.get_caller_identity()
-    assert response["Account"] is not None
-
-
-def test_aws_credentials_not_expired(sts_client):
-    """Verify AWS credentials are not expired."""
-    response = sts_client.get_caller_identity()
-    assert "Arn" in response
-
-
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") != "true",
+    reason="Role identity check only applies in GitHub Actions"
+)
 def test_caller_identity_is_role(current_identity):
     """Verify we are running as an IAM role (not user)."""
     arn = current_identity.get("Arn", "")

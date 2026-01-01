@@ -13,6 +13,8 @@ from test_fixtures.integration.factories.capability import (
 from test_fixtures.integration.factories.infrastructure import (
     create_ecs_runner_lambda_existence_tests,
     create_ecs_runner_outputs_tests,
+    create_kms_policy_test,
+    create_lambda_role_existence_test,
     create_log_group_configuration_tests,
     create_security_group_existence_test,
     create_sqs_fifo_queue_tests,
