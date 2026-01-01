@@ -110,8 +110,14 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')) &&
           (github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true')
-        name: Install pylint
-        run: python3 -m pip install pylint==3.3.*
+        name: Install pylint dependencies
+        run: |
+          python3 -m pip install \
+            boto3==1.35.* \
+            botocore==1.35.* \
+            pylint==3.3.* \
+            pytest==8.3.* \
+            requests==2.32.*
       - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
