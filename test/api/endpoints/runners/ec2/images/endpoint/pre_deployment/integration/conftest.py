@@ -5,9 +5,6 @@ import pytest
 
 from repo_utils import REPO_ROOT
 
-# Enable layer marker plugin for test ordering
-pytest_plugins = ['pytest_layers']
-
 RUNNERS_CONFIG_PATH = REPO_ROOT / "etc" / "runners.json"
 
 
