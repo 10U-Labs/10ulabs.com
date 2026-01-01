@@ -94,9 +94,17 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install mypy
-        run: python3 -m pip install mypy boto3-stubs
+        run: |
+          python3 -m pip install \
+            boto3-stubs \
+            mypy \
+            types-dockerfile-parse \
+            types-PyYAML \
+            types-requests
       - name: Run mypy
-        run: MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy lib/python/ test/www/paths/
+        run: |
+          MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
+            lib/python/ test/www/paths/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
