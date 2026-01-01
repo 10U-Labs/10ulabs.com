@@ -132,6 +132,10 @@ def get_shared_config() -> Dict[str, Any]:
     config: Dict[str, Any] = parse_locals()
     config.update(parse_outputs())
     config["lambda_handler_names"] = parse_lambda_handler_names()
+    # Derive api_fqdn from domain_name for convenience
+    domain_name = config.get("domain_name", "")
+    if domain_name:
+        config["api_fqdn"] = f"api.{domain_name}"
     return config
 
 

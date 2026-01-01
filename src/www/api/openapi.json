@@ -324,7 +324,7 @@
             "default": {
               "statusCode": "200",
               "responseTemplates": {
-                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.json('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
+                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.path('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
               }
             }
           }
@@ -1506,7 +1506,7 @@
             "default": {
               "statusCode": "200",
               "responseTemplates": {
-                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.json('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
+                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.path('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
               }
             }
           }

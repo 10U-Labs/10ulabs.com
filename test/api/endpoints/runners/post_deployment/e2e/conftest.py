@@ -43,8 +43,10 @@ def api_url(request):
     """Get the API URL."""
     config = request.getfixturevalue("shared_config")
     api_fqdn = config.get("api_fqdn", "")
-    if not api_fqdn:
-        pytest.skip("api_fqdn not configured")
+    assert api_fqdn, (
+        "api_fqdn not found in shared config. "
+        "Check that domain_name is set in lib/terraform/common/outputs.tf"
+    )
     return f"https://{api_fqdn}"
 
 
@@ -58,12 +60,8 @@ def ssm_client():
 def api_key(request):
     """Get the API key from SSM."""
     client = request.getfixturevalue("ssm_client")
-    try:
-        response = client.get_parameter(Name='/api/key', WithDecryption=True)
-        return response['Parameter']['Value']
-    except client.exceptions.ParameterNotFound:
-        pytest.skip("API key not found in SSM")
-        return None
+    response = client.get_parameter(Name='/api/key', WithDecryption=True)
+    return response['Parameter']['Value']
 
 
 def create_sqs_event(message_body: dict, message_id: str = "test-msg-id") -> dict:
