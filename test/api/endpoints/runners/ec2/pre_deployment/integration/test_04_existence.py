@@ -37,28 +37,28 @@ class TestImageForEC2RunnersOutputs:
         )
 
 
-class TestRunnersOutputs:
-    """Verify runners terraform outputs exist."""
+class TestNetworkingOutputs:
+    """Verify networking terraform outputs exist."""
 
-    def test_vpc_id_output_exists(self, runners_outputs):
+    def test_vpc_id_output_exists(self, networking_outputs):
         """Verify vpc_id output exists."""
-        assert runners_outputs.get("vpc_id"), (
-            "vpc_id output not found in runners. "
-            "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
+        assert networking_outputs.get("vpc_id"), (
+            "vpc_id output not found in networking. "
+            "Run: cd src/api/common/networking && terraform apply"
         )
 
-    def test_subnet_ids_output_exists(self, runners_outputs):
+    def test_subnet_ids_output_exists(self, networking_outputs):
         """Verify public_subnets_ids output exists."""
-        assert runners_outputs.get("public_subnets_ids"), (
-            "public_subnets_ids output not found in runners. "
-            "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
+        assert networking_outputs.get("public_subnets_ids"), (
+            "public_subnets_ids output not found in networking. "
+            "Run: cd src/api/common/networking && terraform apply"
         )
 
-    def test_security_group_id_output_exists(self, runners_outputs):
+    def test_security_group_id_output_exists(self, networking_outputs):
         """Verify security_group_id_for_runners output exists."""
-        assert runners_outputs.get("security_group_id_for_runners"), (
-            "security_group_id_for_runners output not found in runners. "
-            "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
+        assert networking_outputs.get("security_group_id_for_runners"), (
+            "security_group_id_for_runners output not found in networking. "
+            "Run: cd src/api/common/networking && terraform apply"
         )
 
 
@@ -78,28 +78,28 @@ def test_stable_ami_exists(ec2_client):
 class TestVPCResources:
     """Verify VPC resources exist."""
 
-    def test_vpc_exists(self, ec2_client, runners_outputs):
+    def test_vpc_exists(self, ec2_client, networking_outputs):
         """Verify the VPC exists."""
-        vpc_id = runners_outputs.get("vpc_id")
+        vpc_id = networking_outputs.get("vpc_id")
         if not vpc_id:
             pytest.skip("vpc_id output not found")
         try:
             response = ec2_client.describe_vpcs(VpcIds=[vpc_id])
             assert len(response["Vpcs"]) == 1, (
                 f"VPC {vpc_id} not found. "
-                "Run: cd src/api/endpoints/webhooks/github/jit_runner_requests && terraform apply"
+                "Run: cd src/api/common/networking && terraform apply"
             )
         except ClientError as e:
             if e.response["Error"]["Code"] == "InvalidVpcID.NotFound":
-                jit_path = "src/api/endpoints/webhooks/github/jit_runner_requests"
                 pytest.fail(
-                    f"VPC {vpc_id} does not exist. Run: cd {jit_path} && terraform apply"
+                    f"VPC {vpc_id} does not exist. "
+                    "Run: cd src/api/common/networking && terraform apply"
                 )
             raise
 
-    def test_subnets_exist(self, ec2_client, runners_outputs):
+    def test_subnets_exist(self, ec2_client, networking_outputs):
         """Verify all subnets exist."""
-        subnet_ids_str = runners_outputs.get("public_subnets_ids")
+        subnet_ids_str = networking_outputs.get("public_subnets_ids")
         if not subnet_ids_str:
             pytest.skip("public_subnets_ids output not found")
         subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
@@ -111,16 +111,15 @@ class TestVPCResources:
             )
         except ClientError as e:
             if e.response["Error"]["Code"] == "InvalidSubnetID.NotFound":
-                jit_path = "src/api/endpoints/webhooks/github/jit_runner_requests"
                 pytest.fail(
                     f"One or more subnets not found: {subnet_ids}. "
-                    f"Run: cd {jit_path} && terraform apply"
+                    "Run: cd src/api/common/networking && terraform apply"
                 )
             raise
 
     # Use factory for security group existence test
     test_security_group_exists = create_security_group_existence_test(
-        outputs_fixture="runners_outputs",
+        outputs_fixture="networking_outputs",
         sg_id_key="security_group_id_for_runners",
-        terraform_path="src/api/endpoints/webhooks/github/jit_runner_requests",
+        terraform_path="src/api/common/networking",
     )

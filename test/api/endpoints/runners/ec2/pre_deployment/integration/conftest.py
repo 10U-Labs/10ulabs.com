@@ -16,9 +16,7 @@ import pytest
 pytest_plugins = ['pytest_layers']
 
 IMAGE_FOR_EC2_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2" / "images"
-RUNNERS_DIR = (
-    REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
-)
+NETWORKING_DIR = REPO_ROOT / "src" / "api" / "common" / "networking"
 
 
 @pytest.fixture(scope="session")
@@ -34,9 +32,9 @@ def ec2_images_terraform_initialized():
 
 
 @pytest.fixture(scope="session")
-def runners_terraform_initialized():
-    """Initialize terraform for runners state access."""
-    return terraform_init(RUNNERS_DIR)
+def networking_terraform_initialized():
+    """Initialize terraform for networking state access."""
+    return terraform_init(NETWORKING_DIR)
 
 
 @pytest.fixture(scope="session")
@@ -58,11 +56,11 @@ def ec2_images_outputs(request):
 
 
 @pytest.fixture(scope="session")
-def runners_outputs(request):
-    """Get runners terraform outputs for EC2 runner tests."""
-    if not request.getfixturevalue("runners_terraform_initialized"):
-        pytest.skip("Terraform init failed for runners")
-    return get_runners_outputs(RUNNERS_DIR)
+def networking_outputs(request):
+    """Get networking terraform outputs for EC2 runner tests."""
+    if not request.getfixturevalue("networking_terraform_initialized"):
+        pytest.skip("Terraform init failed for networking")
+    return get_runners_outputs(NETWORKING_DIR)
 
 
 def get_stable_ami_filters():
