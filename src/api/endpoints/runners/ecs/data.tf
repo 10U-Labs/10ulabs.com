@@ -34,7 +34,7 @@ data "terraform_remote_state" "api_common_routing" {
   }
 
   defaults = {
-    api_fqdn                = ""
+    api_fqdn       = ""
     api_gateway_id = ""
   }
 }
