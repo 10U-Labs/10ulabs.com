@@ -24,9 +24,9 @@ def test_stable_ami_is_available(ec2_client):
 class TestVPCConfiguration:
     """Verify VPC resources are properly configured."""
 
-    def test_vpc_is_available(self, ec2_client, runners_outputs):
+    def test_vpc_is_available(self, ec2_client, networking_outputs):
         """Verify the VPC is in available state."""
-        vpc_id = runners_outputs.get("vpc_id")
+        vpc_id = networking_outputs.get("vpc_id")
         if not vpc_id:
             pytest.skip("vpc_id output not found")
         response = ec2_client.describe_vpcs(VpcIds=[vpc_id])
@@ -37,9 +37,9 @@ class TestVPCConfiguration:
             f"VPC {vpc_id} is in state '{vpc['State']}', not 'available'."
         )
 
-    def test_subnets_are_available(self, ec2_client, runners_outputs):
+    def test_subnets_are_available(self, ec2_client, networking_outputs):
         """Verify all subnets are in available state."""
-        subnet_ids_str = runners_outputs.get("public_subnets_ids")
+        subnet_ids_str = networking_outputs.get("public_subnets_ids")
         if not subnet_ids_str:
             pytest.skip("public_subnets_ids output not found")
         subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
