@@ -61,9 +61,6 @@ def terraform_outputs(request):
         # Load values from etc/runners.json
         runners_config = _load_runners_json()
         ec2_ami_tags = runners_config.get("tags", {}).get("ec2", {}).get("ami", {})
-        ec2_ami_params = (
-            runners_config.get("parameters", {}).get("ec2", {}).get("ami", {})
-        )
 
         # Load instance types from config.json
         ec2_images_config = _load_ec2_images_config()
@@ -73,7 +70,6 @@ def terraform_outputs(request):
             # Values from etc/runners.json
             "ec2_runner_ami_purpose_value": ec2_ami_tags.get("purpose_value", ""),
             "ec2_runner_ami_stable_tag": ec2_ami_tags.get("stable_tag", ""),
-            "ssm_parameter_name_for_latest_ami": ec2_ami_params.get("latest", ""),
             # Values from config.json
             "ec2_instance_types": json.dumps(instance_types),
             # Values from terraform networking state

@@ -26,7 +26,6 @@ locals {
   webhook_dlq_name            = "${module.common.lambda_handler_names.webhook}Dlq"
 
   # SSM parameter names
-  ssm_parameter_name_for_latest_ami     = module.common.ssm_ec2_runner_ami_latest
   ssm_parameter_name_for_webhook_secret = "/api/webhook-secret"
 
   # Alerting

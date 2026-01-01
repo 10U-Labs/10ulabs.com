@@ -11,8 +11,6 @@ api_operational_diagnostics
     ↓
 api_common_networking
     ↓
-api_common_parameters
-    ↓
 api_endpoint_v1_runners_ec2_images_post
     ↓
 api_endpoint_v1_runners_ec2_images

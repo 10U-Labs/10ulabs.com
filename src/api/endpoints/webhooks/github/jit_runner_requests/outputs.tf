@@ -42,11 +42,6 @@ output "ecr_repository_uri" {
   value = data.terraform_remote_state.api_common_docker_repository.outputs.ecr_repository_url
 }
 
-output "ssm_parameter_name_for_latest_ami" {
-  description = "SSM parameter name for latest EC2 runner AMI (resource in api_common_parameters)"
-  value       = local.ssm_parameter_name_for_latest_ami
-}
-
 output "api_endpoint" {
   value = "https://${local.api_fqdn}"
 }

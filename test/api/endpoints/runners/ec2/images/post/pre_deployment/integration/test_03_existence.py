@@ -54,10 +54,6 @@ class TestTerraformOutputsExist:
         """Verify security_group_id_for_runners output exists."""
         assert terraform_outputs.get("security_group_id_for_runners") != ""
 
-    def test_ssm_parameter_name_for_latest_ami_exists(self, terraform_outputs):
-        """Verify ssm_parameter_name_for_latest_ami output exists."""
-        assert terraform_outputs.get("ssm_parameter_name_for_latest_ami") != ""
-
     def test_public_subnets_ids_exists(self, terraform_outputs):
         """Verify public_subnets_ids output exists."""
         assert terraform_outputs.get("public_subnets_ids") != ""
