@@ -9,25 +9,43 @@ from ..conftest import make_authenticated_get
 def test_ami_id_fixture(amis_endpoint, api_key):
     """Get an AMI ID to use for delete tests.
 
-    Returns the oldest non-stable AMI if available, otherwise skips.
-    We don't actually delete it - we just test the endpoint behavior.
+    Returns the oldest deletable AMI. An AMI is deletable if it's not the
+    latest stable AMI. We don't actually delete it - we just test the
+    endpoint behavior with x-test-mode.
     """
     response = make_authenticated_get(amis_endpoint, api_key)
     if response.status_code != 200:
         pytest.skip("Cannot list AMIs to find test candidate")
 
     amis = response.json().get("amis", [])
-    # Find a non-stable AMI (stable=false or no stable tag) to avoid deleting important AMIs
-    non_stable_amis = [
+    if not amis:
+        pytest.skip("No AMIs available for delete testing")
+
+    # Find the latest stable AMI (the one we must protect)
+    stable_amis = [
         ami for ami in amis
-        if ami.get("tags", {}).get("Stable") != "true"
+        if ami.get("tags", {}).get("Stable") == "true"
+    ]
+    latest_stable_id = None
+    if stable_amis:
+        sorted_stable = sorted(
+            stable_amis,
+            key=lambda x: x.get("creation_date", ""),
+            reverse=True
+        )
+        latest_stable_id = sorted_stable[0]["ami_id"]
+
+    # Any AMI except the latest stable is a valid delete candidate
+    deletable_amis = [
+        ami for ami in amis
+        if ami["ami_id"] != latest_stable_id
     ]
 
-    if not non_stable_amis:
-        pytest.skip("No non-stable AMIs available for delete testing")
+    if not deletable_amis:
+        pytest.skip("Only one AMI exists (latest stable) - nothing safe to delete")
 
-    # Return the oldest non-stable AMI (least likely to be in use)
-    sorted_amis = sorted(non_stable_amis, key=lambda x: x.get("creation_date", ""))
+    # Return the oldest deletable AMI (least likely to be in use)
+    sorted_amis = sorted(deletable_amis, key=lambda x: x.get("creation_date", ""))
     return sorted_amis[0]["ami_id"]
 
 
