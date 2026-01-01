@@ -150,8 +150,13 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')) &&
           (github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true')
-        name: Install mypy
-        run: python3 -m pip install mypy==1.13.* types-PyYAML==6.0.*
+        name: Install mypy dependencies
+        run: |
+          python3 -m pip install \
+            boto3-stubs==1.35.* \
+            mypy==1.13.* \
+            types-PyYAML==6.0.* \
+            types-requests==2.32.*
       - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
