@@ -66,16 +66,24 @@ data "archive_file" "lambda" {
     filename = "fargate_ops.py"
   }
   source {
-    content  = file("${path.module}/../../../../../lib/python/runner_labels/__init__.py")
-    filename = "runner_labels.py"
+    content  = file("${path.module}/../../../../../lib/python/aws_clients/__init__.py")
+    filename = "aws_clients.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../../lib/python/github_runner_api/__init__.py")
+    filename = "github_runner_api.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../../lib/python/infra_validation/__init__.py")
+    filename = "infra_validation.py"
   }
   source {
     content  = file("${path.module}/../../../../../lib/python/lambda_http/__init__.py")
     filename = "lambda_http.py"
   }
   source {
-    content  = file("${path.module}/../../../../../lib/python/github_runner_api/__init__.py")
-    filename = "github_runner_api.py"
+    content  = file("${path.module}/../../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
   }
   source {
     content  = file("${path.module}/../../../../../etc/runners.json")
