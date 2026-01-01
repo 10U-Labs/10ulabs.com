@@ -98,7 +98,7 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pylint
-        run: python3 -m pip install pylint
+        run: python3 -m pip install pylint boto3 botocore pytest requests
       - name: Run pylint on source
         run: |
           python3 -m pylint \
