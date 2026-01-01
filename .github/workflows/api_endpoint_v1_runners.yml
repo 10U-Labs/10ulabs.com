@@ -105,6 +105,13 @@ jobs:
             lib/python/ src/api/endpoints/runners/lambda/handler.py \
             --fail-on=C,R,W \
             --fail-under=10.0
+      - name: Run pylint on tests
+        run: |
+          PYTHONPATH=lib/python python3 -m pylint \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py test/api/endpoints/runners/ \
+            --fail-on=C,R,W \
+            --fail-under=10.0
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -115,6 +122,11 @@ jobs:
         run: |
           python3 -m mypy \
             lib/python/ src/api/endpoints/runners/lambda/handler.py
+      - name: Run mypy on tests
+        run: |
+          MYPYPATH=lib/python python3 -m mypy \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py test/api/endpoints/runners/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -125,8 +137,40 @@ jobs:
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ src/api/endpoints/runners/lambda/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/api/endpoints/runners/
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pytest dependencies
+        run: >-
+          python3 -m pip install pytest pytest-dependency boto3 botocore requests
+          dnspython python-hcl2
+      - name: Run unit tests
+        run: |
+          python3 -m pytest \
+            test/api/endpoints/runners/pre_deployment/unit/ \
+            --verbose --pythonwarnings=error
+      - name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/api/endpoints/runners/pre_deployment/integration/ \
+            --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/endpoints/runners && terraform apply -auto-approve
+      - name: Run post-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/api/endpoints/runners/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
+      - name: Run E2E tests
+        run: |
+          python3 -m pytest \
+            test/api/endpoints/runners/post_deployment/e2e/ \
+            --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
