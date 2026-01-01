@@ -6,6 +6,7 @@ and route them to the appropriate EC2 or ECS runner endpoints.
 import json
 
 import pytest
+import requests
 
 from terraform_config import TEST_AWS_REGION, get_shared_config
 # Import shared fixtures from integration conftest for re-export
@@ -100,3 +101,16 @@ def create_runner_request(
         "github_repo": github_repo,
         "run_id": run_id
     }
+
+
+@pytest.fixture(scope="session")
+def runners_endpoint(api_url):
+    """Get the runners endpoint URL."""
+    return f"{api_url}/v1/runners"
+
+
+def make_authenticated_post(url: str, api_key: str, timeout: int = 30, **kwargs):
+    """Make an authenticated POST request with the API key header."""
+    headers = kwargs.pop('headers', {})
+    headers['x-api-key'] = api_key
+    return requests.post(url, headers=headers, timeout=timeout, **kwargs)
