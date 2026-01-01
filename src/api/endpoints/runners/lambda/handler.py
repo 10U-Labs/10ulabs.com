@@ -150,7 +150,7 @@ def _handle_sqs_event(event: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
+def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """
     Main Lambda handler.
 
