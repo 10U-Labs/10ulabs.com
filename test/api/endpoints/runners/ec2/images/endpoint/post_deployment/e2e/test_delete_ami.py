@@ -42,7 +42,7 @@ def test_ami_id_fixture(amis_endpoint, api_key):
     ]
 
     if not deletable_amis:
-        pytest.skip("Only one AMI exists (latest stable) - nothing safe to delete")
+        pytest.skip("No deletable AMIs - only the latest stable AMI exists")
 
     # Return the oldest deletable AMI (least likely to be in use)
     sorted_amis = sorted(deletable_amis, key=lambda x: x.get("creation_date", ""))
