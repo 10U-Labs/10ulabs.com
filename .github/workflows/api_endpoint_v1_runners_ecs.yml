@@ -93,7 +93,8 @@ jobs:
       - name: Run pylint on source
         run: |
           SRC=src/api/endpoints/runners/ecs/lambda/handler.py
-          python3 -m pylint lib/python/ $SRC \
+          PYPATH=lib/python:src/api/endpoints/runners/ecs/lambda
+          PYTHONPATH=$PYPATH python3 -m pylint lib/python/ $SRC \
             --fail-on=C,R,W --fail-under=10.0
       - name: Run pylint on tests
         run: |
@@ -109,7 +110,8 @@ jobs:
       - name: Run mypy on source
         run: |
           SRC=src/api/endpoints/runners/ecs/lambda/handler.py
-          python3 -m mypy lib/python/ $SRC
+          PYPATH=lib/python:src/api/endpoints/runners/ecs/lambda
+          MYPYPATH=$PYPATH python3 -m mypy lib/python/ $SRC
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy \
