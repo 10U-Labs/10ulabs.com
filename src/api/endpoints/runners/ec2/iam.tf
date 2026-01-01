@@ -182,7 +182,7 @@ resource "aws_iam_role_policy" "ssm_access" {
       ]
       Resource = compact([
         module.common.ssm_github_pat_arn,
-        data.terraform_remote_state.api.outputs.api_key_ssm_parameter_arn
+        data.terraform_remote_state.api_common_routing.outputs.api_key_ssm_parameter_arn
       ])
     }]
   })
