@@ -114,7 +114,13 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install mypy
-        run: python3 -m pip install mypy boto3-stubs types-requests types-PyYAML
+        run: |
+          python3 -m pip install \
+            boto3-stubs \
+            mypy \
+            types-dockerfile-parse \
+            types-PyYAML \
+            types-requests
       - name: Run mypy on source
         run: |
           SRC=src/api/endpoints/runners/ecs/lambda/handler.py
