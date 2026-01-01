@@ -29,7 +29,7 @@ data "terraform_remote_state" "api_common_routing" {
 
   defaults = {
     api_fqdn                  = ""
-    api_gateway_id   = ""
+    api_gateway_id            = ""
     api_key_ssm_parameter     = ""
     api_key_ssm_parameter_arn = ""
   }
