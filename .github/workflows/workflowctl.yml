@@ -166,7 +166,9 @@ jobs:
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on tests
-        run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/workflowctl/
+        run: |
+          MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
+            lib/python/ test/
       - if: >-
           (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
