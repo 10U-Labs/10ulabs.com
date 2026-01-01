@@ -6,6 +6,8 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from botocore.exceptions import ClientError
 
+import fleet_ops
+import github_runner_api
 from terraform_config import TEST_AWS_REGION
 from .conftest import (
     assert_json_content_type,
@@ -53,7 +55,7 @@ def test_lambda_handler_ec2_runner_post_returns_json_content_type(
 
 def test_get_ec2_runner_status_returns_success_with_no_instances(ec2_runner_handler):
     """Test that status returns success with no instances."""
-    with patch.object(ec2_runner_handler, 'get_ec2_client') as mock_get_client:
+    with patch('fleet_ops.get_ec2_client') as mock_get_client:
         mock_ec2 = MagicMock()
         mock_ec2.describe_instances.return_value = {'Reservations': []}
         mock_get_client.return_value = mock_ec2
@@ -64,7 +66,7 @@ def test_get_ec2_runner_status_returns_success_with_no_instances(ec2_runner_hand
 
 def test_get_ec2_runner_status_returns_zero_running_instances_when_empty(ec2_runner_handler):
     """Test that status returns zero running instances when empty."""
-    with patch.object(ec2_runner_handler, 'get_ec2_client') as mock_get_client:
+    with patch('fleet_ops.get_ec2_client') as mock_get_client:
         mock_ec2 = MagicMock()
         mock_ec2.describe_instances.return_value = {'Reservations': []}
         mock_get_client.return_value = mock_ec2
@@ -75,7 +77,7 @@ def test_get_ec2_runner_status_returns_zero_running_instances_when_empty(ec2_run
 
 def test_get_ec2_runner_status_returns_empty_instance_list_when_none_running(ec2_runner_handler):
     """Test that status returns empty instance list when none running."""
-    with patch.object(ec2_runner_handler, 'get_ec2_client') as mock_get_client:
+    with patch('fleet_ops.get_ec2_client') as mock_get_client:
         mock_ec2 = MagicMock()
         mock_ec2.describe_instances.return_value = {'Reservations': []}
         mock_get_client.return_value = mock_ec2
@@ -86,7 +88,7 @@ def test_get_ec2_runner_status_returns_empty_instance_list_when_none_running(ec2
 
 def test_get_ec2_runner_status_handles_client_error(ec2_runner_handler):
     """Test that status handles client errors gracefully."""
-    with patch.object(ec2_runner_handler, 'get_ec2_client') as mock_get_client:
+    with patch('fleet_ops.get_ec2_client') as mock_get_client:
         mock_ec2 = MagicMock()
         mock_ec2.describe_instances.side_effect = ClientError(
             {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
@@ -100,7 +102,7 @@ def test_get_ec2_runner_status_handles_client_error(ec2_runner_handler):
 
 def test_get_ec2_runner_status_filters_by_managed_by_tag_from_env(ec2_runner_handler):
     """Test that status filters by ManagedBy tag."""
-    with patch.object(ec2_runner_handler, 'get_ec2_client') as mock_get_client:
+    with patch('fleet_ops.get_ec2_client') as mock_get_client:
         mock_ec2 = MagicMock()
         mock_ec2.describe_instances.return_value = {'Reservations': []}
         mock_get_client.return_value = mock_ec2
@@ -135,16 +137,15 @@ def test_handle_ec2_runner_get_returns_json_content_type(
 def test_create_ec2_user_data_formatting(ec2_runner_handler):
     """Test that user data formatting includes token."""
     with patch.dict('os.environ', {'AWS_REGION': TEST_AWS_REGION}):
-        create_ec2_user_data = getattr(ec2_runner_handler, 'create_ec2_user_data')
-        result = create_ec2_user_data(
+        result = fleet_ops.create_ec2_user_data(
             'test-token', ['label1', 'label2'], 'test/repo', 'test-runner'
         )
         contains_token = 'test-token' in result
         assert contains_token
 
 
-@patch('boto3.client')
-def test_get_latest_ami_multiple_amis(mock_boto_client, ec2_runner_handler):
+@patch('fleet_ops.get_ec2_client')
+def test_get_latest_ami_multiple_amis(mock_get_client, ec2_runner_handler):
     """Test that latest AMI is selected when multiple exist."""
     mock_ec2 = MagicMock()
     mock_ec2.describe_images.return_value = {
@@ -153,32 +154,32 @@ def test_get_latest_ami_multiple_amis(mock_boto_client, ec2_runner_handler):
             {'ImageId': 'ami-new', 'CreationDate': '2024-01-05T00:00:00'}
         ]
     }
-    mock_boto_client.return_value = mock_ec2
-    result = ec2_runner_handler.get_latest_ami()
+    mock_get_client.return_value = mock_ec2
+    result = fleet_ops.get_latest_ami()
     is_newest_ami = result == 'ami-new'
     assert is_newest_ami
 
 
-@patch('boto3.client')
-def test_get_latest_ami_no_amis(mock_boto_client, ec2_runner_handler):
+@patch('fleet_ops.get_ec2_client')
+def test_get_latest_ami_no_amis(mock_get_client, ec2_runner_handler):
     """Test that empty string is returned when no AMIs exist."""
     mock_ec2 = MagicMock()
     mock_ec2.describe_images.return_value = {'Images': []}
-    mock_boto_client.return_value = mock_ec2
-    result = ec2_runner_handler.get_latest_ami()
+    mock_get_client.return_value = mock_ec2
+    result = fleet_ops.get_latest_ami()
     is_empty = result == ''
     assert is_empty
 
 
-@patch('boto3.client')
-def test_get_latest_ami_client_error(mock_boto_client, ec2_runner_handler):
+@patch('fleet_ops.get_ec2_client')
+def test_get_latest_ami_client_error(mock_get_client, ec2_runner_handler):
     """Test that client error returns empty string."""
     mock_ec2 = MagicMock()
     mock_ec2.describe_images.side_effect = ClientError(
         {'Error': {'Code': 'TestError'}}, 'DescribeImages'
     )
-    mock_boto_client.return_value = mock_ec2
-    result = ec2_runner_handler.get_latest_ami()
+    mock_get_client.return_value = mock_ec2
+    result = fleet_ops.get_latest_ami()
     is_empty = result == ''
     assert is_empty
 
@@ -191,7 +192,7 @@ def test_get_ec2_config_parsing(ec2_runner_handler):
         'EC2_INSTANCE_TYPES': 't3.small,t3.medium',
         'EC2_IAM_INSTANCE_PROFILE': 'test-profile'
     }):
-        result = getattr(ec2_runner_handler, "get_ec2_config")()
+        result = fleet_ops.get_ec2_config()
         has_correct_profile = result['iam_instance_profile'] == 'test-profile'
         assert has_correct_profile
 
@@ -209,9 +210,7 @@ def test_launch_ec2_runner_no_ami(mock_boto_client, ec2_runner_handler):
         'EC2_IAM_INSTANCE_PROFILE': 'profile',
         'API_FQDN': 'api.test.com'
     }):
-        with patch.object(
-            ec2_runner_handler, 'trigger_ami_creation', return_value={'success': True}
-        ):
+        with patch('fleet_ops.trigger_ami_creation', return_value={'success': True}):
             result = ec2_runner_handler.launch_ec2_runner(123, ['test'], 'test/repo')
             is_failure = not result['success']
             assert is_failure
@@ -259,7 +258,7 @@ def test_launch_ec2_runner_no_github_token(mock_boto_client, ec2_runner_handler)
     """Test that launch fails when GitHub token is not available."""
     mock_boto_client.return_value = create_mock_ec2_with_ami()
     with patch.dict('os.environ', get_minimal_env_vars()):
-        with patch.object(ec2_runner_handler, 'get_github_token', return_value=''):
+        with patch('fleet_ops.get_github_token', return_value=''):
             result = ec2_runner_handler.launch_ec2_runner(123, ['test'], 'test/repo')
             is_failure = not result['success']
             assert is_failure
@@ -270,10 +269,8 @@ def test_launch_ec2_runner_failed_registration(mock_boto_client, ec2_runner_hand
     """Test that launch fails when runner registration fails."""
     mock_boto_client.return_value = create_mock_ec2_with_ami()
     with patch.dict('os.environ', get_minimal_env_vars()):
-        with patch.object(ec2_runner_handler, 'get_github_token', return_value='token'):
-            with patch.object(
-                ec2_runner_handler, 'get_runner_registration_token', return_value=''
-            ):
+        with patch('fleet_ops.get_github_token', return_value='token'):
+            with patch('fleet_ops.get_runner_registration_token', return_value=''):
                 result = ec2_runner_handler.launch_ec2_runner(123, ['test'], 'test/repo')
                 is_failure = not result['success']
                 assert is_failure
@@ -281,7 +278,7 @@ def test_launch_ec2_runner_failed_registration(mock_boto_client, ec2_runner_hand
 
 def test_create_ec2_user_data_includes_region(ec2_runner_handler):
     """Test that user data includes AWS region."""
-    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    result = fleet_ops.create_ec2_user_data('token', ['label'], 'repo', 'runner')
     region = os.environ.get('AWS_REGION', TEST_AWS_REGION)
     contains_region = region in result
     assert contains_region
@@ -289,28 +286,28 @@ def test_create_ec2_user_data_includes_region(ec2_runner_handler):
 
 def test_create_ec2_user_data_includes_nvme_format(ec2_runner_handler):
     """Test that user data includes NVMe formatting commands."""
-    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    result = fleet_ops.create_ec2_user_data('token', ['label'], 'repo', 'runner')
     contains_mkfs = 'mkfs.ext4' in result
     assert contains_mkfs
 
 
 def test_create_ec2_user_data_includes_nvme_mount(ec2_runner_handler):
     """Test that user data includes NVMe mount commands."""
-    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    result = fleet_ops.create_ec2_user_data('token', ['label'], 'repo', 'runner')
     contains_mount = 'mount' in result
     assert contains_mount
 
 
 def test_create_ec2_user_data_detects_instance_store_dynamically(ec2_runner_handler):
     """Test that user data includes dynamic instance store detection."""
-    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    result = fleet_ops.create_ec2_user_data('token', ['label'], 'repo', 'runner')
     contains_lsblk = 'lsblk' in result
     assert contains_lsblk
 
 
 def test_create_ec2_user_data_uses_mountpoint_detection(ec2_runner_handler):
     """Test that user data detects instance store by checking unmounted disks."""
-    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    result = fleet_ops.create_ec2_user_data('token', ['label'], 'repo', 'runner')
     uses_mountpoint = 'MOUNTPOINT' in result
     assert uses_mountpoint
 
@@ -357,13 +354,13 @@ def test_test_mode_post_returns_mock_response(
 
 def test_create_ec2_user_data_starts_cloudwatch_agent(ec2_runner_handler):
     """Test that user data starts CloudWatch agent."""
-    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    result = fleet_ops.create_ec2_user_data('token', ['label'], 'repo', 'runner')
     contains_agent_ctl = 'amazon-cloudwatch-agent-ctl' in result
     assert contains_agent_ctl
 
 
 def test_create_ec2_user_data_cloudwatch_uses_config_file(ec2_runner_handler):
     """Test that user data starts CloudWatch agent with config file."""
-    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    result = fleet_ops.create_ec2_user_data('token', ['label'], 'repo', 'runner')
     contains_config_path = 'amazon-cloudwatch-agent.json' in result
     assert contains_config_path

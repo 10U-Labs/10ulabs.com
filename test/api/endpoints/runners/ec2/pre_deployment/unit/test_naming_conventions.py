@@ -11,7 +11,7 @@ from naming_conventions.test_helpers import (
 from terraform_config import extract_iam_role_names, extract_lambda_function_names
 from repo_utils import REPO_ROOT
 
-EC2_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
+EC2_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2"
 IAM_FILE = EC2_RUNNER_SRC / "iam.tf"
 LAMBDA_FILE = EC2_RUNNER_SRC / "lambda.tf"
 

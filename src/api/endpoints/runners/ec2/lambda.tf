@@ -37,6 +37,14 @@ data "archive_file" "handler" {
     filename = "github_runner_api.py"
   }
   source {
+    content  = file("${path.module}/../../../../../lib/python/aws_clients/__init__.py")
+    filename = "aws_clients.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../../lib/python/infra_validation/__init__.py")
+    filename = "infra_validation.py"
+  }
+  source {
     content  = file("${path.module}/../../../../../etc/runners.json")
     filename = "etc/runners.json"
   }

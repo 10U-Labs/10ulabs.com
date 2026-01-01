@@ -12,6 +12,7 @@ from botocore.exceptions import ClientError
 
 from aws_clients import get_ec2_client
 from github_runner_api import (
+    build_runner_labels,
     cleanup_offline_runners,
     get_existing_runner_for_workflow,
     get_github_token,
@@ -28,17 +29,6 @@ from runner_labels import (
 )
 
 logger = logging.getLogger()
-
-
-def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
-    """Build the complete list of labels for a GitHub runner."""
-    base_labels = ['self-hosted', 'linux', 'x64']
-    for label in job_labels:
-        if label not in base_labels:
-            base_labels.append(label)
-    if run_id:
-        base_labels.append(f'runner-{run_id}')
-    return base_labels
 
 
 def create_ec2_user_data(

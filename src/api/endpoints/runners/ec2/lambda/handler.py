@@ -3,34 +3,6 @@ import json
 import logging
 from typing import Any, Dict
 
-from aws_clients import (
-    get_ec2_client,
-    get_ssm_client,
-    get_dynamodb_client,
-    set_client,
-    reset_clients,
-)
-from github_runner_api import (
-    build_runner_labels,
-    cleanup_offline_runners,
-    delete_runner,
-    get_existing_runner_for_workflow,
-    get_github_token,
-    get_runner_registration_token,
-    list_repo_runners,
-    reset_github_token_cache,
-)
-from infra_validation import (
-    ensure_dependencies_valid,
-    get_api_key,
-    get_dependencies_status,
-    reset_dependency_validation,
-    set_dependencies_status,
-    validate_all_dependencies,
-    validate_security_groups,
-    validate_subnets,
-    validate_vpc,
-)
 from lambda_http import (
     error_response,
     is_capacity_error,
@@ -39,12 +11,8 @@ from lambda_http import (
     success_response,
 )
 from fleet_ops import (
-    create_ec2_user_data,
-    get_ec2_config,
     get_ec2_runner_status,
-    get_latest_ami,
     launch_ec2_runner,
-    trigger_ami_creation,
 )
 
 logger = logging.getLogger()

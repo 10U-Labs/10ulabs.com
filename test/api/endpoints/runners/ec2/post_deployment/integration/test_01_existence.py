@@ -17,7 +17,7 @@ def test_lambda_function_exists(lambda_client, lambda_function_name):
         if e.response["Error"]["Code"] == "ResourceNotFoundException":
             pytest.fail(
                 f"Lambda function '{lambda_function_name}' does not exist. "
-                "Run terraform apply in src/api/endpoints/ec2_runner/"
+                "Run terraform apply in src/api/endpoints/runners/ec2/"
             )
         raise
 
@@ -31,7 +31,7 @@ def test_lambda_execution_role_exists(iam_client, lambda_role_name):
         if e.response["Error"]["Code"] == "NoSuchEntity":
             pytest.fail(
                 f"Lambda execution role '{lambda_role_name}' does not exist. "
-                "Run terraform apply in src/api/endpoints/ec2_runner/"
+                "Run terraform apply in src/api/endpoints/runners/ec2/"
             )
         raise
 
@@ -45,7 +45,7 @@ def test_ec2_runner_role_exists(iam_client, ec2_runner_role_name):
         if e.response["Error"]["Code"] == "NoSuchEntity":
             pytest.fail(
                 f"EC2 runner role '{ec2_runner_role_name}' does not exist. "
-                "Run terraform apply in src/api/endpoints/ec2_runner/"
+                "Run terraform apply in src/api/endpoints/runners/ec2/"
             )
         raise
 
