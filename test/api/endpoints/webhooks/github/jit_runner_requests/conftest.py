@@ -71,8 +71,6 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     result['lambda_runners_role_name'] = f"{lambda_fn}ServiceRole"
     result['webhook_handler_service_role_name'] = f"{lambda_fn}ServiceRole"
     # SQS queue names (PascalCase naming convention, single source of truth: terraform_config)
-    result['job_queue_name'] = f"{lambda_fn}Jobs"
-    result['job_dlq_name'] = f"{lambda_fn}JobDlq"
     result['webhook_dlq_name'] = f"{lambda_fn}Dlq"
     result['drift_recovery_queue_name'] = f"{prefix}DriftRecovery.fifo"
     # New queues for API Gateway → SQS direct integration

@@ -122,8 +122,6 @@ class TestSQSNamingConventions:
         resource_names = get_runners_resource_names()
         # All queues should have a consistent prefix pattern
         expected_queues = [
-            resource_names['job_queue'],
-            resource_names['job_dlq'],
             resource_names['webhook_dlq'],
             resource_names['webhook_ingress_queue'],
             resource_names['webhook_ingress_dlq'],

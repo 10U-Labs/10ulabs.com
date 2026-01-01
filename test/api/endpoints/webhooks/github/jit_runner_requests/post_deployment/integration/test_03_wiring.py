@@ -41,54 +41,7 @@ def test_dlq_reprocessor_rule_has_target(events_client, config):
     assert len(targets["Targets"]) == 1
 
 
-# === SQS Event Source Mappings ===
-
-
-def test_runner_starter_has_event_source_mapping(lambda_client, config):
-    """Verify RunnerStarter has an SQS event source mapping."""
-    function_name = config["runner_starter_function_name"]
-    response = lambda_client.list_event_source_mappings(
-        FunctionName=function_name
-    )
-    assert len(response["EventSourceMappings"]) > 0
-
-
-def test_runner_starter_triggered_by_job_queue(lambda_client, config):
-    """Verify RunnerStarter is triggered by the job queue."""
-    function_name = config["runner_starter_function_name"]
-    response = lambda_client.list_event_source_mappings(
-        FunctionName=function_name
-    )
-    event_sources = [m["EventSourceArn"] for m in response["EventSourceMappings"]]
-    job_queue_name = config["job_queue_name"]
-    assert any(job_queue_name in arn for arn in event_sources)
-
-
 # === SQS DLQ Wiring ===
-
-
-def test_job_queue_redrive_targets_job_dlq(sqs_client, config):
-    """Verify job queue's redrive policy targets job DLQ."""
-    job_queue_url = sqs_client.get_queue_url(
-        QueueName=config["job_queue_name"]
-    )["QueueUrl"]
-    job_dlq_url = sqs_client.get_queue_url(
-        QueueName=config["job_dlq_name"]
-    )["QueueUrl"]
-
-    # Get job queue's redrive policy
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=job_queue_url, AttributeNames=["RedrivePolicy"]
-    )
-    redrive_policy = json.loads(attributes["Attributes"]["RedrivePolicy"])
-
-    # Get job DLQ ARN
-    dlq_attributes = sqs_client.get_queue_attributes(
-        QueueUrl=job_dlq_url, AttributeNames=["QueueArn"]
-    )
-    job_dlq_arn = dlq_attributes["Attributes"]["QueueArn"]
-
-    assert redrive_policy["deadLetterTargetArn"] == job_dlq_arn
 
 
 def test_webhook_ingress_queue_redrive_targets_dlq(sqs_client, config):

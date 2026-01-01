@@ -49,8 +49,6 @@ def config(shared_config):
         'idempotency_table_name': resource_names['idempotency_table'],
         'circuit_breaker_state_table_name': resource_names['circuit_breaker_state_table'],
         'incidents_table_name': resource_names['incidents_table'],
-        'job_queue_name': resource_names['job_queue'],
-        'job_dlq_name': resource_names['job_dlq'],
         'webhook_dlq_name': resource_names['webhook_dlq'],
         'drift_recovery_queue_name': resource_names['drift_recovery_queue'],
         # New queues for API Gateway → SQS direct integration
