@@ -92,6 +92,14 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/workflowctl.yml
       - if: >-
+          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')) &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Install jsonlint
+        run: npm install -g jsonlint
+      - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Linting JSON files
