@@ -57,3 +57,18 @@ class TestAPIGatewayCapabilities:
             if error_code == "NotFoundException":
                 pytest.skip("API Gateway does not exist yet")
             raise
+
+    def test_can_get_api_gateway_stages(self, apigateway_client, api_gateway_id):
+        """Verify we can list API Gateway stages for deployment."""
+        try:
+            apigateway_client.get_stages(restApiId=api_gateway_id)
+        except ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            if error_code in ("AccessDenied", "AccessDeniedException"):
+                pytest.fail(
+                    f"No permission to call apigateway:GetStages on '{api_gateway_id}'. "
+                    "Check IAM permissions for the GitHub Actions role."
+                )
+            if error_code == "NotFoundException":
+                pytest.skip("API Gateway does not exist yet")
+            raise

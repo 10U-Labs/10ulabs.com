@@ -5,6 +5,7 @@ and route them to the appropriate EC2 or ECS runner endpoints.
 """
 import json
 
+import boto3
 import pytest
 import requests
 
@@ -17,6 +18,7 @@ from ..integration.conftest import (
     sqs_dlq_name,
     lambda_client,
     sqs_client,
+    sqs_redrive_policy,
 )
 
 __all__ = [
@@ -26,6 +28,7 @@ __all__ = [
     "sqs_dlq_name",
     "lambda_client",
     "sqs_client",
+    "sqs_redrive_policy",
 ]
 
 
@@ -36,9 +39,10 @@ def shared_config():
 
 
 @pytest.fixture(scope="session")
-def api_url(shared_config):
+def api_url(request):
     """Get the API URL."""
-    api_fqdn = shared_config.get("api_fqdn", "")
+    config = request.getfixturevalue("shared_config")
+    api_fqdn = config.get("api_fqdn", "")
     if not api_fqdn:
         pytest.skip("api_fqdn not configured")
     return f"https://{api_fqdn}"
@@ -47,17 +51,17 @@ def api_url(shared_config):
 @pytest.fixture(scope="session")
 def ssm_client():
     """Create an SSM client."""
-    import boto3
     return boto3.client("ssm", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
-def api_key(ssm_client):
+def api_key(request):
     """Get the API key from SSM."""
+    client = request.getfixturevalue("ssm_client")
     try:
-        response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
+        response = client.get_parameter(Name='/api/key', WithDecryption=True)
         return response['Parameter']['Value']
-    except ssm_client.exceptions.ParameterNotFound:
+    except client.exceptions.ParameterNotFound:
         pytest.skip("API key not found in SSM")
         return None
 
@@ -104,13 +108,63 @@ def create_runner_request(
 
 
 @pytest.fixture(scope="session")
-def runners_endpoint(api_url):
+def runners_endpoint(request):
     """Get the runners endpoint URL."""
-    return f"{api_url}/v1/runners"
+    url = request.getfixturevalue("api_url")
+    return f"{url}/v1/runners"
 
 
-def make_authenticated_post(url: str, api_key: str, timeout: int = 30, **kwargs):
+def make_authenticated_post(url: str, key: str, timeout: int = 30, **kwargs):
     """Make an authenticated POST request with the API key header."""
     headers = kwargs.pop('headers', {})
-    headers['x-api-key'] = api_key
+    headers['x-api-key'] = key
     return requests.post(url, headers=headers, timeout=timeout, **kwargs)
+
+
+def invoke_lambda(client, function_name: str, event: dict) -> dict:
+    """Invoke Lambda and return the raw response.
+
+    Args:
+        client: boto3 Lambda client
+        function_name: Name of the Lambda function
+        event: Event payload to send
+
+    Returns:
+        Raw Lambda invoke response
+    """
+    return client.invoke(
+        FunctionName=function_name,
+        InvocationType="RequestResponse",
+        Payload=json.dumps(event)
+    )
+
+
+def parse_lambda_response(response: dict) -> tuple:
+    """Parse Lambda response into payload, body, and results.
+
+    Args:
+        response: Raw Lambda invoke response
+
+    Returns:
+        Tuple of (payload_dict, body_dict, results_list)
+    """
+    payload = json.loads(response["Payload"].read())
+    body = json.loads(payload.get("body", "{}"))
+    results = body.get("results", [])
+    return payload, body, results
+
+
+def invoke_and_parse(client, function_name: str, event: dict) -> tuple:
+    """Invoke Lambda and parse the response.
+
+    Args:
+        client: boto3 Lambda client
+        function_name: Name of the Lambda function
+        event: Event payload to send
+
+    Returns:
+        Tuple of (response, payload, body, results)
+    """
+    response = invoke_lambda(client, function_name, event)
+    payload, body, results = parse_lambda_response(response)
+    return response, payload, body, results

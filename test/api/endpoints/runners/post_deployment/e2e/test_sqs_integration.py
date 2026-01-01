@@ -54,7 +54,7 @@ class TestSQSQueueAccess:
         except ClientError as e:
             pytest.fail(f"Cannot access SQS queue: {e}")
 
-    def test_queue_has_redrive_policy(self, sqs_client, sqs_queue_url):
+    def test_queue_has_redrive_policy(self, sqs_redrive_policy):
         """Verify SQS queue has redrive policy configured.
 
         User Journey: DLQ configuration verification
@@ -62,17 +62,9 @@ class TestSQSQueueAccess:
         When: We check queue redrive policy
         Then: Queue has a redrive policy
         """
-        if not sqs_queue_url:
-            pytest.skip("sqs_queue_url not available")
+        assert sqs_redrive_policy is not None, "Queue has no redrive policy"
 
-        response = sqs_client.get_queue_attributes(
-            QueueUrl=sqs_queue_url,
-            AttributeNames=["RedrivePolicy"]
-        )
-        redrive_policy = response.get("Attributes", {}).get("RedrivePolicy", "")
-        assert redrive_policy, "Queue has no redrive policy"
-
-    def test_queue_redrive_has_dlq_target(self, sqs_client, sqs_queue_url):
+    def test_queue_redrive_has_dlq_target(self, sqs_redrive_policy):
         """Verify SQS queue redrive policy has DLQ target.
 
         User Journey: DLQ configuration verification
@@ -80,21 +72,11 @@ class TestSQSQueueAccess:
         When: We check queue redrive policy
         Then: Policy has deadLetterTargetArn configured
         """
-        if not sqs_queue_url:
-            pytest.skip("sqs_queue_url not available")
-
-        response = sqs_client.get_queue_attributes(
-            QueueUrl=sqs_queue_url,
-            AttributeNames=["RedrivePolicy"]
-        )
-        redrive_policy = response.get("Attributes", {}).get("RedrivePolicy", "")
-        if not redrive_policy:
+        if sqs_redrive_policy is None:
             pytest.skip("No redrive policy configured")
+        assert "deadLetterTargetArn" in sqs_redrive_policy
 
-        policy = json.loads(redrive_policy)
-        assert "deadLetterTargetArn" in policy
-
-    def test_queue_redrive_has_max_receive_count(self, sqs_client, sqs_queue_url):
+    def test_queue_redrive_has_max_receive_count(self, sqs_redrive_policy):
         """Verify SQS queue redrive policy has maxReceiveCount.
 
         User Journey: DLQ configuration verification
@@ -102,19 +84,9 @@ class TestSQSQueueAccess:
         When: We check queue redrive policy
         Then: Policy has maxReceiveCount configured
         """
-        if not sqs_queue_url:
-            pytest.skip("sqs_queue_url not available")
-
-        response = sqs_client.get_queue_attributes(
-            QueueUrl=sqs_queue_url,
-            AttributeNames=["RedrivePolicy"]
-        )
-        redrive_policy = response.get("Attributes", {}).get("RedrivePolicy", "")
-        if not redrive_policy:
+        if sqs_redrive_policy is None:
             pytest.skip("No redrive policy configured")
-
-        policy = json.loads(redrive_policy)
-        assert "maxReceiveCount" in policy
+        assert "maxReceiveCount" in sqs_redrive_policy
 
 
 class TestSQSMessageSending:
@@ -151,6 +123,33 @@ class TestSQSMessageSending:
                 }
             )
             assert "MessageId" in response
+        except ClientError as e:
+            pytest.fail(f"Cannot send message to queue: {e}")
+
+    def test_send_message_returns_md5(self, sqs_client, sqs_queue_url):
+        """Verify sent messages return MD5 hash.
+
+        User Journey: Message integrity verification
+
+        When: We send a test message to the queue
+        Then: Response includes MD5OfMessageBody for integrity verification
+        """
+        if not sqs_queue_url:
+            pytest.skip("sqs_queue_url not available")
+
+        test_message = {
+            "job_id": 99997,
+            "job_labels": ["test-only", "md5-check"],
+            "github_repo": "test/e2e-verification",
+            "run_id": 99997
+        }
+
+        try:
+            response = sqs_client.send_message(
+                QueueUrl=sqs_queue_url,
+                MessageBody=json.dumps(test_message)
+            )
+            assert "MD5OfMessageBody" in response
         except ClientError as e:
             pytest.fail(f"Cannot send message to queue: {e}")
 

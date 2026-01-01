@@ -7,8 +7,6 @@ Failure Impact: Runner requests not queued, GitHub Actions jobs not processed.
 """
 import requests
 
-import pytest
-
 from .conftest import create_runner_request, make_authenticated_post
 
 

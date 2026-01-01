@@ -26,8 +26,8 @@ class TestLambdaAndIAMAuthorization(Layer3LambdaAndIAMAuthorizationTests):
     """
 
 
-class TestGitHubActionsRoleAuthorization:
-    """Verify authorization for GitHub Actions role inspection."""
+class TestGitHubActionsAndAPIGatewayAuthorization:
+    """Verify authorization for GitHub Actions role and API Gateway inspection."""
 
     def test_can_call_iam_get_role_on_gha_role(self, iam_client, github_actions_role_name):
         """Verify permission to call iam:GetRole on GitHub Actions role."""
@@ -41,10 +41,6 @@ class TestGitHubActionsRoleAuthorization:
                 )
             if error_code != "NoSuchEntity":
                 raise
-
-
-class TestAPIGatewayAuthorization:
-    """Verify API Gateway authorization for inspection."""
 
     def test_can_call_apigateway_get_rest_api(self, apigateway_client, api_gateway_id):
         """Verify permission to call apigateway:GetRestApi."""

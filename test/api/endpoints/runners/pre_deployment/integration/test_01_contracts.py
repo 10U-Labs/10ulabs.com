@@ -4,7 +4,6 @@ Verify cross-file compatibility:
 - Lambda handler exports match Terraform references
 - Remote state outputs referenced exist in api_common_routing
 """
-import re
 from pathlib import Path
 
 import pytest

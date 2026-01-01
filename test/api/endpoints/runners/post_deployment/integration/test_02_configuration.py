@@ -10,8 +10,8 @@ from naming_conventions import validate_name
 pytestmark = pytest.mark.layer(2)
 
 
-class TestLambdaNaming:
-    """Verify Lambda function naming conventions."""
+class TestLambdaConfiguration:
+    """Verify Lambda function configuration and naming."""
 
     def test_lambda_function_name_is_pascalcase(self, lambda_client, lambda_function_name):
         """Verify Lambda function name uses PascalCase."""
@@ -23,10 +23,6 @@ class TestLambdaNaming:
         assert error is None, (
             f"Deployed Lambda function has invalid name '{actual_name}': {error}"
         )
-
-
-class TestLambdaConfiguration:
-    """Verify Lambda function configuration."""
 
     def test_lambda_timeout_is_60_seconds(self, lambda_client, lambda_function_name):
         """Verify Lambda timeout is 60 seconds."""
@@ -127,36 +123,24 @@ class TestSQSConfiguration:
             "Check sqs.tf message_retention_seconds value."
         )
 
-    def test_sqs_has_redrive_policy(self, sqs_client, sqs_queue_url):
+    def test_sqs_has_redrive_policy(self, sqs_redrive_policy):
         """Verify SQS queue has a redrive policy configured."""
-        if not sqs_queue_url:
-            pytest.skip("sqs_queue_url not available")
-        response = sqs_client.get_queue_attributes(
-            QueueUrl=sqs_queue_url,
-            AttributeNames=["RedrivePolicy"]
-        )
-        redrive_policy = response.get("Attributes", {}).get("RedrivePolicy", "")
-        assert redrive_policy, (
+        assert sqs_redrive_policy is not None, (
             "SQS queue has no redrive policy configured. "
             "Check sqs.tf redrive_policy value."
         )
 
-    def test_sqs_redrive_policy_has_dlq_arn(self, sqs_client, sqs_queue_url):
+    def test_sqs_redrive_policy_has_dlq_arn(self, sqs_redrive_policy):
         """Verify SQS redrive policy includes deadLetterTargetArn."""
-        if not sqs_queue_url:
-            pytest.skip("sqs_queue_url not available")
-        response = sqs_client.get_queue_attributes(
-            QueueUrl=sqs_queue_url,
-            AttributeNames=["RedrivePolicy"]
-        )
-        redrive_policy = response.get("Attributes", {}).get("RedrivePolicy", "")
-        assert "deadLetterTargetArn" in redrive_policy, (
+        if sqs_redrive_policy is None:
+            pytest.skip("No redrive policy configured")
+        assert "deadLetterTargetArn" in sqs_redrive_policy, (
             "SQS redrive policy missing deadLetterTargetArn"
         )
 
 
-class TestIAMRoleNaming:
-    """Verify IAM role naming conventions."""
+class TestLambdaRolePolicies:
+    """Verify Lambda role naming and policies."""
 
     def test_lambda_role_name_is_pascalcase(self, iam_client, lambda_role_name):
         """Verify Lambda IAM role name uses PascalCase."""
@@ -171,10 +155,6 @@ class TestIAMRoleNaming:
             if e.response["Error"]["Code"] == "NoSuchEntity":
                 pytest.skip(f"Role {lambda_role_name} does not exist")
             raise
-
-
-class TestLambdaRolePolicies:
-    """Verify Lambda role has required policies."""
 
     def test_lambda_role_has_sqs_policy(self, iam_client, lambda_role_name):
         """Verify the Lambda role has SQS access policy attached."""

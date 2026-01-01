@@ -2,12 +2,10 @@
 
 Verify components are connected properly.
 """
-import json
+from test.api.endpoints.conftest import assert_lambda_package_includes_file
 
 import pytest
 from botocore.exceptions import ClientError
-
-from test.api.endpoints.conftest import assert_lambda_package_includes_file
 
 pytestmark = pytest.mark.layer(3)
 
@@ -78,102 +76,50 @@ class TestLambdaSQSTrigger:
                 pytest.skip("Lambda function does not exist")
             raise
 
-    def test_sqs_trigger_batch_size_is_1(
-        self, lambda_client, lambda_function_name, sqs_queue_arn
-    ):
+    def test_sqs_trigger_batch_size_is_1(self, sqs_event_source_mapping):
         """Verify SQS trigger batch size is 1."""
-        if not lambda_function_name or not sqs_queue_arn:
-            pytest.skip("lambda_function_name or sqs_queue_arn not available")
-        try:
-            response = lambda_client.list_event_source_mappings(
-                FunctionName=lambda_function_name,
-                EventSourceArn=sqs_queue_arn
-            )
-            mappings = response.get("EventSourceMappings", [])
-            if not mappings:
-                pytest.skip("No SQS trigger found")
-            batch_size = mappings[0].get("BatchSize", 0)
-            assert batch_size == 1, (
-                f"SQS trigger batch size is {batch_size}, expected 1. "
-                "Each runner request should be processed individually."
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                pytest.skip("Lambda function does not exist")
-            raise
+        if sqs_event_source_mapping is None:
+            pytest.skip("No SQS event source mapping found")
+        batch_size = sqs_event_source_mapping.get("BatchSize", 0)
+        assert batch_size == 1, (
+            f"SQS trigger batch size is {batch_size}, expected 1. "
+            "Each runner request should be processed individually."
+        )
 
-    def test_sqs_trigger_is_enabled(
-        self, lambda_client, lambda_function_name, sqs_queue_arn
-    ):
+    def test_sqs_trigger_is_enabled(self, sqs_event_source_mapping):
         """Verify SQS trigger is enabled."""
-        if not lambda_function_name or not sqs_queue_arn:
-            pytest.skip("lambda_function_name or sqs_queue_arn not available")
-        try:
-            response = lambda_client.list_event_source_mappings(
-                FunctionName=lambda_function_name,
-                EventSourceArn=sqs_queue_arn
-            )
-            mappings = response.get("EventSourceMappings", [])
-            if not mappings:
-                pytest.skip("No SQS trigger found")
-            state = mappings[0].get("State", "")
-            assert state == "Enabled", (
-                f"SQS trigger state is '{state}', expected 'Enabled'. "
-                "The Lambda will not process messages if the trigger is disabled."
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                pytest.skip("Lambda function does not exist")
-            raise
+        if sqs_event_source_mapping is None:
+            pytest.skip("No SQS event source mapping found")
+        state = sqs_event_source_mapping.get("State", "")
+        assert state == "Enabled", (
+            f"SQS trigger state is '{state}', expected 'Enabled'. "
+            "The Lambda will not process messages if the trigger is disabled."
+        )
 
 
 class TestSQSDLQWiring:
     """Verify SQS queue is wired to DLQ."""
 
-    def test_sqs_redrive_targets_dlq(self, sqs_client, sqs_queue_url, sqs_dlq_arn):
+    def test_sqs_redrive_targets_dlq(self, sqs_redrive_policy, sqs_dlq_arn):
         """Verify SQS redrive policy targets the correct DLQ."""
-        if not sqs_queue_url or not sqs_dlq_arn:
-            pytest.skip("sqs_queue_url or sqs_dlq_arn not available")
-        try:
-            response = sqs_client.get_queue_attributes(
-                QueueUrl=sqs_queue_url,
-                AttributeNames=["RedrivePolicy"]
-            )
-            redrive_policy = response.get("Attributes", {}).get("RedrivePolicy", "")
-            if not redrive_policy:
-                pytest.fail("SQS queue has no redrive policy")
-            policy = json.loads(redrive_policy)
-            target_arn = policy.get("deadLetterTargetArn", "")
-            assert target_arn == sqs_dlq_arn, (
-                f"SQS redrive targets '{target_arn}', expected '{sqs_dlq_arn}'"
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AWS.SimpleQueueService.NonExistentQueue":
-                pytest.skip("SQS queue does not exist")
-            raise
+        if sqs_redrive_policy is None:
+            pytest.skip("No redrive policy configured")
+        if not sqs_dlq_arn:
+            pytest.skip("sqs_dlq_arn not available")
+        target_arn = sqs_redrive_policy.get("deadLetterTargetArn", "")
+        assert target_arn == sqs_dlq_arn, (
+            f"SQS redrive targets '{target_arn}', expected '{sqs_dlq_arn}'"
+        )
 
-    def test_sqs_max_receive_count_is_3(self, sqs_client, sqs_queue_url):
+    def test_sqs_max_receive_count_is_3(self, sqs_redrive_policy):
         """Verify SQS max receive count is 3 before sending to DLQ."""
-        if not sqs_queue_url:
-            pytest.skip("sqs_queue_url not available")
-        try:
-            response = sqs_client.get_queue_attributes(
-                QueueUrl=sqs_queue_url,
-                AttributeNames=["RedrivePolicy"]
-            )
-            redrive_policy = response.get("Attributes", {}).get("RedrivePolicy", "")
-            if not redrive_policy:
-                pytest.fail("SQS queue has no redrive policy")
-            policy = json.loads(redrive_policy)
-            max_receive = policy.get("maxReceiveCount", 0)
-            assert max_receive == 3, (
-                f"SQS maxReceiveCount is {max_receive}, expected 3. "
-                "Messages should be retried 3 times before going to DLQ."
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AWS.SimpleQueueService.NonExistentQueue":
-                pytest.skip("SQS queue does not exist")
-            raise
+        if sqs_redrive_policy is None:
+            pytest.skip("No redrive policy configured")
+        max_receive = sqs_redrive_policy.get("maxReceiveCount", 0)
+        assert max_receive == 3, (
+            f"SQS maxReceiveCount is {max_receive}, expected 3. "
+            "Messages should be retried 3 times before going to DLQ."
+        )
 
 
 class TestLambdaEnvironmentVariables:

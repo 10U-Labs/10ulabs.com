@@ -8,8 +8,8 @@ from botocore.exceptions import ClientError
 pytestmark = pytest.mark.layer(6)
 
 
-class TestAPIGatewayConfiguration:
-    """Verify API Gateway is configured correctly."""
+class TestAPIGatewayAndStateBucketConfiguration:
+    """Verify API Gateway and state bucket are configured correctly."""
 
     def test_api_gateway_is_regional(self, apigateway_client, api_gateway_id):
         """Verify API Gateway is configured as REGIONAL (not EDGE or PRIVATE)."""
@@ -21,6 +21,20 @@ class TestAPIGatewayConfiguration:
             f"Configured types: {endpoint_types}. "
             "The runners endpoint requires a REGIONAL API Gateway."
         )
+
+    def test_state_bucket_has_versioning(self, s3_client, state_bucket_name):
+        """Verify state bucket has versioning enabled."""
+        try:
+            response = s3_client.get_bucket_versioning(Bucket=state_bucket_name)
+            status = response.get("Status", "")
+            assert status == "Enabled", (
+                f"State bucket '{state_bucket_name}' does not have versioning enabled. "
+                "Terraform state buckets should have versioning for safety."
+            )
+        except ClientError as e:
+            if e.response["Error"]["Code"] in ("AccessDenied", "AccessDeniedException"):
+                pytest.skip("No permission to check bucket versioning")
+            raise
 
 
 class TestGitHubActionsRoleConfiguration:
@@ -59,21 +73,3 @@ class TestGitHubActionsRoleConfiguration:
             "sts:AssumeRole or sts:AssumeRoleWithWebIdentity. "
             "Check src/bootstrap/iam.tf for the trust relationship."
         )
-
-
-class TestStateBucketConfiguration:
-    """Verify state bucket is configured correctly."""
-
-    def test_state_bucket_has_versioning(self, s3_client, state_bucket_name):
-        """Verify state bucket has versioning enabled."""
-        try:
-            response = s3_client.get_bucket_versioning(Bucket=state_bucket_name)
-            status = response.get("Status", "")
-            assert status == "Enabled", (
-                f"State bucket '{state_bucket_name}' does not have versioning enabled. "
-                "Terraform state buckets should have versioning for safety."
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] in ("AccessDenied", "AccessDeniedException"):
-                pytest.skip("No permission to check bucket versioning")
-            raise
