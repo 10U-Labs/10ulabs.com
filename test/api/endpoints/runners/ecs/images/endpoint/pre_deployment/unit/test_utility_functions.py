@@ -4,6 +4,7 @@ import sys
 from unittest.mock import MagicMock
 
 handler = sys.modules['handler']
+lambda_http = sys.modules['lambda_http']
 
 
 class TestTestMode:
@@ -103,42 +104,42 @@ class TestJsonResponse:
 
     def test_returns_correct_status_code(self):
         """Test that status code is set correctly."""
-        response = handler.json_response(200, {'key': 'value'})
+        response = lambda_http.json_response(200, {'key': 'value'})
         assert response['statusCode'] == 200
 
     def test_includes_cors_allow_origin_header(self):
         """Test that CORS Allow-Origin header is included."""
-        response = handler.json_response(200, {})
+        response = lambda_http.json_response(200, {})
         assert response['headers']['Access-Control-Allow-Origin'] == '*'
 
     def test_includes_get_in_allowed_methods(self):
         """Test that GET is in allowed methods."""
-        response = handler.json_response(200, {})
+        response = lambda_http.json_response(200, {})
         assert 'GET' in response['headers']['Access-Control-Allow-Methods']
 
     def test_includes_post_in_allowed_methods(self):
         """Test that POST is in allowed methods."""
-        response = handler.json_response(200, {})
+        response = lambda_http.json_response(200, {})
         assert 'POST' in response['headers']['Access-Control-Allow-Methods']
 
     def test_includes_delete_in_allowed_methods(self):
         """Test that DELETE is in allowed methods."""
-        response = handler.json_response(200, {})
+        response = lambda_http.json_response(200, {})
         assert 'DELETE' in response['headers']['Access-Control-Allow-Methods']
 
     def test_includes_content_type_header(self):
         """Test that Content-Type header is set."""
-        response = handler.json_response(200, {})
+        response = lambda_http.json_response(200, {})
         assert response['headers']['Content-Type'] == 'application/json'
 
     def test_body_is_json_string(self):
         """Test that body is a JSON string."""
-        response = handler.json_response(200, {'key': 'value'})
+        response = lambda_http.json_response(200, {'key': 'value'})
         assert response['body'] == '{"key": "value"}'
 
     def test_includes_x_test_mode_in_allowed_headers(self):
         """Test that x-test-mode is in allowed headers."""
-        response = handler.json_response(200, {})
+        response = lambda_http.json_response(200, {})
         assert 'x-test-mode' in response['headers']['Access-Control-Allow-Headers']
 
 
