@@ -105,6 +105,12 @@ jobs:
             lib/python/ src/api/endpoints/runners/lambda/handler.py \
             --fail-on=C,R,W \
             --fail-under=10.0
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install pylint test dependencies
+        run: python3 -m pip install dnspython python-hcl2
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
