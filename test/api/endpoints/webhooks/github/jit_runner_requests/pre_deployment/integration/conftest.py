@@ -28,7 +28,7 @@ pytest_plugins = ['pytest_layers']
 API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"
 API_COMMON_DOCKER_REPOSITORY_DIR = REPO_ROOT / "src" / "api" / "common" / "docker_repository"
 API_COMMON_NETWORKING_DIR = REPO_ROOT / "src" / "api" / "common" / "networking"
-EC2_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
+EC2_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2"
 RUNNERS_DIR = (
     REPO_ROOT / "src" / "api" / "endpoints" / "webhooks" / "github" / "jit_runner_requests"
 )

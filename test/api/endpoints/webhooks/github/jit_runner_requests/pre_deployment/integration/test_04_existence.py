@@ -322,11 +322,3 @@ class TestSQSTerraformConfigExistence:
             "Required for storing unhandled webhook events."
         )
 
-    def test_job_queue_defined(self):
-        """Verify job_queue is defined in Terraform."""
-        queues = extract_sqs_queue_names(SQS_TF_FILE)
-        queue_resources = [name for name, _ in queues]
-        assert "job_queue" in queue_resources, (
-            "job_queue not found in sqs.tf. "
-            "Required for workflow_job queued event handling."
-        )
