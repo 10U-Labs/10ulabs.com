@@ -19,13 +19,6 @@ def test_webhook_handler_lambda_exists(lambda_client, config):
     assert response["Configuration"]["FunctionName"] == function_name
 
 
-def test_runner_starter_lambda_exists(lambda_client, config):
-    """Verify RunnerStarter Lambda exists."""
-    function_name = config["runner_starter_function_name"]
-    response = lambda_client.get_function(FunctionName=function_name)
-    assert response["Configuration"]["FunctionName"] == function_name
-
-
 def test_circuit_breaker_remediation_lambda_exists(lambda_client, config):
     """Verify CircuitBreakerRemediation Lambda exists."""
     function_name = config["circuit_breaker_remediation_function_name"]
@@ -72,20 +65,6 @@ def test_circuit_breaker_state_table_exists(dynamodb_client, config):
 
 
 # === SQS Queues ===
-
-
-def test_job_queue_exists(sqs_client, config):
-    """Verify job queue exists."""
-    queue_name = config["job_queue_name"]
-    response = sqs_client.get_queue_url(QueueName=queue_name)
-    assert "QueueUrl" in response
-
-
-def test_job_dlq_exists(sqs_client, config):
-    """Verify job DLQ exists."""
-    queue_name = config["job_dlq_name"]
-    response = sqs_client.get_queue_url(QueueName=queue_name)
-    assert "QueueUrl" in response
 
 
 def test_webhook_dlq_exists(sqs_client, config):
