@@ -5,7 +5,7 @@ data "archive_file" "handler" {
     filename = "handler.py"
   }
   source {
-    content  = file("${path.module}/../../../../../lib/python/lambda_http/__init__.py")
+    content  = file("${path.module}/../../../../../../lib/python/lambda_http/__init__.py")
     filename = "lambda_http.py"
   }
   output_path = "${path.module}/.terraform/lambda_packages/handler.zip"
