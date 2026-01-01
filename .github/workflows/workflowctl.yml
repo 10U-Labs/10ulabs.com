@@ -126,6 +126,17 @@ jobs:
           python3 -m pylint lib/python/ src/workflowctl/ \
             --fail-on=C,R,W --fail-under=10.0
       - if: >-
+          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')) &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Install pylint test dependencies
+        run: |
+          python3 -m pip install \
+            dnspython==2.7.* \
+            python-hcl2==6.0.*
+      - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pylint on tests
