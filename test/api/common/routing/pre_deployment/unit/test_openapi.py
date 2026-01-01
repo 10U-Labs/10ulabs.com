@@ -450,3 +450,24 @@ def test_openapi_spec_bad_request_parameters_returns_400(openapi_spec):
     """Verify BAD_REQUEST_PARAMETERS returns 400 status code."""
     responses = openapi_spec['x-amazon-apigateway-gateway-responses']
     assert responses['BAD_REQUEST_PARAMETERS']['statusCode'] == 400
+
+
+def test_openapi_spec_response_templates_use_input_path():
+    """Verify response templates use $input.path() for extracting values."""
+    content = _get_openapi_path().read_text()
+    assert '"$input.path(' in content, (
+        "Response templates should use $input.path() to extract values"
+    )
+
+
+def test_openapi_spec_response_templates_do_not_use_input_json_in_quotes():
+    """Verify response templates don't use $input.json() inside quotes.
+
+    Using $input.json() inside a quoted string causes double-quoting because
+    $input.json() returns a JSON-quoted value. Use $input.path() instead.
+    """
+    content = _get_openapi_path().read_text()
+    assert '"$input.json(' not in content, (
+        "Do not use $input.json() in quoted response templates - "
+        "use $input.path() instead to avoid double-quoting"
+    )
