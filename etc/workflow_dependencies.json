@@ -124,7 +124,7 @@
   },
   "api_endpoint_v1_runners_ec2_images": {
     "depends_on": [
-      "api_endpoint_v1_runners_ec2_images_post"
+      "api_common_networking"
     ],
     "name": "Ensuring the /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [
@@ -137,9 +137,7 @@
     ]
   },
   "api_endpoint_v1_runners_ec2_images_post": {
-    "depends_on": [
-      "api_common_networking"
-    ],
+    "depends_on": [],
     "name": "Building AMI for EC2 self-hosted runners",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2_images_post.yml",
@@ -151,7 +149,7 @@
   },
   "api_endpoint_v1_runners_ecs_images": {
     "depends_on": [
-      "api_endpoint_v1_runners_ecs_images_post"
+      "api_common_docker_repository"
     ],
     "name": "Ensuring /v1/runners/ecs/images API endpoint exists and is properly configured",
     "paths": [
@@ -164,9 +162,7 @@
     ]
   },
   "api_endpoint_v1_runners_ecs_images_post": {
-    "depends_on": [
-      "api_common_docker_repository"
-    ],
+    "depends_on": [],
     "name": "Building Docker image for ECS runners",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs_images_post.yml",
