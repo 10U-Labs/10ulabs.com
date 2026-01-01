@@ -1,97 +1,60 @@
 """Unit tests for get_latest_ami_id functionality."""
 
 from unittest.mock import MagicMock
+import pytest
 from botocore.exceptions import ClientError
+
+
+@pytest.fixture
+def mock_ec2_with_single_image():
+    """Create a mock EC2 client with a single image response."""
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{
+            'ImageId': 'ami-12345678',
+            'CreationDate': '2024-01-01T00:00:00.000Z'
+        }]
+    }
+    return mock_ec2
+
+
+@pytest.fixture
+def describe_images_call_kwargs(cleanup, mock_ec2_with_single_image):
+    """Call get_latest_ami_id and return the kwargs passed to describe_images."""
+    cleanup.get_latest_ami_id(
+        mock_ec2_with_single_image, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
+    )
+    return mock_ec2_with_single_image.describe_images.call_args[1]
 
 
 class TestGetLatestAmiIdSuccess:
     """Tests for get_latest_ami_id when successful."""
 
-    def test_returns_ami_id_from_ec2(self, cleanup):
+    def test_returns_ami_id_from_ec2(self, cleanup, mock_ec2_with_single_image):
         """Test that AMI ID is returned from EC2 query."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_images.return_value = {
-            'Images': [{
-                'ImageId': 'ami-12345678',
-                'CreationDate': '2024-01-01T00:00:00.000Z'
-            }]
-        }
-
         result = cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
+            mock_ec2_with_single_image, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
         )
 
         assert result == 'ami-12345678'
 
-    def test_calls_ec2_with_self_owner(self, cleanup):
+    def test_calls_ec2_with_self_owner(self, describe_images_call_kwargs):
         """Test that EC2 is called with self owner filter."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_images.return_value = {
-            'Images': [{
-                'ImageId': 'ami-12345678',
-                'CreationDate': '2024-01-01T00:00:00.000Z'
-            }]
-        }
+        assert describe_images_call_kwargs['Owners'] == ['self']
 
-        cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
-        )
-
-        call_kwargs = mock_ec2.describe_images.call_args[1]
-        assert call_kwargs['Owners'] == ['self']
-
-    def test_calls_ec2_with_purpose_tag_filter(self, cleanup):
+    def test_calls_ec2_with_purpose_tag_filter(self, describe_images_call_kwargs):
         """Test that EC2 is called with purpose tag filter."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_images.return_value = {
-            'Images': [{
-                'ImageId': 'ami-12345678',
-                'CreationDate': '2024-01-01T00:00:00.000Z'
-            }]
-        }
-
-        cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
-        )
-
-        call_kwargs = mock_ec2.describe_images.call_args[1]
-        filter_names = [f['Name'] for f in call_kwargs['Filters']]
+        filter_names = [f['Name'] for f in describe_images_call_kwargs['Filters']]
         assert 'tag:Purpose' in filter_names
 
-    def test_calls_ec2_with_stable_tag_filter(self, cleanup):
+    def test_calls_ec2_with_stable_tag_filter(self, describe_images_call_kwargs):
         """Test that EC2 is called with stable tag filter."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_images.return_value = {
-            'Images': [{
-                'ImageId': 'ami-12345678',
-                'CreationDate': '2024-01-01T00:00:00.000Z'
-            }]
-        }
-
-        cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
-        )
-
-        call_kwargs = mock_ec2.describe_images.call_args[1]
-        filter_names = [f['Name'] for f in call_kwargs['Filters']]
+        filter_names = [f['Name'] for f in describe_images_call_kwargs['Filters']]
         assert 'tag:Stable' in filter_names
 
-    def test_calls_ec2_with_state_filter(self, cleanup):
+    def test_calls_ec2_with_state_filter(self, describe_images_call_kwargs):
         """Test that EC2 is called with state filter."""
-        mock_ec2 = MagicMock()
-        mock_ec2.describe_images.return_value = {
-            'Images': [{
-                'ImageId': 'ami-12345678',
-                'CreationDate': '2024-01-01T00:00:00.000Z'
-            }]
-        }
-
-        cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
-        )
-
-        call_kwargs = mock_ec2.describe_images.call_args[1]
-        filter_names = [f['Name'] for f in call_kwargs['Filters']]
+        filter_names = [f['Name'] for f in describe_images_call_kwargs['Filters']]
         assert 'state' in filter_names
 
     def test_returns_most_recent_ami(self, cleanup):
