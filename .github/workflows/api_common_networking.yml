@@ -96,7 +96,15 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pylint
-        run: python3 -m pip install pylint
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            dnspython \
+            pylint \
+            pytest \
+            python-hcl2 \
+            requests
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
@@ -111,7 +119,7 @@ jobs:
         run: python3 -m pip install mypy boto3-stubs types-requests
       - name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python python3 -m mypy \
+          MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
             lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
