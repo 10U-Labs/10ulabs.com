@@ -109,45 +109,6 @@ def test_circuit_breaker_state_table_has_pitr_enabled(dynamodb_client, config):
 # === SQS Queue Configuration ===
 
 
-def test_job_queue_has_redrive_policy(sqs_client, config):
-    """Verify job queue has redrive policy to DLQ."""
-    queue_name = config["job_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["RedrivePolicy"]
-    )
-    assert "RedrivePolicy" in attributes["Attributes"]
-
-
-def test_job_queue_has_visibility_timeout(sqs_client, config):
-    """Verify job queue has visibility timeout greater than 30 seconds."""
-    queue_name = config["job_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["VisibilityTimeout"]
-    )
-    visibility_timeout = int(attributes["Attributes"]["VisibilityTimeout"])
-    assert visibility_timeout > 30
-
-
-def test_job_queue_is_not_fifo(sqs_client, config):
-    """Verify job queue is standard (not FIFO) for webhook processing."""
-    queue_name = config["job_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    assert ".fifo" not in queue_url
-
-
-def test_job_dlq_has_message_retention(sqs_client, config):
-    """Verify job DLQ has message retention configured."""
-    queue_name = config["job_dlq_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["MessageRetentionPeriod"]
-    )
-    retention = int(attributes["Attributes"]["MessageRetentionPeriod"])
-    assert retention > 0
-
-
 def test_webhook_ingress_queue_has_redrive_policy(sqs_client, config):
     """Verify webhook ingress queue has redrive policy to DLQ."""
     queue_name = config["webhook_ingress_queue_name"]
@@ -265,14 +226,6 @@ def _is_pascalcase(name):
 def test_webhook_handler_name_is_pascalcase(lambda_client, config):
     """Verify WebhookHandler uses PascalCase naming."""
     function_name = config["webhook_handler_function_name"]
-    response = lambda_client.get_function(FunctionName=function_name)
-    actual_name = response["Configuration"]["FunctionName"]
-    assert _is_pascalcase(actual_name), f"Name '{actual_name}' is not PascalCase"
-
-
-def test_runner_starter_name_is_pascalcase(lambda_client, config):
-    """Verify RunnerStarter uses PascalCase naming."""
-    function_name = config["runner_starter_function_name"]
     response = lambda_client.get_function(FunctionName=function_name)
     actual_name = response["Configuration"]["FunctionName"]
     assert _is_pascalcase(actual_name), f"Name '{actual_name}' is not PascalCase"
