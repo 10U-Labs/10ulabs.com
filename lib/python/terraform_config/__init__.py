@@ -277,7 +277,7 @@ def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
         locals_dict[match.group(1)] = _resolve_all_refs(match.group(2), prefix, handler_names)
 
     # Parse module.common.lambda_handler_names references (direct, not interpolated)
-    for match in re.finditer(r'(\w+)\s*=\s*module\.shared\.lambda_handler_names\.(\w+)', content):
+    for match in re.finditer(r'(\w+)\s*=\s*module\.common\.lambda_handler_names\.(\w+)', content):
         local_name, handler_key = match.groups()
         if handler_key in handler_names:
             locals_dict[local_name] = handler_names[handler_key]
@@ -365,7 +365,7 @@ def _resolve_lambda_function_name(
 
     # Try module.common.lambda_handler_names reference
     match = re.search(
-        r'^\s*function_name\s*=\s*module\.shared\.lambda_handler_names\.(\w+)',
+        r'^\s*function_name\s*=\s*module\.common\.lambda_handler_names\.(\w+)',
         block, re.MULTILINE
     )
     if match and match.group(1) in handlers:
