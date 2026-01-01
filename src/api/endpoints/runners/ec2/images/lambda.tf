@@ -28,6 +28,7 @@ resource "aws_lambda_function" "handler" {
       EC2_AMI_PURPOSE_TAG      = local.ami_purpose_tag
       EC2_AMI_PURPOSE_VALUE    = local.ami_purpose_value
       EC2_AMI_STABLE_TAG       = local.ami_stable_tag
+      EC2_AMI_STABLE_VALUE     = local.ami_stable_value
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = module.common.ssm_github_pat_name
       SUBNETS                  = data.terraform_remote_state.api_common_networking.outputs.public_subnets_ids

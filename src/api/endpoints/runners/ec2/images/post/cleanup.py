@@ -34,7 +34,7 @@ def has_excluded_tags(resource_tags, exclude_tags):
     return False
 
 
-def get_latest_ami_id(ec2_client, purpose_tag, purpose_value, stable_tag):
+def get_latest_ami_id(ec2_client, purpose_tag, purpose_value, stable_tag, stable_value):
     """Get the latest stable AMI ID by querying EC2 directly."""
     result = None
     try:
@@ -42,7 +42,7 @@ def get_latest_ami_id(ec2_client, purpose_tag, purpose_value, stable_tag):
             Owners=['self'],
             Filters=[
                 {'Name': f'tag:{purpose_tag}', 'Values': [purpose_value]},
-                {'Name': f'tag:{stable_tag}', 'Values': ['true']},
+                {'Name': f'tag:{stable_tag}', 'Values': [stable_value]},
                 {'Name': 'state', 'Values': ['available']}
             ]
         )
@@ -443,7 +443,8 @@ def handle_ami_cleanup(args):
     print_header(args, resource_types_set, tags, exclude_tags, ami_name_prefix)
 
     latest_ami_id = get_latest_ami_id(
-        ec2_client, args.purpose_tag, args.purpose_value, args.stable_tag
+        ec2_client, args.purpose_tag, args.purpose_value,
+        args.stable_tag, args.stable_value
     )
     latest_snapshot_ids = get_latest_snapshot_ids(ec2_client, latest_ami_id)
     print_protected_resources(latest_ami_id, latest_snapshot_ids)
@@ -535,6 +536,11 @@ def main():
         '--stable-tag',
         required=True,
         help='Tag key identifying stable AMIs (e.g., Stable)'
+    )
+    parser.add_argument(
+        '--stable-value',
+        required=True,
+        help='Tag value identifying stable AMIs (e.g., true)'
     )
     parser.add_argument(
         '--dry-run',

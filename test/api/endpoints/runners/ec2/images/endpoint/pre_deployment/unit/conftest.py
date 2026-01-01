@@ -23,6 +23,7 @@ def _get_handler_env_vars() -> dict[str, str]:
         'EC2_AMI_PURPOSE_TAG': 'Purpose',
         'EC2_AMI_PURPOSE_VALUE': 'GitHub self-hosted EC2 runner',
         'EC2_AMI_STABLE_TAG': 'Stable',
+        'EC2_AMI_STABLE_VALUE': 'true',
         'GITHUB_REPO': get_github_repo(),
         'GITHUB_TOKEN_SECRET_NAME': '/test/github-pat',
         'SUBNETS': 'subnet-test1,subnet-test2',

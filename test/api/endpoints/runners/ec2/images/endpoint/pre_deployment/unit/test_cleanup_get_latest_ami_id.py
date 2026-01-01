@@ -18,7 +18,7 @@ class TestGetLatestAmiIdSuccess:
         }
 
         result = cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable'
+            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
         )
 
         assert result == 'ami-12345678'
@@ -34,7 +34,7 @@ class TestGetLatestAmiIdSuccess:
         }
 
         cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable'
+            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
         )
 
         call_kwargs = mock_ec2.describe_images.call_args[1]
@@ -51,7 +51,7 @@ class TestGetLatestAmiIdSuccess:
         }
 
         cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable'
+            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
         )
 
         call_kwargs = mock_ec2.describe_images.call_args[1]
@@ -69,7 +69,7 @@ class TestGetLatestAmiIdSuccess:
         }
 
         cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable'
+            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
         )
 
         call_kwargs = mock_ec2.describe_images.call_args[1]
@@ -87,7 +87,7 @@ class TestGetLatestAmiIdSuccess:
         }
 
         cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable'
+            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
         )
 
         call_kwargs = mock_ec2.describe_images.call_args[1]
@@ -115,7 +115,7 @@ class TestGetLatestAmiIdSuccess:
         }
 
         result = cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable'
+            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
         )
 
         assert result == 'ami-newest'
@@ -130,7 +130,7 @@ class TestGetLatestAmiIdNoImages:
         mock_ec2.describe_images.return_value = {'Images': []}
 
         result = cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable'
+            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
         )
 
         assert result is None
@@ -153,7 +153,7 @@ class TestGetLatestAmiIdClientErrors:
         )
 
         result = cleanup.get_latest_ami_id(
-            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable'
+            mock_ec2, 'Purpose', 'GitHub self-hosted EC2 runner', 'Stable', 'true'
         )
 
         assert result is None

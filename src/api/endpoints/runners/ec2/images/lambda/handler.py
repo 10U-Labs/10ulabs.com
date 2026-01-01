@@ -185,12 +185,13 @@ def get_latest_ami_details() -> Dict[str, Any]:
     ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
     ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
     ami_stable_tag = os.environ['EC2_AMI_STABLE_TAG']
+    ami_stable_value = os.environ['EC2_AMI_STABLE_VALUE']
     try:
         response = get_ec2_client().describe_images(
             Owners=['self'],
             Filters=[
                 {'Name': f'tag:{ami_purpose_tag}', 'Values': [ami_purpose_value]},
-                {'Name': f'tag:{ami_stable_tag}', 'Values': ['true']},
+                {'Name': f'tag:{ami_stable_tag}', 'Values': [ami_stable_value]},
                 {'Name': 'state', 'Values': ['available']}
             ]
         )
