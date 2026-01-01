@@ -11,11 +11,10 @@ Six-layer testing model:
 - Layer 5: Configuration - Are resources configured correctly?
 - Layer 6: Capability - Can we perform required operations?
 """
-from pathlib import Path
-
 from botocore.exceptions import ClientError
 import pytest
 
+from repo_utils import REPO_ROOT
 from terraform_config import extract_sqs_queue_names
 from test_fixtures.integration import create_security_group_existence_test
 
@@ -24,7 +23,7 @@ pytestmark = pytest.mark.layer(4)
 
 
 RUNNERS_SRC = (
-    Path(__file__).parents[8] / "src" / "api" / "endpoints" / "webhooks"
+    REPO_ROOT / "src" / "api" / "endpoints" / "webhooks"
     / "github" / "jit_runner_requests"
 )
 SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"

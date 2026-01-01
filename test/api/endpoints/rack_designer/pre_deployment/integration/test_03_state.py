@@ -6,19 +6,15 @@ exist in AWS but not in state (orphaned) or vice versa.
 Six-layer testing model:
 - Layer 3: State - Terraform state matches AWS reality
 """
-
-from pathlib import Path
-
 import pytest
 
+from repo_utils import REPO_ROOT
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
 
 pytestmark = pytest.mark.layer(3)
 
-RACK_DESIGNER_SRC = (
-    Path(__file__).parents[6] / "src" / "api" / "endpoints" / "rack_designer"
-)
+RACK_DESIGNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "rack_designer"
 
 TestOrphanedResources = create_orphaned_resource_tests(
     terraform_dir=RACK_DESIGNER_SRC,

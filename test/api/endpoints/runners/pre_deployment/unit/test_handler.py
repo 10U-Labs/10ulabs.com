@@ -1,17 +1,18 @@
 """Unit tests for /v1/runners Lambda handler."""
 import json
 import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from repo_utils import REPO_ROOT
+
 # Add the lambda directory to the path for imports
-LAMBDA_DIR = Path(__file__).parents[5] / 'src' / 'api' / 'endpoints' / 'runners' / 'lambda'
+LAMBDA_DIR = REPO_ROOT / 'src' / 'api' / 'endpoints' / 'runners' / 'lambda'
 sys.path.insert(0, str(LAMBDA_DIR))
 
 # Add lib/python for runner_labels
-LIB_PYTHON = Path(__file__).parents[5] / 'lib' / 'python'
+LIB_PYTHON = REPO_ROOT / 'lib' / 'python'
 sys.path.insert(0, str(LIB_PYTHON))
 
 

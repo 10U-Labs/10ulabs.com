@@ -1,11 +1,12 @@
 """Unit tests for SPA routing Lambda@Edge handler."""
 import importlib.util
 import sys
-from pathlib import Path
 
 import pytest
 
-LAMBDA_DIR = Path(__file__).parents[5] / "src" / "www" / "common" / "lambda"
+from repo_utils import REPO_ROOT
+
+LAMBDA_DIR = REPO_ROOT / "src" / "www" / "common" / "lambda"
 spec = importlib.util.spec_from_file_location("spa_routing", LAMBDA_DIR / "spa_routing.py")
 assert spec is not None, "Failed to create module spec"
 spa_routing = importlib.util.module_from_spec(spec)

@@ -11,17 +11,16 @@ Six-layer testing model:
 - Layer 5: Configuration - Are resources configured correctly?
 - Layer 6: Capability - Can we perform required operations?
 """
-from pathlib import Path
-
 import pytest
 
+from repo_utils import REPO_ROOT
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
 
 pytestmark = pytest.mark.layer(3)
 
 TERRAFORM_DIR = (
-    Path(__file__).parents[8] / "src" / "api" / "endpoints" / "webhooks"
+    REPO_ROOT / "src" / "api" / "endpoints" / "webhooks"
     / "github" / "jit_runner_requests"
 )
 
