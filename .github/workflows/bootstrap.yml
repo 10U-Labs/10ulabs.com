@@ -16,6 +16,44 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert no linter config files (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
+        with:
+          directories: ${{ github.workspace }}
+          linters: pylint,mypy,yamllint
+      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert no linter config files (self-hosted)
+        run: assert-no-linter-config-files --linters pylint,mypy,yamllint ${{ github.workspace }}
+      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert no inline lint disables (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
+        with:
+          files: ${{ github.workspace }}/**/*
+          linters: pylint,mypy,yamllint
+      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert no inline lint disables (self-hosted)
+        run: assert-no-inline-lint-disables --linters pylint,mypy,yamllint ${{ github.workspace }}/**/*
+      - id: terraform
+        if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Extract Terraform version
+        run: |
+          TERRAFORM_VERSION=$(grep 'required_version' \
+            src/bootstrap/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+      - name: Terraform Format Check
+        run: cd src/bootstrap && terraform fmt -diff -check -recursive
       - id: oidc
         name: Check OIDC availability
         run: |
@@ -45,26 +83,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-region: ${{ env.aws_region }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - id: terraform
-        if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Extract Terraform version
-        run: |
-          TERRAFORM_VERSION=$(grep 'required_version' \
-            src/bootstrap/providers.tf | cut -d'"' -f2 | sed 's/>= //')
-          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ steps.terraform.outputs.version }}
-      - name: Terraform Format Check
-        run: cd src/bootstrap && terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/bootstrap && terraform init
       - if: >-
