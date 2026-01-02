@@ -130,6 +130,26 @@ resource "aws_iam_role_policy" "lambda_runners_handler_ssm_github_pat" {
   })
 }
 
+# KMS access for decrypting Lambda environment variables
+# This explicit IAM policy prevents stale KMS grant issues when IAM roles are recreated.
+# KMS grants are tied to role unique IDs which change on recreation; IAM policies are not.
+resource "aws_iam_role_policy" "lambda_runners_handler_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.lambda_runners_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
+    }]
+  })
+}
+
 # Note: runner_starter IAM removed - routing logic moved to /v1/runners endpoint
 
 # Runner Terminator IAM
@@ -229,6 +249,23 @@ resource "aws_iam_role_policy" "runner_terminator_ec2" {
   })
 }
 
+resource "aws_iam_role_policy" "runner_terminator_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.runner_terminator.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
+    }]
+  })
+}
+
 # Ignored Events Archiver IAM
 resource "aws_iam_role" "ignored_events_archiver" {
   name = local.ignored_events_archiver_role_name
@@ -307,6 +344,23 @@ resource "aws_iam_role_policy" "ignored_events_archiver_s3" {
   })
 }
 
+resource "aws_iam_role_policy" "ignored_events_archiver_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.ignored_events_archiver.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
+    }]
+  })
+}
+
 resource "aws_iam_role" "circuit_breaker_reset" {
   name = local.circuit_breaker_reset_role_name
 
@@ -364,6 +418,23 @@ resource "aws_iam_role_policy" "circuit_breaker_reset_permissions" {
         Resource = [aws_dynamodb_table.circuit_breaker_state.arn]
       }
     ]
+  })
+}
+
+resource "aws_iam_role_policy" "circuit_breaker_reset_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.circuit_breaker_reset.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
+    }]
   })
 }
 
@@ -439,6 +510,23 @@ resource "aws_iam_role_policy" "circuit_breaker_remediation_permissions" {
   })
 }
 
+resource "aws_iam_role_policy" "circuit_breaker_remediation_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.circuit_breaker_remediation.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
+    }]
+  })
+}
+
 resource "aws_iam_role" "dlq_reprocessor" {
   name = local.dlq_reprocessor_role_name
 
@@ -498,6 +586,23 @@ resource "aws_iam_role_policy" "dlq_reprocessor_permissions" {
         Resource = [module.common.ssm_github_pat_arn]
       }
     ]
+  })
+}
+
+resource "aws_iam_role_policy" "dlq_reprocessor_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.dlq_reprocessor.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
+    }]
   })
 }
 
@@ -571,6 +676,23 @@ resource "aws_iam_role_policy" "circuit_breaker_recovery_permissions" {
   })
 }
 
+resource "aws_iam_role_policy" "circuit_breaker_recovery_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.circuit_breaker_recovery.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
+    }]
+  })
+}
+
 resource "aws_iam_role" "drift_recovery" {
   name = local.drift_recovery_role_name
 
@@ -635,6 +757,23 @@ resource "aws_iam_role_policy" "drift_recovery_permissions" {
         Resource = ["*"]
       }
     ]
+  })
+}
+
+resource "aws_iam_role_policy" "drift_recovery_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.drift_recovery.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
+    }]
   })
 }
 
@@ -707,6 +846,23 @@ resource "aws_iam_role_policy" "spot_interruption_handler_permissions" {
   })
 }
 
+resource "aws_iam_role_policy" "spot_interruption_handler_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.spot_interruption_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
+    }]
+  })
+}
+
 resource "aws_iam_role" "stale_runner_cleanup" {
   name = local.stale_runner_cleanup_role_name
 
@@ -773,5 +929,22 @@ resource "aws_iam_role_policy" "stale_runner_cleanup_permissions" {
         }
       ] : []
     )
+  })
+}
+
+resource "aws_iam_role_policy" "stale_runner_cleanup_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.stale_runner_cleanup.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
+    }]
   })
 }
