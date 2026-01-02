@@ -6,6 +6,8 @@ import urllib.request
 import urllib.error
 from typing import Any, Dict, List, Optional, cast
 
+from lambda_http import parse_body
+
 # Google OAuth Client ID - set via environment variable
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 
@@ -475,13 +477,6 @@ def get_auth_token(event: Dict[str, Any]) -> Optional[str]:
         return auth_header[7:]
 
     return auth_header
-
-
-def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Parse the request body from an API Gateway event."""
-    body = event.get('body', {})
-    result = json.loads(body) if isinstance(body, str) else body
-    return result
 
 
 def build_soc_config_output() -> Dict[str, Any]:
