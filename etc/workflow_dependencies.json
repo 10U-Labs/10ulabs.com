@@ -16,7 +16,7 @@
   },
   "api_common_docker_repository": {
     "depends_on": [
-      "api_endpoint_v1_runners_ec2"
+      "api_common_routing"
     ],
     "name": "Ensuring API common Docker repository exists and is properly configured",
     "paths": [
@@ -29,7 +29,7 @@
   },
   "api_common_networking": {
     "depends_on": [
-      "api_operational_diagnostics"
+      "api_common_routing"
     ],
     "name": "Ensuring API common networking infrastructure exists and is properly configured",
     "paths": [
@@ -54,7 +54,7 @@
   },
   "api_endpoint_v1_contact_submissions": {
     "depends_on": [
-      "webhooks_github_jit_runner_requests"
+      "api_common_routing"
     ],
     "name": "Ensuring the /v1/contact-submissions API endpoint exists and is properly configured",
     "paths": [
@@ -81,6 +81,7 @@
   },
   "api_endpoint_v1_runners": {
     "depends_on": [
+      "api_endpoint_v1_runners_ec2",
       "api_endpoint_v1_runners_ecs"
     ],
     "name": "Ensuring /v1/runners API endpoint exists and is properly configured",
@@ -97,7 +98,7 @@
   },
   "api_operational_diagnostics": {
     "depends_on": [
-      "api_operational_health"
+      "api_common_routing"
     ],
     "name": "Ensuring the /diagnostics/echo API endpoint exists and is properly configured",
     "paths": [
@@ -149,7 +150,8 @@
   },
   "api_endpoint_v1_runners_ecs_images": {
     "depends_on": [
-      "api_common_docker_repository"
+      "api_common_docker_repository",
+      "api_endpoint_v1_runners_ec2"
     ],
     "name": "Ensuring /v1/runners/ecs/images API endpoint exists and is properly configured",
     "paths": [
@@ -174,7 +176,7 @@
   },
   "api_endpoint_v1_rack_configurations": {
     "depends_on": [
-      "www_rack_designer"
+      "api_common_routing"
     ],
     "name": "Ensuring the /v1/rack-configurations API endpoint exists and is properly configured",
     "paths": [
@@ -187,7 +189,7 @@
   },
   "api_endpoint_v1_sessions": {
     "depends_on": [
-      "api_endpoint_v1_rack_configurations"
+      "api_common_routing"
     ],
     "name": "Ensuring the /v1/sessions API endpoint exists and is properly configured",
     "paths": [
@@ -214,7 +216,7 @@
   },
   "api_endpoint_v1_soc_simulations": {
     "depends_on": [
-      "www_simulations_soc"
+      "api_common_routing"
     ],
     "name": "Ensuring the /v1/soc-simulations API endpoint exists and is properly configured",
     "paths": [
@@ -248,6 +250,7 @@
   },
   "www_home": {
     "depends_on": [
+      "api_endpoint_v1_contact_submissions",
       "www_common"
     ],
     "name": "Ensuring www home page exists and is properly configured",
@@ -261,7 +264,7 @@
   },
   "www_common": {
     "depends_on": [
-      "api_endpoint_v1_contact_submissions"
+      "bootstrap"
     ],
     "name": "Ensuring www common infrastructure exists and is properly configured",
     "paths": [
@@ -278,7 +281,9 @@
   },
   "www_rack_designer": {
     "depends_on": [
-      "www_home"
+      "api_endpoint_v1_rack_configurations",
+      "api_endpoint_v1_sessions",
+      "www_common"
     ],
     "name": "Ensuring www rack designer frontend exists and is properly configured",
     "paths": [
@@ -288,7 +293,8 @@
   },
   "www_simulations_soc": {
     "depends_on": [
-      "api_endpoint_v1_rack_configurations"
+      "api_endpoint_v1_soc_simulations",
+      "www_common"
     ],
     "name": "Ensuring www SoC simulations frontend exists and is properly configured",
     "paths": [
