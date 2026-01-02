@@ -1,4 +1,4 @@
-"""Pytest fixtures for rack designer integration tests."""
+"""Pytest fixtures for rack configurations integration tests."""
 import boto3
 import pytest
 

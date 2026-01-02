@@ -1,4 +1,4 @@
-"""Layer 5: Configuration tests for rack_designer endpoint pre-deployment.
+"""Layer 5: Configuration tests for rack_configurations endpoint pre-deployment.
 
 Tests that prerequisite resources are configured correctly.
 Assumes existence passed. Not capability - just configuration.

@@ -1,4 +1,4 @@
-"""Layer 2: Authorization tests for rack_designer endpoint pre-deployment.
+"""Layer 2: Authorization tests for rack_configurations endpoint pre-deployment.
 
 Tests that credentials have permission to INSPECT prerequisite resources.
 Not existence, not capability - just authorization to check.

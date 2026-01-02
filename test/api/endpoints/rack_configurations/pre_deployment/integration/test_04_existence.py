@@ -1,4 +1,4 @@
-"""Layer 4: Existence tests for rack_designer endpoint pre-deployment.
+"""Layer 4: Existence tests for rack_configurations endpoint pre-deployment.
 
 Tests that prerequisite resources from OTHER workflows exist.
 Not configuration, not capability - just existence.

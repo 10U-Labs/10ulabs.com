@@ -1,7 +1,7 @@
-"""Layer 6: Capability tests for rack_designer endpoint pre-deployment.
+"""Layer 6: Capability tests for rack_configurations endpoint pre-deployment.
 
 Tests that you can perform required operations. Assumes configuration passed.
-These tests verify we have the capability to deploy the rack_designer endpoint.
+These tests verify we have the capability to deploy the rack_configurations endpoint.
 
 Six-layer testing model:
 - Layer 6: Capability - Can perform required operations

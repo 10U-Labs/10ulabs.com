@@ -1,1 +1,1 @@
-"""Pre-deployment integration tests for rack_designer endpoint."""
+"""Pre-deployment integration tests for rack_configurations endpoint."""

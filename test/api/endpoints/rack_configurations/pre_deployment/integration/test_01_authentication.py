@@ -1,4 +1,4 @@
-"""Layer 1: Authentication tests for rack_designer endpoint pre-deployment.
+"""Layer 1: Authentication tests for rack_configurations endpoint pre-deployment.
 
 Tests ONLY that AWS credentials are valid. No authorization or resource checks.
 
