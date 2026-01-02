@@ -13,7 +13,6 @@ import urllib.request
 from typing import Any, Dict, Optional
 import boto3
 from botocore.exceptions import ClientError
-from lambda_http import parse_body
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -82,6 +81,12 @@ def error_response(
     if details is not None:
         response_body['details'] = details
     return json_response(status_code, response_body)
+
+
+def parse_request_body(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract and parse JSON body from Lambda event for contact form processing."""
+    raw_body = event.get('body') or '{}'
+    return json.loads(raw_body) if isinstance(raw_body, str) else raw_body
 
 
 def get_recaptcha_secret() -> str:
@@ -230,7 +235,7 @@ TEST_MODE_MOCK_RESPONSE = {
 def handle_contact_post(event: Dict[str, Any]) -> Dict[str, Any]:
     """Handle POST /v1/contact request."""
     try:
-        body = parse_body(event)
+        body = parse_request_body(event)
         fields = {
             'recaptcha_token': body.get('recaptcha_token', '').strip(),
             'name': body.get('name', '').strip(),
