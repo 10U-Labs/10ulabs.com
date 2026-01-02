@@ -175,7 +175,9 @@ jobs:
           python3 -m pytest \
             $TESTS --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
-        run: cd src/api/endpoints/rack_configurations && terraform apply -auto-approve
+        run: |
+          cd src/api/endpoints/rack_configurations
+          terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
           TESTS="test/api/endpoints/rack_configurations/post_deployment/integration/"
@@ -209,7 +211,8 @@ jobs:
             --repo ${{ github.repository }} \
             $FLAGS
 name: >-
-  Ensuring /v1/rack-configurations and /v1/sessions API endpoints exist and are properly configured
+  Ensuring /v1/rack-configurations API endpoint exists and is properly
+  configured
 on:
   workflow_dispatch:
     inputs:
