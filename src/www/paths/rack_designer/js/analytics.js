@@ -237,7 +237,6 @@ var Analytics = (function() {
         }
         var eventsToSend = eventQueue.splice(0, MAX_BATCH_SIZE);
         var payload = {
-            session_id: sessionId,
             device_id: deviceId,
             events: eventsToSend
         };
@@ -246,10 +245,11 @@ var Analytics = (function() {
             contextSent = true;
         }
         var body = JSON.stringify(payload);
+        var url = API_BASE_URL + '/v1/sessions/' + encodeURIComponent(sessionId) + '/events';
         if (useBeacon && navigator.sendBeacon) {
-            navigator.sendBeacon(API_BASE_URL + '/v1/rack-designer/events', body);
+            navigator.sendBeacon(url, body);
         } else {
-            fetch(API_BASE_URL + '/v1/rack-designer/events', {
+            fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: body,

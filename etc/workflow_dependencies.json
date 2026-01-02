@@ -52,16 +52,16 @@
       "test/lib/python/**"
     ]
   },
-  "api_endpoint_v1_contact": {
+  "api_endpoint_v1_contact_submissions": {
     "depends_on": [
       "webhooks_github_jit_runner_requests"
     ],
-    "name": "Ensuring the /v1/contact API endpoint exists and is properly configured",
+    "name": "Ensuring the /v1/contact-submissions API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/api_endpoint_v1_contact.yml",
+      ".github/workflows/api_endpoint_v1_contact_submissions.yml",
       "lib/python/**",
-      "src/api/endpoints/contact/**",
-      "test/api/endpoints/contact/**",
+      "src/api/endpoints/contact_submissions/**",
+      "test/api/endpoints/contact_submissions/**",
       "test/lib/python/**"
     ]
   },
@@ -172,17 +172,29 @@
       "test/lib/python/**"
     ]
   },
-  "api_endpoint_v1_rack_designer": {
+  "api_endpoint_v1_rack_configurations": {
     "depends_on": [
-      "www_home"
+      "www_rack_designer"
     ],
-    "name": "Ensuring /v1/rack-designer API endpoint exists and is properly configured",
+    "name": "Ensuring the /v1/rack-configurations API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/api_endpoint_v1_rack_designer.yml",
+      ".github/workflows/api_endpoint_v1_rack_configurations.yml",
       "lib/python/**",
-      "src/api/endpoints/rack_designer/**",
-      "src/www/paths/rack_designer/**",
-      "test/api/endpoints/rack_designer/**",
+      "src/api/endpoints/rack_configurations/**",
+      "test/api/endpoints/rack_configurations/**",
+      "test/lib/python/**"
+    ]
+  },
+  "api_endpoint_v1_sessions": {
+    "depends_on": [
+      "api_endpoint_v1_rack_configurations"
+    ],
+    "name": "Ensuring the /v1/sessions API endpoint exists and is properly configured",
+    "paths": [
+      ".github/workflows/api_endpoint_v1_sessions.yml",
+      "lib/python/**",
+      "src/api/endpoints/sessions/**",
+      "test/api/endpoints/sessions/**",
       "test/lib/python/**"
     ]
   },
@@ -200,17 +212,16 @@
       "test/lib/python/**"
     ]
   },
-  "api_endpoint_v1_simulation_soc": {
+  "api_endpoint_v1_soc_simulations": {
     "depends_on": [
-      "api_endpoint_v1_rack_designer"
+      "www_simulations_soc"
     ],
-    "name": "Ensuring the /v1/simulation-soc API endpoint exists and is properly configured",
+    "name": "Ensuring the /v1/soc-simulations API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/api_endpoint_v1_simulation_soc.yml",
+      ".github/workflows/api_endpoint_v1_soc_simulations.yml",
       "lib/python/**",
-      "src/api/endpoints/simulation_soc/**",
-      "src/www/paths/simulations/soc/**",
-      "test/api/endpoints/simulation_soc/**",
+      "src/api/endpoints/soc_simulations/**",
+      "test/api/endpoints/soc_simulations/**",
       "test/lib/python/**"
     ]
   },
@@ -250,7 +261,7 @@
   },
   "www_common": {
     "depends_on": [
-      "api_endpoint_v1_contact"
+      "api_endpoint_v1_contact_submissions"
     ],
     "name": "Ensuring www common infrastructure exists and is properly configured",
     "paths": [
@@ -263,6 +274,26 @@
       "test/lib/terraform/cloudfront_waf/**",
       "test/lib/terraform/s3_bucket/**",
       "test/www/common/**"
+    ]
+  },
+  "www_rack_designer": {
+    "depends_on": [
+      "www_home"
+    ],
+    "name": "Ensuring www rack designer frontend exists and is properly configured",
+    "paths": [
+      ".github/workflows/www_rack_designer.yml",
+      "src/www/paths/rack_designer/**"
+    ]
+  },
+  "www_simulations_soc": {
+    "depends_on": [
+      "api_endpoint_v1_rack_configurations"
+    ],
+    "name": "Ensuring www SoC simulations frontend exists and is properly configured",
+    "paths": [
+      ".github/workflows/www_simulations_soc.yml",
+      "src/www/paths/simulations/soc/**"
     ]
   }
 }

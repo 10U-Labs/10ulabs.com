@@ -76,7 +76,7 @@ export const ContactForm = () => {
       if (!recaptchaToken) {
         throw new Error("reCAPTCHA verification failed. Please try again.");
       }
-      const response = await fetch(`${API_URL}/v1/contact`, {
+      const response = await fetch(`${API_URL}/v1/contact-submissions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...validatedData, recaptcha_token: recaptchaToken }),

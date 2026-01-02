@@ -25,13 +25,18 @@ api_endpoint_v1_runners
     ↓
 webhooks_github_jit_runner_requests
     ↓
-api_endpoint_v1_contact
+api_endpoint_v1_contact_submissions
     ↓
 www_common
     ↓
 www_home
     ↓
-api_endpoint_v1_rack_designer
+www_rack_designer
     ↓
-api_endpoint_v1_simulation_soc
+api_endpoint_v1_rack_configurations
+    ├─────────────────────┐
+    ↓                     ↓
+api_endpoint_v1_sessions  www_simulations_soc
+                          ↓
+                    api_endpoint_v1_soc_simulations
 ```

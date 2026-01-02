@@ -784,7 +784,7 @@ function showShareModal(url) {
 function saveConfiguration() {
     const config = getConfiguration();
     Analytics.track('save_clicked', { part_count: config.placedParts.length, rack_height: config.rackHeight, rack_count: config.rackCount });
-    fetch(`${API_BASE_URL}/v1/rack-designer/configurations`, {
+    fetch(`${API_BASE_URL}/v1/rack-configurations`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -816,7 +816,7 @@ function loadConfigurationFromUrl() {
         return;
     }
     const configHash = pathMatch[1];
-    fetch(`${API_BASE_URL}/v1/rack-designer/configurations/${configHash}`)
+    fetch(`${API_BASE_URL}/v1/rack-configurations/${configHash}`)
     .then(response => response.json())
     .then(data => {
         if (data.success) {

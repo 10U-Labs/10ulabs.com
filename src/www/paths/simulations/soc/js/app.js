@@ -336,7 +336,7 @@ function fetchSimulation(persona) {
         headers['Authorization'] = token;
     }
 
-    return fetch(baseUrl + '/v1/simulation-soc', {
+    return fetch(baseUrl + '/v1/soc-simulations', {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({ persona: persona })

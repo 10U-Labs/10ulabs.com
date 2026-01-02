@@ -198,19 +198,19 @@ def test_openapi_spec_health_options_allows_wildcard_origin(openapi_spec):
     assert "'*'" in origin_value
 
 
-def test_openapi_spec_has_simulation_soc_endpoint(openapi_spec):
-    """Verify spec has /v1/simulation-soc endpoint."""
-    assert '/v1/simulation-soc' in openapi_spec['paths']
+def test_openapi_spec_has_soc_simulations_endpoint(openapi_spec):
+    """Verify spec has /v1/soc-simulations endpoint."""
+    assert '/v1/soc-simulations' in openapi_spec['paths']
 
 
-def test_openapi_spec_simulation_soc_has_post_method(openapi_spec):
-    """Verify /v1/simulation-soc has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/simulation-soc']
+def test_openapi_spec_soc_simulations_has_post_method(openapi_spec):
+    """Verify /v1/soc-simulations has POST method."""
+    assert 'post' in openapi_spec['paths']['/v1/soc-simulations']
 
 
-def test_openapi_spec_simulation_soc_has_options_method(openapi_spec):
-    """Verify /v1/simulation-soc has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/simulation-soc']
+def test_openapi_spec_soc_simulations_has_options_method(openapi_spec):
+    """Verify /v1/soc-simulations has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/soc-simulations']
 
 
 def test_openapi_spec_has_ecs_image_base_endpoint(openapi_spec):
@@ -278,66 +278,66 @@ def test_openapi_spec_ec2_runner_has_options_method(openapi_spec):
     assert 'options' in openapi_spec['paths']['/v1/runners/ec2']
 
 
-def test_openapi_spec_has_contact_endpoint(openapi_spec):
-    """Verify spec has /v1/contact endpoint."""
-    assert '/v1/contact' in openapi_spec['paths']
+def test_openapi_spec_has_contact_submissions_endpoint(openapi_spec):
+    """Verify spec has /v1/contact-submissions endpoint."""
+    assert '/v1/contact-submissions' in openapi_spec['paths']
 
 
-def test_openapi_spec_contact_has_post_method(openapi_spec):
-    """Verify /v1/contact has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/contact']
+def test_openapi_spec_contact_submissions_has_post_method(openapi_spec):
+    """Verify /v1/contact-submissions has POST method."""
+    assert 'post' in openapi_spec['paths']['/v1/contact-submissions']
 
 
-def test_openapi_spec_contact_has_options_method(openapi_spec):
-    """Verify /v1/contact has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/contact']
+def test_openapi_spec_contact_submissions_has_options_method(openapi_spec):
+    """Verify /v1/contact-submissions has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/contact-submissions']
 
 
-def test_openapi_spec_has_rack_designer_configurations_endpoint(openapi_spec):
-    """Verify spec has /v1/rack-designer/configurations endpoint."""
-    assert '/v1/rack-designer/configurations' in openapi_spec['paths']
+def test_openapi_spec_has_rack_configurations_endpoint(openapi_spec):
+    """Verify spec has /v1/rack-configurations endpoint."""
+    assert '/v1/rack-configurations' in openapi_spec['paths']
 
 
-def test_openapi_spec_rack_designer_configurations_has_post_method(openapi_spec):
-    """Verify /v1/rack-designer/configurations has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/rack-designer/configurations']
+def test_openapi_spec_rack_configurations_has_post_method(openapi_spec):
+    """Verify /v1/rack-configurations has POST method."""
+    assert 'post' in openapi_spec['paths']['/v1/rack-configurations']
 
 
-def test_openapi_spec_rack_designer_configurations_has_options_method(openapi_spec):
-    """Verify /v1/rack-designer/configurations has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/rack-designer/configurations']
+def test_openapi_spec_rack_configurations_has_options_method(openapi_spec):
+    """Verify /v1/rack-configurations has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/rack-configurations']
 
 
-def test_openapi_spec_has_rack_designer_configuration_hash_endpoint(openapi_spec):
-    """Verify spec has /v1/rack-designer/configurations/{config_hash} endpoint."""
-    assert '/v1/rack-designer/configurations/{config_hash}' in openapi_spec['paths']
+def test_openapi_spec_has_rack_configuration_hash_endpoint(openapi_spec):
+    """Verify spec has /v1/rack-configurations/{config_hash} endpoint."""
+    assert '/v1/rack-configurations/{config_hash}' in openapi_spec['paths']
 
 
-def test_openapi_spec_rack_designer_configuration_hash_has_get_method(openapi_spec):
-    """Verify /v1/rack-designer/configurations/{config_hash} has GET method."""
-    path = '/v1/rack-designer/configurations/{config_hash}'
+def test_openapi_spec_rack_configuration_hash_has_get_method(openapi_spec):
+    """Verify /v1/rack-configurations/{config_hash} has GET method."""
+    path = '/v1/rack-configurations/{config_hash}'
     assert 'get' in openapi_spec['paths'][path]
 
 
-def test_openapi_spec_rack_designer_configuration_hash_has_options_method(openapi_spec):
-    """Verify /v1/rack-designer/configurations/{config_hash} has OPTIONS method."""
-    path = '/v1/rack-designer/configurations/{config_hash}'
+def test_openapi_spec_rack_configuration_hash_has_options_method(openapi_spec):
+    """Verify /v1/rack-configurations/{config_hash} has OPTIONS method."""
+    path = '/v1/rack-configurations/{config_hash}'
     assert 'options' in openapi_spec['paths'][path]
 
 
-def test_openapi_spec_has_rack_designer_events_endpoint(openapi_spec):
-    """Verify spec has /v1/rack-designer/events endpoint."""
-    assert '/v1/rack-designer/events' in openapi_spec['paths']
+def test_openapi_spec_has_session_events_endpoint(openapi_spec):
+    """Verify spec has /v1/sessions/{session_id}/events endpoint."""
+    assert '/v1/sessions/{session_id}/events' in openapi_spec['paths']
 
 
-def test_openapi_spec_rack_designer_events_has_post_method(openapi_spec):
-    """Verify /v1/rack-designer/events has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/rack-designer/events']
+def test_openapi_spec_session_events_has_post_method(openapi_spec):
+    """Verify /v1/sessions/{session_id}/events has POST method."""
+    assert 'post' in openapi_spec['paths']['/v1/sessions/{session_id}/events']
 
 
-def test_openapi_spec_rack_designer_events_has_options_method(openapi_spec):
-    """Verify /v1/rack-designer/events has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/rack-designer/events']
+def test_openapi_spec_session_events_has_options_method(openapi_spec):
+    """Verify /v1/sessions/{session_id}/events has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/sessions/{session_id}/events']
 
 
 def test_openapi_spec_diagnostics_echo_has_options_method(openapi_spec):

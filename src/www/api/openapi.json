@@ -1711,13 +1711,13 @@
         }
       }
     },
-    "/v1/contact": {
+    "/v1/contact-submissions": {
       "post": {
         "summary": "Submit Contact Form",
         "description": "Submits a contact form request with reCAPTCHA verification",
-        "operationId": "submitContact",
+        "operationId": "submitContactSubmission",
         "tags": [
-          "/v1/contact"
+          "/v1/contact-submissions"
         ],
         "requestBody": {
           "required": true,
@@ -1831,11 +1831,11 @@
         }
       },
       "options": {
-        "summary": "CORS preflight for contact endpoint",
+        "summary": "CORS preflight for contact submissions endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "contactOptions",
+        "operationId": "contactSubmissionsOptions",
         "tags": [
-          "/v1/contact"
+          "/v1/contact-submissions"
         ],
         "responses": {
           "200": {
@@ -1877,13 +1877,13 @@
         }
       }
     },
-    "/v1/rack-designer/configurations": {
+    "/v1/rack-configurations": {
       "post": {
-        "summary": "Save Rack Designer Configuration",
-        "description": "Saves a rack designer configuration and returns a unique 8-character hash",
-        "operationId": "saveRackConfiguration",
+        "summary": "Save Rack Configuration",
+        "description": "Saves a rack configuration and returns a unique 9-character hash",
+        "operationId": "createRackConfiguration",
         "tags": [
-          "/v1/rack-designer"
+          "/v1/rack-configurations"
         ],
         "requestBody": {
           "required": true,
@@ -2004,11 +2004,11 @@
         }
       },
       "options": {
-        "summary": "CORS preflight for rack designer endpoint",
+        "summary": "CORS preflight for rack configurations endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "rackDesignerConfigurationsOptions",
+        "operationId": "rackConfigurationsOptions",
         "tags": [
-          "/v1/rack-designer"
+          "/v1/rack-configurations"
         ],
         "responses": {
           "200": {
@@ -2050,13 +2050,13 @@
         }
       }
     },
-    "/v1/rack-designer/configurations/{config_hash}": {
+    "/v1/rack-configurations/{config_hash}": {
       "get": {
-        "summary": "Load Rack Designer Configuration",
-        "description": "Loads a rack designer configuration by its unique hash",
-        "operationId": "loadRackConfiguration",
+        "summary": "Load Rack Configuration",
+        "description": "Loads a rack configuration by its unique hash",
+        "operationId": "getRackConfiguration",
         "tags": [
-          "/v1/rack-designer"
+          "/v1/rack-configurations"
         ],
         "parameters": [
           {
@@ -2126,11 +2126,11 @@
         }
       },
       "options": {
-        "summary": "CORS preflight for rack designer configuration endpoint",
+        "summary": "CORS preflight for rack configuration endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "rackDesignerConfigurationOptions",
+        "operationId": "rackConfigurationOptions",
         "tags": [
-          "/v1/rack-designer"
+          "/v1/rack-configurations"
         ],
         "parameters": [
           {
@@ -2182,13 +2182,13 @@
         }
       }
     },
-    "/v1/simulation-soc": {
+    "/v1/soc-simulations": {
       "post": {
         "summary": "Simulate Tri-mode SoC",
         "description": "Simulates a tri-mode SoC running a workload in the specified persona (RISC-V, x86-64, or ARM64)",
-        "operationId": "simulateTriModeSoc",
+        "operationId": "createSocSimulation",
         "tags": [
-          "/v1/simulation-soc"
+          "/v1/soc-simulations"
         ],
         "requestBody": {
           "required": true,
@@ -2343,11 +2343,11 @@
         }
       },
       "options": {
-        "summary": "CORS preflight for simulation soc endpoint",
+        "summary": "CORS preflight for soc simulations endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "simulationSocOptions",
+        "operationId": "socSimulationsOptions",
         "tags": [
-          "/v1/simulation-soc"
+          "/v1/soc-simulations"
         ],
         "responses": {
           "200": {
@@ -2389,13 +2389,23 @@
         }
       }
     },
-    "/v1/rack-designer/events": {
+    "/v1/sessions/{session_id}/events": {
       "post": {
-        "summary": "Save Rack Designer Analytics Events",
-        "description": "Saves analytics events for rack designer usage tracking",
-        "operationId": "saveRackAnalyticsEvents",
+        "summary": "Save Session Analytics Events",
+        "description": "Saves analytics events for a session",
+        "operationId": "createSessionEvents",
         "tags": [
-          "/v1/rack-designer"
+          "/v1/sessions"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -2404,14 +2414,10 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "session_id",
                   "device_id",
                   "events"
                 ],
                 "properties": {
-                  "session_id": {
-                    "type": "string"
-                  },
                   "device_id": {
                     "type": "string"
                   },
@@ -2489,17 +2495,27 @@
           }
         },
         "x-amazon-apigateway-integration": {
-          "uri": "${RackDesignerHandlerArn}",
+          "uri": "${SessionsHandlerArn}",
           "httpMethod": "POST",
           "type": "aws_proxy"
         }
       },
       "options": {
-        "summary": "CORS preflight for rack designer events endpoint",
+        "summary": "CORS preflight for session events endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "rackDesignerEventsOptions",
+        "operationId": "sessionEventsOptions",
         "tags": [
-          "/v1/rack-designer"
+          "/v1/sessions"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -2615,8 +2631,8 @@
       "description": "Diagnostics utility endpoints"
     },
     {
-      "name": "/v1/contact",
-      "description": "Contact form endpoints"
+      "name": "/v1/contact-submissions",
+      "description": "Contact form submission endpoints"
     },
     {
       "name": "/v1/runners",
@@ -2639,15 +2655,19 @@
       "description": "ECS runner image management endpoints"
     },
     {
-      "name": "/v1/rack-designer",
-      "description": "Rack designer configuration endpoints"
+      "name": "/v1/rack-configurations",
+      "description": "Rack configuration endpoints"
+    },
+    {
+      "name": "/v1/sessions",
+      "description": "Session analytics endpoints"
     },
     {
       "name": "/v1/webhooks",
       "description": "Webhook receiver endpoints"
     },
     {
-      "name": "/v1/simulation-soc",
+      "name": "/v1/soc-simulations",
       "description": "SoC simulation endpoints"
     }
   ],
@@ -2662,14 +2682,15 @@
     {
       "name": "/v1/",
       "tags": [
-        "/v1/contact",
+        "/v1/contact-submissions",
         "/v1/runners",
         "/v1/runners/ec2",
         "/v1/runners/ecs",
         "/v1/runners/ec2/images",
         "/v1/runners/ecs/images",
-        "/v1/rack-designer",
-        "/v1/simulation-soc",
+        "/v1/rack-configurations",
+        "/v1/sessions",
+        "/v1/soc-simulations",
         "/v1/webhooks"
       ]
     }

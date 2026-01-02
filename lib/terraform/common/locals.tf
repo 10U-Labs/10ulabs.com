@@ -31,6 +31,7 @@ locals {
     image_for_ecs_runners = "${local.resource_prefix}ImageForEcsRunnersHandler"
     rack_designer         = "${local.resource_prefix}RackDesignerHandler"
     runners               = "${local.resource_prefix}RunnersHandler"
+    sessions              = "${local.resource_prefix}SessionsHandler"
     simulation_soc        = "${local.resource_prefix}SimulationSocHandler"
     webhook               = "${local.resource_prefix}WebhookHandler"
   }
