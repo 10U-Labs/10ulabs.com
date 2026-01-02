@@ -11,9 +11,9 @@ api_common_routing                                                              
     ├── api_endpoint_v1_contact_submissions ───────────────────────────────────────────────────────────┼─→ www_home
     │                                                                                                  │
     ├── api_endpoint_v1_rack_configurations ─┐                                                         │
-    ├── api_endpoint_v1_sessions ────────────┴─────────────────────────────────────────────────────────┴─→ www_rack_designer
-    │
-    ├── api_endpoint_v1_soc_simulations ─→ www_simulations_soc
+    ├── api_endpoint_v1_sessions ────────────┴─────────────────────────────────────────────────────────┼─→ www_rack_designer
+    │                                                                                                  │
+    ├── api_endpoint_v1_soc_simulations ───────────────────────────────────────────────────────────────┴─→ www_simulations_soc
     │
     ├── api_common_networking
     │       └── api_endpoint_v1_runners_ec2_images
