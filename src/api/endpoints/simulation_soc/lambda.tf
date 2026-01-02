@@ -1,7 +1,14 @@
 data "archive_file" "simulation_soc_handler" {
-  type        = "zip"
-  source_file = "${path.module}/lambda/handler.py"
   output_path = "${path.module}/.terraform/lambda_packages/simulation_soc_handler.zip"
+  source {
+    content  = file("${path.module}/lambda/handler.py")
+    filename = "handler.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/lambda_http/__init__.py")
+    filename = "lambda_http.py"
+  }
+  type = "zip"
 }
 
 resource "aws_lambda_function" "simulation_soc_handler" {
