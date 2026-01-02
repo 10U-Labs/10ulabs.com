@@ -7,7 +7,10 @@ from .conftest import create_mock_dynamodb
 
 def test_handle_events_missing_session_id_in_path(handler):
     """Test handle_events returns 400 without session_id in path."""
-    body = json.dumps({'device_id': 'abc', 'events': [{'event_type': 'test', 'timestamp': '2025-01-01T00:00:00Z'}]})
+    body = json.dumps({
+        'device_id': 'abc',
+        'events': [{'event_type': 'test', 'timestamp': '2025-01-01T00:00:00Z'}]
+    })
     event = {'body': body, 'headers': {}, 'path': '/v1/sessions//events'}
     response = handler.handle_events(event)
     assert response['statusCode'] == 400
