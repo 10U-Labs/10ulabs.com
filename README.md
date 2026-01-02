@@ -17,11 +17,10 @@ api_common_routing                                                              
     │
     ├── api_common_networking
     │       └── api_endpoint_v1_runners_ec2_images
-    │               └── api_endpoint_v1_runners_ec2 ─┬─────────────────────────────────────┐
-    │                                                │                                     ↓
-    └── api_common_docker_repository ────────────────┴─→ api_endpoint_v1_runners_ecs_images
-                                                                └── api_endpoint_v1_runners_ecs ─┐
-                                                                                                 │
-                                       api_endpoint_v1_runners_ec2 ──────────────────────────────┴─→ api_endpoint_v1_runners
-                                                                                                         └── webhooks_github_jit_runner_requests
+    │               └── api_endpoint_v1_runners_ec2 ─┬────────────────────────────────────────────────────────┐
+    │                                                │                                                        │
+    └── api_common_docker_repository ────────────────┴─→ api_endpoint_v1_runners_ecs_images                   │
+                                                                └── api_endpoint_v1_runners_ecs ─┐            │
+                                                                                                 └────────────┴─→ api_endpoint_v1_runners
+                                                                                                                       └── webhooks_github_jit_runner_requests
 ```
