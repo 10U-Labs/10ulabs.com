@@ -29,7 +29,7 @@ locals {
     health                = "${local.resource_prefix}HealthHandler"
     image_for_ec2_runners = "${local.resource_prefix}ImageForEC2RunnersHandler"
     image_for_ecs_runners = "${local.resource_prefix}ImageForEcsRunnersHandler"
-    rack_designer         = "${local.resource_prefix}RackDesignerHandler"
+    rack_configurations   = "${local.resource_prefix}RackConfigurationsHandler"
     runners               = "${local.resource_prefix}RunnersHandler"
     sessions              = "${local.resource_prefix}SessionsHandler"
     simulation_soc        = "${local.resource_prefix}SimulationSocHandler"

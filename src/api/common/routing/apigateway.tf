@@ -10,7 +10,7 @@ locals {
     health                = module.common.lambda_handler_names.health
     image_for_ec2_runners = module.common.lambda_handler_names.image_for_ec2_runners
     image_for_ecs_runners = module.common.lambda_handler_names.image_for_ecs_runners
-    rack_designer         = module.common.lambda_handler_names.rack_designer
+    rack_configurations   = module.common.lambda_handler_names.rack_configurations
     sessions              = module.common.lambda_handler_names.sessions
     simulation_soc        = module.common.lambda_handler_names.simulation_soc
     webhook               = module.common.lambda_handler_names.webhook
@@ -32,7 +32,7 @@ locals {
   health_arn                = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.health}/invocations"
   image_for_ec2_runners_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ec2_runners}/invocations"
   image_for_ecs_runners_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ecs_runners}/invocations"
-  rack_designer_arn         = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_designer}/invocations"
+  rack_configurations_arn   = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_configurations}/invocations"
   sessions_arn              = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.sessions}/invocations"
   simulation_soc_arn        = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
 
@@ -55,7 +55,7 @@ locals {
     HealthHandlerArn             = local.health_arn
     ImageForEcsRunnersHandlerArn = local.image_for_ecs_runners_arn
     ImageForEC2RunnersHandlerArn = local.image_for_ec2_runners_arn
-    RackDesignerHandlerArn       = local.rack_designer_arn
+    RackConfigurationsHandlerArn = local.rack_configurations_arn
     SessionsHandlerArn           = local.sessions_arn
     SimulationSocHandlerArn      = local.simulation_soc_arn
     # SQS direct integration for /v1/webhooks/github/jit-runner-requests webhook ingress

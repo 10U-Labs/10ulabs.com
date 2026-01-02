@@ -1998,7 +1998,7 @@
           }
         },
         "x-amazon-apigateway-integration": {
-          "uri": "${RackDesignerHandlerArn}",
+          "uri": "${RackConfigurationsHandlerArn}",
           "httpMethod": "POST",
           "type": "aws_proxy"
         }
@@ -2120,7 +2120,7 @@
           }
         },
         "x-amazon-apigateway-integration": {
-          "uri": "${RackDesignerHandlerArn}",
+          "uri": "${RackConfigurationsHandlerArn}",
           "httpMethod": "POST",
           "type": "aws_proxy"
         }

@@ -1,13 +1,13 @@
 resource "aws_backup_vault" "rack_designer" {
-  name = "${local.resource_prefix}-rack-designer-backup"
+  name = "${local.resource_prefix}-rack-configurations-backup"
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-designer-backup"
+    Name = "${local.resource_prefix}-rack-configurations-backup"
   })
 }
 
 resource "aws_backup_plan" "rack_designer" {
-  name = "${local.resource_prefix}-rack-designer-backup"
+  name = "${local.resource_prefix}-rack-configurations-backup"
 
   rule {
     rule_name         = "daily-backup"
@@ -20,12 +20,12 @@ resource "aws_backup_plan" "rack_designer" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-designer-backup"
+    Name = "${local.resource_prefix}-rack-configurations-backup"
   })
 }
 
 resource "aws_iam_role" "backup" {
-  name = "${local.resource_prefix}-RackDesignerBackup-Role"
+  name = "${local.resource_prefix}-RackConfigurationsBackup-Role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -39,7 +39,7 @@ resource "aws_iam_role" "backup" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerBackup-Role"
+    Name = "${local.resource_prefix}-RackConfigurationsBackup-Role"
   })
 }
 
@@ -54,7 +54,7 @@ resource "aws_iam_role_policy_attachment" "backup_restores" {
 }
 
 resource "aws_backup_selection" "rack_designer" {
-  name         = "${local.resource_prefix}-rack-designer-tables"
+  name         = "${local.resource_prefix}-rack-configurations-tables"
   plan_id      = aws_backup_plan.rack_designer.id
   iam_role_arn = aws_iam_role.backup.arn
 

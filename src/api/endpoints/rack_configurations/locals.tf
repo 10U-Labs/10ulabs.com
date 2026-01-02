@@ -5,18 +5,18 @@ locals {
   resource_prefix  = module.common.resource_prefix
 
   # Lambda function names (single source of truth)
-  export_function_name          = "${module.common.resource_prefix}RackDesignerExport"
-  crawler_trigger_function_name = "${module.common.resource_prefix}RackDesignerCrawlerTrigger"
+  export_function_name          = "${module.common.resource_prefix}RackConfigurationsExport"
+  crawler_trigger_function_name = "${module.common.resource_prefix}RackConfigurationsCrawlerTrigger"
 
   # IAM role names (single source of truth)
-  handler_role_name         = "${module.common.resource_prefix}RackDesignerLambdaRole"
-  export_role_name          = "${module.common.resource_prefix}RackDesignerExportRole"
-  glue_crawler_role_name    = "${module.common.resource_prefix}RackDesignerGlueCrawlerRole"
-  scheduler_role_name       = "${module.common.resource_prefix}RackDesignerSchedulerRole"
-  crawler_trigger_role_name = "${module.common.resource_prefix}RackDesignerCrawlerTriggerRole"
+  handler_role_name         = "${module.common.resource_prefix}RackConfigurationsLambdaRole"
+  export_role_name          = "${module.common.resource_prefix}RackConfigurationsExportRole"
+  glue_crawler_role_name    = "${module.common.resource_prefix}RackConfigurationsGlueCrawlerRole"
+  scheduler_role_name       = "${module.common.resource_prefix}RackConfigurationsSchedulerRole"
+  crawler_trigger_role_name = "${module.common.resource_prefix}RackConfigurationsCrawlerTriggerRole"
 
   common_tags = {
     ManagedBy = "terraform"
-    Purpose   = "rack-designer"
+    Purpose   = "rack-configurations"
   }
 }

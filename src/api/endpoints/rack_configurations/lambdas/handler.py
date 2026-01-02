@@ -82,7 +82,7 @@ def save_rack_configuration(
     device_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """Save a rack configuration to DynamoDB."""
-    table_name = os.environ['RACK_DESIGNER_CONFIGURATIONS_TABLE']
+    table_name = os.environ['RACK_CONFIGURATIONS_TABLE']
     created_at = datetime.now(timezone.utc).isoformat()
     item: Dict[str, Any] = {
         'config_hash': {'S': config_hash},
@@ -114,7 +114,7 @@ def migrate_rack_configuration(old_hash: str, config: Dict[str, Any]) -> Optiona
     new_hash = generate_config_hash(config)
     if old_hash == new_hash:
         return None
-    table_name = os.environ['RACK_DESIGNER_CONFIGURATIONS_TABLE']
+    table_name = os.environ['RACK_CONFIGURATIONS_TABLE']
     try:
         get_dynamodb_client().put_item(
             TableName=table_name,
@@ -136,7 +136,7 @@ def migrate_rack_configuration(old_hash: str, config: Dict[str, Any]) -> Optiona
 
 def load_rack_configuration(config_hash: str) -> Dict[str, Any]:
     """Load a rack configuration from DynamoDB by hash."""
-    table_name = os.environ['RACK_DESIGNER_CONFIGURATIONS_TABLE']
+    table_name = os.environ['RACK_CONFIGURATIONS_TABLE']
     try:
         response = get_dynamodb_client().get_item(
             TableName=table_name,

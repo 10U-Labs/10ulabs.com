@@ -160,7 +160,7 @@ def test_handle_post_success(mock_boto_client, handler):
         }),
         'headers': {}
     }
-    with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
+    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
         response = handler.handle_post(event)
     assert response['statusCode'] == 200
 
@@ -184,7 +184,7 @@ def _run_handle_get(mock_boto_client, handler, return_item=None):
     mock_boto_client.return_value = create_mock_dynamodb('get_item', return_item)
     handler.clear_clients()
     event = {'pathParameters': {'config_hash': 'ABCD12345'}, 'headers': {}}
-    with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
+    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
         return handler.handle_get(event)
 
 
@@ -248,7 +248,7 @@ def test_handle_post_with_device_id(mock_boto_client, handler):
     payload = {'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}}
     payload['device_id'] = 'test-device-123'
     event = {'body': json.dumps(payload), 'headers': {}}
-    with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
+    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
         response = handler.handle_post(event)
     assert response['statusCode'] == 200
 
@@ -259,7 +259,7 @@ def _run_save_rack_configuration(mock_boto_client, handler, device_id=None):
     mock_boto_client.return_value = mock_dynamodb
     handler.clear_clients()
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
-    with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
+    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
         if device_id:
             handler.save_rack_configuration('ABCD12345', config, device_id)
         else:

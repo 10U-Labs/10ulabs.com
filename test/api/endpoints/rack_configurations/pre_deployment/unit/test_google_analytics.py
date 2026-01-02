@@ -1,4 +1,4 @@
-"""Unit tests for rack designer Google Analytics integration."""
+"""Unit tests for rack configurations Google Analytics integration."""
 from repo_utils import REPO_ROOT
 
 RACK_DESIGNER_SRC = REPO_ROOT / "src" / "www" / "paths" / "rack_designer"

@@ -1,8 +1,8 @@
 resource "aws_s3_bucket" "analytics" {
-  bucket = "${lower(local.resource_prefix)}-rack-designer-analytics"
+  bucket = "${lower(local.resource_prefix)}-rack-configurations-analytics"
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-designer-analytics"
+    Name = "${local.resource_prefix}-rack-configurations-analytics"
   })
 }
 
@@ -36,7 +36,7 @@ resource "aws_glue_catalog_database" "analytics" {
   name = "${lower(local.resource_prefix)}_rack_designer_analytics"
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-designer-analytics"
+    Name = "${local.resource_prefix}-rack-configurations-analytics"
   })
 }
 
@@ -82,7 +82,7 @@ resource "aws_iam_role_policy" "glue_s3_access" {
 }
 
 resource "aws_glue_crawler" "events" {
-  name          = "${local.resource_prefix}-rack-designer-events"
+  name          = "${local.resource_prefix}-rack-configurations-events"
   database_name = aws_glue_catalog_database.analytics.name
   role          = aws_iam_role.glue_crawler.arn
   schedule      = "cron(0 6 * * ? *)"
@@ -97,7 +97,7 @@ resource "aws_glue_crawler" "events" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-designer-events-crawler"
+    Name = "${local.resource_prefix}-rack-configurations-events-crawler"
   })
 }
 
@@ -194,12 +194,12 @@ resource "aws_cloudwatch_log_group" "export_lambda" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerExport-Logs"
+    Name = "${local.resource_prefix}-RackConfigurationsExport-Logs"
   })
 }
 
 resource "aws_scheduler_schedule" "daily_export" {
-  name       = "${local.resource_prefix}-RackDesignerDailyExport"
+  name       = "${local.resource_prefix}-RackConfigurationsDailyExport"
   group_name = "default"
 
   flexible_time_window {
@@ -327,12 +327,12 @@ resource "aws_cloudwatch_log_group" "crawler_trigger" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerCrawlerTrigger-Logs"
+    Name = "${local.resource_prefix}-RackConfigurationsCrawlerTrigger-Logs"
   })
 }
 
 resource "aws_cloudwatch_event_rule" "export_completed" {
-  name = "${local.resource_prefix}-RackDesignerExportCompleted"
+  name = "${local.resource_prefix}-RackConfigurationsExportCompleted"
 
   event_pattern = jsonencode({
     source      = ["aws.dynamodb"]
@@ -345,7 +345,7 @@ resource "aws_cloudwatch_event_rule" "export_completed" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerExportCompleted"
+    Name = "${local.resource_prefix}-RackConfigurationsExportCompleted"
   })
 }
 

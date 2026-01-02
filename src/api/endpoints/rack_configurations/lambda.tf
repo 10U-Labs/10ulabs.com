@@ -6,7 +6,7 @@ data "archive_file" "handler" {
 
 resource "aws_lambda_function" "handler" {
   filename         = data.archive_file.handler.output_path
-  function_name    = module.common.lambda_handler_names.rack_designer
+  function_name    = module.common.lambda_handler_names.rack_configurations
   role             = aws_iam_role.lambda.arn
   handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.handler.output_base64sha256
@@ -14,12 +14,12 @@ resource "aws_lambda_function" "handler" {
   architectures    = ["arm64"]
   timeout          = 10
   memory_size      = 128
-  description      = "Rack Designer API handler for saving and loading configurations"
+  description      = "Rack Configurations API handler for saving and loading configurations"
 
   environment {
     variables = {
-      RACK_DESIGNER_CONFIGURATIONS_TABLE = aws_dynamodb_table.configurations.name
-      RACK_DESIGNER_EVENTS_TABLE         = aws_dynamodb_table.events.name
+      RACK_CONFIGURATIONS_TABLE = aws_dynamodb_table.configurations.name
+      RACK_CONFIGURATIONS_EVENTS_TABLE         = aws_dynamodb_table.events.name
     }
   }
 
@@ -29,7 +29,7 @@ resource "aws_lambda_function" "handler" {
   }
 
   tags = merge(local.common_tags, {
-    Name = module.common.lambda_handler_names.rack_designer
+    Name = module.common.lambda_handler_names.rack_configurations
   })
 
   # Force Lambda replacement when IAM role is recreated to refresh KMS grant
@@ -39,11 +39,11 @@ resource "aws_lambda_function" "handler" {
 }
 
 resource "aws_cloudwatch_log_group" "handler" {
-  name              = "/aws/lambda/${module.common.lambda_handler_names.rack_designer}"
+  name              = "/aws/lambda/${module.common.lambda_handler_names.rack_configurations}"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${module.common.lambda_handler_names.rack_designer}Logs"
+    Name = "${module.common.lambda_handler_names.rack_configurations}Logs"
   })
 }
 

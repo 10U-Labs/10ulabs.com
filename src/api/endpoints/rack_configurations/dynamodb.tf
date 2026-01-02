@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "configurations" {
-  name         = "${local.resource_prefix}-rack-designer-configurations"
+  name         = "${local.resource_prefix}-rack-configurations-configurations"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "config_hash"
 
@@ -13,12 +13,12 @@ resource "aws_dynamodb_table" "configurations" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-designer-configurations"
+    Name = "${local.resource_prefix}-rack-configurations-configurations"
   })
 }
 
 resource "aws_dynamodb_table" "events" {
-  name         = "${local.resource_prefix}-rack-designer-events"
+  name         = "${local.resource_prefix}-rack-configurations-events"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "session_id"
   range_key    = "timestamp"
@@ -62,6 +62,6 @@ resource "aws_dynamodb_table" "events" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-designer-events"
+    Name = "${local.resource_prefix}-rack-configurations-events"
   })
 }

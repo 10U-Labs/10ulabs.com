@@ -16,9 +16,9 @@ def website_url_fixture(config):
 
 @pytest.fixture(name="handler_log_group", scope="module")
 def handler_log_group_fixture(logs_client, shared_config):
-    """Get the rack designer handler log group info from CloudWatch."""
+    """Get the rack configurations handler log group info from CloudWatch."""
     function_name = shared_config.get("lambda_handler_names", {}).get(
-        "rack_designer", "TenULabsRackDesignerHandler"
+        "rack_configurations", "TenULabsRackConfigurationsHandler"
     )
     log_group_name = f"/aws/lambda/{function_name}"
     return get_log_group_info(logs_client, log_group_name)
@@ -56,7 +56,7 @@ def events_client(aws_region):
 
 @pytest.fixture(scope="module")
 def resource_prefix(shared_config):
-    """Get the resource prefix for rack designer resources."""
+    """Get the resource prefix for rack configurations resources."""
     return shared_config.get("resource_prefix", "TenULabs")
 
 
@@ -64,7 +64,7 @@ def resource_prefix(shared_config):
 def handler_function_name(shared_config):
     """Get the handler Lambda function name."""
     return shared_config.get("lambda_handler_names", {}).get(
-        "rack_designer", "TenULabsRackDesignerHandler"
+        "rack_configurations", "TenULabsRackConfigurationsHandler"
     )
 
 
@@ -72,60 +72,60 @@ def handler_function_name(shared_config):
 def export_function_name(request):
     """Get the export Lambda function name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackDesignerExport"
+    return f"{prefix}RackConfigurationsExport"
 
 
 @pytest.fixture(scope="module")
 def crawler_trigger_function_name(request):
     """Get the crawler trigger Lambda function name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackDesignerCrawlerTrigger"
+    return f"{prefix}RackConfigurationsCrawlerTrigger"
 
 
 @pytest.fixture(scope="module")
 def handler_role_name(request):
     """Get the handler IAM role name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackDesignerLambdaRole"
+    return f"{prefix}RackConfigurationsLambdaRole"
 
 
 @pytest.fixture(scope="module")
 def export_role_name(request):
     """Get the export IAM role name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackDesignerExportRole"
+    return f"{prefix}RackConfigurationsExportRole"
 
 
 @pytest.fixture(scope="module")
 def crawler_trigger_role_name(request):
     """Get the crawler trigger IAM role name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackDesignerCrawlerTriggerRole"
+    return f"{prefix}RackConfigurationsCrawlerTriggerRole"
 
 
 @pytest.fixture(scope="module")
 def glue_crawler_role_name(request):
     """Get the Glue crawler IAM role name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackDesignerGlueCrawlerRole"
+    return f"{prefix}RackConfigurationsGlueCrawlerRole"
 
 
 @pytest.fixture(scope="module")
 def scheduler_role_name(request):
     """Get the scheduler IAM role name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackDesignerSchedulerRole"
+    return f"{prefix}RackConfigurationsSchedulerRole"
 
 
 @pytest.fixture(scope="module")
 def configurations_table_name(request):
     """Get the configurations DynamoDB table name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}-rack-designer-configurations"
+    return f"{prefix}-rack-configurations-configurations"
 
 
 @pytest.fixture(scope="module")
 def events_table_name(request):
     """Get the events DynamoDB table name."""
     prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}-rack-designer-events"
+    return f"{prefix}-rack-configurations-events"
