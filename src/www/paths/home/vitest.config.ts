@@ -4,7 +4,7 @@ import path from "path";
 
 const projectRoot = path.resolve(__dirname, "../../../..");
 const srcDir = path.resolve(__dirname, "./src");
-const testDir = path.resolve(projectRoot, "test/www/paths/index/pre_deployment/unit");
+const testDir = path.resolve(projectRoot, "test/www/paths/home/pre_deployment/unit");
 const nodeModulesDir = path.resolve(__dirname, "node_modules");
 
 export default defineConfig({
