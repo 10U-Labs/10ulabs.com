@@ -125,6 +125,25 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install pytest dependencies
         run: python3 -m pip install pytest boto3 requests
+      - id: terraform
+        if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Extract Terraform version
+        run: |
+          TERRAFORM_VERSION=$(grep 'required_version' \
+            src/www/common/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
