@@ -24,6 +24,7 @@ jobs:
         with:
           directories: ${{ github.workspace }}
           linters: pylint,mypy,yamllint
+          verbose: true
       - continue-on-error: true
         id: no_linter_configs_sh
         if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
@@ -31,6 +32,7 @@ jobs:
         run: >-
           assert-no-linter-config-files
           --linters pylint,mypy,yamllint
+          --verbose
           ${{ github.workspace }}
       - continue-on-error: true
         id: no_inline_disables_gh
@@ -40,6 +42,7 @@ jobs:
         with:
           files: ${{ github.workspace }}/**/*
           linters: pylint,mypy,yamllint
+          verbose: true
       - continue-on-error: true
         id: no_inline_disables_sh
         if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
@@ -47,6 +50,7 @@ jobs:
         run: >-
           assert-no-inline-lint-disables
           --linters pylint,mypy,yamllint
+          --verbose
           ${{ github.workspace }}/**/*
       - id: terraform
         if: >-
@@ -325,7 +329,7 @@ on:
         required: false
         type: string
       trigger_descendants:
-        default: true
+        default: false
         description: Trigger descendant workflows after this workflow completes
         type: boolean
 permissions:
