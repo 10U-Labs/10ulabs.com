@@ -14,7 +14,9 @@ IAM_ROLES = (
 )
 LAMBDA_FUNCTIONS = (
     extract_lambda_function_names(RACK_CONFIGURATIONS_SRC / "lambda.tf", use_handler_names=True)
-    + extract_lambda_function_names(RACK_CONFIGURATIONS_SRC / "analytics.tf", use_handler_names=True)
+    + extract_lambda_function_names(
+        RACK_CONFIGURATIONS_SRC / "analytics.tf", use_handler_names=True
+    )
 )
 
 if IAM_ROLES:
