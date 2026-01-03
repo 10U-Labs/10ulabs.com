@@ -86,48 +86,29 @@ jobs:
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install yamllint
-        run: python3 -m pip install yamllint
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install pylint
+        name: Install Python dependencies
         run: |
           python3 -m pip install \
             boto3 \
+            boto3-stubs \
             botocore \
             dnspython \
+            mypy \
             pylint \
             pytest \
+            pytest-dependency \
             python-hcl2 \
-            requests
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install mypy
-        run: |
-          python3 -m pip install \
-            boto3-stubs \
-            mypy \
+            requests \
             types-dockerfile-parse \
             types-PyYAML \
-            types-requests
+            types-requests \
+            yamllint
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
         run: npm install -g jscpd
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install pytest dependencies
-        run: >-
-          python3 -m pip install pytest pytest-dependency boto3 dnspython
-          python-hcl2
       - continue-on-error: true
         id: terraform_fmt
         name: Terraform Format Check

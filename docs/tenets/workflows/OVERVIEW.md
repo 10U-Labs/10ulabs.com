@@ -137,13 +137,14 @@ All tool installations must happen at the start of the workflow, immediately aft
 Checkout and assertion steps. This ensures linting and tests can run even if
 credentials or Terraform init fails (due to `continue-on-error: true`).
 
+Consolidate installations by package manager - use a single `pip install` for all
+Python packages and a single `npm install` for all Node packages.
+
 ```yaml
 # After Checkout and assertion steps, install all tools:
 - if: [GITHUB_HOSTED_CONDITION]
   name: Setup Terraform
   uses: hashicorp/setup-terraform@v3
-  with:
-    terraform_version: ${{ steps.terraform.outputs.version }}
 - if: [GITHUB_HOSTED_CONDITION]
   name: Setup TFLint
   uses: terraform-linters/setup-tflint@v6
@@ -151,20 +152,19 @@ credentials or Terraform init fails (due to `continue-on-error: true`).
   name: Set up Python
   uses: actions/setup-python@v5
 - if: [GITHUB_HOSTED_CONDITION]
-  name: Install yamllint
-  run: python3 -m pip install yamllint
-- if: [GITHUB_HOSTED_CONDITION]
-  name: Install pylint
-  run: python3 -m pip install pylint ...
-- if: [GITHUB_HOSTED_CONDITION]
-  name: Install mypy
-  run: python3 -m pip install mypy boto3-stubs types-requests
+  name: Install Python dependencies
+  run: |
+    python3 -m pip install \
+      boto3 \
+      boto3-stubs \
+      mypy \
+      pylint \
+      pytest \
+      types-requests \
+      yamllint
 - if: [GITHUB_HOSTED_CONDITION]
   name: Install jscpd
   run: npm install -g jscpd
-- if: [GITHUB_HOSTED_CONDITION]
-  name: Install pytest dependencies
-  run: python3 -m pip install pytest ...
 
 # Then run checks, credentials, and tests
 ```
