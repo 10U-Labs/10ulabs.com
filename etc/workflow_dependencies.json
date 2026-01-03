@@ -178,7 +178,7 @@
     "depends_on": [
       "api_common_routing"
     ],
-    "name": "Ensuring the /v1/rack-configurations API endpoint exists and is properly configured",
+    "name": "Ensuring /v1/rack-configurations API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_rack_configurations.yml",
       "lib/python/**",
