@@ -16,25 +16,33 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+      - continue-on-error: true
+        id: no_linter_configs_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
         name: Assert no linter config files (GitHub-hosted)
         uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
         with:
           directories: ${{ github.workspace }}
           linters: pylint,mypy,yamllint
-      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+      - continue-on-error: true
+        id: no_linter_configs_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
         name: Assert no linter config files (self-hosted)
         run: >-
           assert-no-linter-config-files
           --linters pylint,mypy,yamllint
           ${{ github.workspace }}
-      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+      - continue-on-error: true
+        id: no_inline_disables_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
         name: Assert no inline lint disables (GitHub-hosted)
         uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
         with:
           files: ${{ github.workspace }}/**/*
           linters: pylint,mypy,yamllint
-      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+      - continue-on-error: true
+        id: no_inline_disables_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
         name: Assert no inline lint disables (self-hosted)
         run: >-
           assert-no-inline-lint-disables
@@ -58,7 +66,9 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
-      - name: Terraform Format Check
+      - continue-on-error: true
+        id: terraform_fmt
+        name: Terraform Format Check
         run: cd src/bootstrap && terraform fmt -diff -check -recursive
       - id: oidc
         name: Check OIDC availability
@@ -99,8 +109,10 @@ jobs:
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - env:
+      - continue-on-error: true
+        env:
           GITHUB_TOKEN: ${{ github.token }}
+        id: tflint
         name: Run tflint
         run: cd src/bootstrap && tflint --init && tflint
       - if: >-
@@ -117,7 +129,9 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install yamllint
         run: python3 -m pip install yamllint
-      - name: Linting YAML files
+      - continue-on-error: true
+        id: yamllint
+        name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -141,7 +155,9 @@ jobs:
             pytest \
             python-hcl2 \
             requests
-      - name: Run pylint on tests
+      - continue-on-error: true
+        id: pylint
+        name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
             lib/python/ test/ \
@@ -158,7 +174,9 @@ jobs:
             types-dockerfile-parse \
             types-PyYAML \
             types-requests
-      - name: Run mypy on tests
+      - continue-on-error: true
+        id: mypy
+        name: Run mypy on tests
         run: |
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
             lib/python/ test/
@@ -168,7 +186,9 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
         run: npm install -g jscpd
-      - name: Check for duplicate code in test Python files
+      - continue-on-error: true
+        id: jscpd
+        name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
@@ -180,29 +200,39 @@ jobs:
         run: >-
           python3 -m pip install pytest pytest-dependency boto3 dnspython
           python-hcl2
-      - name: Run unit tests
+      - continue-on-error: true
+        id: unit_tests
+        name: Run unit tests
         run: |
           python3 -m pytest \
             test/bootstrap/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
-      - name: Run pre-deployment integration tests
+      - continue-on-error: true
+        id: pre_integration_tests
+        name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
             test/bootstrap/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
-      - name: Terraform Apply
+      - continue-on-error: true
+        id: terraform_apply
+        name: Terraform Apply
         run: |
           cd src/bootstrap && \
             terraform apply \
             -auto-approve \
             -var="github_pat=${{ secrets.GH_PAT }}" \
             -var="github_app_private_key=${{ secrets.GH_APP_PRIVATE_KEY }}"
-      - name: Run post-deployment integration tests
+      - continue-on-error: true
+        id: post_integration_tests
+        name: Run post-deployment integration tests
         run: |
           python3 -m pytest \
             test/bootstrap/post_deployment/integration/ \
             --verbose --pythonwarnings=error
-      - name: Run E2E tests
+      - continue-on-error: true
+        id: e2e_tests
+        name: Run E2E tests
         run: |
           python3 -m pytest \
             test/bootstrap/post_deployment/e2e/ \
@@ -238,6 +268,45 @@ jobs:
             --workflow bootstrap \
             --repo ${{ github.repository }} \
             $FLAGS
+      - env:
+          E2E_TESTS: ${{ steps.e2e_tests.outcome }}
+          JSCPD: ${{ steps.jscpd.outcome }}
+          MYPY: ${{ steps.mypy.outcome }}
+          NO_INLINE_DISABLES_GH: ${{ steps.no_inline_disables_gh.outcome }}
+          NO_INLINE_DISABLES_SH: ${{ steps.no_inline_disables_sh.outcome }}
+          NO_LINTER_CONFIGS_GH: ${{ steps.no_linter_configs_gh.outcome }}
+          NO_LINTER_CONFIGS_SH: ${{ steps.no_linter_configs_sh.outcome }}
+          POST_INTEGRATION_TESTS: ${{ steps.post_integration_tests.outcome }}
+          PRE_INTEGRATION_TESTS: ${{ steps.pre_integration_tests.outcome }}
+          PYLINT: ${{ steps.pylint.outcome }}
+          TERRAFORM_APPLY: ${{ steps.terraform_apply.outcome }}
+          TERRAFORM_FMT: ${{ steps.terraform_fmt.outcome }}
+          TFLINT: ${{ steps.tflint.outcome }}
+          UNIT_TESTS: ${{ steps.unit_tests.outcome }}
+          YAMLLINT: ${{ steps.yamllint.outcome }}
+        name: Assert no step failed
+        run: |
+          failed=""
+          [ "$NO_LINTER_CONFIGS_GH" = "failure" ] && failed="$failed no_linter_configs_gh"
+          [ "$NO_LINTER_CONFIGS_SH" = "failure" ] && failed="$failed no_linter_configs_sh"
+          [ "$NO_INLINE_DISABLES_GH" = "failure" ] && failed="$failed no_inline_disables_gh"
+          [ "$NO_INLINE_DISABLES_SH" = "failure" ] && failed="$failed no_inline_disables_sh"
+          [ "$TERRAFORM_FMT" = "failure" ] && failed="$failed terraform_fmt"
+          [ "$TFLINT" = "failure" ] && failed="$failed tflint"
+          [ "$YAMLLINT" = "failure" ] && failed="$failed yamllint"
+          [ "$PYLINT" = "failure" ] && failed="$failed pylint"
+          [ "$MYPY" = "failure" ] && failed="$failed mypy"
+          [ "$JSCPD" = "failure" ] && failed="$failed jscpd"
+          [ "$UNIT_TESTS" = "failure" ] && failed="$failed unit_tests"
+          [ "$PRE_INTEGRATION_TESTS" = "failure" ] && failed="$failed pre_integration_tests"
+          [ "$TERRAFORM_APPLY" = "failure" ] && failed="$failed terraform_apply"
+          [ "$POST_INTEGRATION_TESTS" = "failure" ] && failed="$failed post_integration_tests"
+          [ "$E2E_TESTS" = "failure" ] && failed="$failed e2e_tests"
+          if [ -n "$failed" ]; then
+            echo "Steps that failed:$failed"
+            exit 1
+          fi
+          echo "All steps succeeded"
 name: Ensuring bootstrap infrastructure exists and is properly configured
 on:
   workflow_dispatch:
