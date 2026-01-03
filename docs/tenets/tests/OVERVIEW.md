@@ -202,12 +202,17 @@ If your fixture is useful beyond your specific test file:
 
 ## Layer Marker System
 
-Integration tests use a layer-based dependency system. Layer N tests skip if any test in layers 1 through N-1 failed.
+Integration tests use a layer marker for organization and result tracking. All tests
+run regardless of failures in other layers.
 
 ```python
 # In test file
 pytestmark = pytest.mark.layer(N)
 ```
+
+Layers are used to categorize tests (e.g., layer 1 for infrastructure, layer 2 for
+authorization) but do not affect test execution. All issues are reported in a single
+test run.
 
 See [PRE_DEPLOYMENT_INTEGRATION_TESTS.md](PRE_DEPLOYMENT_INTEGRATION_TESTS.md) and [POST_DEPLOYMENT_INTEGRATION_TESTS.md](POST_DEPLOYMENT_INTEGRATION_TESTS.md) for layer definitions.
 

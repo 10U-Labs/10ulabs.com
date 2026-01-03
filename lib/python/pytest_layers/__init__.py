@@ -1,4 +1,4 @@
-"""Pytest layer-based test dependency tracking.
+"""Pytest layer-based test organization and tracking.
 
 Usage:
     Add pytest_plugins = ['pytest_layers'] to conftest.py
@@ -6,7 +6,8 @@ Usage:
 Then mark test files with:
     pytestmark = pytest.mark.layer(N)
 
-Layer N tests automatically skip if any test in layers 1 through N-1 failed.
+Layers are used to categorize tests but do not affect execution order or skip
+tests. All tests run regardless of failures in other layers.
 """
 from typing import Dict
 
@@ -20,7 +21,7 @@ def pytest_configure(config):
     """Register the layer marker."""
     config.addinivalue_line(
         "markers",
-        "layer(num): mark test as belonging to layer N (skips if earlier layers failed)"
+        "layer(num): mark test as belonging to layer N (for organization and tracking)"
     )
 
 
@@ -43,9 +44,5 @@ def pytest_runtest_makereport(item, call):
 
 
 def pytest_runtest_setup(item):
-    """Skip tests if any earlier layer failed."""
-    for marker in item.iter_markers("layer"):
-        layer_num = marker.args[0]
-        for prev_layer in range(1, layer_num):
-            if prev_layer in _layer_results and _layer_results[prev_layer]["failed"] > 0:
-                pytest.skip(f"Skipped: layer {prev_layer} had failures")
+    """Placeholder for layer-based test setup (skipping disabled)."""
+    del item  # Required by hook signature but unused

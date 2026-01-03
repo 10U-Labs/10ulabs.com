@@ -66,41 +66,6 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
-      - continue-on-error: true
-        id: terraform_fmt
-        name: Terraform Format Check
-        run: cd src/bootstrap && terraform fmt -diff -check -recursive
-      - id: oidc
-        name: Check OIDC availability
-        run: |
-          if [ -n "${{ vars.AWS_REGION }}" ] && \
-             [ -n "${{ vars.OIDC_ROLE_ARN }}" ]; then
-            echo "is_available=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_available=false" >> $GITHUB_OUTPUT
-          fi
-      - if: steps.oidc.outputs.is_available == 'true'
-        name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
-      - if: steps.oidc.outputs.is_available != 'true'
-        name: Extract AWS region (cold start)
-        run: |
-          AWS_REGION=$(grep 'aws_region' \
-            lib/terraform/common/locals.tf \
-            | grep -v '\$' | cut -d'"' -f2)
-          echo "aws_region=$AWS_REGION" >> $GITHUB_ENV
-      - if: steps.oidc.outputs.is_available != 'true'
-        name: Configure AWS credentials via static keys (cold start)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-region: ${{ env.aws_region }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - name: Terraform Init
-        run: cd src/bootstrap && terraform init
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -109,12 +74,6 @@ jobs:
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        id: tflint
-        name: Run tflint
-        run: cd src/bootstrap && tflint --init && tflint
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -129,18 +88,6 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install yamllint
         run: python3 -m pip install yamllint
-      - continue-on-error: true
-        id: yamllint
-        name: Linting YAML files
-        run: |
-          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
-          KEY_ORDERING='key-ordering: enable'
-          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
-          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
-          python3 -m yamllint --strict \
-            --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/bootstrap.yml
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -155,13 +102,6 @@ jobs:
             pytest \
             python-hcl2 \
             requests
-      - continue-on-error: true
-        id: pylint
-        name: Run pylint on tests
-        run: |
-          PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/ \
-            --fail-on=C,R,W --fail-under=10.0
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -174,24 +114,12 @@ jobs:
             types-dockerfile-parse \
             types-PyYAML \
             types-requests
-      - continue-on-error: true
-        id: mypy
-        name: Run mypy on tests
-        run: |
-          MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
-            lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
         run: npm install -g jscpd
-      - continue-on-error: true
-        id: jscpd
-        name: Check for duplicate code in test Python files
-        run: |
-          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -200,6 +128,87 @@ jobs:
         run: >-
           python3 -m pip install pytest pytest-dependency boto3 dnspython
           python-hcl2
+      - continue-on-error: true
+        id: terraform_fmt
+        name: Terraform Format Check
+        run: cd src/bootstrap && terraform fmt -diff -check -recursive
+      - continue-on-error: true
+        id: oidc
+        name: Check OIDC availability
+        run: |
+          if [ -n "${{ vars.AWS_REGION }}" ] && \
+             [ -n "${{ vars.OIDC_ROLE_ARN }}" ]; then
+            echo "is_available=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_available=false" >> $GITHUB_OUTPUT
+          fi
+      - continue-on-error: true
+        id: aws_oidc
+        if: steps.oidc.outputs.is_available == 'true'
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - continue-on-error: true
+        id: aws_region_cold
+        if: steps.oidc.outputs.is_available != 'true'
+        name: Extract AWS region (cold start)
+        run: |
+          AWS_REGION=$(grep 'aws_region' \
+            lib/terraform/common/locals.tf \
+            | grep -v '\$' | cut -d'"' -f2)
+          echo "aws_region=$AWS_REGION" >> $GITHUB_ENV
+      - continue-on-error: true
+        id: aws_static
+        if: steps.oidc.outputs.is_available != 'true'
+        name: Configure AWS credentials via static keys (cold start)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ env.aws_region }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - continue-on-error: true
+        id: terraform_init
+        name: Terraform Init
+        run: cd src/bootstrap && terraform init
+      - continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        id: tflint
+        name: Run tflint
+        run: cd src/bootstrap && tflint --init && tflint
+      - continue-on-error: true
+        id: yamllint
+        name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
+          python3 -m yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/bootstrap.yml
+      - continue-on-error: true
+        id: pylint
+        name: Run pylint on tests
+        run: |
+          PYTHONPATH=lib/python python3 -m pylint \
+            lib/python/ test/ \
+            --fail-on=C,R,W --fail-under=10.0
+      - continue-on-error: true
+        id: mypy
+        name: Run mypy on tests
+        run: |
+          MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
+            lib/python/ test/
+      - continue-on-error: true
+        id: jscpd
+        name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/
       - continue-on-error: true
         id: unit_tests
         name: Run unit tests
@@ -269,6 +278,9 @@ jobs:
             --repo ${{ github.repository }} \
             $FLAGS
       - env:
+          AWS_OIDC: ${{ steps.aws_oidc.outcome }}
+          AWS_REGION_COLD: ${{ steps.aws_region_cold.outcome }}
+          AWS_STATIC: ${{ steps.aws_static.outcome }}
           E2E_TESTS: ${{ steps.e2e_tests.outcome }}
           JSCPD: ${{ steps.jscpd.outcome }}
           MYPY: ${{ steps.mypy.outcome }}
@@ -276,11 +288,13 @@ jobs:
           NO_INLINE_DISABLES_SH: ${{ steps.no_inline_disables_sh.outcome }}
           NO_LINTER_CONFIGS_GH: ${{ steps.no_linter_configs_gh.outcome }}
           NO_LINTER_CONFIGS_SH: ${{ steps.no_linter_configs_sh.outcome }}
+          OIDC: ${{ steps.oidc.outcome }}
           POST_INTEGRATION_TESTS: ${{ steps.post_integration_tests.outcome }}
           PRE_INTEGRATION_TESTS: ${{ steps.pre_integration_tests.outcome }}
           PYLINT: ${{ steps.pylint.outcome }}
           TERRAFORM_APPLY: ${{ steps.terraform_apply.outcome }}
           TERRAFORM_FMT: ${{ steps.terraform_fmt.outcome }}
+          TERRAFORM_INIT: ${{ steps.terraform_init.outcome }}
           TFLINT: ${{ steps.tflint.outcome }}
           UNIT_TESTS: ${{ steps.unit_tests.outcome }}
           YAMLLINT: ${{ steps.yamllint.outcome }}
@@ -292,6 +306,11 @@ jobs:
           [ "$NO_INLINE_DISABLES_GH" = "failure" ] && failed="$failed no_inline_disables_gh"
           [ "$NO_INLINE_DISABLES_SH" = "failure" ] && failed="$failed no_inline_disables_sh"
           [ "$TERRAFORM_FMT" = "failure" ] && failed="$failed terraform_fmt"
+          [ "$OIDC" = "failure" ] && failed="$failed oidc"
+          [ "$AWS_OIDC" = "failure" ] && failed="$failed aws_oidc"
+          [ "$AWS_REGION_COLD" = "failure" ] && failed="$failed aws_region_cold"
+          [ "$AWS_STATIC" = "failure" ] && failed="$failed aws_static"
+          [ "$TERRAFORM_INIT" = "failure" ] && failed="$failed terraform_init"
           [ "$TFLINT" = "failure" ] && failed="$failed tflint"
           [ "$YAMLLINT" = "failure" ] && failed="$failed yamllint"
           [ "$PYLINT" = "failure" ] && failed="$failed pylint"

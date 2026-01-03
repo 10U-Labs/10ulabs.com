@@ -131,31 +131,46 @@ Key points:
 - Skip the source step when the only Python source is `lib/python/` (already covered by
   test step)
 
-## 5. Just-In-Time (JIT) Dependency Installation
+## 5. Batched Dependency Installation
 
-Dependencies must be installed immediately before their first use:
+All tool installations must happen at the start of the workflow, immediately after
+Checkout and assertion steps. This ensures linting and tests can run even if
+credentials or Terraform init fails (due to `continue-on-error: true`).
 
 ```yaml
+# After Checkout and assertion steps, install all tools:
+- if: [GITHUB_HOSTED_CONDITION]
+  name: Setup Terraform
+  uses: hashicorp/setup-terraform@v3
+  with:
+    terraform_version: ${{ steps.terraform.outputs.version }}
+- if: [GITHUB_HOSTED_CONDITION]
+  name: Setup TFLint
+  uses: terraform-linters/setup-tflint@v6
+- if: [GITHUB_HOSTED_CONDITION]
+  name: Set up Python
+  uses: actions/setup-python@v5
 - if: [GITHUB_HOSTED_CONDITION]
   name: Install yamllint
   run: python3 -m pip install yamllint
-- name: Linting YAML files
-  run: python3 -m yamllint --strict ...
-
 - if: [GITHUB_HOSTED_CONDITION]
   name: Install pylint
-  run: python3 -m pip install pylint
-- name: Run pylint on source
-  run: python3 -m pylint ...
-
+  run: python3 -m pip install pylint ...
 - if: [GITHUB_HOSTED_CONDITION]
   name: Install mypy
   run: python3 -m pip install mypy boto3-stubs types-requests
-- name: Run mypy on source
-  run: python3 -m mypy ...
+- if: [GITHUB_HOSTED_CONDITION]
+  name: Install jscpd
+  run: npm install -g jscpd
+- if: [GITHUB_HOSTED_CONDITION]
+  name: Install pytest dependencies
+  run: python3 -m pip install pytest ...
+
+# Then run checks, credentials, and tests
 ```
 
-Never batch all installations at the beginning of the workflow.
+Batching installations at the start enables all independent checks to run regardless
+of failures in credential or infrastructure steps.
 
 ## 6. Conditional Installation for GitHub-Hosted vs ECS Runners
 
@@ -242,3 +257,68 @@ Use these exact step names for consistency:
 | Terraform apply | `Terraform Apply` |
 | Post-deploy integration | `Run post-deployment integration tests` |
 | E2E tests | `Run E2E tests` |
+
+## 10. Continue-On-Error Pattern
+
+All check and test steps must use `continue-on-error: true` so that failures don't
+prevent subsequent steps from running. This ensures all issues are reported in a
+single workflow run.
+
+### Required Step Attributes
+
+Every check/test step needs:
+
+- `continue-on-error: true`
+- `id: step_name` (snake_case identifier)
+
+Example:
+
+```yaml
+- continue-on-error: true
+  id: pylint
+  name: Run pylint on tests
+  run: ...
+
+- continue-on-error: true
+  id: unit_tests
+  name: Run unit tests
+  run: ...
+```
+
+### Final Assertion Step
+
+Add an "Assert no step failed" step at the end that checks all outcomes:
+
+```yaml
+- env:
+    PYLINT: ${{ steps.pylint.outcome }}
+    UNIT_TESTS: ${{ steps.unit_tests.outcome }}
+    # ... all other step outcomes
+  name: Assert no step failed
+  run: |
+    failed=""
+    [ "$PYLINT" = "failure" ] && failed="$failed pylint"
+    [ "$UNIT_TESTS" = "failure" ] && failed="$failed unit_tests"
+    # ... check all steps
+    if [ -n "$failed" ]; then
+      echo "Steps that failed:$failed"
+      exit 1
+    fi
+    echo "All steps succeeded"
+```
+
+### Which Steps Get continue-on-error
+
+| Step Type                          | continue-on-error |
+|------------------------------------|-------------------|
+| Checkout, Setup, Install           | No                |
+| AWS credentials, Terraform Init    | Yes               |
+| Linting (yamllint, pylint, mypy)   | Yes               |
+| Duplicate code check (jscpd)       | Yes               |
+| Tests (unit, integration, e2e)     | Yes               |
+| Terraform Apply                    | Yes               |
+| Assert no step failed              | No (final gate)   |
+
+Steps like linting and unit tests don't depend on AWS credentials or Terraform Init
+succeeding, so those infrastructure steps should also use `continue-on-error: true`
+to allow independent steps to run.
