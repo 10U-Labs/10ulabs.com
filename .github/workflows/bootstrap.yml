@@ -239,50 +239,50 @@ jobs:
           gh variable set AWS_REGION --body "$AWS_REGION"
           gh variable set OIDC_ROLE_ARN --body "$ROLE_ARN"
       - env:
-          AWS_OIDC: ${{ steps.aws_oidc.outcome }}
-          AWS_REGION_COLD: ${{ steps.aws_region_cold.outcome }}
-          AWS_STATIC: ${{ steps.aws_static.outcome }}
-          E2E_TESTS: ${{ steps.e2e_tests.outcome }}
-          JSCPD: ${{ steps.jscpd.outcome }}
-          MYPY: ${{ steps.mypy.outcome }}
-          NO_INLINE_DISABLES_GH: ${{ steps.no_inline_disables_gh.outcome }}
-          NO_INLINE_DISABLES_SH: ${{ steps.no_inline_disables_sh.outcome }}
-          NO_LINTER_CONFIGS_GH: ${{ steps.no_linter_configs_gh.outcome }}
-          NO_LINTER_CONFIGS_SH: ${{ steps.no_linter_configs_sh.outcome }}
-          OIDC: ${{ steps.oidc.outcome }}
-          POST_INTEGRATION_TESTS: ${{ steps.post_integration_tests.outcome }}
-          PRE_INTEGRATION_TESTS: ${{ steps.pre_integration_tests.outcome }}
-          PYLINT: ${{ steps.pylint.outcome }}
-          TERRAFORM_APPLY: ${{ steps.terraform_apply.outcome }}
-          TERRAFORM_FMT: ${{ steps.terraform_fmt.outcome }}
-          TERRAFORM_INIT: ${{ steps.terraform_init.outcome }}
-          TFLINT: ${{ steps.tflint.outcome }}
-          UNIT_TESTS: ${{ steps.unit_tests.outcome }}
-          YAMLLINT: ${{ steps.yamllint.outcome }}
+          S01: ${{ steps.no_linter_configs_gh.outcome }}
+          S02: ${{ steps.no_linter_configs_sh.outcome }}
+          S03: ${{ steps.no_inline_disables_gh.outcome }}
+          S04: ${{ steps.no_inline_disables_sh.outcome }}
+          S05: ${{ steps.terraform_fmt.outcome }}
+          S06: ${{ steps.oidc.outcome }}
+          S07: ${{ steps.aws_oidc.outcome }}
+          S08: ${{ steps.aws_region_cold.outcome }}
+          S09: ${{ steps.aws_static.outcome }}
+          S10: ${{ steps.terraform_init.outcome }}
+          S11: ${{ steps.tflint.outcome }}
+          S12: ${{ steps.yamllint.outcome }}
+          S13: ${{ steps.pylint.outcome }}
+          S14: ${{ steps.mypy.outcome }}
+          S15: ${{ steps.jscpd.outcome }}
+          S16: ${{ steps.unit_tests.outcome }}
+          S17: ${{ steps.pre_integration_tests.outcome }}
+          S18: ${{ steps.terraform_apply.outcome }}
+          S19: ${{ steps.post_integration_tests.outcome }}
+          S20: ${{ steps.e2e_tests.outcome }}
         name: Assert no step failed
         run: |
           failed=""
           f="failure"
-          [ "$NO_LINTER_CONFIGS_GH" = "$f" ] && failed="$failed no_linter_configs_gh"
-          [ "$NO_LINTER_CONFIGS_SH" = "$f" ] && failed="$failed no_linter_configs_sh"
-          [ "$NO_INLINE_DISABLES_GH" = "$f" ] && failed="$failed no_inline_disables_gh"
-          [ "$NO_INLINE_DISABLES_SH" = "$f" ] && failed="$failed no_inline_disables_sh"
-          [ "$TERRAFORM_FMT" = "$f" ] && failed="$failed terraform_fmt"
-          [ "$OIDC" = "$f" ] && failed="$failed oidc"
-          [ "$AWS_OIDC" = "$f" ] && failed="$failed aws_oidc"
-          [ "$AWS_REGION_COLD" = "$f" ] && failed="$failed aws_region_cold"
-          [ "$AWS_STATIC" = "$f" ] && failed="$failed aws_static"
-          [ "$TERRAFORM_INIT" = "$f" ] && failed="$failed terraform_init"
-          [ "$TFLINT" = "$f" ] && failed="$failed tflint"
-          [ "$YAMLLINT" = "$f" ] && failed="$failed yamllint"
-          [ "$PYLINT" = "$f" ] && failed="$failed pylint"
-          [ "$MYPY" = "$f" ] && failed="$failed mypy"
-          [ "$JSCPD" = "$f" ] && failed="$failed jscpd"
-          [ "$UNIT_TESTS" = "$f" ] && failed="$failed unit_tests"
-          [ "$PRE_INTEGRATION_TESTS" = "$f" ] && failed="$failed pre_integration"
-          [ "$TERRAFORM_APPLY" = "$f" ] && failed="$failed terraform_apply"
-          [ "$POST_INTEGRATION_TESTS" = "$f" ] && failed="$failed post_integration"
-          [ "$E2E_TESTS" = "$f" ] && failed="$failed e2e_tests"
+          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
+          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
+          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
+          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
+          [ "$S05" = "$f" ] && failed="$failed terraform_fmt"
+          [ "$S06" = "$f" ] && failed="$failed oidc"
+          [ "$S07" = "$f" ] && failed="$failed aws_oidc"
+          [ "$S08" = "$f" ] && failed="$failed aws_region_cold"
+          [ "$S09" = "$f" ] && failed="$failed aws_static"
+          [ "$S10" = "$f" ] && failed="$failed terraform_init"
+          [ "$S11" = "$f" ] && failed="$failed tflint"
+          [ "$S12" = "$f" ] && failed="$failed yamllint"
+          [ "$S13" = "$f" ] && failed="$failed pylint"
+          [ "$S14" = "$f" ] && failed="$failed mypy"
+          [ "$S15" = "$f" ] && failed="$failed jscpd"
+          [ "$S16" = "$f" ] && failed="$failed unit_tests"
+          [ "$S17" = "$f" ] && failed="$failed pre_integration_tests"
+          [ "$S18" = "$f" ] && failed="$failed terraform_apply"
+          [ "$S19" = "$f" ] && failed="$failed post_integration_tests"
+          [ "$S20" = "$f" ] && failed="$failed e2e_tests"
           if [ -n "$failed" ]; then
             echo "Steps that failed:$failed"
             exit 1
