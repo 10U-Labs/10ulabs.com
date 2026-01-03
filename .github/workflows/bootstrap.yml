@@ -228,37 +228,6 @@ jobs:
             test/bootstrap/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
       - env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-        name: Set GitHub variables for OIDC authentication
-        run: |
-          AWS_REGION=$(grep 'aws_region' \
-            lib/terraform/common/locals.tf \
-            | grep -v '\$' | cut -d'"' -f2)
-          ROLE_ARN=$(cd src/bootstrap && \
-            terraform output -raw arn_for_github_actions_role)
-          gh variable set AWS_REGION --body "$AWS_REGION"
-          gh variable set OIDC_ROLE_ARN --body "$ROLE_ARN"
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: >-
-          github.event_name == 'workflow_dispatch' &&
-          (github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message, '[trigger descendants]'))
-        name: Dispatch descendant workflows
-        run: |
-          FLAGS=""
-          if [ "${{ github.event.inputs.trigger_descendants }}" = "true" ]; then
-            FLAGS="$FLAGS --trigger-descendants"
-          fi
-          INV="${{ github.event.inputs.invalidate_cloudfront }}"
-          if [ "$INV" = "true" ]; then
-            FLAGS="$FLAGS --invalidate-cloudfront"
-          fi
-          python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
-            --workflow bootstrap \
-            --repo ${{ github.repository }} \
-            $FLAGS
-      - env:
           AWS_OIDC: ${{ steps.aws_oidc.outcome }}
           AWS_REGION_COLD: ${{ steps.aws_region_cold.outcome }}
           AWS_STATIC: ${{ steps.aws_static.outcome }}
@@ -308,6 +277,37 @@ jobs:
             exit 1
           fi
           echo "All steps succeeded"
+      - env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        name: Set GitHub variables for OIDC authentication
+        run: |
+          AWS_REGION=$(grep 'aws_region' \
+            lib/terraform/common/locals.tf \
+            | grep -v '\$' | cut -d'"' -f2)
+          ROLE_ARN=$(cd src/bootstrap && \
+            terraform output -raw arn_for_github_actions_role)
+          gh variable set AWS_REGION --body "$AWS_REGION"
+          gh variable set OIDC_ROLE_ARN --body "$ROLE_ARN"
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          (github.event.inputs.trigger_descendants == 'true' ||
+           contains(github.event.head_commit.message, '[trigger descendants]'))
+        name: Dispatch descendant workflows
+        run: |
+          FLAGS=""
+          if [ "${{ github.event.inputs.trigger_descendants }}" = "true" ]; then
+            FLAGS="$FLAGS --trigger-descendants"
+          fi
+          INV="${{ github.event.inputs.invalidate_cloudfront }}"
+          if [ "$INV" = "true" ]; then
+            FLAGS="$FLAGS --invalidate-cloudfront"
+          fi
+          python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
+            --workflow bootstrap \
+            --repo ${{ github.repository }} \
+            $FLAGS
 name: Ensuring bootstrap infrastructure exists and is properly configured
 on:
   workflow_dispatch:
