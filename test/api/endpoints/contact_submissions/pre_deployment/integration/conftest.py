@@ -5,6 +5,4 @@ iam_client, lambda_client, ssm_client, api_gateway_info) are inherited from
 test/api/conftest.py and test_fixtures.aws.
 """
 
-pytest_plugins = ['pytest_layers']
-
 # All fixtures inherited from parent conftest and test_fixtures.aws

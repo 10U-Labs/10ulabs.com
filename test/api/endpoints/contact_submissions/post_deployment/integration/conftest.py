@@ -1,14 +1,11 @@
 """Pytest fixtures for contact endpoint post-deployment integration tests.
 
-Layer marker system and AWS clients inherited from parent conftest.
+AWS clients inherited from parent conftest.
 """
 
 import pytest
 
 from test_fixtures.aws import get_log_group_info
-
-
-pytest_plugins = ['pytest_layers']
 
 
 @pytest.fixture(scope="module")
