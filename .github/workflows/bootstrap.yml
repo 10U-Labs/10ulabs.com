@@ -24,7 +24,10 @@ jobs:
           linters: pylint,mypy,yamllint
       - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
         name: Assert no linter config files (self-hosted)
-        run: assert-no-linter-config-files --linters pylint,mypy,yamllint ${{ github.workspace }}
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          ${{ github.workspace }}
       - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
         name: Assert no inline lint disables (GitHub-hosted)
         uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
@@ -33,7 +36,10 @@ jobs:
           linters: pylint,mypy,yamllint
       - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
         name: Assert no inline lint disables (self-hosted)
-        run: assert-no-inline-lint-disables --linters pylint,mypy,yamllint ${{ github.workspace }}/**/*
+        run: >-
+          assert-no-inline-lint-disables
+          --linters pylint,mypy,yamllint
+          ${{ github.workspace }}/**/*
       - id: terraform
         if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
