@@ -371,3 +371,87 @@ class TestHandleEventsErrorHandling:
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             response = handler.handle_events(event)
         assert response['statusCode'] == 500
+
+    def test_value_error_returns_500(self, handler):
+        """Verify ValueError in handle_events returns 500."""
+        event = {
+            'path': '/v1/sessions/abc123/events',
+            'httpMethod': 'POST',
+            'body': 'invalid json {'
+        }
+        response = handler.handle_events(event)
+        assert response['statusCode'] == 500
+
+    def test_key_error_returns_500(self, handler):
+        """Verify KeyError in handle_events returns 500."""
+        mock_dynamodb = create_mock_dynamodb_client('batch_write_item', {})
+        event = {
+            'path': '/v1/sessions/abc123/events',
+            'httpMethod': 'POST',
+            'body': '{"device_id": "dev1", "events": [{"event_type": "test", "timestamp": "2024-01-15T10:30:00Z"}]}'
+        }
+        with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
+            with patch.object(handler, 'save_analytics_events', side_effect=KeyError('missing_key')):
+                response = handler.handle_events(event)
+        assert response['statusCode'] == 500
+
+
+class TestGetDynamoDbClient:
+    """Tests for get_dynamodb_client function."""
+
+    def test_creates_client_when_not_cached(self, handler):
+        """Verify get_dynamodb_client creates client when cache is empty."""
+        handler.clear_clients()
+        with patch('boto3.client') as mock_boto:
+            mock_client = MagicMock()
+            mock_boto.return_value = mock_client
+            result = handler.get_dynamodb_client()
+            mock_boto.assert_called_once_with('dynamodb')
+            assert result == mock_client
+
+    def test_returns_cached_client(self, handler):
+        """Verify get_dynamodb_client returns cached client on second call."""
+        handler.clear_clients()
+        with patch('boto3.client') as mock_boto:
+            mock_client = MagicMock()
+            mock_boto.return_value = mock_client
+            first_result = handler.get_dynamodb_client()
+            second_result = handler.get_dynamodb_client()
+            mock_boto.assert_called_once()
+            assert first_result == second_result
+
+
+class TestLambdaHandlerPostRoute:
+    """Tests for lambda_handler POST routing."""
+
+    @pytest.fixture(autouse=True)
+    def setup_env(self):
+        """Set up environment variables for tests."""
+        os.environ['SESSION_EVENTS_TABLE'] = 'test-events-table'
+        yield
+        del os.environ['SESSION_EVENTS_TABLE']
+
+    def test_post_to_events_endpoint_routes_to_handle_events(self, handler):
+        """Verify POST to /v1/sessions/{id}/events routes to handle_events."""
+        mock_dynamodb = create_mock_dynamodb_client('batch_write_item', {})
+        event = {
+            'httpMethod': 'POST',
+            'path': '/v1/sessions/test-session/events',
+            'body': '{"device_id": "dev1", "events": [{"event_type": "test", "timestamp": "2024-01-15T10:30:00Z"}]}'
+        }
+        with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
+            response = handler.lambda_handler(event, None)
+        assert response['statusCode'] == 200
+
+    def test_post_to_events_returns_success(self, handler):
+        """Verify POST to events endpoint returns success response."""
+        mock_dynamodb = create_mock_dynamodb_client('batch_write_item', {})
+        event = {
+            'httpMethod': 'POST',
+            'path': '/v1/sessions/my-session-id/events',
+            'body': '{"device_id": "device123", "events": [{"event_type": "click", "timestamp": "2024-01-15T10:30:00Z"}]}'
+        }
+        with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
+            response = handler.lambda_handler(event, None)
+        body = json.loads(response['body'])
+        assert body['success'] is True
