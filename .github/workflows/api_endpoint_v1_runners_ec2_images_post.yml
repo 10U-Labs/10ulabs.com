@@ -183,14 +183,6 @@ jobs:
           python3 -m pytest \
             $TEST/unit/ \
             --confcutdir=test --verbose --pythonwarnings=error
-      - continue-on-error: true
-        id: pre_integration_tests
-        name: Run pre-deployment integration tests
-        run: |
-          TEST=test/api/endpoints/runners/ec2/images/post/pre_deployment
-          python3 -m pytest \
-            $TEST/integration/ \
-            --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - id: terraform
         if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
@@ -211,6 +203,14 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
+      - continue-on-error: true
+        id: pre_integration_tests
+        name: Run pre-deployment integration tests
+        run: |
+          TEST=test/api/endpoints/runners/ec2/images/post/pre_deployment
+          python3 -m pytest \
+            $TEST/integration/ \
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - id: api
         name: Get configuration and networking outputs
         run: |
