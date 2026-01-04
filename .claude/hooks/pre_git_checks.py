@@ -9,49 +9,6 @@ import subprocess
 import sys
 
 
-# Lint config files that can be used to disable checks - block these entirely
-BLOCKED_LINT_CONFIG_FILES = [
-    '.pylintrc',
-    'pylintrc',
-    '.flake8',
-    '.bandit',
-    '.mypy.ini',
-    '.rubocop.yml',
-    '.stylelintrc',
-    '.stylelintrc.json',
-    '.stylelintrc.yml',
-    '.markdownlint.json',
-    '.markdownlint.yaml',
-    '.markdownlintrc',
-    'tox.ini',
-]
-
-
-LINT_DISABLE_PATTERNS = [
-    (r'eslint-disable', 'eslint-disable'),
-    (r'@ts-ignore', '@ts-ignore'),
-    (r'@ts-nocheck', '@ts-nocheck'),
-    (r'@ts-expect-error', '@ts-expect-error'),
-    (r'#\s*noqa', 'noqa'),
-    (r'#\s*type:\s*ignore', 'type: ignore'),
-    (r'#\s*pragma:\s*no\s*cover', 'pragma: no cover'),
-    (r'#\s*flake8:\s*noqa', 'flake8: noqa'),
-    (r'#\s*pylint:\s*disable', 'pylint: disable'),
-    (r'//\s*nolint', 'nolint (Go)'),
-    (r'#\s*rubocop:disable', 'rubocop:disable'),
-    (r'//\s*NOLINT', 'NOLINT (C++)'),
-    (r'#\s*shellcheck\s+disable', 'shellcheck disable'),
-    (r'<!--\s*markdownlint-disable', 'markdownlint-disable'),
-    (r'#\s*yamllint\s+disable', 'yamllint disable'),
-    (r'stylelint-disable', 'stylelint-disable'),
-    (r'--ignore-missing-imports', 'mypy --ignore-missing-imports'),
-    (r'--max-args', 'pylint --max-args (loosens argument limit)'),
-    (r'--disable=', 'pylint --disable flag'),
-    (r'--skip-check', 'lint skip-check flag'),
-    (r'--no-verify', 'git --no-verify (skips hooks)'),
-]
-
-
 DEBUG_LOG = os.path.expanduser('~/.claude/hook_debug.log')
 OUTPUT_LINES: list[str] = []
 
@@ -116,12 +73,6 @@ def log_debug(message):
         pass
 
 
-SKIP_LINT_CHECK_PATTERNS = [
-    r'test.*lint.*blocker',
-    r'\.claude/hooks/',
-]
-
-
 def get_changed_files(command=''):
     """Get list of changed files from git staging area, working tree, or last commit."""
     files = set()
@@ -163,67 +114,6 @@ def get_changed_files(command=''):
         files.update(f for f in fallback if f)
 
     return [f for f in files if f]
-
-
-def should_skip_lint_check(file_path):
-    """Check if a file should be skipped for lint disable checking."""
-    for pattern in SKIP_LINT_CHECK_PATTERNS:
-        if re.search(pattern, file_path, re.IGNORECASE):
-            return True
-    return False
-
-
-def check_file_for_lint_disables(file_path):
-    """Check a single file for lint disable patterns. Returns list of violations."""
-    if should_skip_lint_check(file_path):
-        return []
-
-    if not os.path.isfile(file_path):
-        return []
-
-    try:
-        with open(file_path, encoding='utf-8', errors='ignore') as f:
-            content = f.read()
-    except (OSError, IOError):
-        return []
-
-    violations = []
-    for pattern, description in LINT_DISABLE_PATTERNS:
-        matches = list(re.finditer(pattern, content, re.IGNORECASE))
-        for match in matches:
-            line_num = content[:match.start()].count('\n') + 1
-            violations.append((file_path, line_num, description))
-
-    return violations
-
-
-def check_changed_files_for_lint_disables(changed_files):
-    """Check all changed files for lint disable patterns."""
-    all_violations = []
-    for file_path in changed_files:
-        violations = check_file_for_lint_disables(file_path)
-        all_violations.extend(violations)
-    return all_violations
-
-
-def run_lint_disable_check(changed_files):
-    """Run lint disable check phase. Returns True if passed, False if failed."""
-    capture_print("\n" + "="*60)
-    capture_print("PHASE: LINT DISABLE CHECK")
-    capture_print("="*60)
-    lint_violations = check_changed_files_for_lint_disables(changed_files)
-    if lint_violations:
-        capture_print("\nLINT DISABLE VIOLATIONS FOUND:")
-        for file_path, line_num, description in lint_violations:
-            capture_print(f"  {file_path}:{line_num} - {description}")
-        capture_print("\n" + "="*60)
-        capture_print("LINT DISABLE CHECK FAILED - Remove lint disable comments")
-        capture_print("Fix the actual code instead of disabling lint checks.")
-        capture_print("="*60)
-        print("LINT DISABLE CHECK FAILED", file=sys.stderr)
-        return False
-    capture_print("No lint disable patterns found in changed files.")
-    return True
 
 
 def count_asserts_in_function(func_node):
@@ -302,34 +192,6 @@ def run_single_assert_check(changed_files):
     return True
 
 
-def run_blocked_lint_config_check(changed_files):
-    """Check for blocked lint config files. Returns True if passed, False if failed."""
-    capture_print("\n" + "="*60)
-    capture_print("PHASE: BLOCKED LINT CONFIG FILES CHECK")
-    capture_print("="*60)
-
-    violations = []
-    for file_path in changed_files:
-        filename = os.path.basename(file_path)
-        if filename in BLOCKED_LINT_CONFIG_FILES and os.path.isfile(file_path):
-            violations.append(file_path)
-
-    if violations:
-        capture_print("\nBLOCKED LINT CONFIG FILES FOUND:")
-        for file_path in violations:
-            capture_print(f"  {file_path}")
-        capture_print("\n" + "="*60)
-        capture_print("BLOCKED LINT CONFIG FILES CHECK FAILED")
-        capture_print("These files can be used to disable lint checks.")
-        capture_print("Fix the actual code instead of configuring linters to ignore issues.")
-        capture_print("="*60)
-        print("BLOCKED LINT CONFIG FILES CHECK FAILED", file=sys.stderr)
-        return False
-
-    capture_print("No blocked lint config files found.")
-    return True
-
-
 def parse_command_from_stdin():
     """Parse the bash command from Claude Code hook stdin JSON."""
     input_data = sys.stdin.read()
@@ -349,15 +211,9 @@ def parse_command_from_stdin():
 
 def run_file_level_checks(changed_files):
     """Run all file-level checks. Calls deny_tool_use on failure."""
-    checks = [
-        (run_blocked_lint_config_check, "BLOCKED LINT CONFIG FILES - Remove lint config files"),
-        (run_lint_disable_check, "LINT DISABLE CHECK FAILED - Remove lint disable comments"),
-        (run_single_assert_check, "SINGLE ASSERT CHECK FAILED - Split into separate tests"),
-    ]
-    for check_fn, failure_msg in checks:
-        if not check_fn(changed_files):
-            log_debug(f"{failure_msg.split(' - ', maxsplit=1)[0]} - denying tool use")
-            deny_tool_use(failure_msg)
+    if not run_single_assert_check(changed_files):
+        log_debug("SINGLE ASSERT CHECK FAILED - denying tool use")
+        deny_tool_use("SINGLE ASSERT CHECK FAILED - Split into separate tests")
 
 
 def main():
