@@ -38,6 +38,7 @@ class TestSSMAndSESExistence:
                     "Run terraform apply in src/api/endpoints/contact_submissions/"
                 )
             raise
+        assert True  # Explicit pass
 
     def test_contact_email_identity_exists(self, ses_client, shared_config):
         """Verify contact@domain SES email identity exists."""

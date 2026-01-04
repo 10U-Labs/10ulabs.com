@@ -333,7 +333,7 @@ def test_lambda_handler_routes_cloudwatch_alarm_events(circuit_breaker_remediati
     """Test lambda handler routes cloudwatch alarm events."""
     with _patched_remediation_env(_base_env()):
         response = circuit_breaker_remediation.lambda_handler(_create_alarm_event(), lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_lambda_handler_handles_unsupported_event_types(
@@ -344,7 +344,7 @@ def test_lambda_handler_handles_unsupported_event_types(
     event = {'source': 'aws.ec2', 'detail-type': 'EC2 Instance State-change Notification'}
     with patch('boto3.client'):
         response = circuit_breaker_remediation.lambda_handler(event, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_lambda_handler_returns_result_for_valid_events(

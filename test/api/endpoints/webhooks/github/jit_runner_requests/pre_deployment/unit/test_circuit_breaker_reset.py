@@ -273,7 +273,7 @@ class TestLambdaHandlerGetStatus:
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
         )
-        assert_response_status(response, 200)
+        assert response['statusCode'] == 200
 
     def test_02_returns_503_when_unhealthy(
         self, circuit_breaker_reset, lambda_context, cb_status_mock_factory
@@ -286,7 +286,7 @@ class TestLambdaHandlerGetStatus:
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
         )
-        assert_response_status(response, 503)
+        assert response['statusCode'] == 503
 
     def test_03_includes_cors_headers(
         self, circuit_breaker_reset, lambda_context, cb_status_mock_factory
@@ -312,7 +312,7 @@ class TestLambdaHandlerPostReset:
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
         )
-        assert_response_status(response, 200)
+        assert response['statusCode'] == 200
 
     def test_02_returns_success_true(self, circuit_breaker_reset, lambda_context):
         """Test lambda handler returns success true on reset."""
@@ -347,7 +347,7 @@ class TestLambdaHandlerPostReset:
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
         )
-        assert_response_status(response, 500)
+        assert response['statusCode'] == 500
 
 
 class TestLambdaHandlerPostDirectPath:
@@ -362,7 +362,7 @@ class TestLambdaHandlerPostDirectPath:
         response = _invoke_handler(
             circuit_breaker_reset, event, lambda_context, mock_dynamodb, mock_lambda
         )
-        assert_response_status(response, 200)
+        assert response['statusCode'] == 200
 
     def test_02_returns_success_on_direct_path(
         self, circuit_breaker_reset, lambda_context
@@ -402,7 +402,7 @@ class TestLambdaHandlerMethodNotAllowed:
             'STATE_TABLE_NAME': 'test-table'
         }):
             response = circuit_breaker_reset.lambda_handler(event, lambda_context)
-        assert_response_status(response, 405)
+        assert response['statusCode'] == 405
 
     def test_02_includes_error_message(self, circuit_breaker_reset, lambda_context):
         """Test lambda handler includes error message for 405."""

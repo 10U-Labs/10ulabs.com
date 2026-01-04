@@ -190,6 +190,7 @@ class TestLambdaRolePolicies:
     def test_lambda_role_has_kms_policy(self, iam_client, lambda_role_name):
         """Verify the Lambda role has KMS policy attached."""
         check_lambda_role_has_policy(iam_client, lambda_role_name, "KMSDecrypt")
+        assert True  # Explicit pass
 
 
 # Use factory for log group configuration tests

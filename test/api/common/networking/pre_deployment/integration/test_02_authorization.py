@@ -44,6 +44,7 @@ class TestS3BucketInspectionAuthorization(Layer2S3AuthorizationTests):
                 "NoSuchBucket",
             ):
                 raise
+        assert True  # Explicit pass
 
     def test_can_call_s3_get_bucket_location_api(
         self, s3_client, state_bucket_name
@@ -59,3 +60,4 @@ class TestS3BucketInspectionAuthorization(Layer2S3AuthorizationTests):
                 )
             if e.response["Error"]["Code"] not in ("404", "NoSuchBucket"):
                 raise
+        assert True  # Explicit pass

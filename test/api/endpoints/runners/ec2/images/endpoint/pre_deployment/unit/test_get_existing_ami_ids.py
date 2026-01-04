@@ -35,6 +35,7 @@ class TestGetExistingAmiIdsSuccess:
         cleanup.get_existing_ami_ids(mock_ec2_client)
 
         mock_ec2_client.describe_images.assert_called_once_with(Owners=['self'])
+        assert True  # Explicit pass
 
     def test_returns_empty_set_when_no_amis(self, cleanup, mock_ec2_client):
         """Test that an empty set is returned when no AMIs are found."""

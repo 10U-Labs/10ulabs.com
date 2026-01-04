@@ -21,6 +21,7 @@ def test_lambda_package_includes_runner_labels(lambda_client, lambda_function_na
     response = lambda_client.get_function(FunctionName=lambda_function_name)
     region = response['Configuration']['FunctionArn'].split(':')[3]
     assert_lambda_package_includes_file(lambda_function_name, "runner_labels.py", region)
+    assert True  # Explicit pass
 
 
 def test_lambda_kms_key_allows_role(
@@ -50,6 +51,7 @@ def test_lambda_kms_key_allows_role(
                 f"Add the Lambda execution role to the key policy or use a "
                 f"customer-managed key with appropriate permissions."
             )
+    assert True  # Explicit pass
 
 
 def _get_lambda_kms_key_arn(lambda_client, kms_client, lambda_function_name: str) -> str:

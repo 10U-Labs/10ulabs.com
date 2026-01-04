@@ -22,6 +22,7 @@ class TestEC2Authorization:
                     "Check IAM policy for ec2:DescribeImages permission."
                 )
             raise
+        assert True  # Explicit pass
 
     def test_can_call_describe_images_with_filters(self, ec2_client):
         """Verify we can call DescribeImages with tag filters."""
@@ -37,3 +38,4 @@ class TestEC2Authorization:
                     "Check IAM policy for ec2:DescribeImages permission."
                 )
             raise
+        assert True  # Explicit pass

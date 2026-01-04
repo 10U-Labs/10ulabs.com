@@ -28,6 +28,7 @@ class TestS3StateCapabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTe
     def test_can_read_state_file(self, s3_client, state_bucket_name):
         """Verify we can read the api_common_routing state file."""
         check_state_file_readable(s3_client, state_bucket_name, "api/terraform.tfstate")
+        assert True  # Explicit pass
 
 
 class TestCentralLogsBucketCapabilities:
@@ -57,6 +58,7 @@ class TestCentralLogsBucketCapabilities:
                 s3_client.delete_object(Bucket=central_logs_bucket_name, Key=test_key)
             except ClientError:
                 pass
+        assert True  # Explicit pass
 
     def test_can_delete_from_central_logs_bucket(
         self, s3_client, central_logs_bucket_name
@@ -81,3 +83,4 @@ class TestCentralLogsBucketCapabilities:
             raise
         finally:
             s3_client.delete_object(Bucket=central_logs_bucket_name, Key=test_key)
+        assert True  # Explicit pass

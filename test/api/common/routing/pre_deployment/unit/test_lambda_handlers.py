@@ -1,11 +1,6 @@
 """Tests for Lambda handler functions."""
 
-from lambda_response import (
-    assert_cors_headers,
-    assert_json_content_type,
-    assert_response_status,
-    parse_response_body,
-)
+import json
 
 
 def test_lambda_handler_catchall_returns_404_for_unknown_path(
@@ -13,7 +8,7 @@ def test_lambda_handler_catchall_returns_404_for_unknown_path(
 ):
     """Verify that catchall handler returns 404 for unknown path."""
     response = catchall_handler.handler(catchall_unknown_event, lambda_context)
-    assert_response_status(response, 404)
+    assert response['statusCode'] == 404
 
 
 def test_lambda_handler_catchall_returns_json_content_type(
@@ -21,7 +16,7 @@ def test_lambda_handler_catchall_returns_json_content_type(
 ):
     """Verify that catchall handler returns JSON content type."""
     response = catchall_handler.handler(catchall_unknown_event, lambda_context)
-    assert_json_content_type(response)
+    assert response['headers']['Content-Type'].startswith('application/json')
 
 
 def test_lambda_handler_catchall_returns_cors_header(
@@ -29,7 +24,7 @@ def test_lambda_handler_catchall_returns_cors_header(
 ):
     """Verify that catchall handler returns CORS headers."""
     response = catchall_handler.handler(catchall_unknown_event, lambda_context)
-    assert_cors_headers(response)
+    assert 'Access-Control-Allow-Origin' in response['headers']
 
 
 def test_lambda_handler_catchall_body_contains_error_message(
@@ -37,5 +32,5 @@ def test_lambda_handler_catchall_body_contains_error_message(
 ):
     """Verify that catchall handler body contains error message."""
     response = catchall_handler.handler(catchall_unknown_event, lambda_context)
-    body = parse_response_body(response)
+    body = json.loads(response['body'])
     assert 'error' in body

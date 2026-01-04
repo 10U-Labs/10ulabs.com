@@ -55,6 +55,7 @@ class TestListEcrImages:
             repositoryName='test-repo',
             filter={'tagStatus': 'TAGGED'}
         )
+        assert True  # Explicit pass
 
     def test_skips_images_without_tags_count_zero(self, mock_ecr_client):
         """Test that count is zero when images have no tags."""
@@ -188,6 +189,7 @@ class TestGetEcrImageByDigest:
             repositoryName='test-repo',
             imageIds=[{'imageDigest': 'sha256:abc123'}]
         )
+        assert True  # Explicit pass
 
     def test_returns_error_for_not_found_success_false(self, image_not_found_result):
         """Test that not found returns success False."""
@@ -257,6 +259,7 @@ class TestDeleteEcrImage:
             repositoryName='test-repo',
             imageIds=[{'imageDigest': 'sha256:abc123'}]
         )
+        assert True  # Explicit pass
 
     def test_delete_error_returns_false(self, delete_image_error_result):
         """Test that ClientError returns success=False."""

@@ -20,6 +20,7 @@ def test_lambda_handler_uses_correct_crawler_name(crawler_module):
     module, glue_client = crawler_module
     module.lambda_handler({}, None)
     glue_client.start_crawler.assert_called_with(Name='test-crawler')
+    assert True  # Explicit pass
 
 
 def test_lambda_handler_returns_crawler_name(crawler_module):

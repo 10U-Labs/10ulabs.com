@@ -24,6 +24,7 @@ class TestLambdaExistence:
                     f"Lambda function '{handler_function_name}' does not exist"
                 )
             raise
+        assert True  # Explicit pass
 
     def test_export_lambda_exists(self, lambda_client, export_function_name):
         """Verify rack designer export Lambda function exists."""
@@ -35,6 +36,7 @@ class TestLambdaExistence:
                     f"Lambda function '{export_function_name}' does not exist"
                 )
             raise
+        assert True  # Explicit pass
 
     def test_crawler_trigger_lambda_exists(
         self, lambda_client, crawler_trigger_function_name
@@ -48,6 +50,7 @@ class TestLambdaExistence:
                     f"Lambda function '{crawler_trigger_function_name}' does not exist"
                 )
             raise
+        assert True  # Explicit pass
 
 
 class TestIAMRoleExistence:
@@ -61,6 +64,7 @@ class TestIAMRoleExistence:
             if e.response["Error"]["Code"] == "NoSuchEntity":
                 pytest.fail(f"IAM role '{handler_role_name}' does not exist")
             raise
+        assert True  # Explicit pass
 
     def test_export_iam_role_exists(self, iam_client, export_role_name):
         """Verify rack designer export IAM role exists."""
@@ -70,6 +74,7 @@ class TestIAMRoleExistence:
             if e.response["Error"]["Code"] == "NoSuchEntity":
                 pytest.fail(f"IAM role '{export_role_name}' does not exist")
             raise
+        assert True  # Explicit pass
 
     def test_crawler_trigger_iam_role_exists(
         self, iam_client, crawler_trigger_role_name
@@ -81,6 +86,7 @@ class TestIAMRoleExistence:
             if e.response["Error"]["Code"] == "NoSuchEntity":
                 pytest.fail(f"IAM role '{crawler_trigger_role_name}' does not exist")
             raise
+        assert True  # Explicit pass
 
     def test_glue_crawler_iam_role_exists(self, iam_client, glue_crawler_role_name):
         """Verify rack designer Glue crawler IAM role exists."""
@@ -90,6 +96,7 @@ class TestIAMRoleExistence:
             if e.response["Error"]["Code"] == "NoSuchEntity":
                 pytest.fail(f"IAM role '{glue_crawler_role_name}' does not exist")
             raise
+        assert True  # Explicit pass
 
     def test_scheduler_iam_role_exists(self, iam_client, scheduler_role_name):
         """Verify rack designer scheduler IAM role exists."""
@@ -99,6 +106,7 @@ class TestIAMRoleExistence:
             if e.response["Error"]["Code"] == "NoSuchEntity":
                 pytest.fail(f"IAM role '{scheduler_role_name}' does not exist")
             raise
+        assert True  # Explicit pass
 
 
 class TestDynamoDBAndCloudWatchExistence:
@@ -116,6 +124,7 @@ class TestDynamoDBAndCloudWatchExistence:
                     f"DynamoDB table '{configurations_table_name}' does not exist"
                 )
             raise
+        assert True  # Explicit pass
 
     def test_events_table_exists(self, dynamodb_client, events_table_name):
         """Verify rack designer events DynamoDB table exists."""
@@ -125,6 +134,7 @@ class TestDynamoDBAndCloudWatchExistence:
             if e.response["Error"]["Code"] == "ResourceNotFoundException":
                 pytest.fail(f"DynamoDB table '{events_table_name}' does not exist")
             raise
+        assert True  # Explicit pass
 
     def test_handler_log_group_exists(self, handler_log_group):
         """Verify rack designer handler CloudWatch log group exists."""

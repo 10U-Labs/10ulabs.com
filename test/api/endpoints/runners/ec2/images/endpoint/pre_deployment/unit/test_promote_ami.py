@@ -50,6 +50,7 @@ class TestPromoteAmi:
                 Resources=['ami-123'],
                 Tags=[{'Key': 'stable', 'Value': 'true'}]
             )
+        assert True  # Explicit pass
 
     def test_successful_ami_promotion_returns_zero(self, promote_ami):
         """Test that successful AMI promotion returns exit code 0."""

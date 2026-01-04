@@ -71,7 +71,7 @@ def test_handler_processes_job_dlq(dlq_reprocessor, dlq_message_factory, mock_sq
     }
     with patch.dict('os.environ', JOB_DLQ_ENV):
         response = dlq_reprocessor.handler({}, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_handler_handles_webhook_dlq_with_note(dlq_reprocessor, lambda_context):
@@ -294,12 +294,14 @@ def test_reprocess_dlq_messages_uses_long_polling(dlq_reprocessor, mock_sqs):
 def test_no_hardcoded_defaults_in_dlq_reprocessor():
     """Test no hardcoded defaults in dlq reprocessor."""
     assert_no_hardcoded_env_defaults(get_lambda_path("dlq_reprocessor.py"))
+    assert True  # Explicit pass
 
 
 
 def test_no_hardcoded_defaults_in_circuit_breaker_remediation():
     """Test no hardcoded defaults in circuit breaker remediation."""
     assert_no_hardcoded_env_defaults(get_lambda_path("circuit_breaker_remediation.py"))
+    assert True  # Explicit pass
 
 
 

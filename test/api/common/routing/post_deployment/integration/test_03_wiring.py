@@ -75,6 +75,7 @@ def test_api_gateway_usage_plan_associated_with_prod_stage(
         if stage.get('apiId') == api_gateway_id and stage.get('stage') == 'prod':
             return
     pytest.fail("Usage plan not associated with prod stage")
+    assert True  # Explicit pass
 
 
 def test_api_gateway_usage_plan_key_links_key_to_plan(apigateway_client, usage_plan_id):

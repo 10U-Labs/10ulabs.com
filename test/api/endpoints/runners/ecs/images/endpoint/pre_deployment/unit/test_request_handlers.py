@@ -31,6 +31,7 @@ class TestHandlePostRequest:
         handler.handle_post_request(event, mock_handler)
 
         mock_handler.assert_called_with({'key': 'value'})
+        assert True  # Explicit pass
 
     def test_returns_success_response(self):
         """Test that success response is returned."""

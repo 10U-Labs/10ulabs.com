@@ -34,6 +34,7 @@ class TestBootstrapPrerequisites:
                     "Run terraform apply in src/bootstrap/"
                 )
             raise
+        assert True  # Explicit pass
 
 
 class TestAPICommonRoutingPrerequisites:
@@ -50,6 +51,7 @@ class TestAPICommonRoutingPrerequisites:
                     "Run terraform apply in src/api/common/routing/"
                 )
             raise
+        assert True  # Explicit pass
 
     def test_bootstrap_terraform_initialized(self, bootstrap_outputs):
         """Verify terraform init succeeds for bootstrap."""

@@ -45,6 +45,7 @@ class TestCleanupLaunchTemplatesCallsDeleteLaunchTemplate:
         cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.delete_launch_template.assert_called_once_with(LaunchTemplateId='lt-123')
+        assert True  # Explicit pass
 
     def test_calls_delete_for_multiple_launch_templates(self, cleanup, mock_ec2_client):
         """Test that delete is called for multiple launch templates."""
@@ -74,6 +75,7 @@ class TestCleanupLaunchTemplatesDryRun:
         cleanup.cleanup_launch_templates(mock_ec2_client, True, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.delete_launch_template.assert_not_called()
+        assert True  # Explicit pass
 
     def test_dry_run_still_returns_count(self, cleanup, mock_ec2_client):
         """Test that dry run still returns count of launch templates."""
@@ -177,6 +179,7 @@ class TestCleanupLaunchTemplatesExcludeTags:
         cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, exclude_tags)
 
         mock_ec2_client.delete_launch_template.assert_not_called()
+        assert True  # Explicit pass
 
     def test_deletes_launch_template_without_excluded_tag(self, cleanup, mock_ec2_client):
         """Test that cleanup deletes launch template without excluded tag."""

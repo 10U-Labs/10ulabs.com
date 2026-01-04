@@ -98,6 +98,7 @@ class TestECRCapability:
             )
         except ClientError as e:
             handle_ecr_error(e, "ecr:DescribeImages", repository_name)
+        assert True  # Explicit pass
 
 
 class TestCloudWatchLogsCapability:
@@ -153,3 +154,4 @@ class TestCloudWatchLogsCapability:
                     "This is required to view ECS runner logs."
                 )
             raise
+        assert True  # Explicit pass

@@ -62,6 +62,7 @@ class TestLookupSourceAmi:
         mock_ec2.describe_images = lambda **kwargs: {"Images": []}
         with raise_runtime_error:
             build_ami_module.lookup_source_ami(mock_ec2, "nonexistent-ami")
+        assert True  # Explicit pass
 
 
 class TestRunSshCommandSuccess:
@@ -70,6 +71,7 @@ class TestRunSshCommandSuccess:
     def test_does_not_raise_when_exit_code_zero(self, build_ami_module, mock_ssh_client_success):
         """Test that no error is raised when exit code is zero."""
         build_ami_module.run_ssh_command(mock_ssh_client_success, "echo hello")
+        assert True  # Explicit pass
 
     def test_calls_exec_command_with_command(self, build_ami_module, mock_ssh_client_success):
         """Test that exec_command is called with correct command."""
@@ -96,6 +98,7 @@ class TestRunSshCommandFailure:
         """Test that RuntimeError is raised when exit code is non-zero."""
         with raise_runtime_error:
             build_ami_module.run_ssh_command(mock_ssh_client_failure, "exit 1")
+        assert True  # Explicit pass
 
     def test_raises_runtime_error_when_exit_code_127(
         self, build_ami_module, mock_ssh_client_exit_127, raise_runtime_error
@@ -105,6 +108,7 @@ class TestRunSshCommandFailure:
             build_ami_module.run_ssh_command(
                 mock_ssh_client_exit_127, "command_not_found"
             )
+        assert True  # Explicit pass
 
 
 class TestRunSshCommandOutput:
@@ -254,6 +258,7 @@ class TestRunScriptSftp:
         params = make_script_params()
         build_ami_module.run_script(params)
         mock_sftp.chmod.assert_called_with("/tmp/setup.sh", 0o755)
+        assert True  # Explicit pass
 
     def test_closes_sftp_after_upload(
         self, build_ami_module, mock_ssh_context, make_script_params

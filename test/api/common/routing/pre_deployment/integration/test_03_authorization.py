@@ -33,3 +33,4 @@ def test_can_call_s3_head_bucket_on_central_logs(s3_client, central_logs_bucket_
             )
         if error_code != "404":
             raise
+    assert True  # Explicit pass

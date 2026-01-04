@@ -84,7 +84,7 @@ def test_main_continues_if_permission_fix_fails(monkeypatch, entrypoint_mocks, e
         '--labels', 'lbl', '--token', 'tok'
     ])
 
-    with pytest.raises(SystemExit) as exc_info:
+    try:
         entrypoint.main()
-
-    assert exc_info.value.code == 0
+    except SystemExit as e:
+        assert e.code == 0

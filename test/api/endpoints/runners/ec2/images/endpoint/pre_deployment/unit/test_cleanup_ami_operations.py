@@ -32,13 +32,11 @@ class TestFindAmisByNamePrefix:
 
         result = cleanup.find_amis_by_name_prefix(mock_ec2_client, "github-runner")
 
-        assert 'ami-1' in result
-        assert 'ami-2' in result
         mock_ec2_client.describe_images.assert_called_once()
         call_args = mock_ec2_client.describe_images.call_args
         filters = call_args[1]['Filters']
         name_filter = [f for f in filters if f['Name'] == 'name'][0]
-        assert name_filter['Values'] == ['github-runner*']
+        assert 'ami-1' in result and 'ami-2' in result and name_filter['Values'] == ['github-runner*']
 
     def test_handles_describe_error(self, cleanup, mock_ec2_client):
         """Verify handles describe_images error gracefully."""

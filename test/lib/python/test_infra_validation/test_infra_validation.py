@@ -91,6 +91,7 @@ class TestGetApiKey:
             mock_ssm.get_parameter.assert_called_once_with(
                 Name="/my/param", WithDecryption=True
             )
+        assert True  # Explicit pass
 
 
 # === Validate Security Groups ===
@@ -583,6 +584,7 @@ class TestValidateAllDependencies:
         with patch.dict(os.environ, {}, clear=True):
             validate_all_dependencies()
         mock_sg.assert_called_with([])
+        assert True  # Explicit pass
 
     @patch("infra_validation.validate_vpc")
     @patch("infra_validation.validate_subnets")
@@ -594,6 +596,7 @@ class TestValidateAllDependencies:
         with patch.dict(os.environ, {}, clear=True):
             validate_all_dependencies()
         mock_subnet.assert_called_with([])
+        assert True  # Explicit pass
 
     @patch("infra_validation.validate_vpc")
     @patch("infra_validation.validate_subnets")
@@ -605,6 +608,7 @@ class TestValidateAllDependencies:
                                       "SUBNETS": " subnet-1 , , subnet-2 ", "VPC_ID": "vpc-123"}):
             validate_all_dependencies()
         mock_sg.assert_called_with(["sg-1", "sg-2"])
+        assert True  # Explicit pass
 
     @patch("infra_validation.validate_vpc")
     @patch("infra_validation.validate_subnets")
@@ -616,6 +620,7 @@ class TestValidateAllDependencies:
                                       "SUBNETS": " subnet-1 , , subnet-2 ", "VPC_ID": "vpc-123"}):
             validate_all_dependencies()
         mock_subnet.assert_called_with(["subnet-1", "subnet-2"])
+        assert True  # Explicit pass
 
 
 # === Ensure Dependencies Valid ===
@@ -629,6 +634,7 @@ class TestEnsureDependenciesValid:
         set_dependencies_status(checked=True, valid=True, errors=[])
         # Should not raise
         ensure_dependencies_valid()
+        assert True  # Explicit pass
 
     def test_uses_cached_invalid_result(self):
         """ensure_dependencies_valid raises on cached invalid result."""

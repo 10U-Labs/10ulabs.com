@@ -81,6 +81,7 @@ def test_fargate_task_fixture(test_context, ecr_image_count, ecs_context, config
         "run_id": test_context["github_run_id"]
     }
     stop_task(ecs_context["client"], ecs_context["cluster_name"], task_arn)
+    assert True  # Explicit pass
 
 
 def test_ecs_runner_post_returns_response(test_fargate_task, stable_ecr_image_exists):

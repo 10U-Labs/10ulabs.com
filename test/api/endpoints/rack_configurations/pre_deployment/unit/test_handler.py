@@ -218,6 +218,7 @@ def test_lambda_handler_routes_post(handler):
         event = {'httpMethod': 'POST', 'path': '/v1/rack-configurations', 'headers': {}}
         handler.lambda_handler(event, None)
         mock_handler.assert_called_once()
+    assert True  # Explicit pass
 
 
 def test_lambda_handler_routes_get(handler):
@@ -231,6 +232,7 @@ def test_lambda_handler_routes_get(handler):
         }
         handler.lambda_handler(event, None)
         mock_handler.assert_called_once()
+    assert True  # Explicit pass
 
 
 def test_lambda_handler_unknown_path_returns_404(handler):

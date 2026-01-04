@@ -78,8 +78,7 @@ class TestCorsPreflightLatest:
     def test_options_has_cors_headers(self, latest_endpoint):
         """Verify OPTIONS response has required CORS headers."""
         response = requests.options(latest_endpoint, timeout=10)
-        assert "Access-Control-Allow-Origin" in response.headers
-        assert "Access-Control-Allow-Methods" in response.headers
+        assert "Access-Control-Allow-Origin" in response.headers and "Access-Control-Allow-Methods" in response.headers
 
 
 class TestCorsOnActualRequests:

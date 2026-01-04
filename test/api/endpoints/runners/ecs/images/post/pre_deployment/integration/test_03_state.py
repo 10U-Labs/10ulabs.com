@@ -50,6 +50,7 @@ class TestECRImageState:
                 "This indicates a previous build completed but promotion failed. "
                 "Run the promote_docker_image.py script to fix this state."
             )
+        assert True  # Explicit pass
 
     def test_no_duplicate_stable_digests(self, ecr_client, api_common_ecr_outputs):
         """Verify only one image has the 'stable' tag.
@@ -79,3 +80,4 @@ class TestECRImageState:
                 pytest.skip("Repository does not exist yet")
             else:
                 raise
+        assert True  # Explicit pass

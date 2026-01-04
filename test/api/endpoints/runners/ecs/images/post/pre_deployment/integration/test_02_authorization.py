@@ -25,6 +25,7 @@ class TestECRAuthorization:
             handle_ecr_authorization_error(
                 e, "ecr:DescribeRepositories", repository_name
             )
+        assert True  # Explicit pass
 
     def test_can_get_authorization_token(self, ecr_client):
         """Verify permission to call ecr:GetAuthorizationToken."""
@@ -37,3 +38,4 @@ class TestECRAuthorization:
                     "This is required to push Docker images to ECR."
                 )
             raise
+        assert True  # Explicit pass

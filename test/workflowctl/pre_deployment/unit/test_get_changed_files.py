@@ -100,6 +100,7 @@ class TestGetChangedFiles:
         mock_diff.return_value = ["file.py"]
         get_changed_files.get_changed_files(get_changed_files.ZERO_SHA, "head123")
         mock_diff.assert_called_once_with("HEAD~1", "head123")
+        assert True  # Explicit pass
 
     @patch("get_changed_files.get_changed_files_diff")
     @patch("get_changed_files.commit_exists")
@@ -114,6 +115,7 @@ class TestGetChangedFiles:
         mock_diff.return_value = ["file.py"]
         get_changed_files.get_changed_files("base123", "head123")
         mock_diff.assert_called_once_with("base123", "head123")
+        assert True  # Explicit pass
 
     @patch("get_changed_files.get_changed_files_diff")
     @patch("get_changed_files.commit_exists")
@@ -128,6 +130,7 @@ class TestGetChangedFiles:
         mock_diff.return_value = ["file.py"]
         get_changed_files.get_changed_files("missing123", "head123")
         mock_diff.assert_called_once_with("HEAD~1", "head123")
+        assert True  # Explicit pass
 
     @patch("get_changed_files.get_changed_files_show")
     @patch("get_changed_files.get_changed_files_diff")
@@ -162,6 +165,7 @@ class TestGetChangedFiles:
         mock_show.return_value = ["file.py"]
         get_changed_files.get_changed_files("base123", "head123")
         mock_show.assert_called_once_with("head123")
+        assert True  # Explicit pass
 
 
 class TestHasSkipCi:

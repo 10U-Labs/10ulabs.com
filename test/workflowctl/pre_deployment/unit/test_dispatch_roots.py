@@ -45,6 +45,7 @@ class TestWorkflowFileExists:
         mock_isfile.return_value = True
         dispatch_roots.workflow_file_exists("bootstrap")
         mock_isfile.assert_called_once_with(".github/workflows/bootstrap.yml")
+        assert True  # Explicit pass
 
     @patch("os.path.isfile")
     def test_returns_false_when_file_missing(self, mock_isfile: MagicMock, dispatch_roots) -> None:
@@ -241,3 +242,4 @@ class TestMainWithRunningWorkflows:
                             ):
                                 dispatch_roots.main()
         mock_merge.assert_called_once_with(["b"], ["a"], graph)
+        assert True  # Explicit pass

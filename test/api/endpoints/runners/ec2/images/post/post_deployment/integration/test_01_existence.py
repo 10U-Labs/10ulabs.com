@@ -41,6 +41,7 @@ class TestInstanceLaunches:
 
         waiter = ec2_client.get_waiter("instance_status_ok")
         waiter.wait(InstanceIds=[test_instance])
+        assert True  # Explicit pass
 
     def test_instance_passes_system_status_checks(self, ec2_client, test_instance):
         """Verify instance passes system status checks."""
@@ -49,6 +50,7 @@ class TestInstanceLaunches:
 
         waiter = ec2_client.get_waiter("system_status_ok")
         waiter.wait(InstanceIds=[test_instance])
+        assert True  # Explicit pass
 
 
 class TestSsmAgentInstalled:

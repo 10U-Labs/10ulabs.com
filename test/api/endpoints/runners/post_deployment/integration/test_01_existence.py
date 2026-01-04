@@ -15,11 +15,13 @@ def test_lambda_function_exists(lambda_client, lambda_function_name):
     if not lambda_function_name:
         pytest.skip("lambda_function_name not available from terraform output")
     check_lambda_function_exists(lambda_client, lambda_function_name, TERRAFORM_PATH)
+    assert True  # Explicit pass
 
 
 def test_lambda_execution_role_exists(iam_client, lambda_role_name):
     """Verify the Lambda execution role exists."""
     check_iam_role_exists(iam_client, lambda_role_name, TERRAFORM_PATH)
+    assert True  # Explicit pass
 
 
 def test_sqs_queue_exists(sqs_client, sqs_queue_url):

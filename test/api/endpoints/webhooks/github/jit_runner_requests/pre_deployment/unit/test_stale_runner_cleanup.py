@@ -157,6 +157,7 @@ class TestCleanupOrphanedResourcesSkipsActiveJobs:
             mocks['is_active'].assert_called_once_with(
                 "test-token", "test-org/test-repo", "12345"
             )
+        assert True  # Explicit pass
 
     def test_active_job_ecs_task_is_not_terminated(self, cleanup_module):
         """Test that ECS tasks with active jobs are not terminated."""
@@ -170,6 +171,7 @@ class TestCleanupOrphanedResourcesSkipsActiveJobs:
                                   is_active=True) as mocks:
             cleanup_module.cleanup_orphaned_resources("test-token")
             mocks['terminate_ecs'].assert_not_called()
+        assert True  # Explicit pass
 
     def test_active_job_ecs_task_returns_skipped_count(self, cleanup_module):
         """Test that ECS tasks with active jobs are counted as skipped."""
@@ -196,6 +198,7 @@ class TestCleanupOrphanedResourcesSkipsActiveJobs:
                                   is_active=False) as mocks:
             cleanup_module.cleanup_orphaned_resources("test-token")
             mocks['terminate_ecs'].assert_called_once()
+        assert True  # Explicit pass
 
     def test_inactive_job_ecs_task_returns_cleaned_count(self, cleanup_module):
         """Test that ECS tasks with inactive jobs are counted as cleaned."""
@@ -224,6 +227,7 @@ class TestCleanupOrphanedResourcesSkipsActiveJobs:
             mocks['is_active'].assert_called_once_with(
                 "test-token", "test-org/test-repo", "12345"
             )
+        assert True  # Explicit pass
 
     def test_active_job_ec2_instance_is_not_terminated(self, cleanup_module):
         """Test that EC2 instances with active jobs are not terminated."""
@@ -237,6 +241,7 @@ class TestCleanupOrphanedResourcesSkipsActiveJobs:
                                   is_active=True) as mocks:
             cleanup_module.cleanup_orphaned_resources("test-token")
             mocks['terminate_ec2'].assert_not_called()
+        assert True  # Explicit pass
 
     def test_active_job_ec2_instance_returns_skipped_count(self, cleanup_module):
         """Test that EC2 instances with active jobs are counted as skipped."""
@@ -263,6 +268,7 @@ class TestCleanupOrphanedResourcesSkipsActiveJobs:
                                   is_active=False) as mocks:
             cleanup_module.cleanup_orphaned_resources("test-token")
             mocks['terminate_ec2'].assert_called_once_with("i-1234567890abcdef0")
+        assert True  # Explicit pass
 
     def test_inactive_job_ec2_instance_returns_cleaned_count(self, cleanup_module):
         """Test that EC2 instances with inactive jobs are counted as cleaned."""

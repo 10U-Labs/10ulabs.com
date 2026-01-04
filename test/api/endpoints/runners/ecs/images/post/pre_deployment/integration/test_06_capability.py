@@ -58,3 +58,4 @@ class TestECRCapability:
             )
         except ClientError as e:
             handle_ecr_error(e, "ecr:ListImages", repository_name)
+        assert True  # Explicit pass

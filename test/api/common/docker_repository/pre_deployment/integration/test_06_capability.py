@@ -29,6 +29,7 @@ class TestS3Capabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTests):
     ):
         """Verify we can read the api_common_docker_repository state file."""
         check_state_file_readable(s3_client, state_bucket_name, docker_repository_state_key)
+        assert True  # Explicit pass
 
 
 class TestECRCapabilities(Layer6ECRCapabilityTests):

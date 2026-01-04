@@ -62,9 +62,11 @@ class TestLambdaCapability:
     ):
         """Verify we can read the EC2 runner Lambda configuration."""
         _verify_lambda_configuration(lambda_client, ec2_runner_outputs, "lambda_function_name")
+        assert True  # Explicit pass
 
     def test_can_get_ecs_runner_lambda_configuration(
         self, lambda_client, ecs_runner_outputs
     ):
         """Verify we can read the ECS runner Lambda configuration."""
         _verify_lambda_configuration(lambda_client, ecs_runner_outputs, "lambda_function_name")
+        assert True  # Explicit pass

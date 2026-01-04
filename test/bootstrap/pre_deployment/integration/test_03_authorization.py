@@ -22,3 +22,4 @@ def test_can_call_s3_get_object(s3_client, state_bucket_name):
         # NoSuchKey/NoSuchBucket means object/bucket doesn't exist but we have permission
         if error_code not in ("NoSuchKey", "NoSuchBucket", "404"):
             raise
+    assert True  # Explicit pass

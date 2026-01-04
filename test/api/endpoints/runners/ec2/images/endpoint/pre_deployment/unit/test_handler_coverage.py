@@ -209,6 +209,7 @@ class TestHandlePostRequest:
         mock_handler = MagicMock(return_value={'result': 'success'})
         handler_module.handle_post_request(event, mock_handler)
         mock_handler.assert_called_once()
+        assert True  # Explicit pass
 
     def test_returns_200_when_handler_succeeds(self, handler_module):
         """Verify returns 200 when handler function succeeds."""
@@ -336,6 +337,7 @@ class TestDeregisterAmi:
         _setup_ami_with_snapshots(mock_ec2)
         handler_module.deregister_ami('ami-test')
         mock_ec2.deregister_image.assert_called_once_with(ImageId='ami-test')
+        assert True  # Explicit pass
 
     def test_deregisters_ami_deletes_both_snapshots(self, handler_module, mock_ec2):
         """Verify both snapshots are deleted."""
@@ -465,6 +467,7 @@ class TestLambdaHandler:
         }
         handler_module.lambda_handler(event, None)
         mock_ec2.describe_images.assert_called()
+        assert True  # Explicit pass
 
     def test_routes_get_latest_to_get_latest_ami_details(
         self, handler_module, mock_ec2
@@ -506,6 +509,7 @@ class TestLambdaHandler:
         _setup_delete_request(mock_ec2)
         _handle_delete_request(handler_module)
         mock_ec2.deregister_image.assert_called_once_with(ImageId='ami-123')
+        assert True  # Explicit pass
 
     def test_returns_404_for_unknown_route(self, handler_module):
         """Verify returns 404 for unknown routes."""

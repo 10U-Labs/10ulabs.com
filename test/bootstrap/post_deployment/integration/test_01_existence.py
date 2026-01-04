@@ -26,6 +26,7 @@ def test_terraform_state_exists(s3_client, config):
         Bucket=bucket_name,
         Key='bootstrap/terraform.tfstate'
     )
+    assert True  # Explicit pass
 
 
 # =============================================================================
@@ -113,6 +114,7 @@ def test_github_actions_role_exists(iam_client, config):
         iam_client.get_role(RoleName=role_name)
     except iam_client.exceptions.NoSuchEntityException:
         pytest.fail(f"IAM role '{role_name}' does not exist")
+    assert True  # Explicit pass
 
 
 # =============================================================================

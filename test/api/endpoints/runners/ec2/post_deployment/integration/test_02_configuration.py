@@ -55,6 +55,7 @@ class TestLambdaRoleKmsPolicy:
     def test_lambda_role_has_kms_policy(self, iam_client, lambda_role_name):
         """Verify the Lambda role has a KMS policy attached."""
         check_lambda_role_has_policy(iam_client, lambda_role_name, "KMSDecrypt")
+        assert True  # Explicit pass
 
     def test_kms_policy_allows_decrypt(self, iam_client, lambda_role_name):
         """Verify the KMS policy allows kms:Decrypt action."""

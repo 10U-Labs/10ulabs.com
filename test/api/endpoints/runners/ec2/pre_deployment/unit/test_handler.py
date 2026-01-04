@@ -24,7 +24,7 @@ def test_lambda_handler_ec2_runner_post_with_missing_job_id_returns_400(
     del body['job_id']
     event['body'] = json.dumps(body)
     response = ec2_runner_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 400)
+    assert response['statusCode'] == 400
 
 
 def test_lambda_handler_ec2_runner_post_with_missing_repo_returns_400(
@@ -36,7 +36,7 @@ def test_lambda_handler_ec2_runner_post_with_missing_repo_returns_400(
     del body['github_repo']
     event['body'] = json.dumps(body)
     response = ec2_runner_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 400)
+    assert response['statusCode'] == 400
 
 
 @pytest.mark.usefixtures('mock_boto_client')
@@ -46,7 +46,7 @@ def test_lambda_handler_ec2_runner_post_returns_json_content_type(
     """Test that POST returns JSON content type."""
     event = ec2_runner_post_event_factory(job_id=12345, github_repo='test-org/test-repo')
     response = ec2_runner_handler.lambda_handler(event, lambda_context)
-    assert_json_content_type(response)
+    assert response['headers']['Content-Type'].startswith('application/json')
 
 
 def test_get_ec2_runner_status_returns_success_with_no_instances(ec2_runner_handler):
@@ -117,7 +117,7 @@ def test_handle_ec2_runner_get_returns_200_status(
     with patch.object(ec2_runner_handler, 'get_ec2_runner_status') as mock_status:
         mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
         response = ec2_runner_handler.lambda_handler(ec2_runner_get_event, lambda_context)
-        assert_response_status(response, 200)
+        assert response['statusCode'] == 200
 
 
 def test_handle_ec2_runner_get_returns_json_content_type(
@@ -127,7 +127,7 @@ def test_handle_ec2_runner_get_returns_json_content_type(
     with patch.object(ec2_runner_handler, 'get_ec2_runner_status') as mock_status:
         mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
         response = ec2_runner_handler.lambda_handler(ec2_runner_get_event, lambda_context)
-        assert_json_content_type(response)
+        assert response['headers']['Content-Type'].startswith('application/json')
 
 
 @patch('boto3.client')
@@ -213,14 +213,14 @@ def test_lambda_handler_options_returns_200(ec2_runner_handler, lambda_context):
     """Test that OPTIONS request returns 200."""
     event = {'path': '/v1/runners/ec2', 'httpMethod': 'OPTIONS', 'headers': {}}
     response = ec2_runner_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_lambda_handler_unknown_path_returns_404(ec2_runner_handler, lambda_context):
     """Test that unknown path returns 404."""
     event = {'path': '/v1/unknown', 'httpMethod': 'GET', 'headers': {}}
     response = ec2_runner_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 404)
+    assert response['statusCode'] == 404
 
 
 def test_test_mode_header_sets_test_mode(ec2_runner_handler, lambda_context):

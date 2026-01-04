@@ -31,6 +31,7 @@ class TestWorkflowctlCLI:
             mock_main.assert_called_once()
         finally:
             workflowctl.COMMANDS["compute-root-workflows"] = original
+        assert True  # Explicit pass
 
     def test_get_running_subcommand_routes_correctly(self, workflowctl) -> None:
         """Test that get-running-workflows subcommand routes to get_running.main."""

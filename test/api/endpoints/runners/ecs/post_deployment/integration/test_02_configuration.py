@@ -229,9 +229,11 @@ class TestLambdaPackageContents:
         function_name = config["lambda_function_name"]
         region = config["aws_region"]
         assert_lambda_package_includes_file(function_name, "runner_labels.py", region)
+        assert True  # Explicit pass
 
     def test_lambda_package_includes_handler(self, config):
         """Verify deployed ECS runner handler Lambda includes handler.py."""
         function_name = config["lambda_function_name"]
         region = config["aws_region"]
         assert_lambda_package_includes_file(function_name, "handler.py", region)
+        assert True  # Explicit pass

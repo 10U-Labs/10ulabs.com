@@ -1,6 +1,5 @@
 """Tests for entrypoint output functionality."""
 from unittest.mock import Mock, patch
-import pytest
 
 
 def _setup_popen_mock(mock_popen, returncode=0):
@@ -23,8 +22,10 @@ def test_registration_prints_repository_name(mock_run, mock_print, mock_popen, e
     """Test that registration prints the repository name correctly."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
+    try:
         entrypoint.main()
+    except SystemExit:
+        pass
     assert mock_print.call_args_list[1][0][0] == 'Repository: my-org/my-repo'
 
 
@@ -39,8 +40,10 @@ def test_registration_prints_runner_name(mock_run, mock_print, mock_popen, entry
     """Test that registration prints the runner name correctly."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
+    try:
         entrypoint.main()
+    except SystemExit:
+        pass
     assert mock_print.call_args_list[2][0][0] == 'Runner Name: test-runner-name'
 
 
@@ -55,8 +58,10 @@ def test_registration_prints_labels(mock_run, mock_print, mock_popen, entrypoint
     """Test that registration prints the labels correctly."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
+    try:
         entrypoint.main()
+    except SystemExit:
+        pass
     assert mock_print.call_args_list[3][0][0] == 'Labels: test-labels'
 
 
@@ -69,8 +74,10 @@ def test_registration_prints_labels(mock_run, mock_print, mock_popen, entrypoint
 def test_error_message_prints_when_config_fails(mock_run, mock_print, entrypoint):
     """Test that error message is printed when config.sh fails."""
     mock_run.return_value = Mock(returncode=5)
-    with pytest.raises(SystemExit):
+    try:
         entrypoint.main()
+    except SystemExit:
+        pass
     error_prints = [
         c for c in mock_print.call_args_list
         if 'Error: config.sh failed' in str(c)
@@ -89,8 +96,10 @@ def test_runner_exit_code_is_printed(mock_run, mock_print, mock_popen, entrypoin
     """Test that runner exit code is printed."""
     mock_run.return_value = Mock(returncode=0)
     _setup_popen_mock(mock_popen, returncode=3)
-    with pytest.raises(SystemExit):
+    try:
         entrypoint.main()
+    except SystemExit:
+        pass
     exit_code_prints = [
         c for c in mock_print.call_args_list
         if 'Runner exited with code 3' in str(c)

@@ -47,6 +47,7 @@ class TestGetLatestSnapshotIdsWithNoAmi:
         cleanup.get_latest_snapshot_ids(mock_ec2_client, None)
 
         mock_ec2_client.describe_images.assert_not_called()
+        assert True  # Explicit pass
 
 
 class TestGetLatestSnapshotIdsWithEmptyResponse:

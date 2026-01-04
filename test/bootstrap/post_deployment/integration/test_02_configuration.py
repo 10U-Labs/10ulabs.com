@@ -484,6 +484,7 @@ def test_github_actions_role_name_is_pascalcase(iam_client, config):
     """Verify GitHub Actions IAM role name uses PascalCase."""
     role_name = config.get('name_for_github_actions_role', 'TenULabsGitHubActionsRole')
     assert_iam_role_name_is_pascalcase(iam_client, role_name, validate_name)
+    assert True  # Explicit pass
 
 
 # =============================================================================

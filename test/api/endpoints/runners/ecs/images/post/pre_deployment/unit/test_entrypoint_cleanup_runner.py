@@ -7,6 +7,7 @@ def test_cleanup_runner_calls_subprocess_run(mock_run, entrypoint):
     """Test that cleanup_runner calls subprocess.run."""
     entrypoint.cleanup_runner('test-token')
     mock_run.assert_called_once()
+    assert True  # Explicit pass
 
 
 @patch('entrypoint.subprocess.run')

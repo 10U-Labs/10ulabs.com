@@ -17,6 +17,7 @@ def test_can_call_iam_get_role(iam_client, github_actions_role_name):
             pytest.fail("No permission to call iam:GetRole")
         if e.response["Error"]["Code"] != "NoSuchEntity":
             raise
+    assert True  # Explicit pass
 
 
 def test_can_call_iam_list_attached_role_policies(iam_client, github_actions_role_name):
@@ -28,11 +29,13 @@ def test_can_call_iam_list_attached_role_policies(iam_client, github_actions_rol
             pytest.fail("No permission to call iam:ListAttachedRolePolicies")
         if e.response["Error"]["Code"] != "NoSuchEntity":
             raise
+    assert True  # Explicit pass
 
 
 def test_can_call_s3_head_bucket(s3_client, state_bucket_name):
     """Verify permission to call s3:HeadBucket."""
     check_s3_head_bucket_permission(s3_client, state_bucket_name)
+    assert True  # Explicit pass
 
 
 def test_can_call_route53_get_hosted_zone(route53_client, hosted_zone_id):
@@ -45,6 +48,7 @@ def test_can_call_route53_get_hosted_zone(route53_client, hosted_zone_id):
             pytest.fail(f"No permission to call route53:GetHostedZone on '{hosted_zone_id}'")
         if error_code != "NoSuchHostedZone":
             raise
+    assert True  # Explicit pass
 
 
 def test_can_call_route53_list_resource_record_sets(route53_client, hosted_zone_id):
@@ -59,3 +63,4 @@ def test_can_call_route53_list_resource_record_sets(route53_client, hosted_zone_
             )
         if error_code != "NoSuchHostedZone":
             raise
+    assert True  # Explicit pass

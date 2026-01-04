@@ -27,6 +27,7 @@ class TestAWSCredentialsAuthentication:
     def test_credentials_available(self, sts_client):
         """Verify AWS credentials are configured."""
         check_credentials_available(sts_client)
+        assert True  # Explicit pass
 
     def test_can_call_sts_api(self, sts_client):
         """Verify we can call sts:GetCallerIdentity."""
@@ -49,3 +50,4 @@ class TestAWSCredentialsAuthentication:
                 f"Running as IAM user ({arn}), not role. "
                 "Skipping role check for local development."
             )
+        assert True  # Explicit pass

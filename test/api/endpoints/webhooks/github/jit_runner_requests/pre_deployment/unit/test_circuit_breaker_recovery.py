@@ -449,7 +449,7 @@ def test_lambda_handler_processes_scheduled_event(circuit_breaker_recovery, lamb
     mock_client = MagicMock()
     mock_client.get_item.return_value = _create_closed_state_item()
     response = _run_handler_with_mock(circuit_breaker_recovery, mock_client, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_lambda_handler_returns_recovery_result(circuit_breaker_recovery, lambda_context):

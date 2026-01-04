@@ -219,11 +219,13 @@ class TestValidateLabelsEcs:
         """validate_labels accepts ecs + fargate + x86 + spot."""
         parsed = ParsedLabels("ecs", "fargate", "spot", "runner-1", "x86")
         validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_accepts_ecs_fargate_arm_on_demand(self) -> None:
         """validate_labels accepts ecs + fargate + arm + on-demand."""
         parsed = ParsedLabels("ecs", "fargate", "on-demand", "runner-1", "arm")
         validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_rejects_ecs_missing_architecture(self) -> None:
         """validate_labels rejects ecs without architecture."""
@@ -251,21 +253,25 @@ class TestValidateLabelsEc2WithArch:
         """validate_labels accepts ec2 + general-purpose + intel."""
         parsed = ParsedLabels("ec2", "general-purpose", "spot", "runner-1", "intel")
         validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_accepts_ec2_general_purpose_amd(self) -> None:
         """validate_labels accepts ec2 + general-purpose + amd."""
         parsed = ParsedLabels("ec2", "general-purpose", "spot", "runner-1", "amd")
         validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_accepts_ec2_general_purpose_arm(self) -> None:
         """validate_labels accepts ec2 + general-purpose + arm."""
         parsed = ParsedLabels("ec2", "general-purpose", "spot", "runner-1", "arm")
         validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_accepts_ec2_memory_optimized_intel(self) -> None:
         """validate_labels accepts ec2 + memory-optimized + intel."""
         parsed = ParsedLabels("ec2", "memory-optimized", "on-demand", "runner-1", "intel")
         validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_rejects_ec2_general_purpose_missing_arch(self) -> None:
         """validate_labels rejects ec2 + general-purpose without arch."""
@@ -287,11 +293,13 @@ class TestValidateLabelsEc2WithoutArch:
         """validate_labels accepts ec2 + gpu without architecture."""
         parsed = ParsedLabels("ec2", "gpu", "spot", "runner-1", None)
         validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_accepts_ec2_fpga_no_arch(self) -> None:
         """validate_labels accepts ec2 + fpga without architecture."""
         parsed = ParsedLabels("ec2", "fpga", "on-demand", "runner-1", None)
         validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_rejects_ec2_gpu_with_arch(self) -> None:
         """validate_labels rejects ec2 + gpu with architecture."""

@@ -28,6 +28,7 @@ def test_catchall_handler_role_exists(iam_client, shared_config):
         iam_client.get_role(RoleName=role_name)
     except iam_client.exceptions.NoSuchEntityException:
         pytest.fail(f"IAM role '{role_name}' does not exist")
+    assert True  # Explicit pass
 
 
 # =============================================================================

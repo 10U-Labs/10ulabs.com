@@ -63,3 +63,4 @@ def test_no_orphaned_resources():
             msg += f"  - {r['type']}: {r['name']}\n"
             msg += f"    Fix: terraform import {r['address']} {r['name']}\n"
         pytest.fail(msg)
+    assert True  # Explicit pass

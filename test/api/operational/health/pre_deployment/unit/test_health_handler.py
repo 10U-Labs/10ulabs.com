@@ -12,7 +12,7 @@ def test_health_handler_returns_200_status_code(
 ):
     """Verify handler returns HTTP 200."""
     response = health_handler.handler(health_get_event, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_health_handler_returns_json_content_type(
@@ -20,7 +20,7 @@ def test_health_handler_returns_json_content_type(
 ):
     """Verify handler returns JSON content type."""
     response = health_handler.handler(health_get_event, lambda_context)
-    assert_json_content_type(response)
+    assert response['headers']['Content-Type'].startswith('application/json')
 
 
 def test_health_handler_returns_cors_header(
@@ -28,7 +28,7 @@ def test_health_handler_returns_cors_header(
 ):
     """Verify handler returns CORS headers."""
     response = health_handler.handler(health_get_event, lambda_context)
-    assert_cors_headers(response)
+    assert 'Access-Control-Allow-Origin' in response['headers']
 
 
 def test_health_handler_body_contains_status(
@@ -89,14 +89,14 @@ def test_handler_returns_404_for_unknown_path(health_handler, lambda_context):
     """Verify handler returns 404 for unknown path."""
     event = {'path': '/unknown', 'httpMethod': 'GET'}
     response = health_handler.handler(event, lambda_context)
-    assert_response_status(response, 404)
+    assert response['statusCode'] == 404
 
 
 def test_handler_returns_404_for_unknown_method(health_handler, lambda_context):
     """Verify handler returns 404 for unknown HTTP method."""
     event = {'path': '/health', 'httpMethod': 'POST'}
     response = health_handler.handler(event, lambda_context)
-    assert_response_status(response, 404)
+    assert response['statusCode'] == 404
 
 
 def test_handler_404_response_contains_error_field(health_handler, lambda_context):

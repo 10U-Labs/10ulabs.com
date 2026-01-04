@@ -29,7 +29,7 @@ def test_echo_handler_returns_200_status_code(
     """Test that echo handler returns 200 status code."""
     event = echo_post_event_factory()
     response = echo_handler.handler(event, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_echo_handler_returns_json_content_type(
@@ -38,7 +38,7 @@ def test_echo_handler_returns_json_content_type(
     """Test that echo handler returns JSON content type."""
     event = echo_post_event_factory()
     response = echo_handler.handler(event, lambda_context)
-    assert_json_content_type(response)
+    assert response['headers']['Content-Type'].startswith('application/json')
 
 
 def test_echo_handler_returns_cors_header(
@@ -47,7 +47,7 @@ def test_echo_handler_returns_cors_header(
     """Test that echo handler includes CORS headers."""
     event = echo_post_event_factory()
     response = echo_handler.handler(event, lambda_context)
-    assert_cors_headers(response)
+    assert 'Access-Control-Allow-Origin' in response['headers']
 
 
 def test_echo_handler_echoes_input_data(
@@ -80,7 +80,7 @@ def test_echo_handler_with_invalid_json_returns_400(
     event = echo_post_event_factory()
     event['body'] = 'not valid json'
     response = echo_handler.handler(event, lambda_context)
-    assert_response_status(response, 400)
+    assert response['statusCode'] == 400
 
 
 def test_echo_handler_body_contains_echo_key(
@@ -98,11 +98,11 @@ def test_echo_handler_options_returns_200(echo_handler, lambda_context):
     """Test that OPTIONS request returns 200."""
     event = {'path': '/diagnostics/echo', 'httpMethod': 'OPTIONS'}
     response = echo_handler.handler(event, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_echo_handler_unknown_route_returns_404(echo_handler, lambda_context):
     """Test that unknown route returns 404."""
     event = {'path': '/v1/unknown', 'httpMethod': 'POST', 'body': '{}'}
     response = echo_handler.handler(event, lambda_context)
-    assert_response_status(response, 404)
+    assert response['statusCode'] == 404

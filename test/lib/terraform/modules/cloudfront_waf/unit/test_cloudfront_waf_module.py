@@ -3,10 +3,7 @@
 
 def test_module_files_exist(module_path):
     """Test that required module files exist."""
-    assert (module_path / "main.tf").exists()
-    assert (module_path / "variables.tf").exists()
-    assert (module_path / "outputs.tf").exists()
-    assert (module_path / "providers.tf").exists()
+    assert (module_path / "main.tf").exists() and (module_path / "variables.tf").exists() and (module_path / "outputs.tf").exists() and (module_path / "providers.tf").exists()
 
 
 def test_wafv2_web_acl_resource_exists(main_tf_content):
@@ -26,8 +23,7 @@ def test_wafv2_web_acl_scope_is_cloudfront(main_tf_content):
 
 def test_wafv2_web_acl_has_default_allow(main_tf_content):
     """Test that WAFv2 web ACL has default allow action."""
-    assert 'default_action {' in main_tf_content
-    assert 'allow {}' in main_tf_content
+    assert 'default_action {' in main_tf_content and 'allow {}' in main_tf_content
 
 
 def test_cloudwatch_log_group_exists(main_tf_content):
@@ -40,15 +36,16 @@ def test_cloudwatch_log_group_uses_us_east_1_provider(main_tf_content):
     # The log group should use the same provider as the WAF
     lines = main_tf_content.split('\n')
     in_log_group = False
+    found_provider = False
     for line in lines:
         if 'resource "aws_cloudwatch_log_group" "waf"' in line:
             in_log_group = True
         if in_log_group and 'provider = aws.us-east-1' in line:
-            assert True
-            return
+            found_provider = True
+            break
         if in_log_group and line.strip() == '}':
             break
-    assert 'provider = aws.us-east-1' in main_tf_content
+    assert found_provider or 'provider = aws.us-east-1' in main_tf_content
 
 
 def test_cloudwatch_log_group_has_waf_prefix(main_tf_content):

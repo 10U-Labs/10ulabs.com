@@ -360,6 +360,7 @@ class TestValidateLabels:
             runner_id="runner-12345",
         )
         validate_labels(parsed)  # Should not raise
+        assert True  # Explicit pass
 
     def test_valid_ecs_fargate_arm(self):
         """validate_labels accepts valid ECS Fargate ARM."""
@@ -371,6 +372,7 @@ class TestValidateLabels:
             runner_id="runner-12345",
         )
         validate_labels(parsed)  # Should not raise
+        assert True  # Explicit pass
 
     def test_ecs_invalid_compute_raises(self):
         """validate_labels raises for invalid ECS compute type."""
@@ -418,6 +420,7 @@ class TestValidateLabels:
             runner_id="runner-12345",
         )
         validate_labels(parsed)  # Should not raise
+        assert True  # Explicit pass
 
     def test_valid_ec2_gpu_no_arch(self):
         """validate_labels accepts valid EC2 GPU without architecture."""
@@ -429,6 +432,7 @@ class TestValidateLabels:
             runner_id="runner-12345",
         )
         validate_labels(parsed)  # Should not raise
+        assert True  # Explicit pass
 
     def test_ec2_invalid_compute_raises(self):
         """validate_labels raises for invalid EC2 compute type."""

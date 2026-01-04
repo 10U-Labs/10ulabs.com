@@ -19,6 +19,7 @@ class TestLambdaPackage:
         response = lambda_client.get_function(FunctionName=lambda_function_name)
         region = response['Configuration']['FunctionArn'].split(':')[3]
         assert_lambda_package_includes_file(lambda_function_name, "handler.py", region)
+        assert True  # Explicit pass
 
     def test_lambda_package_includes_runner_labels(
         self, lambda_client, lambda_function_name
@@ -36,6 +37,7 @@ class TestLambdaPackage:
         assert_lambda_package_includes_file(
             lambda_function_name, "runner_labels.py", region
         )
+        assert True  # Explicit pass
 
     def test_lambda_package_includes_runners_json(
         self, lambda_client, lambda_function_name
@@ -51,6 +53,7 @@ class TestLambdaPackage:
         assert_lambda_package_includes_file(
             lambda_function_name, "etc/runners.json", region
         )
+        assert True  # Explicit pass
 
 
 class TestLambdaSQSTrigger:

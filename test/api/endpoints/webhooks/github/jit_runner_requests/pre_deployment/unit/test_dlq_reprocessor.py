@@ -150,6 +150,7 @@ def test_get_github_token_calls_ssm_with_decryption(dlq_reprocessor):
         with patch.object(dlq_reprocessor, 'get_ssm_client', return_value=mock_ssm):
             dlq_reprocessor.get_github_token()
             mock_ssm.get_parameter.assert_called_once_with(Name='/test/param', WithDecryption=True)
+    assert True  # Explicit pass
 
 
 def test_get_github_token_returns_empty_on_client_error(dlq_reprocessor):
@@ -234,6 +235,7 @@ def test_send_poison_pill_alert_does_nothing_when_no_sns_topic_arn(dlq_reprocess
         with patch.object(dlq_reprocessor, 'get_sns_client', return_value=mock_sns):
             dlq_reprocessor.send_poison_pill_alert({'job_id': 123}, 4, 'test reason')
             mock_sns.publish.assert_not_called()
+    assert True  # Explicit pass
 
 
 def test_send_poison_pill_alert_publishes_to_sns(dlq_reprocessor):

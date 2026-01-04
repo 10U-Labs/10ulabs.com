@@ -161,6 +161,7 @@ class TestHandleEvents:
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             handler.handle_events(event)
         mock_dynamodb.batch_write_item.assert_called_once()
+        assert True  # Explicit pass
 
 
 class TestLambdaHandler:

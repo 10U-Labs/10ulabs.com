@@ -13,16 +13,19 @@ TERRAFORM_PATH = "src/api/endpoints/runners/ec2/"
 def test_lambda_function_exists(lambda_client, lambda_function_name):
     """Verify the EC2 runner handler Lambda function exists."""
     check_lambda_function_exists(lambda_client, lambda_function_name, TERRAFORM_PATH)
+    assert True  # Explicit pass
 
 
 def test_lambda_execution_role_exists(iam_client, lambda_role_name):
     """Verify the Lambda execution role exists."""
     check_iam_role_exists(iam_client, lambda_role_name, TERRAFORM_PATH)
+    assert True  # Explicit pass
 
 
 def test_ec2_runner_role_exists(iam_client, ec2_runner_role_name):
     """Verify the EC2 runner IAM role exists."""
     check_iam_role_exists(iam_client, ec2_runner_role_name, TERRAFORM_PATH)
+    assert True  # Explicit pass
 
 
 def test_handler_log_group_exists(handler_log_group):

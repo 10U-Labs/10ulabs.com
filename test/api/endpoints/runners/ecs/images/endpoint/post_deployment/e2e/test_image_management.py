@@ -107,6 +107,7 @@ class TestTestModeWorkflow:
             body={},
             test_mode=True
         )
+        assert True  # Explicit pass
 
     def test_01_post_test_mode_returns_200(self, test_mode_post_response):
         """Verify POST with test mode returns 200."""
@@ -132,6 +133,7 @@ class TestTestModeWorkflow:
             method="GET",
             test_mode=True
         )
+        assert True  # Explicit pass
 
     def test_05_get_test_mode_returns_200(self, test_mode_get_response):
         """Verify GET with test mode returns 200."""

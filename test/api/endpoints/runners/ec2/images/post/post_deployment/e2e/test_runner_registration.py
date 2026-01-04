@@ -59,6 +59,7 @@ def test_github_runner_can_register(ssm_client, e2e_test_instance):
     if not runner_configured:
         logs = get_instance_logs(ssm_client, e2e_test_instance)
         pytest.fail(f"Runner failed to register. Logs:\n{logs}")
+    assert True  # Explicit pass
 
 
 def test_github_runner_process_is_running(ssm_client, e2e_test_instance):
@@ -97,3 +98,4 @@ def test_github_runner_process_is_running(ssm_client, e2e_test_instance):
     if not runner_running:
         logs = get_instance_logs(ssm_client, e2e_test_instance)
         pytest.fail(f"Runner process not running. Logs:\n{logs}")
+    assert True  # Explicit pass

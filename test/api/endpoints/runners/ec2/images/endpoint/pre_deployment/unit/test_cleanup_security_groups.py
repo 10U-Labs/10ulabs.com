@@ -43,6 +43,7 @@ class TestCleanupSecurityGroupsCallsDeleteSecurityGroup:
         cleanup.cleanup_security_groups(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.delete_security_group.assert_called_once_with(GroupId='sg-123')
+        assert True  # Explicit pass
 
     def test_calls_delete_for_multiple_security_groups(self, cleanup, mock_ec2_client):
         """Test that delete is called for multiple security groups."""
@@ -70,6 +71,7 @@ class TestCleanupSecurityGroupsDryRun:
         cleanup.cleanup_security_groups(mock_ec2_client, True, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.delete_security_group.assert_not_called()
+        assert True  # Explicit pass
 
     def test_dry_run_still_returns_count(self, cleanup, mock_ec2_client):
         """Test that dry run still returns count of security groups."""
@@ -170,6 +172,7 @@ class TestCleanupSecurityGroupsExcludeTags:
         cleanup.cleanup_security_groups(mock_ec2_client, False, TAGS, exclude_tags)
 
         mock_ec2_client.delete_security_group.assert_not_called()
+        assert True  # Explicit pass
 
     def test_deletes_security_group_without_excluded_tag(self, cleanup, mock_ec2_client):
         """Test that cleanup deletes security group without excluded tag."""

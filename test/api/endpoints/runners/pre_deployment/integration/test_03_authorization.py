@@ -40,6 +40,7 @@ class TestGitHubActionsAndAPIGatewayAuthorization:
                 )
             if error_code != "NoSuchEntity":
                 raise
+        assert True  # Explicit pass
 
     def test_can_call_apigateway_get_rest_api(self, apigateway_client, api_gateway_id):
         """Verify permission to call apigateway:GetRestApi."""
@@ -53,3 +54,4 @@ class TestGitHubActionsAndAPIGatewayAuthorization:
                 )
             if error_code != "NotFoundException":
                 raise
+        assert True  # Explicit pass

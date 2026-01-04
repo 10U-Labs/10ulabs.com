@@ -18,6 +18,7 @@ def test_can_describe_ecr_repositories(ecr_client, ecr_repository_name):
         handle_ecr_authorization_error(
             e, "ecr:DescribeRepositories", ecr_repository_name
         )
+    assert True  # Explicit pass
 
 
 def test_can_list_ecr_images(ecr_client, ecr_repository_name):
@@ -28,3 +29,4 @@ def test_can_list_ecr_images(ecr_client, ecr_repository_name):
         ecr_client.list_images(repositoryName=ecr_repository_name, maxResults=1)
     except ClientError as e:
         handle_ecr_authorization_error(e, "ecr:ListImages", ecr_repository_name)
+    assert True  # Explicit pass

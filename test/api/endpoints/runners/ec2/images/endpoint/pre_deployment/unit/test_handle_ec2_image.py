@@ -43,6 +43,7 @@ class TestHandleEc2ImageDelete:
             handler_module.handle_ec2_image_delete(event)
 
             mock_deregister.assert_called_once_with('ami-123')
+        assert True  # Explicit pass
 
     def test_returns_success_response(self, handler_module):
         """Test that success response is returned when AMI is deregistered."""

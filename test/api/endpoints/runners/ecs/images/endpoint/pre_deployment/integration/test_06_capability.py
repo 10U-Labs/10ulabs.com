@@ -23,6 +23,7 @@ def test_can_describe_ecr_images(ecr_client, ecr_repository_name):
         if e.response["Error"]["Code"] == "RepositoryNotFoundException":
             pytest.skip(f"ECR repository '{ecr_repository_name}' does not exist")
         raise
+    assert True  # Explicit pass
 
 
 def test_can_list_ecr_images(ecr_client, ecr_repository_name):
@@ -41,3 +42,4 @@ def test_can_list_ecr_images(ecr_client, ecr_repository_name):
         if e.response["Error"]["Code"] == "RepositoryNotFoundException":
             pytest.skip(f"ECR repository '{ecr_repository_name}' does not exist")
         raise
+    assert True  # Explicit pass

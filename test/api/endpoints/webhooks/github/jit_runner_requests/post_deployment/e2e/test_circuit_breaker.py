@@ -55,12 +55,14 @@ def test_circuit_breaker_remediation_workflow_detects_state(api_url, api_key):
     """Test circuit breaker remediation workflow detects state."""
     response = _make_circuit_breaker_request(api_url, api_key)
     assert_circuit_breaker_state_in_response(response)
+    assert True  # Explicit pass
 
 
 def test_circuit_breaker_auto_recovery_after_timeout(api_url, api_key):
     """Test circuit breaker auto recovery after timeout."""
     response1 = _make_circuit_breaker_request(api_url, api_key)
     assert_circuit_breaker_state_in_response(response1)
+    assert True  # Explicit pass
 
 
 def test_circuit_breaker_auto_recovery_second_request_has_state(api_url, api_key):

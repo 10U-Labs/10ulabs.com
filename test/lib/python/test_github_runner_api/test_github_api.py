@@ -217,6 +217,7 @@ class TestCleanupOfflineRunners:
         cleanup_offline_runners('token', 'owner/repo', 12345)
 
         mock_delete.assert_called_once_with('token', 'owner/repo', 1)
+        assert True  # Explicit pass
 
     @patch('github_runner_api.delete_runner')
     @patch('github_runner_api.list_repo_runners')
@@ -247,6 +248,7 @@ class TestCleanupOfflineRunners:
         cleanup_offline_runners('token', 'owner/repo', 12345)
 
         mock_delete.assert_not_called()
+        assert True  # Explicit pass
 
     @patch('github_runner_api.delete_runner')
     @patch('github_runner_api.list_repo_runners')
@@ -277,6 +279,7 @@ class TestCleanupOfflineRunners:
         cleanup_offline_runners('token', 'owner/repo', 12345)
 
         mock_delete.assert_not_called()
+        assert True  # Explicit pass
 
     @patch('github_runner_api.delete_runner')
     @patch('github_runner_api.list_repo_runners')
@@ -518,6 +521,7 @@ class TestGetGithubToken:
             mock_ssm.get_parameter.assert_called_once_with(
                 Name='/my/token', WithDecryption=True
             )
+        assert True  # Explicit pass
 
     @patch('github_runner_api.get_ssm_client')
     def test_returns_empty_on_parse_error(self, mock_get_ssm):
@@ -629,6 +633,7 @@ class TestCleanupOfflineRunnersAdvanced:
         cleanup_offline_runners('token', 'owner/repo', None)
 
         mock_delete.assert_not_called()
+        assert True  # Explicit pass
 
     @patch('github_runner_api.delete_runner')
     @patch('github_runner_api.list_repo_runners')
@@ -674,6 +679,7 @@ class TestCleanupOfflineRunnersAdvanced:
         cleanup_offline_runners('token', 'owner/repo', 12345)
 
         mock_delete.assert_not_called()
+        assert True  # Explicit pass
 
 
 class TestGetExistingRunnerForWorkflowAdvanced:

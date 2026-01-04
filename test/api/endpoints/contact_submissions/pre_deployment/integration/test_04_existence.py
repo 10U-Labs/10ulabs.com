@@ -18,6 +18,7 @@ class TestPrerequisiteExistence:
     def test_api_gateway_rest_api_exists(self, api_gateway_info):
         """Verify API Gateway REST API exists."""
         assert_api_gateway_exists(api_gateway_info)
+        assert True  # Explicit pass
 
     def test_ses_sending_is_enabled(self, ses_client):
         """Verify SES sending is enabled in the region."""

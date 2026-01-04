@@ -43,6 +43,7 @@ class TestCleanupKeyPairsCallsDeleteKeyPair:
         cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.delete_key_pair.assert_called_once_with(KeyName='ami-builder-abc123')
+        assert True  # Explicit pass
 
     def test_calls_delete_for_multiple_key_pairs(self, cleanup, mock_ec2_client):
         """Test that delete is called for multiple key pairs."""
@@ -70,6 +71,7 @@ class TestCleanupKeyPairsDryRun:
         cleanup.cleanup_key_pairs(mock_ec2_client, True, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.delete_key_pair.assert_not_called()
+        assert True  # Explicit pass
 
     def test_dry_run_still_returns_count(self, cleanup, mock_ec2_client):
         """Test that dry run still returns count of key pairs."""
@@ -168,6 +170,7 @@ class TestCleanupKeyPairsExcludeTags:
         cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, exclude_tags)
 
         mock_ec2_client.delete_key_pair.assert_not_called()
+        assert True  # Explicit pass
 
     def test_deletes_key_pair_without_excluded_tag(self, cleanup, mock_ec2_client):
         """Test that cleanup deletes key pair without excluded tag."""

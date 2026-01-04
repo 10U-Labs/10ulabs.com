@@ -24,6 +24,7 @@ class TestLaunchAmiBuilder:
             handler_module.launch_ami_builder({})
 
             mock_trigger.assert_called_once()
+        assert True  # Explicit pass
 
     def test_calls_with_correct_workflow_file(self, handler_module):
         """Test that workflow is triggered with correct workflow file name."""

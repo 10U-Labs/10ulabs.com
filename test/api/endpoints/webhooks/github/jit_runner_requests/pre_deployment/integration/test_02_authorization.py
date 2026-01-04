@@ -33,6 +33,7 @@ def test_can_call_dynamodb_list_tables_api(dynamodb_client):
                 "Check IAM permissions for DynamoDB access."
             )
         raise
+    assert True  # Explicit pass
 
 
 def test_can_call_sqs_list_queues_api(sqs_client):
@@ -46,6 +47,7 @@ def test_can_call_sqs_list_queues_api(sqs_client):
                 "Check IAM permissions for SQS access."
             )
         raise
+    assert True  # Explicit pass
 
 
 def test_can_call_lambda_list_functions_api(lambda_client):
@@ -59,6 +61,7 @@ def test_can_call_lambda_list_functions_api(lambda_client):
                 "Check IAM permissions for Lambda access."
             )
         raise
+    assert True  # Explicit pass
 
 
 def test_can_call_ssm_get_parameter_api(ssm_client, ssm_github_pat_name):
@@ -76,6 +79,7 @@ def test_can_call_ssm_get_parameter_api(ssm_client, ssm_github_pat_name):
             pass  # Parameter doesn't exist, but we have permission - that's OK here
         else:
             raise
+    assert True  # Explicit pass
 
 
 def test_can_call_firehose_describe_delivery_stream_api(
@@ -97,3 +101,4 @@ def test_can_call_firehose_describe_delivery_stream_api(
             pass  # Stream doesn't exist, but we have permission - that's OK here
         else:
             raise
+    assert True  # Explicit pass

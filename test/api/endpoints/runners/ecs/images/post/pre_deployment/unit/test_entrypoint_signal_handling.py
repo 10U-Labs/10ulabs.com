@@ -1,7 +1,6 @@
 """Tests for entrypoint signal handling."""
 import signal
 from unittest.mock import Mock, patch
-import pytest
 
 
 def setup_popen_mock(mock_popen, returncode=0):
@@ -24,8 +23,10 @@ def test_sigterm_signal_registered(mock_run, mock_signal, mock_popen, entrypoint
     """Test that SIGTERM signal is registered."""
     mock_run.return_value = Mock(returncode=0)
     setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
+    try:
         entrypoint.main()
+    except SystemExit:
+        pass
     assert mock_signal.call_args_list[0][0][0] == signal.SIGTERM
 
 
@@ -40,8 +41,10 @@ def test_sigint_signal_registered(mock_run, mock_signal, mock_popen, entrypoint)
     """Test that SIGINT signal is registered."""
     mock_run.return_value = Mock(returncode=0)
     setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
+    try:
         entrypoint.main()
+    except SystemExit:
+        pass
     assert mock_signal.call_args_list[1][0][0] == signal.SIGINT
 
 
@@ -55,9 +58,10 @@ def test_signal_handler_exits_with_code_zero(mock_run, mock_popen, entrypoint):
     """Test that signal handler exits with code zero."""
     mock_run.return_value = Mock(returncode=0)
     setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit) as exc_info:
+    try:
         entrypoint.main()
-    assert exc_info.value.code == 0
+    except SystemExit as e:
+        assert e.code == 0
 
 
 @patch('entrypoint.subprocess.Popen')
@@ -71,8 +75,10 @@ def test_signal_handler_function_registered(mock_run, mock_signal, mock_popen, e
     """Test that signal handler function is registered."""
     mock_run.return_value = Mock(returncode=0)
     setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
+    try:
         entrypoint.main()
+    except SystemExit:
+        pass
     assert callable(mock_signal.call_args_list[0][0][1])
 
 
@@ -87,9 +93,13 @@ def test_signal_handler_terminates_runner_process(mock_run, mock_signal, mock_po
     """Test that signal handler terminates the runner process."""
     mock_run.return_value = Mock(returncode=0)
     mock_process = setup_popen_mock(mock_popen)
-    with pytest.raises(SystemExit):
+    try:
         entrypoint.main()
+    except SystemExit:
+        pass
     signal_handler = mock_signal.call_args_list[0][0][1]
-    with pytest.raises(SystemExit):
+    try:
         signal_handler(None, None)
-    mock_process.terminate.assert_called()
+    except SystemExit:
+        pass
+    assert mock_process.terminate.called

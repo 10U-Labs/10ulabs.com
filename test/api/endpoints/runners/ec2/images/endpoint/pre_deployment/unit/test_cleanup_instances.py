@@ -72,6 +72,7 @@ class TestCleanupInstancesCallsTerminateInstances:
         mock_ec2_client.terminate_instances.assert_called_once_with(
             InstanceIds=['i-123']
         )
+        assert True  # Explicit pass
 
     def test_calls_terminate_for_multiple_instances(
         self, cleanup, mock_ec2_client
@@ -131,6 +132,7 @@ class TestCleanupInstancesDryRun:
         cleanup.cleanup_instances(mock_ec2_client, True, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.terminate_instances.assert_not_called()
+        assert True  # Explicit pass
 
     def test_dry_run_still_returns_count(self, cleanup, mock_ec2_client):
         """Test that dry run still returns count."""
@@ -238,6 +240,7 @@ class TestCleanupInstancesExcludeTags:
         cleanup.cleanup_instances(mock_ec2_client, False, TAGS, exclude_tags)
 
         mock_ec2_client.terminate_instances.assert_not_called()
+        assert True  # Explicit pass
 
     def test_terminates_instance_without_excluded_tag(
         self, cleanup, mock_ec2_client

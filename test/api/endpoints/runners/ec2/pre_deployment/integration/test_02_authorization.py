@@ -18,6 +18,7 @@ def test_can_call_describe_vpcs(ec2_client):
                 "Check IAM policy has ec2:DescribeVpcs."
             )
         raise
+    assert True  # Explicit pass
 
 
 def test_can_call_describe_images(ec2_client):
@@ -31,6 +32,7 @@ def test_can_call_describe_images(ec2_client):
                 "Check IAM policy has ec2:DescribeImages."
             )
         raise
+    assert True  # Explicit pass
 
 
 def test_can_call_describe_subnets(ec2_client):
@@ -44,6 +46,7 @@ def test_can_call_describe_subnets(ec2_client):
                 "Check IAM policy has ec2:DescribeSubnets."
             )
         raise
+    assert True  # Explicit pass
 
 
 def test_can_call_describe_security_groups(ec2_client):
@@ -57,3 +60,4 @@ def test_can_call_describe_security_groups(ec2_client):
                 "Check IAM policy has ec2:DescribeSecurityGroups."
             )
         raise
+    assert True  # Explicit pass

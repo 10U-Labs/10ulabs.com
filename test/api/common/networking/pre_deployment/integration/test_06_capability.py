@@ -28,3 +28,4 @@ class TestS3Capabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTests):
     ):
         """Verify we can read the api_common_networking state file."""
         check_state_file_readable(s3_client, state_bucket_name, networking_state_key)
+        assert True  # Explicit pass

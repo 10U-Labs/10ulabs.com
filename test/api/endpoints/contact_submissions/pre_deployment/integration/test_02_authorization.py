@@ -42,6 +42,7 @@ class TestSESAndSSMAuthorization:
             if e.response["Error"]["Code"] == "AccessDenied":
                 pytest.fail("No permission to check SES account sending status")
             raise
+        assert True  # Explicit pass
 
     def test_can_list_identities(self, ses_client):
         """Verify permission to list SES identities."""
@@ -51,6 +52,7 @@ class TestSESAndSSMAuthorization:
             if e.response["Error"]["Code"] == "AccessDenied":
                 pytest.fail("No permission to list SES identities")
             raise
+        assert True  # Explicit pass
 
     def test_can_describe_parameters(self, ssm_client):
         """Verify permission to describe SSM parameters."""
@@ -60,3 +62,4 @@ class TestSESAndSSMAuthorization:
             if e.response["Error"]["Code"] == "AccessDeniedException":
                 pytest.fail("No permission to describe SSM parameters")
             raise
+        assert True  # Explicit pass

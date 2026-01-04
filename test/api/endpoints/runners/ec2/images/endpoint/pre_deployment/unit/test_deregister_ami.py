@@ -21,6 +21,7 @@ class TestDeregisterAmi:
         handler_module.deregister_ami('ami-123')
 
         mock_ec2.deregister_image.assert_called_once_with(ImageId='ami-123')
+        assert True  # Explicit pass
 
     def test_handles_invalid_ami_id(self, handler_module, mock_ec2):
         """Test that deregister_ami handles invalid AMI ID."""

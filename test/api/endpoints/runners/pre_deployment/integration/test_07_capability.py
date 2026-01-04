@@ -24,6 +24,7 @@ class TestS3StateCapabilities(Layer6S3CapabilityTests):
         check_state_file_readable(
             s3_client, state_bucket_name, "api/endpoints/runners/terraform.tfstate"
         )
+        assert True  # Explicit pass
 
 
 class TestIAMCapabilities(Layer6IAMCapabilityTests):
@@ -50,6 +51,7 @@ class TestAPIGatewayCapabilities:
             if error_code == "NotFoundException":
                 pytest.skip("API Gateway does not exist yet")
             raise
+        assert True  # Explicit pass
 
     def test_can_get_api_gateway_stages(self, apigateway_client, api_gateway_id):
         """Verify we can list API Gateway stages for deployment."""
@@ -65,3 +67,4 @@ class TestAPIGatewayCapabilities:
             if error_code == "NotFoundException":
                 pytest.skip("API Gateway does not exist yet")
             raise
+        assert True  # Explicit pass

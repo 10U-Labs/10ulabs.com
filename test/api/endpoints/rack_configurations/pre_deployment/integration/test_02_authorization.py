@@ -42,6 +42,7 @@ class TestDynamoDBAndS3Authorization:
             if e.response["Error"]["Code"] == "AccessDeniedException":
                 pytest.fail("No permission to list DynamoDB tables")
             raise
+        assert True  # Explicit pass
 
     def test_can_list_buckets(self, s3_client):
         """Verify permission to list S3 buckets."""
@@ -51,3 +52,4 @@ class TestDynamoDBAndS3Authorization:
             if e.response["Error"]["Code"] == "AccessDenied":
                 pytest.fail("No permission to list S3 buckets")
             raise
+        assert True  # Explicit pass

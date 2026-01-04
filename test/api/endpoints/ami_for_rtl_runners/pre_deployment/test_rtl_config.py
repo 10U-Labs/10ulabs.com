@@ -23,8 +23,7 @@ class TestRtlSimConfig:
         """Test that runner version is a valid semver string."""
         version = rtl_sim_config["runner"]["version"]
         parts = version.split(".")
-        assert len(parts) == 3, f"Invalid version format: {version}"
-        assert all(part.isdigit() for part in parts)
+        assert len(parts) == 3 and all(part.isdigit() for part in parts), f"Invalid version: {version}"
 
     def test_instance_type_is_c8i(self, rtl_sim_config: dict) -> None:
         """Test that instance type is c8i.4xlarge for simulation."""
@@ -40,24 +39,20 @@ class TestRtlSimConfig:
 
     def test_chipyard_version_specified(self, rtl_sim_config: dict) -> None:
         """Test that Chipyard version is specified."""
-        assert "chipyard" in rtl_sim_config["tools"]
-        assert "version" in rtl_sim_config["tools"]["chipyard"]
+        assert rtl_sim_config.get("tools", {}).get("chipyard", {}).get("version") is not None
 
     def test_verilator_version_specified(self, rtl_sim_config: dict) -> None:
         """Test that Verilator version is specified."""
-        assert "verilator" in rtl_sim_config["tools"]
-        assert "version" in rtl_sim_config["tools"]["verilator"]
+        assert rtl_sim_config.get("tools", {}).get("verilator", {}).get("version") is not None
 
     def test_packages_is_non_empty_list(self, rtl_sim_config: dict) -> None:
         """Test that packages is a non-empty list."""
-        assert "packages" in rtl_sim_config
-        assert isinstance(rtl_sim_config["packages"], list)
-        assert len(rtl_sim_config["packages"]) > 0
+        packages = rtl_sim_config.get("packages", [])
+        assert isinstance(packages, list) and len(packages) > 0
 
     def test_environment_has_riscv_path(self, rtl_sim_config: dict) -> None:
         """Test that RISCV environment variable is set."""
-        assert "environment" in rtl_sim_config
-        assert "RISCV" in rtl_sim_config["environment"]
+        assert rtl_sim_config.get("environment", {}).get("RISCV") is not None
 
 
 class TestRtlSynthConfig:
@@ -78,18 +73,15 @@ class TestRtlSynthConfig:
 
     def test_openlane_version_specified(self, rtl_synth_config: dict) -> None:
         """Test that OpenLane version is specified."""
-        assert "openlane" in rtl_synth_config["tools"]
-        assert "version" in rtl_synth_config["tools"]["openlane"]
+        assert rtl_synth_config.get("tools", {}).get("openlane", {}).get("version") is not None
 
     def test_sky130_pdk_version_specified(self, rtl_synth_config: dict) -> None:
         """Test that SKY130 PDK version is specified."""
-        assert "sky130_pdk" in rtl_synth_config["tools"]
-        assert "version" in rtl_synth_config["tools"]["sky130_pdk"]
+        assert rtl_synth_config.get("tools", {}).get("sky130_pdk", {}).get("version") is not None
 
     def test_environment_has_pdk_root(self, rtl_synth_config: dict) -> None:
         """Test that PDK_ROOT environment variable is set."""
-        assert "environment" in rtl_synth_config
-        assert "PDK_ROOT" in rtl_synth_config["environment"]
+        assert rtl_synth_config.get("environment", {}).get("PDK_ROOT") is not None
 
     def test_environment_has_pdk_variable(self, rtl_synth_config: dict) -> None:
         """Test that PDK environment variable is set to sky130A."""
@@ -118,13 +110,11 @@ class TestRtlGpuConfig:
 
     def test_rtlflow_tool_specified(self, rtl_gpu_config: dict) -> None:
         """Test that RTLflow is specified in tools."""
-        assert "rtlflow" in rtl_gpu_config["tools"]
-        assert "repository" in rtl_gpu_config["tools"]["rtlflow"]
+        assert rtl_gpu_config.get("tools", {}).get("rtlflow", {}).get("repository") is not None
 
     def test_environment_has_cuda_home(self, rtl_gpu_config: dict) -> None:
         """Test that CUDA_HOME environment variable is set."""
-        assert "environment" in rtl_gpu_config
-        assert "CUDA_HOME" in rtl_gpu_config["environment"]
+        assert rtl_gpu_config.get("environment", {}).get("CUDA_HOME") is not None
 
 
 class TestVersionExtraction:
@@ -133,18 +123,14 @@ class TestVersionExtraction:
     def test_extract_chipyard_version(self, rtl_sim_config: dict) -> None:
         """Test extracting Chipyard version."""
         version = rtl_sim_config["tools"]["chipyard"]["version"]
-        assert version is not None
-        assert len(version) > 0
+        assert version is not None and len(version) > 0
 
     def test_extract_openlane_version(self, rtl_synth_config: dict) -> None:
         """Test extracting OpenLane version."""
         version = rtl_synth_config["tools"]["openlane"]["version"]
-        assert version is not None
-        assert len(version) > 0
+        assert version is not None and len(version) > 0
 
     def test_extract_cuda_version(self, rtl_gpu_config: dict) -> None:
         """Test extracting CUDA version."""
         version = rtl_gpu_config["nvidia"]["cuda_version"]
-        assert version is not None
-        parts = version.split(".")
-        assert len(parts) >= 1
+        assert version is not None and len(version.split(".")) >= 1

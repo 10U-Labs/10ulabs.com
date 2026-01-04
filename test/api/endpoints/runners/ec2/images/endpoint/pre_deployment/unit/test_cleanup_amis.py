@@ -89,6 +89,7 @@ class TestCleanupAmisSkipsLatestAmi:
         )
 
         mock_ec2_client.deregister_image.assert_not_called()
+        assert True  # Explicit pass
 
 
 class TestCleanupAmisCollectsSnapshots:
@@ -188,6 +189,7 @@ class TestCleanupAmisDryRun:
         )
 
         mock_ec2_client.deregister_image.assert_not_called()
+        assert True  # Explicit pass
 
     def test_dry_run_still_returns_count(
         self, cleanup, mock_ec2_client, make_ami_cleanup_params
@@ -296,6 +298,7 @@ class TestCleanupAmisExcludeTags:
         )
 
         mock_ec2_client.deregister_image.assert_not_called()
+        assert True  # Explicit pass
 
     def test_deregisters_ami_without_excluded_tag(
         self, cleanup, mock_ec2_client, make_ami_cleanup_params

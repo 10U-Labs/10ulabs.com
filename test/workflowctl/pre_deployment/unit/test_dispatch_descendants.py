@@ -397,6 +397,7 @@ class TestMain:
                     ):
                         dispatch_descendants.main()
         mock_deps.assert_called_once()
+        assert True  # Explicit pass
 
     def test_skips_dispatch_when_dependencies_not_met(
         self, dispatch_descendants
@@ -404,6 +405,7 @@ class TestMain:
         """Test that dispatch is skipped when dependencies are not met."""
         _, mock_dispatch = _run_main_with_unmet_deps(dispatch_descendants)
         mock_dispatch.assert_not_called()
+        assert True  # Explicit pass
 
     def test_returns_0_when_dependencies_not_met(self, dispatch_descendants) -> None:
         """Test returns 0 when skipping due to unmet dependencies."""

@@ -34,7 +34,7 @@ def test_lambda_handler_ecs_runner_post_with_missing_job_id_returns_400(
     del body['job_id']
     event['body'] = json.dumps(body)
     response = ecs_runner_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 400)
+    assert response['statusCode'] == 400
 
 
 def test_lambda_handler_ecs_runner_post_with_missing_repo_returns_400(
@@ -46,7 +46,7 @@ def test_lambda_handler_ecs_runner_post_with_missing_repo_returns_400(
     del body['github_repo']
     event['body'] = json.dumps(body)
     response = ecs_runner_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 400)
+    assert response['statusCode'] == 400
 
 
 def _create_ecr_mock_with_stable_image():
@@ -82,7 +82,7 @@ def test_lambda_handler_ecs_runner_post_returns_json_content_type(
     _setup_post_handler_mocks(mock_boto_client)
     event = ecs_runner_post_event_factory(job_id=12345, github_repo='test-org/test-repo')
     response = ecs_runner_handler.lambda_handler(event, lambda_context)
-    assert_json_content_type(response)
+    assert response['headers']['Content-Type'].startswith('application/json')
 
 
 def _invoke_post_handler_and_get_run_task_kwargs(
@@ -136,7 +136,7 @@ def test_lambda_handler_ecs_runner_get_returns_json_content_type(
     mock_boto_client.side_effect = mock_client
     event = {'path': '/v1/runners/ecs', 'httpMethod': 'GET'}
     response = ecs_runner_handler.lambda_handler(event, lambda_context)
-    assert_json_content_type(response)
+    assert response['headers']['Content-Type'].startswith('application/json')
 
 
 def test_lambda_handler_ecs_runner_unsupported_method_returns_404(
@@ -145,7 +145,7 @@ def test_lambda_handler_ecs_runner_unsupported_method_returns_404(
     """Test lambda handler ecs runner unsupported method returns 404."""
     event = {'path': '/v1/runners/ecs', 'httpMethod': 'DELETE'}
     response = ecs_runner_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 404)
+    assert response['statusCode'] == 404
 
 
 def _setup_ecs_status_mocks():
@@ -207,7 +207,7 @@ def test_handle_ecs_runner_get_returns_200_status(ecs_runner_handler, lambda_con
             'success': True, 'running_tasks': 0, 'tasks': [], 'cluster': 'test'
         }
         response = ecs_runner_handler.lambda_handler(event, lambda_context)
-        assert_response_status(response, 200)
+        assert response['statusCode'] == 200
 
 
 @patch('boto3.client')
@@ -383,7 +383,7 @@ def test_lambda_handler_options_request_returns_200(ecs_runner_handler, lambda_c
     """Test lambda handler options request returns 200."""
     event = {'path': '/v1/runners/ecs', 'httpMethod': 'OPTIONS'}
     response = ecs_runner_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_lambda_handler_options_request_returns_allow_origin_header(

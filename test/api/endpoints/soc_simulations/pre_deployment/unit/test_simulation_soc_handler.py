@@ -28,7 +28,7 @@ def test_handler_returns_200_for_riscv_persona(
     """Verify handler returns 200 for RISC-V persona."""
     event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
     response = simulation_soc_handler.handler(event, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_handler_returns_200_for_desktop64_persona(
@@ -36,7 +36,7 @@ def test_handler_returns_200_for_desktop64_persona(
     """Verify handler returns 200 for Desktop64 persona."""
     event = simulation_soc_post_event_factory(body_data={'persona': 'desktop64'})
     response = simulation_soc_handler.handler(event, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_handler_returns_200_for_mobile64_persona(
@@ -44,7 +44,7 @@ def test_handler_returns_200_for_mobile64_persona(
     """Verify handler returns 200 for Mobile64 persona."""
     event = simulation_soc_post_event_factory(body_data={'persona': 'mobile64'})
     response = simulation_soc_handler.handler(event, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_handler_returns_json_content_type(
@@ -52,7 +52,7 @@ def test_handler_returns_json_content_type(
     """Verify handler returns JSON content type."""
     event = simulation_soc_post_event_factory()
     response = simulation_soc_handler.handler(event, lambda_context)
-    assert_json_content_type(response)
+    assert response['headers']['Content-Type'].startswith('application/json')
 
 
 def test_handler_returns_cors_header(
@@ -60,7 +60,7 @@ def test_handler_returns_cors_header(
     """Verify handler returns CORS headers."""
     event = simulation_soc_post_event_factory()
     response = simulation_soc_handler.handler(event, lambda_context)
-    assert_cors_headers(response)
+    assert 'Access-Control-Allow-Origin' in response['headers']
 
 
 def test_handler_returns_400_for_invalid_persona(
@@ -68,7 +68,7 @@ def test_handler_returns_400_for_invalid_persona(
     """Verify handler returns 400 for invalid persona."""
     event = simulation_soc_post_event_factory(body_data={'persona': 'invalid'})
     response = simulation_soc_handler.handler(event, lambda_context)
-    assert_response_status(response, 400)
+    assert response['statusCode'] == 400
 
 
 def test_handler_returns_400_for_missing_persona(
@@ -76,7 +76,7 @@ def test_handler_returns_400_for_missing_persona(
     """Verify handler returns 400 when persona is missing."""
     event = simulation_soc_post_event_factory(body_data={})
     response = simulation_soc_handler.handler(event, lambda_context)
-    assert_response_status(response, 400)
+    assert response['statusCode'] == 400
 
 
 def test_handler_returns_400_for_invalid_json(simulation_soc_handler, lambda_context):
@@ -89,21 +89,21 @@ def test_handler_returns_400_for_invalid_json(simulation_soc_handler, lambda_con
         'requestContext': {'requestId': 'test-request-id'}
     }
     response = simulation_soc_handler.handler(event, lambda_context)
-    assert_response_status(response, 400)
+    assert response['statusCode'] == 400
 
 
 def test_handler_options_returns_200(simulation_soc_handler, lambda_context):
     """Verify handler returns 200 for OPTIONS request."""
     event = {'path': '/v1/soc-simulations', 'httpMethod': 'OPTIONS'}
     response = simulation_soc_handler.handler(event, lambda_context)
-    assert_response_status(response, 200)
+    assert response['statusCode'] == 200
 
 
 def test_handler_unknown_route_returns_404(simulation_soc_handler, lambda_context):
     """Verify handler returns 404 for unknown route."""
     event = {'path': '/v1/unknown', 'httpMethod': 'POST', 'body': '{}'}
     response = simulation_soc_handler.handler(event, lambda_context)
-    assert_response_status(response, 404)
+    assert response['statusCode'] == 404
 
 
 def test_response_contains_success_field(

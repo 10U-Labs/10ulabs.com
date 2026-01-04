@@ -118,6 +118,7 @@ def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client
         "github_repo": test_context["github_repo"], "run_id": test_context["github_run_id"]
     }
     terminate_instance(ec2_client, instance_id)
+    assert True  # Explicit pass
 
 
 def test_ec2_runner_post_returns_response(test_ec2_runner_instance, latest_ami_exists):

@@ -30,6 +30,7 @@ class TestAPIBackendPrerequisites:
     def test_api_gateway_rest_api_exists(self, api_gateway_info):
         """Verify the API Gateway REST API exists."""
         assert_api_gateway_exists(api_gateway_info)
+        assert True  # Explicit pass
 
 
 TestECSRunnerOutputs = create_ecs_runner_outputs_tests()

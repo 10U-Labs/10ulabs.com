@@ -25,6 +25,7 @@ def test_can_describe_iam_instance_profile(iam_client, config):
         if e.response["Error"]["Code"] == "AccessDenied":
             pytest.fail(f"No permission to inspect IAM instance profile '{profile_name}'")
         raise
+    assert True  # Explicit pass
 
 
 def test_can_describe_security_groups(ec2_client, security_group_id):
@@ -42,6 +43,7 @@ def test_can_describe_security_groups(ec2_client, security_group_id):
             pass  # Resource doesn't exist, but we have permission to check
         else:
             raise
+    assert True  # Explicit pass
 
 
 def test_can_describe_subnets(ec2_client, subnet_ids):
@@ -59,6 +61,7 @@ def test_can_describe_subnets(ec2_client, subnet_ids):
             pass  # Resource doesn't exist, but we have permission to check
         else:
             raise
+    assert True  # Explicit pass
 
 
 def test_can_describe_images(ec2_client):
@@ -74,6 +77,7 @@ def test_can_describe_images(ec2_client):
         if e.response["Error"]["Code"] == "AccessDenied":
             pytest.fail("No permission to describe EC2 images")
         raise
+    assert True  # Explicit pass
 
 
 def test_can_describe_instance_types(ec2_client, instance_types):
@@ -91,3 +95,4 @@ def test_can_describe_instance_types(ec2_client, instance_types):
             pass  # Invalid type, but we have permission to check
         else:
             raise
+    assert True  # Explicit pass
