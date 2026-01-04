@@ -131,10 +131,10 @@ def is_kebabcase(name: str) -> bool:
     prefix, rest = parts
 
     # Validate prefix (PascalCase) and rest (lowercase with hyphens)
-    prefix_valid = prefix and prefix[0].isupper() and prefix.isalnum()
-    rest_valid = rest and re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', rest)
+    prefix_valid = bool(prefix) and prefix[0].isupper() and prefix.isalnum()
+    rest_valid = bool(rest) and bool(re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', rest))
 
-    return prefix_valid and bool(rest_valid)
+    return prefix_valid and rest_valid
 
 
 def validate_kebab_name(name: str) -> Optional[str]:
