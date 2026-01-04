@@ -4,12 +4,14 @@ Tests verify Terraform configuration correctness without deploying:
 - Lambda lifecycle rules for environment variable handling
 - IAM role naming conventions (PascalCase)
 - Lambda function naming conventions (PascalCase)
+- Remote state configuration (no hardcoded values)
 """
 from pathlib import Path
 
 from naming_conventions import validate_name
 from repo_utils import REPO_ROOT
 from test_fixtures.lambda_lifecycle import create_lambda_lifecycle_tests
+from test_fixtures.terraform_tests import create_remote_state_config_tests
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
 
@@ -18,6 +20,12 @@ SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
 TestLambdaLifecycle = create_lambda_lifecycle_tests(
     endpoint_src=SESSIONS_SRC_PATH,
     tf_files=["lambda.tf", "analytics.tf"]
+)
+
+# Generate remote state configuration tests to prevent hardcoded values
+TestRemoteStateConfig = create_remote_state_config_tests(
+    endpoint_src=SESSIONS_SRC_PATH,
+    endpoint_name="sessions"
 )
 
 

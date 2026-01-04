@@ -170,3 +170,76 @@ def create_naming_conventions_tests(
             )
 
     return TestIAMRoleNamingConventions, TestLambdaFunctionNamingConventions
+
+
+def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str):
+    """Create tests to verify remote state configuration uses dynamic values.
+
+    Checks that data.tf doesn't use hardcoded bucket names or regions,
+    and uses the correct state key path.
+
+    Args:
+        endpoint_src: Path to the endpoint source directory
+        endpoint_name: Name of the endpoint (for error messages)
+
+    Returns:
+        Test class with remote state configuration tests
+    """
+    data_tf_path = endpoint_src / "data.tf"
+
+    class TestRemoteStateConfig:
+        """Tests for remote state configuration best practices."""
+
+        def test_data_tf_exists(self):
+            """Verify data.tf exists."""
+            assert data_tf_path.exists(), f"data.tf not found in {endpoint_name}"
+
+        def test_no_hardcoded_bucket_name(self):
+            """Verify remote state uses module.common for bucket name."""
+            content = data_tf_path.read_text()
+            # Check for hardcoded bucket patterns (common S3 bucket name patterns)
+            hardcoded_patterns = [
+                r'bucket\s*=\s*"[a-z0-9]+-terraform-state',
+                r'bucket\s*=\s*"tenulabs-',
+                r'bucket\s*=\s*"10ulabs-',
+            ]
+            for pattern in hardcoded_patterns:
+                match = re.search(pattern, content, re.IGNORECASE)
+                assert match is None, (
+                    f"{endpoint_name}/data.tf uses hardcoded bucket name. "
+                    "Use module.common.name_for_terraform_state_bucket instead."
+                )
+
+        def test_no_hardcoded_region(self):
+            """Verify remote state uses local.aws_region for region."""
+            content = data_tf_path.read_text()
+            # Check for hardcoded region patterns
+            hardcoded_region = re.search(
+                r'region\s*=\s*"[a-z]+-[a-z]+-\d+"', content
+            )
+            assert hardcoded_region is None, (
+                f"{endpoint_name}/data.tf uses hardcoded region. "
+                "Use local.aws_region or module.common.aws_region instead."
+            )
+
+        def test_uses_correct_state_key_pattern(self):
+            """Verify remote state key follows expected pattern."""
+            content = data_tf_path.read_text()
+            # The api state should be at "api/terraform.tfstate"
+            if 'terraform_remote_state' in content and '"api"' in content:
+                correct_key = re.search(
+                    r'key\s*=\s*"api/terraform\.tfstate"', content
+                )
+                wrong_key = re.search(
+                    r'key\s*=\s*"api_common_routing/terraform\.tfstate"', content
+                )
+                assert wrong_key is None, (
+                    f"{endpoint_name}/data.tf uses wrong state key path. "
+                    'Use "api/terraform.tfstate" not "api_common_routing/..."'
+                )
+                assert correct_key is not None, (
+                    f"{endpoint_name}/data.tf should use key = "
+                    '"api/terraform.tfstate" for API remote state.'
+                )
+
+    return TestRemoteStateConfig
