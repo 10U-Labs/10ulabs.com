@@ -110,3 +110,12 @@ class TestNamingConventions:
         assert error is None, (
             f"Handler IAM role has invalid name '{actual_name}': {error}"
         )
+
+    def test_backup_role_name_is_pascalcase(self, iam_client, backup_role_name):
+        """Verify backup IAM role name uses PascalCase."""
+        response = iam_client.get_role(RoleName=backup_role_name)
+        actual_name = response["Role"]["RoleName"]
+        error = validate_name(actual_name)
+        assert error is None, (
+            f"Backup IAM role has invalid name '{actual_name}': {error}"
+        )

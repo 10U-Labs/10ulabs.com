@@ -55,6 +55,13 @@ def handler_role_name(request):
 
 
 @pytest.fixture(scope="module")
+def backup_role_name(request):
+    """Get the backup IAM role name."""
+    prefix = request.getfixturevalue("resource_prefix")
+    return f"{prefix}RackConfigurationsBackupRole"
+
+
+@pytest.fixture(scope="module")
 def configurations_table_name(request):
     """Get the configurations DynamoDB table name."""
     prefix = request.getfixturevalue("resource_prefix")
