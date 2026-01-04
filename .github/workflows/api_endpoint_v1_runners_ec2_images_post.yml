@@ -25,27 +25,27 @@ jobs:
         uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
         with:
           directories: ${{ github.workspace }}
-          linters: pylint,mypy,yamllint
+          tools: pylint,mypy,yamllint
           verbose: true
       - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
         name: Assert no linter config files (self-hosted)
         run: >-
           assert-no-linter-config-files
-          --linters pylint,mypy,yamllint
+          --tools pylint,mypy,yamllint
           --verbose
           ${{ github.workspace }}
       - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
         name: Assert no inline lint disables (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
+        uses: 10U-Labs-LLC/assert-no-inline-directives@latest
         with:
           files: ${{ github.workspace }}/**/*
-          linters: pylint,mypy,yamllint
+          tools: pylint,mypy,yamllint
           verbose: true
       - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
         name: Assert no inline lint disables (self-hosted)
         run: >-
-          assert-no-inline-lint-disables
-          --linters pylint,mypy,yamllint
+          assert-no-inline-directives
+          --tools pylint,mypy,yamllint
           --verbose
           ${{ github.workspace }}/**/*
       - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
