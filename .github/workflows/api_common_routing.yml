@@ -54,6 +54,22 @@ jobs:
           --tools pylint,mypy,yamllint
           --verbose
           ${{ github.workspace }}/**/*
+      - continue-on-error: true
+        id: one_assert_per_pytest_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert one assert per pytest (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-one-assert-per-pytest@latest
+        with:
+          files: ${{ github.workspace }}/test/**/*.py
+          verbose: true
+      - continue-on-error: true
+        id: one_assert_per_pytest_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert one assert per pytest (self-hosted)
+        run: >-
+          assert-one-assert-per-pytest
+          --verbose
+          ${{ github.workspace }}/test
       - name: Verify OIDC variables
         uses: ./.github/actions/verify-oidc-vars
         with:
@@ -269,21 +285,23 @@ jobs:
           S02: ${{ steps.no_linter_configs_sh.outcome }}
           S03: ${{ steps.no_inline_disables_gh.outcome }}
           S04: ${{ steps.no_inline_disables_sh.outcome }}
-          S05: ${{ steps.yamllint.outcome }}
-          S06: ${{ steps.pylint_source.outcome }}
-          S07: ${{ steps.pylint_tests.outcome }}
-          S08: ${{ steps.mypy_source.outcome }}
-          S09: ${{ steps.mypy_tests.outcome }}
-          S10: ${{ steps.jscpd_source.outcome }}
-          S11: ${{ steps.jscpd_tests.outcome }}
-          S12: ${{ steps.terraform_fmt.outcome }}
-          S13: ${{ steps.terraform_init.outcome }}
-          S14: ${{ steps.tflint.outcome }}
-          S15: ${{ steps.unit_tests.outcome }}
-          S16: ${{ steps.pre_integration_tests.outcome }}
-          S17: ${{ steps.terraform_apply.outcome }}
-          S18: ${{ steps.post_integration_tests.outcome }}
-          S19: ${{ steps.e2e_tests.outcome }}
+          S05: ${{ steps.one_assert_per_pytest_gh.outcome }}
+          S06: ${{ steps.one_assert_per_pytest_sh.outcome }}
+          S07: ${{ steps.yamllint.outcome }}
+          S08: ${{ steps.pylint_source.outcome }}
+          S09: ${{ steps.pylint_tests.outcome }}
+          S10: ${{ steps.mypy_source.outcome }}
+          S11: ${{ steps.mypy_tests.outcome }}
+          S12: ${{ steps.jscpd_source.outcome }}
+          S13: ${{ steps.jscpd_tests.outcome }}
+          S14: ${{ steps.terraform_fmt.outcome }}
+          S15: ${{ steps.terraform_init.outcome }}
+          S16: ${{ steps.tflint.outcome }}
+          S17: ${{ steps.unit_tests.outcome }}
+          S18: ${{ steps.pre_integration_tests.outcome }}
+          S19: ${{ steps.terraform_apply.outcome }}
+          S20: ${{ steps.post_integration_tests.outcome }}
+          S21: ${{ steps.e2e_tests.outcome }}
         name: Assert no step failed
         run: |
           failed=""
@@ -292,21 +310,23 @@ jobs:
           [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
           [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
           [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
-          [ "$S05" = "$f" ] && failed="$failed yamllint"
-          [ "$S06" = "$f" ] && failed="$failed pylint_source"
-          [ "$S07" = "$f" ] && failed="$failed pylint_tests"
-          [ "$S08" = "$f" ] && failed="$failed mypy_source"
-          [ "$S09" = "$f" ] && failed="$failed mypy_tests"
-          [ "$S10" = "$f" ] && failed="$failed jscpd_source"
-          [ "$S11" = "$f" ] && failed="$failed jscpd_tests"
-          [ "$S12" = "$f" ] && failed="$failed terraform_fmt"
-          [ "$S13" = "$f" ] && failed="$failed terraform_init"
-          [ "$S14" = "$f" ] && failed="$failed tflint"
-          [ "$S15" = "$f" ] && failed="$failed unit_tests"
-          [ "$S16" = "$f" ] && failed="$failed pre_integration_tests"
-          [ "$S17" = "$f" ] && failed="$failed terraform_apply"
-          [ "$S18" = "$f" ] && failed="$failed post_integration_tests"
-          [ "$S19" = "$f" ] && failed="$failed e2e_tests"
+          [ "$S05" = "$f" ] && failed="$failed one_assert_per_pytest_gh"
+          [ "$S06" = "$f" ] && failed="$failed one_assert_per_pytest_sh"
+          [ "$S07" = "$f" ] && failed="$failed yamllint"
+          [ "$S08" = "$f" ] && failed="$failed pylint_source"
+          [ "$S09" = "$f" ] && failed="$failed pylint_tests"
+          [ "$S10" = "$f" ] && failed="$failed mypy_source"
+          [ "$S11" = "$f" ] && failed="$failed mypy_tests"
+          [ "$S12" = "$f" ] && failed="$failed jscpd_source"
+          [ "$S13" = "$f" ] && failed="$failed jscpd_tests"
+          [ "$S14" = "$f" ] && failed="$failed terraform_fmt"
+          [ "$S15" = "$f" ] && failed="$failed terraform_init"
+          [ "$S16" = "$f" ] && failed="$failed tflint"
+          [ "$S17" = "$f" ] && failed="$failed unit_tests"
+          [ "$S18" = "$f" ] && failed="$failed pre_integration_tests"
+          [ "$S19" = "$f" ] && failed="$failed terraform_apply"
+          [ "$S20" = "$f" ] && failed="$failed post_integration_tests"
+          [ "$S21" = "$f" ] && failed="$failed e2e_tests"
           if [ -n "$failed" ]; then
             echo "Steps that failed:$failed"
             exit 1

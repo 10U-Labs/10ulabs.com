@@ -54,6 +54,22 @@ jobs:
           --tools pylint,mypy,yamllint
           --verbose
           ${{ github.workspace }}/**/*
+      - continue-on-error: true
+        id: one_assert_per_pytest_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert one assert per pytest (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-one-assert-per-pytest@latest
+        with:
+          files: ${{ github.workspace }}/test/**/*.py
+          verbose: true
+      - continue-on-error: true
+        id: one_assert_per_pytest_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert one assert per pytest (self-hosted)
+        run: >-
+          assert-one-assert-per-pytest
+          --verbose
+          ${{ github.workspace }}/test
       - name: Verify OIDC variables
         uses: ./.github/actions/verify-oidc-vars
         with:
@@ -258,24 +274,25 @@ jobs:
         name: Run E2E tests
         run: npm run test:e2e --prefix src/www/paths/home
       - env:
-          S01: ${{ steps.no_linter_configs_gh.outcome }}
           S02: ${{ steps.no_linter_configs_sh.outcome }}
           S03: ${{ steps.no_inline_disables_gh.outcome }}
           S04: ${{ steps.no_inline_disables_sh.outcome }}
-          S05: ${{ steps.yamllint.outcome }}
-          S06: ${{ steps.jsonlint.outcome }}
-          S07: ${{ steps.pylint.outcome }}
-          S08: ${{ steps.mypy.outcome }}
-          S09: ${{ steps.jscpd.outcome }}
-          S10: ${{ steps.npm_install.outcome }}
-          S11: ${{ steps.unit_tests.outcome }}
-          S12: ${{ steps.pre_integration_tests.outcome }}
-          S13: ${{ steps.terraform_init.outcome }}
-          S14: ${{ steps.build.outcome }}
-          S15: ${{ steps.s3_sync.outcome }}
-          S16: ${{ steps.playwright_install.outcome }}
-          S17: ${{ steps.post_integration_tests.outcome }}
-          S18: ${{ steps.e2e_tests.outcome }}
+          S05: ${{ steps.one_assert_per_pytest_gh.outcome }}
+          S06: ${{ steps.one_assert_per_pytest_sh.outcome }}
+          S07: ${{ steps.yamllint.outcome }}
+          S08: ${{ steps.jsonlint.outcome }}
+          S09: ${{ steps.pylint.outcome }}
+          S10: ${{ steps.mypy.outcome }}
+          S11: ${{ steps.jscpd.outcome }}
+          S12: ${{ steps.npm_install.outcome }}
+          S13: ${{ steps.unit_tests.outcome }}
+          S14: ${{ steps.pre_integration_tests.outcome }}
+          S15: ${{ steps.terraform_init.outcome }}
+          S16: ${{ steps.build.outcome }}
+          S17: ${{ steps.s3_sync.outcome }}
+          S18: ${{ steps.playwright_install.outcome }}
+          S19: ${{ steps.post_integration_tests.outcome }}
+          S20: ${{ steps.e2e_tests.outcome }}
         name: Assert no step failed
         run: |
           failed=""
@@ -284,20 +301,22 @@ jobs:
           [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
           [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
           [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
-          [ "$S05" = "$f" ] && failed="$failed yamllint"
-          [ "$S06" = "$f" ] && failed="$failed jsonlint"
-          [ "$S07" = "$f" ] && failed="$failed pylint"
-          [ "$S08" = "$f" ] && failed="$failed mypy"
-          [ "$S09" = "$f" ] && failed="$failed jscpd"
-          [ "$S10" = "$f" ] && failed="$failed npm_install"
-          [ "$S11" = "$f" ] && failed="$failed unit_tests"
-          [ "$S12" = "$f" ] && failed="$failed pre_integration_tests"
-          [ "$S13" = "$f" ] && failed="$failed terraform_init"
-          [ "$S14" = "$f" ] && failed="$failed build"
-          [ "$S15" = "$f" ] && failed="$failed s3_sync"
-          [ "$S16" = "$f" ] && failed="$failed playwright_install"
-          [ "$S17" = "$f" ] && failed="$failed post_integration_tests"
-          [ "$S18" = "$f" ] && failed="$failed e2e_tests"
+          [ "$S05" = "$f" ] && failed="$failed one_assert_per_pytest_gh"
+          [ "$S06" = "$f" ] && failed="$failed one_assert_per_pytest_sh"
+          [ "$S07" = "$f" ] && failed="$failed yamllint"
+          [ "$S08" = "$f" ] && failed="$failed jsonlint"
+          [ "$S09" = "$f" ] && failed="$failed pylint"
+          [ "$S10" = "$f" ] && failed="$failed mypy"
+          [ "$S11" = "$f" ] && failed="$failed jscpd"
+          [ "$S12" = "$f" ] && failed="$failed npm_install"
+          [ "$S13" = "$f" ] && failed="$failed unit_tests"
+          [ "$S14" = "$f" ] && failed="$failed pre_integration_tests"
+          [ "$S15" = "$f" ] && failed="$failed terraform_init"
+          [ "$S16" = "$f" ] && failed="$failed build"
+          [ "$S17" = "$f" ] && failed="$failed s3_sync"
+          [ "$S18" = "$f" ] && failed="$failed playwright_install"
+          [ "$S19" = "$f" ] && failed="$failed post_integration_tests"
+          [ "$S20" = "$f" ] && failed="$failed e2e_tests"
           if [ -n "$failed" ]; then
             echo "Steps that failed:$failed"
             exit 1
