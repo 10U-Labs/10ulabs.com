@@ -77,6 +77,7 @@ __all__ = [
     'parse_lambda_response_payload',
     'assert_no_hardcoded_env_defaults',
     'create_lambda_loader',
+    'create_mock_dynamodb_client',
 ]
 
 
@@ -144,6 +145,23 @@ def parse_lambda_response_payload(response: Any) -> Any:
         Parsed JSON from the response payload
     """
     return json.loads(response['Payload'].read())
+
+
+def create_mock_dynamodb_client(method_name: str, return_value: Any = None) -> MagicMock:
+    """Create a mock DynamoDB client with a specified method returning a value.
+
+    Args:
+        method_name: The DynamoDB method to mock (e.g., 'batch_write_item').
+        return_value: The value to return from the method. Defaults to {}.
+
+    Returns:
+        A mock DynamoDB client.
+    """
+    if return_value is None:
+        return_value = {}
+    mock_client = MagicMock()
+    getattr(mock_client, method_name).return_value = return_value
+    return mock_client
 
 
 def assert_no_hardcoded_env_defaults(lambda_path: Path) -> None:

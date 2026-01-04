@@ -48,20 +48,3 @@ def export_module_fixture():
     del os.environ['DYNAMODB_TABLE_ARN']
     del os.environ['S3_BUCKET']
     del os.environ['S3_PREFIX']
-
-
-def create_mock_dynamodb(method_name: str, return_value=None):
-    """Create a mock DynamoDB client with a specified method returning a value.
-
-    Args:
-        method_name: The DynamoDB method to mock (e.g., 'batch_write_item').
-        return_value: The value to return from the method. Defaults to {}.
-
-    Returns:
-        A mock DynamoDB client.
-    """
-    if return_value is None:
-        return_value = {}
-    mock_dynamodb = MagicMock()
-    getattr(mock_dynamodb, method_name).return_value = return_value
-    return mock_dynamodb

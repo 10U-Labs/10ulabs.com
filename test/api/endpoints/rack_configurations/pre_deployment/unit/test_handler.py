@@ -1,15 +1,8 @@
 """Unit tests for rack designer Lambda handler."""
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-
-def create_mock_dynamodb(method_name: str, return_value=None):
-    """Create a mock DynamoDB client with a specified method returning a value."""
-    if return_value is None:
-        return_value = {}
-    mock_dynamodb = MagicMock()
-    getattr(mock_dynamodb, method_name).return_value = return_value
-    return mock_dynamodb
+from test_fixtures.unit import create_mock_dynamodb_client
 
 
 def test_generate_config_hash_returns_9_char_string(handler):
@@ -158,7 +151,7 @@ def test_handle_post_invalid_configuration(handler):
 @patch('boto3.client')
 def test_handle_post_success(mock_boto_client, handler):
     """Test POST returns 200 for valid request."""
-    mock_boto_client.return_value = create_mock_dynamodb('put_item')
+    mock_boto_client.return_value = create_mock_dynamodb_client('put_item')
     handler.clear_clients()
     event = {
         'body': json.dumps({
@@ -188,7 +181,7 @@ def test_handle_get_invalid_config_hash_format(handler):
 
 def _run_handle_get(mock_boto_client, handler, return_item=None):
     """Run handle_get with mocked DynamoDB and return response."""
-    mock_boto_client.return_value = create_mock_dynamodb('get_item', return_item)
+    mock_boto_client.return_value = create_mock_dynamodb_client('get_item', return_item)
     handler.clear_clients()
     event = {'pathParameters': {'config_hash': 'ABCD12345'}, 'headers': {}}
     with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
@@ -252,7 +245,7 @@ def test_lambda_handler_unknown_path_returns_404(handler):
 @patch('boto3.client')
 def test_handle_post_with_device_id(mock_boto_client, handler):
     """Test POST stores device_id correctly."""
-    mock_boto_client.return_value = create_mock_dynamodb('put_item')
+    mock_boto_client.return_value = create_mock_dynamodb_client('put_item')
     handler.clear_clients()
     payload = {'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}}
     payload['device_id'] = 'test-device-123'
@@ -264,7 +257,7 @@ def test_handle_post_with_device_id(mock_boto_client, handler):
 
 def _run_save_rack_configuration(mock_boto_client, handler, device_id=None):
     """Helper to run save_rack_configuration and return the stored item."""
-    mock_dynamodb = create_mock_dynamodb('put_item')
+    mock_dynamodb = create_mock_dynamodb_client('put_item')
     mock_boto_client.return_value = mock_dynamodb
     handler.clear_clients()
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}

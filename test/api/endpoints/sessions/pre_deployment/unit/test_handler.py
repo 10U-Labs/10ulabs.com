@@ -1,17 +1,10 @@
 """Unit tests for sessions Lambda handler."""
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
-
-def create_mock_dynamodb(method_name: str, return_value=None):
-    """Create a mock DynamoDB client with a specified method returning a value."""
-    if return_value is None:
-        return_value = {}
-    mock_dynamodb = MagicMock()
-    getattr(mock_dynamodb, method_name).return_value = return_value
-    return mock_dynamodb
+from test_fixtures.unit import create_mock_dynamodb_client
 
 
 class TestExtractSessionIdFromPath:
@@ -147,11 +140,13 @@ class TestHandleEvents:
 
     def test_valid_request_returns_200(self, handler):
         """Verify valid request returns 200."""
-        mock_dynamodb = create_mock_dynamodb('batch_write_item', {})
+        mock_dynamodb = create_mock_dynamodb_client('batch_write_item', {})
+        body = '{"device_id": "dev1", "events": [{"event_type": "test", ' \
+               '"timestamp": "2024-01-15T10:30:00Z"}]}'
         event = {
             'path': '/v1/sessions/abc123/events',
             'httpMethod': 'POST',
-            'body': '{"device_id": "dev1", "events": [{"event_type": "test", "timestamp": "2024-01-15T10:30:00Z"}]}'
+            'body': body
         }
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             response = handler.handle_events(event)
@@ -159,11 +154,13 @@ class TestHandleEvents:
 
     def test_valid_request_saves_events(self, handler):
         """Verify valid request saves events to DynamoDB."""
-        mock_dynamodb = create_mock_dynamodb('batch_write_item', {})
+        mock_dynamodb = create_mock_dynamodb_client('batch_write_item', {})
+        body = '{"device_id": "dev1", "events": [{"event_type": "test", ' \
+               '"timestamp": "2024-01-15T10:30:00Z"}]}'
         event = {
             'path': '/v1/sessions/abc123/events',
             'httpMethod': 'POST',
-            'body': '{"device_id": "dev1", "events": [{"event_type": "test", "timestamp": "2024-01-15T10:30:00Z"}]}'
+            'body': body
         }
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             handler.handle_events(event)

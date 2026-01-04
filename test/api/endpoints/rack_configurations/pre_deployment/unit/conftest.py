@@ -1,6 +1,4 @@
 """Pytest fixtures for rack configurations pre-deployment unit tests."""
-from unittest.mock import MagicMock
-
 import pytest
 from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
@@ -30,20 +28,3 @@ def backup_tf_content_fixture(backup_tf_path):
     """Provide the content of the backup.tf file."""
     with open(backup_tf_path, encoding="utf-8") as f:
         return f.read()
-
-
-def create_mock_dynamodb(method_name: str, return_value=None):
-    """Create a mock DynamoDB client with a specified method returning a value.
-
-    Args:
-        method_name: The DynamoDB method to mock (e.g., 'put_item', 'get_item').
-        return_value: The value to return from the method. Defaults to {}.
-
-    Returns:
-        A tuple of (mock_boto_client_patcher, mock_dynamodb_client).
-    """
-    if return_value is None:
-        return_value = {}
-    mock_dynamodb = MagicMock()
-    getattr(mock_dynamodb, method_name).return_value = return_value
-    return mock_dynamodb
