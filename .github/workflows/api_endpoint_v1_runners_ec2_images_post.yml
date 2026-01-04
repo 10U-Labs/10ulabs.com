@@ -112,8 +112,8 @@ jobs:
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install jsonlint
-        run: npm install -g jsonlint
+        name: Install npm dependencies
+        run: npm install -g jscpd jsonlint
       - continue-on-error: true
         id: jsonlint
         name: Linting JSON files
@@ -146,12 +146,6 @@ jobs:
         run: |
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
             lib/python/ test/
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install jscpd
-        run: npm install -g jscpd
       - continue-on-error: true
         id: jscpd_source
         name: Check for duplicate code in source Python files
