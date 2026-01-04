@@ -3,7 +3,7 @@
 These tests verify that resources were created by Terraform.
 Tests are organized by resource domain for readability.
 """
-import pytest
+from test_fixtures.aws import iam_role_exists
 
 
 
@@ -110,11 +110,7 @@ def test_iam_role_exists_in_aws(iam_client, config):
 def test_github_actions_role_exists(iam_client, config):
     """Verify GitHub Actions IAM role exists."""
     role_name = config.get('name_for_github_actions_role', 'TenULabsGitHubActionsRole')
-    try:
-        iam_client.get_role(RoleName=role_name)
-    except iam_client.exceptions.NoSuchEntityException:
-        pytest.fail(f"IAM role '{role_name}' does not exist")
-    assert True  # Explicit pass
+    assert iam_role_exists(iam_client, role_name), f"GitHub Actions role '{role_name}' missing"
 
 
 # =============================================================================

@@ -109,6 +109,7 @@ jobs:
             pyyaml \
             requests \
             types-paramiko \
+            types-requests \
             types-PyYAML \
             yamllint
       - continue-on-error: true
