@@ -85,20 +85,20 @@ def logs_client(request):
     return boto3.client("logs", region_name=region)
 
 
-def iam_role_exists(iam_client, role_name: str) -> bool:
+def iam_role_exists(client, role_name: str) -> bool:
     """Check if an IAM role exists.
 
     Args:
-        iam_client: IAM boto3 client
+        client: IAM boto3 client
         role_name: Name of the IAM role to check
 
     Returns:
         True if the role exists, False otherwise
     """
     try:
-        iam_client.get_role(RoleName=role_name)
+        client.get_role(RoleName=role_name)
         return True
-    except iam_client.exceptions.NoSuchEntityException:
+    except client.exceptions.NoSuchEntityException:
         return False
 
 
