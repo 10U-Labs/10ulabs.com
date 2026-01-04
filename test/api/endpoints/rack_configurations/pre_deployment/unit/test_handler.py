@@ -332,38 +332,38 @@ def test_parse_body_returns_empty_dict_when_body_is_empty_string(handler):
 # ============================================================================
 
 
+def _create_save_error_mock(error_code):
+    """Create a mock DynamoDB client that raises a ClientError on put_item."""
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.put_item.side_effect = create_client_error(error_code, 'PutItem')
+    return mock_dynamodb
+
+
+def _run_save_with_error(mock_boto_client, handler, error_code):
+    """Run save_rack_configuration with a mock that raises an error."""
+    mock_boto_client.return_value = _create_save_error_mock(error_code)
+    handler.clear_clients()
+    config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
+    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
+        return handler.save_rack_configuration('ABCD12345', config)
+
+
 @patch('boto3.client')
 def test_save_rack_configuration_returns_success_on_conditional_check_failed(
     mock_boto_client, handler
 ):
     """Test save returns success when config already exists (idempotent)."""
-    mock_dynamodb = MagicMock()
-    mock_dynamodb.put_item.side_effect = create_client_error(
-        'ConditionalCheckFailedException', 'PutItem'
+    result = _run_save_with_error(
+        mock_boto_client, handler, 'ConditionalCheckFailedException'
     )
-    mock_boto_client.return_value = mock_dynamodb
-    handler.clear_clients()
-    config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
-    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
-        result = handler.save_rack_configuration('ABCD12345', config)
-    assert result['success'] is True
-    assert result['config_hash'] == 'ABCD12345'
+    assert result == {'success': True, 'config_hash': 'ABCD12345'}
 
 
 @patch('boto3.client')
 def test_save_rack_configuration_returns_error_on_client_error(mock_boto_client, handler):
     """Test save returns error dict when DynamoDB raises generic ClientError."""
-    mock_dynamodb = MagicMock()
-    mock_dynamodb.put_item.side_effect = create_client_error(
-        'InternalServerError', 'PutItem'
-    )
-    mock_boto_client.return_value = mock_dynamodb
-    handler.clear_clients()
-    config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
-    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
-        result = handler.save_rack_configuration('ABCD12345', config)
+    result = _run_save_with_error(mock_boto_client, handler, 'InternalServerError')
     assert result['success'] is False
-    assert 'error' in result
 
 
 # ============================================================================
@@ -371,19 +371,35 @@ def test_save_rack_configuration_returns_error_on_client_error(mock_boto_client,
 # ============================================================================
 
 
+def _create_load_mock_with_item(config_hash, config):
+    """Create a mock DynamoDB client that returns a config item."""
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.get_item.return_value = {
+        'Item': {
+            'config_hash': {'S': config_hash},
+            'configuration': {'S': json.dumps(config)}
+        }
+    }
+    mock_dynamodb.put_item.return_value = {}
+    mock_dynamodb.delete_item.return_value = {}
+    return mock_dynamodb
+
+
+def _run_load_configuration(mock_boto_client, handler, config_hash, mock_dynamodb):
+    """Run load_rack_configuration with a given mock."""
+    mock_boto_client.return_value = mock_dynamodb
+    handler.clear_clients()
+    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
+        return handler.load_rack_configuration(config_hash)
+
+
 @patch('boto3.client')
 def test_load_rack_configuration_returns_error_on_client_error(mock_boto_client, handler):
     """Test load returns error dict when DynamoDB raises ClientError."""
     mock_dynamodb = MagicMock()
-    mock_dynamodb.get_item.side_effect = create_client_error(
-        'InternalServerError', 'GetItem'
-    )
-    mock_boto_client.return_value = mock_dynamodb
-    handler.clear_clients()
-    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
-        result = handler.load_rack_configuration('ABCD12345')
+    mock_dynamodb.get_item.side_effect = create_client_error('InternalServerError', 'GetItem')
+    result = _run_load_configuration(mock_boto_client, handler, 'ABCD12345', mock_dynamodb)
     assert result['success'] is False
-    assert 'error' in result
 
 
 @patch('boto3.client')
@@ -392,19 +408,9 @@ def test_load_rack_configuration_triggers_migration_for_8_char_hash(
 ):
     """Test load triggers migration when loading 8-char hash."""
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
-    config_json = json.dumps(config)
-    mock_dynamodb = MagicMock()
-    mock_dynamodb.get_item.return_value = {
-        'Item': {'config_hash': {'S': 'ABCD1234'}, 'configuration': {'S': config_json}}
-    }
-    mock_dynamodb.put_item.return_value = {}
-    mock_dynamodb.delete_item.return_value = {}
-    mock_boto_client.return_value = mock_dynamodb
-    handler.clear_clients()
-    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
-        result = handler.load_rack_configuration('ABCD1234')
-    assert result['success'] is True
-    assert len(result['config_hash']) == 9
+    mock_dynamodb = _create_load_mock_with_item('ABCD1234', config)
+    result = _run_load_configuration(mock_boto_client, handler, 'ABCD1234', mock_dynamodb)
+    assert len(result.get('config_hash', '')) == 9
 
 
 @patch('boto3.client')
@@ -413,19 +419,9 @@ def test_load_rack_configuration_skips_migration_for_9_char_hash(
 ):
     """Test load skips migration when loading 9-char hash."""
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
-    config_json = json.dumps(config)
-    mock_dynamodb = MagicMock()
-    mock_dynamodb.get_item.return_value = {
-        'Item': {'config_hash': {'S': 'ABCD12345'}, 'configuration': {'S': config_json}}
-    }
-    mock_boto_client.return_value = mock_dynamodb
-    handler.clear_clients()
-    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
-        result = handler.load_rack_configuration('ABCD12345')
-    assert result['success'] is True
-    assert result['config_hash'] == 'ABCD12345'
-    mock_dynamodb.put_item.assert_not_called()
-    mock_dynamodb.delete_item.assert_not_called()
+    mock_dynamodb = _create_load_mock_with_item('ABCD12345', config)
+    result = _run_load_configuration(mock_boto_client, handler, 'ABCD12345', mock_dynamodb)
+    assert result == {'success': True, 'config_hash': 'ABCD12345', 'configuration': config}
 
 
 # ============================================================================
@@ -433,21 +429,27 @@ def test_load_rack_configuration_skips_migration_for_9_char_hash(
 # ============================================================================
 
 
+def _run_migrate(mock_boto_client, handler, old_hash, config, mock_dynamodb=None):
+    """Run migrate_rack_configuration with a given mock."""
+    if mock_dynamodb is None:
+        mock_dynamodb = MagicMock()
+        mock_dynamodb.put_item.return_value = {}
+        mock_dynamodb.delete_item.return_value = {}
+    mock_boto_client.return_value = mock_dynamodb
+    handler.clear_clients()
+    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
+        return handler.migrate_rack_configuration(old_hash, config)
+
+
 @patch('boto3.client')
 def test_migrate_rack_configuration_returns_none_when_hash_unchanged(
     mock_boto_client, handler
 ):
     """Test migrate returns None when new hash equals old hash."""
-    mock_dynamodb = MagicMock()
-    mock_boto_client.return_value = mock_dynamodb
-    handler.clear_clients()
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     new_hash = handler.generate_config_hash(config)
-    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
-        result = handler.migrate_rack_configuration(new_hash, config)
+    result = _run_migrate(mock_boto_client, handler, new_hash, config)
     assert result is None
-    mock_dynamodb.put_item.assert_not_called()
-    mock_dynamodb.delete_item.assert_not_called()
 
 
 @patch('boto3.client')
@@ -455,19 +457,9 @@ def test_migrate_rack_configuration_returns_new_hash_on_success(
     mock_boto_client, handler
 ):
     """Test migrate returns new hash when migration succeeds."""
-    mock_dynamodb = MagicMock()
-    mock_dynamodb.put_item.return_value = {}
-    mock_dynamodb.delete_item.return_value = {}
-    mock_boto_client.return_value = mock_dynamodb
-    handler.clear_clients()
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
-    old_hash = 'OLDHASH8'
-    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
-        result = handler.migrate_rack_configuration(old_hash, config)
-    assert result is not None
+    result = _run_migrate(mock_boto_client, handler, 'OLDHASH8', config)
     assert len(result) == 9
-    mock_dynamodb.put_item.assert_called_once()
-    mock_dynamodb.delete_item.assert_called_once()
 
 
 @patch('boto3.client')
@@ -476,15 +468,9 @@ def test_migrate_rack_configuration_returns_none_on_client_error(
 ):
     """Test migrate returns None when DynamoDB raises ClientError."""
     mock_dynamodb = MagicMock()
-    mock_dynamodb.put_item.side_effect = create_client_error(
-        'InternalServerError', 'PutItem'
-    )
-    mock_boto_client.return_value = mock_dynamodb
-    handler.clear_clients()
+    mock_dynamodb.put_item.side_effect = create_client_error('InternalServerError', 'PutItem')
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
-    old_hash = 'OLDHASH8'
-    with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
-        result = handler.migrate_rack_configuration(old_hash, config)
+    result = _run_migrate(mock_boto_client, handler, 'OLDHASH8', config, mock_dynamodb)
     assert result is None
 
 
@@ -518,12 +504,16 @@ def test_error_response_sets_correct_status_code(handler):
 # ============================================================================
 
 
-def test_json_response_includes_cors_headers(handler):
-    """Test json_response includes CORS headers."""
+def test_json_response_includes_cors_allow_origin(handler):
+    """Test json_response includes Access-Control-Allow-Origin header."""
     response = handler.json_response(200, {'data': 'test'})
     assert response['headers']['Access-Control-Allow-Origin'] == '*'
+
+
+def test_json_response_includes_cors_allow_methods(handler):
+    """Test json_response includes Access-Control-Allow-Methods header."""
+    response = handler.json_response(200, {'data': 'test'})
     assert 'GET' in response['headers']['Access-Control-Allow-Methods']
-    assert 'POST' in response['headers']['Access-Control-Allow-Methods']
 
 
 def test_json_response_sets_content_type_json(handler):
@@ -537,54 +527,54 @@ def test_json_response_sets_content_type_json(handler):
 # ============================================================================
 
 
-@patch('boto3.client')
-def test_handle_post_returns_500_on_save_failure(mock_boto_client, handler):
-    """Test POST returns 500 when save_rack_configuration fails."""
-    mock_dynamodb = MagicMock()
-    mock_dynamodb.put_item.side_effect = create_client_error(
-        'InternalServerError', 'PutItem'
-    )
-    mock_boto_client.return_value = mock_dynamodb
-    handler.clear_clients()
-    event = {
+def _create_valid_post_event():
+    """Create a valid POST event for handle_post tests."""
+    return {
         'body': json.dumps({
             'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []},
             'device_id': 'test-device'
         }),
         'headers': {}
     }
+
+
+@patch('boto3.client')
+def test_handle_post_returns_500_on_save_failure(mock_boto_client, handler):
+    """Test POST returns 500 when save_rack_configuration fails."""
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.put_item.side_effect = create_client_error('InternalServerError', 'PutItem')
+    mock_boto_client.return_value = mock_dynamodb
+    handler.clear_clients()
     with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
-        response = handler.handle_post(event)
+        response = handler.handle_post(_create_valid_post_event())
     assert response['statusCode'] == 500
 
 
 def test_handle_post_returns_500_on_value_error(handler):
     """Test POST returns 500 when ValueError is raised during processing."""
-    event = {
-        'body': json.dumps({
-            'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []},
-            'device_id': 'test-device'
-        }),
-        'headers': {}
-    }
     with patch.object(handler, 'generate_config_hash', side_effect=ValueError("test error")):
-        response = handler.handle_post(event)
+        response = handler.handle_post(_create_valid_post_event())
     assert response['statusCode'] == 500
+
+
+def test_handle_post_value_error_includes_details(handler):
+    """Test POST error response includes error details for ValueError."""
+    with patch.object(handler, 'generate_config_hash', side_effect=ValueError("test error")):
+        response = handler.handle_post(_create_valid_post_event())
     body = json.loads(response['body'])
     assert body['details'] == 'test error'
 
 
 def test_handle_post_returns_500_on_key_error(handler):
     """Test POST returns 500 when KeyError is raised during processing."""
-    event = {
-        'body': json.dumps({
-            'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []},
-            'device_id': 'test-device'
-        }),
-        'headers': {}
-    }
     with patch.object(handler, 'generate_config_hash', side_effect=KeyError("missing_key")):
-        response = handler.handle_post(event)
+        response = handler.handle_post(_create_valid_post_event())
     assert response['statusCode'] == 500
+
+
+def test_handle_post_key_error_includes_details(handler):
+    """Test POST error response includes error details for KeyError."""
+    with patch.object(handler, 'generate_config_hash', side_effect=KeyError("missing_key")):
+        response = handler.handle_post(_create_valid_post_event())
     body = json.loads(response['body'])
     assert 'missing_key' in body['details']

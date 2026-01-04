@@ -149,46 +149,28 @@ class TestBackupConfiguration:
 
     def test_backup_plan_has_daily_schedule(self, backup_client, backup_plan_id):
         """Verify backup plan has daily schedule at 5 AM UTC."""
-        if backup_plan_id is None:
-            assert False, "Backup plan not found"
         plan = backup_client.get_backup_plan(BackupPlanId=backup_plan_id)
         rules = plan["BackupPlan"]["Rules"]
-        has_daily = any(
-            r.get("ScheduleExpression") == "cron(0 5 * * ? *)" for r in rules
-        )
-        assert has_daily, (
-            f"Backup plan should have daily schedule 'cron(0 5 * * ? *)', "
-            f"got rules: {rules}"
-        )
+        schedules = [r.get("ScheduleExpression") for r in rules]
+        assert "cron(0 5 * * ? *)" in schedules
 
     def test_backup_plan_has_30_day_retention(self, backup_client, backup_plan_id):
         """Verify backup plan has 30-day retention."""
-        if backup_plan_id is None:
-            assert False, "Backup plan not found"
         plan = backup_client.get_backup_plan(BackupPlanId=backup_plan_id)
         rules = plan["BackupPlan"]["Rules"]
-        has_30_day = any(
-            r.get("Lifecycle", {}).get("DeleteAfterDays") == 30 for r in rules
-        )
-        assert has_30_day, (
-            f"Backup plan should have 30-day retention, got rules: {rules}"
-        )
+        retentions = [r.get("Lifecycle", {}).get("DeleteAfterDays") for r in rules]
+        assert 30 in retentions
 
     def test_backup_selection_includes_dynamodb_table(
         self, backup_client, backup_plan_id, configurations_table_arn
     ):
         """Verify backup selection includes the DynamoDB table."""
-        if backup_plan_id is None:
-            assert False, "Backup plan not found"
         selections = backup_client.list_backup_selections(BackupPlanId=backup_plan_id)
+        all_resources = []
         for sel in selections.get("BackupSelectionsList", []):
             selection = backup_client.get_backup_selection(
                 BackupPlanId=backup_plan_id,
                 SelectionId=sel["SelectionId"]
             )
-            resources = selection["BackupSelection"].get("Resources", [])
-            if configurations_table_arn in resources:
-                return
-        assert False, (
-            f"DynamoDB table '{configurations_table_arn}' not in backup selection"
-        )
+            all_resources.extend(selection["BackupSelection"].get("Resources", []))
+        assert configurations_table_arn in all_resources
