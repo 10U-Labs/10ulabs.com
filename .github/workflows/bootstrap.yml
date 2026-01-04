@@ -58,7 +58,7 @@ jobs:
         name: Assert one assert per pytest (GitHub-hosted)
         uses: 10U-Labs-LLC/assert-one-assert-per-pytest@latest
         with:
-          directories: ${{ github.workspace }}/test
+          files: ${{ github.workspace }}/test/**/*.py
           verbose: true
       - continue-on-error: true
         id: one_assert_per_pytest_sh
