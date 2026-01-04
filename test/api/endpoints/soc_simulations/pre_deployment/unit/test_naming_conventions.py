@@ -6,11 +6,11 @@ from naming_conventions.test_helpers import (
 from repo_utils import REPO_ROOT
 from terraform_config import extract_iam_role_names, extract_lambda_function_names
 
-SIMULATION_SOC_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "simulation_soc"
+SOC_SIMULATIONS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "soc_simulations"
 
-IAM_ROLES = extract_iam_role_names(SIMULATION_SOC_SRC / "iam.tf")
+IAM_ROLES = extract_iam_role_names(SOC_SIMULATIONS_SRC / "iam.tf")
 LAMBDA_FUNCTIONS = extract_lambda_function_names(
-    SIMULATION_SOC_SRC / "lambda.tf", use_handler_names=True
+    SOC_SIMULATIONS_SRC / "lambda.tf", use_handler_names=True
 )
 
 if IAM_ROLES:

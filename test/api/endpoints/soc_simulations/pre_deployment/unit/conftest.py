@@ -7,12 +7,12 @@ import pytest
 from module_utils import load_module_from_path
 from repo_utils import REPO_ROOT
 
-SIMULATION_SOC_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "simulation_soc"
+SOC_SIMULATIONS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "soc_simulations"
 
 
 def load_simulation_soc_handler_module() -> ModuleType:
     """Load the simulation-soc handler module dynamically."""
-    handler_path = SIMULATION_SOC_SRC / "lambda" / "handler.py"
+    handler_path = SOC_SIMULATIONS_SRC / "lambda" / "handler.py"
     return load_module_from_path("simulation_soc_handler", handler_path)
 
 
