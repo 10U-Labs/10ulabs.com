@@ -92,10 +92,10 @@ jobs:
           (github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true')
         name: Assert no inline lint disables (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
+        uses: 10U-Labs-LLC/assert-no-inline-directives@latest
         with:
           files: ${{ github.workspace }}/**/*
-          linters: pylint,mypy,yamllint
+          tools: pylint,mypy,yamllint
           verbose: true
       - continue-on-error: true
         id: no_inline_disables_sh
@@ -105,8 +105,8 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true')
         name: Assert no inline lint disables (self-hosted)
         run: >-
-          assert-no-inline-lint-disables
-          --linters pylint,mypy,yamllint
+          assert-no-inline-directives
+          --tools pylint,mypy,yamllint
           --verbose
           ${{ github.workspace }}/**/*
       - continue-on-error: true
