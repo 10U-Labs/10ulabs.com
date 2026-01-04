@@ -108,7 +108,16 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_endpoint_v1_runners_ec2_images_post.yml
-          jsonlint -q src/api/endpoints/runners/ec2/images/post/config.json
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install jsonlint
+        run: npm install -g jsonlint
+      - continue-on-error: true
+        id: jsonlint
+        name: Linting JSON files
+        run: jsonlint -q src/api/endpoints/runners/ec2/images/post/config.json
       - continue-on-error: true
         id: pylint_source
         name: Run pylint on source
@@ -359,14 +368,15 @@ jobs:
           S03: ${{ steps.no_inline_disables_gh.outcome }}
           S04: ${{ steps.no_inline_disables_sh.outcome }}
           S05: ${{ steps.yamllint.outcome }}
-          S06: ${{ steps.pylint_source.outcome }}
-          S07: ${{ steps.pylint_tests.outcome }}
-          S08: ${{ steps.mypy_source.outcome }}
-          S09: ${{ steps.mypy_tests.outcome }}
-          S10: ${{ steps.jscpd_source.outcome }}
-          S11: ${{ steps.jscpd_tests.outcome }}
-          S12: ${{ steps.unit_tests.outcome }}
-          S13: ${{ steps.pre_integration_tests.outcome }}
+          S06: ${{ steps.jsonlint.outcome }}
+          S07: ${{ steps.pylint_source.outcome }}
+          S08: ${{ steps.pylint_tests.outcome }}
+          S09: ${{ steps.mypy_source.outcome }}
+          S10: ${{ steps.mypy_tests.outcome }}
+          S11: ${{ steps.jscpd_source.outcome }}
+          S12: ${{ steps.jscpd_tests.outcome }}
+          S13: ${{ steps.unit_tests.outcome }}
+          S14: ${{ steps.pre_integration_tests.outcome }}
         name: Assert no step failed
         run: |
           failed=""
@@ -376,14 +386,15 @@ jobs:
           [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
           [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
           [ "$S05" = "$f" ] && failed="$failed yamllint"
-          [ "$S06" = "$f" ] && failed="$failed pylint_source"
-          [ "$S07" = "$f" ] && failed="$failed pylint_tests"
-          [ "$S08" = "$f" ] && failed="$failed mypy_source"
-          [ "$S09" = "$f" ] && failed="$failed mypy_tests"
-          [ "$S10" = "$f" ] && failed="$failed jscpd_source"
-          [ "$S11" = "$f" ] && failed="$failed jscpd_tests"
-          [ "$S12" = "$f" ] && failed="$failed unit_tests"
-          [ "$S13" = "$f" ] && failed="$failed pre_integration_tests"
+          [ "$S06" = "$f" ] && failed="$failed jsonlint"
+          [ "$S07" = "$f" ] && failed="$failed pylint_source"
+          [ "$S08" = "$f" ] && failed="$failed pylint_tests"
+          [ "$S09" = "$f" ] && failed="$failed mypy_source"
+          [ "$S10" = "$f" ] && failed="$failed mypy_tests"
+          [ "$S11" = "$f" ] && failed="$failed jscpd_source"
+          [ "$S12" = "$f" ] && failed="$failed jscpd_tests"
+          [ "$S13" = "$f" ] && failed="$failed unit_tests"
+          [ "$S14" = "$f" ] && failed="$failed pre_integration_tests"
           if [ -n "$failed" ]; then
             echo "Steps that failed:$failed"
             exit 1
