@@ -121,33 +121,20 @@ def is_kebabcase(name: str) -> bool:
     Returns:
         True if the name is valid kebab-case, False otherwise.
     """
-    if not name:
+    if not name or '-' not in name:
         return False
 
-    # Must contain at least one hyphen
-    if '-' not in name:
-        return False
-
-    # Split on first hyphen to get prefix and rest
     parts = name.split('-', 1)
     if len(parts) != 2:
         return False
 
     prefix, rest = parts
 
-    # Prefix must be PascalCase (start with uppercase, alphanumeric only)
-    if not prefix or not prefix[0].isupper() or not prefix.isalnum():
-        return False
+    # Validate prefix (PascalCase) and rest (lowercase with hyphens)
+    prefix_valid = prefix and prefix[0].isupper() and prefix.isalnum()
+    rest_valid = rest and re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', rest)
 
-    # Rest must be lowercase with hyphens only
-    if not rest:
-        return False
-
-    # Check rest is lowercase alphanumeric with hyphens
-    if not re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', rest):
-        return False
-
-    return True
+    return prefix_valid and bool(rest_valid)
 
 
 def validate_kebab_name(name: str) -> Optional[str]:
@@ -169,24 +156,14 @@ def validate_kebab_name(name: str) -> Optional[str]:
         return f"Name '{name}' must contain hyphens for kebab-case format"
 
     parts = name.split('-', 1)
-    if len(parts) != 2:
-        return f"Name '{name}' must have format: Prefix-lowercase-words"
+    prefix, rest = parts[0], parts[1] if len(parts) > 1 else ""
 
-    prefix, rest = parts
+    # Validate prefix
+    if not prefix or not prefix[0].isupper() or not prefix.isalnum():
+        return f"Name '{name}' prefix must be PascalCase (alphanumeric, starts uppercase)"
 
-    if not prefix:
-        return f"Name '{name}' must start with a PascalCase prefix"
-
-    if not prefix[0].isupper():
-        return f"Name '{name}' prefix must start with uppercase letter"
-
-    if not prefix.isalnum():
-        return f"Name '{name}' prefix must be alphanumeric (PascalCase)"
-
-    if not rest:
-        return f"Name '{name}' must have content after the prefix"
-
-    if not re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', rest):
+    # Validate rest
+    if not rest or not re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', rest):
         return f"Name '{name}' suffix must be lowercase words separated by hyphens"
 
     return None
