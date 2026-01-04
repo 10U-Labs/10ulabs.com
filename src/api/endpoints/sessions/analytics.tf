@@ -1,8 +1,8 @@
 resource "aws_s3_bucket" "analytics" {
-  bucket = "${lower(local.resource_prefix)}-rack-configurations-analytics"
+  bucket = "${lower(local.resource_prefix)}-sessions-analytics"
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-configurations-analytics"
+    Name = "${local.resource_prefix}-sessions-analytics"
   })
 }
 
@@ -33,10 +33,10 @@ resource "aws_s3_bucket_public_access_block" "analytics" {
 }
 
 resource "aws_glue_catalog_database" "analytics" {
-  name = "${lower(local.resource_prefix)}_rack_designer_analytics"
+  name = "${lower(local.resource_prefix)}_sessions_analytics"
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-configurations-analytics"
+    Name = "${local.resource_prefix}-sessions-analytics"
   })
 }
 
@@ -82,7 +82,7 @@ resource "aws_iam_role_policy" "glue_s3_access" {
 }
 
 resource "aws_glue_crawler" "events" {
-  name          = "${local.resource_prefix}-rack-configurations-events"
+  name          = "${local.resource_prefix}-sessions-events"
   database_name = aws_glue_catalog_database.analytics.name
   role          = aws_iam_role.glue_crawler.arn
   schedule      = "cron(0 6 * * ? *)"
@@ -97,7 +97,7 @@ resource "aws_glue_crawler" "events" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-configurations-events-crawler"
+    Name = "${local.resource_prefix}-sessions-events-crawler"
   })
 }
 
@@ -183,7 +183,6 @@ resource "aws_lambda_function" "export" {
     Name = local.export_function_name
   })
 
-  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
   lifecycle {
     replace_triggered_by = [aws_iam_role.export_lambda.id]
   }
@@ -194,12 +193,12 @@ resource "aws_cloudwatch_log_group" "export_lambda" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackConfigurationsExport-Logs"
+    Name = "${local.resource_prefix}-SessionsExport-Logs"
   })
 }
 
 resource "aws_scheduler_schedule" "daily_export" {
-  name       = "${local.resource_prefix}-RackConfigurationsDailyExport"
+  name       = "${local.resource_prefix}-SessionsDailyExport"
   group_name = "default"
 
   flexible_time_window {
@@ -316,7 +315,6 @@ resource "aws_lambda_function" "crawler_trigger" {
     Name = local.crawler_trigger_function_name
   })
 
-  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
   lifecycle {
     replace_triggered_by = [aws_iam_role.crawler_trigger.id]
   }
@@ -327,12 +325,12 @@ resource "aws_cloudwatch_log_group" "crawler_trigger" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackConfigurationsCrawlerTrigger-Logs"
+    Name = "${local.resource_prefix}-SessionsCrawlerTrigger-Logs"
   })
 }
 
 resource "aws_cloudwatch_event_rule" "export_completed" {
-  name = "${local.resource_prefix}-RackConfigurationsExportCompleted"
+  name = "${local.resource_prefix}-SessionsExportCompleted"
 
   event_pattern = jsonencode({
     source      = ["aws.dynamodb"]
@@ -345,7 +343,7 @@ resource "aws_cloudwatch_event_rule" "export_completed" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackConfigurationsExportCompleted"
+    Name = "${local.resource_prefix}-SessionsExportCompleted"
   })
 }
 
