@@ -57,8 +57,8 @@ RUN apt-get update && \
     ln -s /usr/local/lib/node_modules /home/runner/node_modules && \
     python3 -m pip install --no-cache-dir --no-compile --break-system-packages \
         assert-no-inline-lint-disables assert-no-linter-config-files assert-one-assert-per-pytest \
-        'boto3>=1.35.0' boto3-stubs 'botocore>=1.35.0' dockerfile-parse dnspython \
-        mypy paramiko pylint PyJWT pytest pytest-dependency python-hcl2 PyYAML requests types-dockerfile-parse \
+        'boto3>=1.35.0' boto3-stubs 'botocore>=1.35.0' dnspython \
+        mypy paramiko pylint PyJWT pytest pytest-dependency python-hcl2 PyYAML requests \
         types-paramiko types-PyYAML types-requests yamllint && \
     apt-get autoremove -y && apt-get clean && \
     useradd -m -s /bin/bash runner && echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \

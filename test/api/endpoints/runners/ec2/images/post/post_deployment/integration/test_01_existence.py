@@ -411,19 +411,6 @@ class TestPipPackagesInstalled:
 
         assert output["Status"] == "Success"
 
-    def test_dockerfile_parse_is_installed(
-        self, ssm_client, test_instance, run_ssm_command
-    ):
-        """Verify dockerfile-parse is installed."""
-        if not test_instance:
-            pytest.fail("Test instance not created")
-
-        output = run_ssm_command(
-            ssm_client, test_instance, "python3 -m pip show dockerfile-parse"
-        )
-
-        assert output["Status"] == "Success"
-
     def test_mypy_is_installed(self, ssm_client, test_instance, run_ssm_command):
         """Verify mypy is installed."""
         if not test_instance:
@@ -513,18 +500,6 @@ class TestPipPackagesInstalled:
         output = run_ssm_command(
             ssm_client, test_instance, "python3 -m pip show requests"
         )
-
-        assert output["Status"] == "Success"
-
-    def test_types_dockerfile_parse_is_installed(
-        self, ssm_client, test_instance, run_ssm_command
-    ):
-        """Verify types-dockerfile-parse is installed."""
-        if not test_instance:
-            pytest.fail("Test instance not created")
-
-        cmd = "python3 -m pip show types-dockerfile-parse"
-        output = run_ssm_command(ssm_client, test_instance, cmd)
 
         assert output["Status"] == "Success"
 

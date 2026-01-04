@@ -208,13 +208,6 @@ class TestPythonPackagesExist:
         )
         assert result.returncode == 0
 
-    def test_dockerfile_parse_installed(self, docker_image):
-        """Test that dockerfile-parse is installed."""
-        result = run_command_in_container(
-            docker_image, "python3 -m pip show dockerfile-parse"
-        )
-        assert result.returncode == 0
-
     def test_dnspython_installed(self, docker_image):
         """Test that dnspython is installed."""
         result = run_command_in_container(
@@ -283,12 +276,6 @@ class TestPythonPackagesExist:
         result = run_command_in_container(
             docker_image, "python3 -m pip show requests"
         )
-        assert result.returncode == 0
-
-    def test_types_dockerfile_parse_installed(self, docker_image):
-        """Test that types-dockerfile-parse is installed."""
-        cmd = "python3 -m pip show types-dockerfile-parse"
-        result = run_command_in_container(docker_image, cmd)
         assert result.returncode == 0
 
     def test_types_paramiko_installed(self, docker_image):

@@ -106,7 +106,6 @@ def install_python_packages() -> None:
         "boto3-stubs[ecr]",
         "botocore",
         "dnspython",
-        "dockerfile-parse",
         "mypy",
         "paramiko",
         "pylint",
@@ -117,7 +116,6 @@ def install_python_packages() -> None:
         "requests",
         "types-paramiko",
         "types-PyYAML",
-        "types-dockerfile-parse",
         "types-requests",
         "yamllint",
     ]
