@@ -99,6 +99,9 @@ def install_system_packages() -> None:
 def install_python_packages() -> None:
     """Install Python packages via pip."""
     packages = [
+        "assert-no-inline-lint-disables",
+        "assert-no-linter-config-files",
+        "assert-one-assert-per-pytest",
         "boto3",
         "boto3-stubs[ecr]",
         "botocore",
