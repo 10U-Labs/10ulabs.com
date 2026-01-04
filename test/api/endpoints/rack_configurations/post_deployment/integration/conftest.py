@@ -1,4 +1,5 @@
 """Pytest fixtures for rack configurations integration tests."""
+# pylint: disable=redefined-outer-name
 import boto3
 import pytest
 
@@ -73,3 +74,33 @@ def configurations_table_name(request):
     """Get the configurations DynamoDB table name."""
     prefix = request.getfixturevalue("resource_prefix")
     return f"{prefix}-rack-configurations-configurations"
+
+
+@pytest.fixture(scope="module")
+def configurations_table_arn(dynamodb_client, configurations_table_name):
+    """Get the configurations DynamoDB table ARN."""
+    response = dynamodb_client.describe_table(TableName=configurations_table_name)
+    return response["Table"]["TableArn"]
+
+
+@pytest.fixture(scope="module")
+def backup_plan_name(request):
+    """Get the backup plan name."""
+    prefix = request.getfixturevalue("resource_prefix")
+    return f"{prefix}-rack-configurations-backup"
+
+
+@pytest.fixture(scope="session")
+def backup_client(aws_region):
+    """Create an AWS Backup client."""
+    return boto3.client("backup", region_name=aws_region)
+
+
+@pytest.fixture(scope="module")
+def backup_plan_id(backup_client, backup_plan_name):
+    """Get the backup plan ID by name."""
+    plans = backup_client.list_backup_plans()
+    for plan in plans.get("BackupPlansList", []):
+        if plan["BackupPlanName"] == backup_plan_name:
+            return plan["BackupPlanId"]
+    return None

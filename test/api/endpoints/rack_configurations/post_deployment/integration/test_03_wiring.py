@@ -77,3 +77,31 @@ class TestHandlerIAMWiring:
             f"IAM role '{handler_role_name}' missing DynamoDB inline policy. "
             f"Available policies: {inline_policies}"
         )
+
+
+class TestBackupIAMWiring:
+    """Layer 3: Verify backup IAM role has required policies attached."""
+
+    def test_backup_role_has_backup_policy(self, iam_client, backup_role_name):
+        """Verify backup IAM role has AWSBackupServiceRolePolicyForBackup attached."""
+        response = iam_client.list_attached_role_policies(RoleName=backup_role_name)
+        policy_arns = [p["PolicyArn"] for p in response["AttachedPolicies"]]
+        expected = (
+            "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+        )
+        assert expected in policy_arns, (
+            f"IAM role '{backup_role_name}' missing AWSBackupServiceRolePolicyForBackup. "
+            f"Attached policies: {policy_arns}"
+        )
+
+    def test_backup_role_has_restore_policy(self, iam_client, backup_role_name):
+        """Verify backup IAM role has AWSBackupServiceRolePolicyForRestores attached."""
+        response = iam_client.list_attached_role_policies(RoleName=backup_role_name)
+        policy_arns = [p["PolicyArn"] for p in response["AttachedPolicies"]]
+        expected = (
+            "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores"
+        )
+        assert expected in policy_arns, (
+            f"IAM role '{backup_role_name}' missing AWSBackupServiceRolePolicyForRestores. "
+            f"Attached policies: {policy_arns}"
+        )
