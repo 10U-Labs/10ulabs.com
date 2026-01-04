@@ -9,7 +9,6 @@ from test_fixtures.integration import (
     Layer3LambdaAndIAMAuthorizationTests,
 )
 
-pytestmark = pytest.mark.layer(3)
 
 
 class TestS3Authorization(Layer2S3AuthorizationTests):

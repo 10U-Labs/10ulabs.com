@@ -11,7 +11,6 @@ from test_fixtures.integration import (
     check_state_file_readable,
 )
 
-pytestmark = pytest.mark.layer(7)
 
 
 class TestS3StateCapabilities(Layer6S3CapabilityTests):

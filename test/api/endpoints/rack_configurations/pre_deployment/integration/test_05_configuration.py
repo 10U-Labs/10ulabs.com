@@ -11,7 +11,6 @@ import pytest
 from test_fixtures.integration import skip_if_api_gateway_unavailable
 
 
-pytestmark = pytest.mark.layer(5)
 
 
 class TestAPIGatewayConfiguration:

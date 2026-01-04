@@ -9,7 +9,6 @@ from botocore.exceptions import ClientError
 from test_fixtures.integration import create_security_group_existence_test
 from .conftest import get_stable_ami_filters
 
-pytestmark = pytest.mark.layer(4)
 
 
 class TestImageForEC2RunnersOutputs:

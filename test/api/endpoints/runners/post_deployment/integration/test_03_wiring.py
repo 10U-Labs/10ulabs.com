@@ -7,7 +7,6 @@ from test.api.endpoints.conftest import assert_lambda_package_includes_file
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.layer(3)
 
 
 class TestLambdaPackage:

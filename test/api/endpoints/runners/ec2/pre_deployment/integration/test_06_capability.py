@@ -7,7 +7,6 @@ from botocore.exceptions import ClientError
 
 from .conftest import get_stable_ami_info
 
-pytestmark = pytest.mark.layer(6)
 
 
 def test_can_run_instances_in_subnets(ec2_client, networking_outputs):

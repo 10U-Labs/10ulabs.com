@@ -8,18 +8,8 @@ Shared fixtures are loaded via pytest_plugins.
 import sys
 from pathlib import Path
 
-import pytest
-
 # Load shared fixtures for all tests - must be a module-level variable
 pytest_plugins = ['test_fixtures.unit']
-
-
-def pytest_configure(config: pytest.Config) -> None:
-    """Register custom pytest markers."""
-    config.addinivalue_line(
-        "markers",
-        "layer(number): mark test with a layer number for categorization"
-    )
 
 _REPO_ROOT = Path(__file__).parent.parent
 _LIB_DIR = _REPO_ROOT / "lib" / "python"

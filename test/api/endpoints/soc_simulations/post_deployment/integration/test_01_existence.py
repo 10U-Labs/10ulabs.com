@@ -4,7 +4,6 @@ Verify that resources created by this deployment exist.
 """
 import pytest
 
-pytestmark = pytest.mark.layer(1)
 
 
 def test_simulation_soc_handler_log_group_exists(handler_log_group):

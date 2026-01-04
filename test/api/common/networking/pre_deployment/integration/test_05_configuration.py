@@ -10,7 +10,6 @@ import pytest
 from test_fixtures.integration import Layer5PrerequisiteConfigurationTests
 
 
-pytestmark = pytest.mark.layer(5)
 
 
 class TestPrerequisiteResourcesConfiguration(Layer5PrerequisiteConfigurationTests):

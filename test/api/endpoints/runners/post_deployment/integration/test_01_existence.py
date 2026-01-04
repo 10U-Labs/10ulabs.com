@@ -6,7 +6,6 @@ import pytest
 
 from test_fixtures.integration import check_iam_role_exists, check_lambda_function_exists
 
-pytestmark = pytest.mark.layer(1)
 
 TERRAFORM_PATH = "src/api/endpoints/runners/"
 

@@ -12,7 +12,6 @@ import pytest
 from test_fixtures.integration import create_lambda_existence_tests
 
 
-pytestmark = pytest.mark.layer(1)
 
 TestDeployedResourcesExist = create_lambda_existence_tests(
     function_name_config_key="health_handler_function_name",

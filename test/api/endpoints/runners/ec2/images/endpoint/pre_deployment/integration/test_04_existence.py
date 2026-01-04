@@ -1,7 +1,6 @@
 """Layer 4: Existence - Verify prerequisite resources exist."""
 import pytest
 
-pytestmark = pytest.mark.layer(4)
 
 
 class TestStableAMIExistence:

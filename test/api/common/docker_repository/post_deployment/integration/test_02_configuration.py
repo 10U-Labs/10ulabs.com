@@ -11,7 +11,6 @@ import json
 import pytest
 
 
-pytestmark = pytest.mark.layer(2)
 
 
 class TestECRSecurityConfiguration:

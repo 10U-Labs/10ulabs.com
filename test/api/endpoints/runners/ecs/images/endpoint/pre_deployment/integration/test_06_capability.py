@@ -5,7 +5,6 @@ Verify we can perform required operations on prerequisite resources.
 from botocore.exceptions import ClientError
 import pytest
 
-pytestmark = pytest.mark.layer(6)
 
 
 def test_can_describe_ecr_images(ecr_client, ecr_repository_name):

@@ -9,7 +9,6 @@ import pytest
 from naming_conventions import validate_name
 from test_fixtures.integration import assert_iam_role_name_is_pascalcase
 
-pytestmark = pytest.mark.layer(2)
 
 
 # =============================================================================

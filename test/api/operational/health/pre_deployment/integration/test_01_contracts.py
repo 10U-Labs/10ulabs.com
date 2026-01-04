@@ -11,7 +11,6 @@ import pytest
 from repo_utils import REPO_ROOT
 
 
-pytestmark = pytest.mark.layer(1)
 
 HEALTH_SRC = REPO_ROOT / "src" / "api" / "operational" / "health"
 

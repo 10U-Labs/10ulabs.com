@@ -4,7 +4,6 @@ Verify prerequisite resources are configured correctly.
 """
 import pytest
 
-pytestmark = pytest.mark.layer(5)
 
 
 def test_ecr_repository_has_uri(ecr_repo):

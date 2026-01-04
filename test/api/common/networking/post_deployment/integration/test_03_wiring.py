@@ -9,7 +9,6 @@ Three-layer testing model:
 import pytest
 
 
-pytestmark = pytest.mark.layer(3)
 
 
 class TestVPCWiring:

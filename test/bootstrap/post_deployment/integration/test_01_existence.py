@@ -5,7 +5,6 @@ Tests are organized by resource domain for readability.
 """
 import pytest
 
-pytestmark = pytest.mark.layer(1)
 
 
 # =============================================================================

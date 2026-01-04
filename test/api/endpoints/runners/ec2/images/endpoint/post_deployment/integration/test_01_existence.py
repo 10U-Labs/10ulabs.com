@@ -4,7 +4,6 @@ These tests verify that all resources created by terraform apply exist.
 """
 import pytest
 
-pytestmark = pytest.mark.layer(1)
 
 
 class TestLambdaFunctionExists:

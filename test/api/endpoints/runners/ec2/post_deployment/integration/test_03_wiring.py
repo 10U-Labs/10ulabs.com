@@ -9,7 +9,6 @@ from test.api.endpoints.conftest import assert_lambda_package_includes_file
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.layer(3)
 
 
 def test_lambda_package_includes_runner_labels(lambda_client, lambda_function_name):

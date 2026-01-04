@@ -5,7 +5,6 @@ Verify prerequisite resources this endpoint depends on exist.
 from botocore.exceptions import ClientError
 import pytest
 
-pytestmark = pytest.mark.layer(4)
 
 
 class TestImageForECSRunnersOutputs:

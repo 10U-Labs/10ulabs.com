@@ -11,7 +11,6 @@ from test_fixtures.integration import (
     create_log_group_configuration_tests,
 )
 
-pytestmark = pytest.mark.layer(2)
 
 
 class TestLambdaConfiguration:

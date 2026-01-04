@@ -4,7 +4,6 @@ Verify prerequisite resources exist.
 """
 import pytest
 
-pytestmark = pytest.mark.layer(4)
 
 
 def test_ecr_repository_exists(ecr_repo, ecr_repository_name):

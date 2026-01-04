@@ -7,7 +7,6 @@ Per the tenets, capability tests should clean up any test artifacts in finally b
 """
 import pytest
 
-pytestmark = pytest.mark.layer(6)
 
 
 class TestEC2Capabilities:

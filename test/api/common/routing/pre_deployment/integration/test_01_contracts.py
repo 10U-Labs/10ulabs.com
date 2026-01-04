@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.layer(1)
 
 
 def _extract_openapi_template_vars(openapi_path: Path) -> set[str]:

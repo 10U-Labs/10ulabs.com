@@ -12,7 +12,6 @@ from botocore.exceptions import ClientError
 from test_fixtures.integration import create_lambda_existence_tests
 
 
-pytestmark = pytest.mark.layer(1)
 
 
 # Use factory for Lambda/IAM existence tests

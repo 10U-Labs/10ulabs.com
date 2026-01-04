@@ -15,7 +15,6 @@ from test_fixtures.integration import (
 )
 
 
-pytestmark = pytest.mark.layer(3)
 
 
 # Use factory for Lambda wiring tests

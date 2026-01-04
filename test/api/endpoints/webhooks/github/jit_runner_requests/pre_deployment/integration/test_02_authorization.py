@@ -16,7 +16,6 @@ import pytest
 from test_fixtures.integration import Layer2IAMAuthorizationTests
 
 
-pytestmark = pytest.mark.layer(2)
 
 
 class TestIAMAuthorization(Layer2IAMAuthorizationTests):

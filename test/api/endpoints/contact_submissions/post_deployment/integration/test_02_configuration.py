@@ -11,7 +11,6 @@ import pytest
 from test_fixtures.integration import create_naming_convention_tests
 
 
-pytestmark = pytest.mark.layer(2)
 
 
 class TestLambdaConfiguration:

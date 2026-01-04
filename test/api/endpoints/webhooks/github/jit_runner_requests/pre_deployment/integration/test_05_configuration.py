@@ -18,7 +18,6 @@ from repo_utils import REPO_ROOT
 from terraform_config import get_runners_resource_names
 
 
-pytestmark = pytest.mark.layer(5)
 
 
 RUNNERS_SRC = (

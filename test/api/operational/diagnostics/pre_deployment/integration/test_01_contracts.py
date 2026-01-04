@@ -12,7 +12,6 @@ from repo_utils import REPO_ROOT
 from test_fixtures.terraform_tests import create_remote_state_contract_tests
 
 
-pytestmark = pytest.mark.layer(1)
 
 DIAGNOSTICS_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
 

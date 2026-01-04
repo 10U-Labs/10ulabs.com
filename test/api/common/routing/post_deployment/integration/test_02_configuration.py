@@ -9,7 +9,6 @@ import boto3
 
 from test_fixtures.integration import create_deployed_naming_convention_tests
 
-pytestmark = pytest.mark.layer(2)
 
 
 # =============================================================================

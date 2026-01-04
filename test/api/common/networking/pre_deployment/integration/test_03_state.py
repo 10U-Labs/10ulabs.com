@@ -13,7 +13,6 @@ from terraform_config import get_shared_config
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
 
-pytestmark = pytest.mark.layer(3)
 
 
 API_COMMON_NETWORKING_SRC = REPO_ROOT / "src" / "api" / "common" / "networking"

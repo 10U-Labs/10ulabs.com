@@ -14,7 +14,6 @@ import json
 import pytest
 
 
-pytestmark = pytest.mark.layer(3)
 
 
 # === EventBridge Rule Targets ===

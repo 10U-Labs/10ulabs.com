@@ -7,7 +7,6 @@ from test.api.endpoints.webhooks.github.jit_runner_requests.conftest import find
 
 import pytest
 
-pytestmark = pytest.mark.layer(1)
 
 # === Lambda Functions ===
 

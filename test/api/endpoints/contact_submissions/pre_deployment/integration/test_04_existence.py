@@ -11,7 +11,6 @@ import pytest
 from test_fixtures.integration import assert_api_gateway_exists
 
 
-pytestmark = pytest.mark.layer(4)
 
 
 class TestPrerequisiteExistence:

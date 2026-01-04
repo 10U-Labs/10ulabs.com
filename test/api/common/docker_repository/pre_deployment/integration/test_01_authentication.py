@@ -10,7 +10,6 @@ import pytest
 from test_fixtures.integration import Layer1AuthenticationTests
 
 
-pytestmark = pytest.mark.layer(1)
 
 
 class TestAWSAuthentication(Layer1AuthenticationTests):

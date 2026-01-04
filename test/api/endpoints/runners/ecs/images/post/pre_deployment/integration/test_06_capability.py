@@ -10,7 +10,6 @@ import pytest
 
 from test_fixtures.integration import handle_ecr_error
 
-pytestmark = pytest.mark.layer(6)
 
 
 class TestECRCapability:

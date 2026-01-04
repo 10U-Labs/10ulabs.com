@@ -5,7 +5,6 @@ Verify prerequisite resources are configured correctly (assumes existence passed
 import pytest
 from test_fixtures.integration import Layer5IAMConfigurationTests
 
-pytestmark = pytest.mark.layer(6)
 
 
 class TestIAMConfiguration(Layer5IAMConfigurationTests):

@@ -10,7 +10,6 @@ import pytest
 from test_fixtures.integration import Layer4PrerequisiteExistenceTests
 
 
-pytestmark = pytest.mark.layer(4)
 
 
 class TestPrerequisiteResourcesExist(Layer4PrerequisiteExistenceTests):

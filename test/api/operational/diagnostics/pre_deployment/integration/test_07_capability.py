@@ -11,7 +11,6 @@ import pytest
 from test_fixtures.integration import Layer6DeploymentCapabilityTests
 
 
-pytestmark = pytest.mark.layer(7)
 
 
 class TestDeploymentCapabilities(Layer6DeploymentCapabilityTests):

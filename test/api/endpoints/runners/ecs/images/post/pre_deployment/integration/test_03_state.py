@@ -9,7 +9,6 @@ from botocore.exceptions import ClientError
 
 import pytest
 
-pytestmark = pytest.mark.layer(3)
 
 
 class TestECRImageState:

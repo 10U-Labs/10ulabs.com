@@ -20,7 +20,6 @@ import pytest
 from botocore.exceptions import ClientError
 
 
-pytestmark = pytest.mark.layer(6)
 
 
 def _verify_lambda_configuration(lambda_client, outputs, output_key):

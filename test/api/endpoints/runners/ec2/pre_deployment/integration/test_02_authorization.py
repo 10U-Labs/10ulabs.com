@@ -5,7 +5,6 @@ Verify we have permission to inspect prerequisite resources.
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.layer(2)
 
 
 def test_can_call_describe_vpcs(ec2_client):

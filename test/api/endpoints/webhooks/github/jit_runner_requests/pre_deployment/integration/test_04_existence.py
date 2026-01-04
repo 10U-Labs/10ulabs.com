@@ -19,7 +19,6 @@ from terraform_config import extract_sqs_queue_names
 from test_fixtures.integration import create_security_group_existence_test
 
 
-pytestmark = pytest.mark.layer(4)
 
 
 RUNNERS_SRC = (

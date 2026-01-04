@@ -10,7 +10,6 @@ Three-layer testing model:
 import pytest
 
 
-pytestmark = pytest.mark.layer(1)
 
 
 class TestVPCResourcesExist:

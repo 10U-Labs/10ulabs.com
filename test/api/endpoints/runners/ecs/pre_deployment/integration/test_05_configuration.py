@@ -7,7 +7,6 @@ import pytest
 
 from .conftest import get_repository_name_or_skip
 
-pytestmark = pytest.mark.layer(5)
 
 
 def _get_stable_image_or_skip(ecr_client, repository_name):

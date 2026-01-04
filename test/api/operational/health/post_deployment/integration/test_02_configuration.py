@@ -16,7 +16,6 @@ from test_fixtures.integration import (
 )
 
 
-pytestmark = pytest.mark.layer(2)
 
 
 TestLambdaConfiguration = create_lambda_configuration_tests(

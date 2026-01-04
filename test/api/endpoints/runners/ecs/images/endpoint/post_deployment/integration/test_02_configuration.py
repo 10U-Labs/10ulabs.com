@@ -7,7 +7,6 @@ import pytest
 
 from naming_conventions import validate_name
 
-pytestmark = pytest.mark.layer(2)
 
 
 class TestLambdaRuntime:

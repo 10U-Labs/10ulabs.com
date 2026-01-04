@@ -2,7 +2,6 @@
 import pytest
 from botocore.exceptions import ClientError, NoCredentialsError
 
-pytestmark = pytest.mark.layer(1)
 
 
 class TestAWSCredentialsExistence:

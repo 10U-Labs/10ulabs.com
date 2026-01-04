@@ -9,7 +9,6 @@ import re
 import pytest
 
 
-pytestmark = pytest.mark.layer(2)
 
 
 # === DynamoDB Table Configuration ===

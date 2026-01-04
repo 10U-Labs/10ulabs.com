@@ -13,7 +13,6 @@ from test_fixtures.integration import (
 
 from .conftest import get_inline_policy_actions
 
-pytestmark = pytest.mark.layer(2)
 
 
 def test_lambda_function_name_is_pascalcase(lambda_client, lambda_function_name):

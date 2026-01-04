@@ -19,7 +19,6 @@ from test_fixtures.integration.helpers import (
 )
 
 
-pytestmark = pytest.mark.layer(1)
 
 
 class TestAWSCredentialsAuthentication:

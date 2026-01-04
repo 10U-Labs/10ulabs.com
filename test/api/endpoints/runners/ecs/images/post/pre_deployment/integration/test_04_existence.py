@@ -9,7 +9,6 @@ import requests
 
 from .conftest import BASE_IMAGE, BASE_TAG
 
-pytestmark = pytest.mark.layer(4)
 
 
 class TestTerraformOutputsExist:

@@ -7,7 +7,6 @@ import pytest
 
 from .conftest import get_repository_name_or_skip
 
-pytestmark = pytest.mark.layer(2)
 
 
 def _handle_ecr_client_error(error, operation, repository_name):

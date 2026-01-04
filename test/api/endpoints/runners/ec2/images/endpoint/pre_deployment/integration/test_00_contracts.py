@@ -11,7 +11,6 @@ import pytest
 
 from repo_utils import REPO_ROOT
 
-pytestmark = pytest.mark.layer(0)
 
 ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2" / "images"
 HANDLER_PATH = ENDPOINT_SRC / "lambda" / "handler.py"
@@ -73,13 +72,17 @@ class TestLambdaHandlerContract:
             f"Terraform references '{tf_handler}' but handler.py exports: {exports}"
         )
 
-    def test_handler_reference_format(self):
-        """Verify Terraform handler reference has correct format."""
+    def test_handler_reference_has_dot_separator(self):
+        """Verify Terraform handler reference uses module.function format."""
         tf_handler = _get_terraform_handler_reference()
         assert '.' in tf_handler, (
             f"Terraform handler reference '{tf_handler}' should be 'module.function'"
         )
-        module, function = tf_handler.rsplit('.', 1)
+
+    def test_handler_reference_uses_handler_module(self):
+        """Verify Terraform handler reference uses 'handler' module."""
+        tf_handler = _get_terraform_handler_reference()
+        module = tf_handler.rsplit('.', 1)[0] if '.' in tf_handler else ""
         assert module == "handler", (
             f"Handler module should be 'handler', got '{module}'"
         )

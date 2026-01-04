@@ -1,7 +1,6 @@
 """Layer 5: Configuration - Verify prerequisite resources are configured correctly."""
 import pytest
 
-pytestmark = pytest.mark.layer(5)
 
 
 class TestRunnersConfiguration:

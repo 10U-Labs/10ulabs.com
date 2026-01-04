@@ -4,7 +4,6 @@ Verify resources created by this deployment exist. No configuration checks.
 """
 import pytest
 
-pytestmark = pytest.mark.layer(1)
 
 
 def test_cloudfront_distribution_exists(cloudfront_client):

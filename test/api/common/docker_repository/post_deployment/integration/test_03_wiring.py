@@ -12,7 +12,6 @@ other components (ECS tasks, CI/CD) to authenticate and use the repository.
 import pytest
 
 
-pytestmark = pytest.mark.layer(3)
 
 
 class TestECRAuthorizationWiring:

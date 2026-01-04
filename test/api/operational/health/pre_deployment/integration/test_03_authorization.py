@@ -14,7 +14,6 @@ from test_fixtures.integration import (
 )
 
 
-pytestmark = pytest.mark.layer(3)
 
 
 class TestAPIGatewayAuthorization(Layer3APIGatewayAuthorizationTests):

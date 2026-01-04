@@ -15,7 +15,6 @@ from test_fixtures.integration import (
 )
 
 
-pytestmark = pytest.mark.layer(6)
 
 
 class TestIAMCapabilities(Layer6IAMCapabilityTests):

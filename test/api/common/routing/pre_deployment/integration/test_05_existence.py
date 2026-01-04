@@ -9,7 +9,6 @@ from test_fixtures.integration import (
     Layer4TerraformStateExistenceTests,
 )
 
-pytestmark = pytest.mark.layer(5)
 
 
 class TestIAMAndStateExistence(

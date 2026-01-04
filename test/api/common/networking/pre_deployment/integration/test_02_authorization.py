@@ -15,7 +15,6 @@ from test_fixtures.integration import (
 )
 
 
-pytestmark = pytest.mark.layer(2)
 
 
 class TestIAMRoleInspectionAuthorization(Layer2IAMAuthorizationTests):

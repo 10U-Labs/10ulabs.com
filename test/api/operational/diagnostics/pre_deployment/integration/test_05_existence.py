@@ -16,7 +16,6 @@ from test_fixtures.integration import (
 )
 
 
-pytestmark = pytest.mark.layer(5)
 
 
 class TestAPIBackendPrerequisites(Layer4APIBackendPrerequisiteTests):

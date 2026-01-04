@@ -9,7 +9,6 @@ import pytest
 from botocore.exceptions import ClientError
 
 
-pytestmark = pytest.mark.layer(1)
 
 
 class TestLambdaExistence:

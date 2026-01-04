@@ -6,7 +6,6 @@ import pytest
 
 from .conftest import get_stable_ami_filters
 
-pytestmark = pytest.mark.layer(5)
 
 
 def test_stable_ami_is_available(ec2_client):

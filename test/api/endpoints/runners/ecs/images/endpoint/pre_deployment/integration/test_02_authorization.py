@@ -6,7 +6,6 @@ from botocore.exceptions import ClientError
 import pytest
 from test_fixtures.integration import handle_ecr_authorization_error
 
-pytestmark = pytest.mark.layer(2)
 
 
 def test_can_describe_ecr_repositories(ecr_client, ecr_repository_name):

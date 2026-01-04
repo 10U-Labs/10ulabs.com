@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.layer(1)
 
 
 def _extract_module_common_refs(content: str) -> set[str]:

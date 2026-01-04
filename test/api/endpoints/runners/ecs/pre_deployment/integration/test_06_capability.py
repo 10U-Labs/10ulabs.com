@@ -11,7 +11,6 @@ import pytest
 from test_fixtures.integration import handle_ecr_error
 from .conftest import get_repository_name_or_skip
 
-pytestmark = pytest.mark.layer(6)
 
 
 class TestECSCapability:

@@ -5,7 +5,6 @@ Verify prerequisite resources are configured correctly (assumes existence passed
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.layer(6)
 
 
 class TestAPIGatewayAndStateBucketConfiguration:

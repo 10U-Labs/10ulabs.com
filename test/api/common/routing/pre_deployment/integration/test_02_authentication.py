@@ -5,7 +5,6 @@ Verify AWS credentials are valid before testing authorization or state.
 import pytest
 from test_fixtures.integration import Layer2EndpointAuthenticationTests
 
-pytestmark = pytest.mark.layer(2)
 
 
 class TestAuthentication(Layer2EndpointAuthenticationTests):

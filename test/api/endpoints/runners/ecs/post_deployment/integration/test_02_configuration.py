@@ -9,7 +9,6 @@ from test.api.endpoints.conftest import assert_lambda_package_includes_file
 from naming_conventions import validate_name
 import pytest
 
-pytestmark = pytest.mark.layer(2)
 
 
 class TestECSTaskDefinitionRuntimePlatform:

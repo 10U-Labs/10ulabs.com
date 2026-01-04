@@ -8,7 +8,6 @@ import pytest
 
 from .conftest import BASE_IMAGE, BASE_TAG
 
-pytestmark = pytest.mark.layer(5)
 
 
 class TestECRRepositoryConfiguration:

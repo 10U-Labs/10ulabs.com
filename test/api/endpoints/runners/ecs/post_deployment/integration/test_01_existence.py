@@ -4,7 +4,6 @@ Verify resources created by this deployment exist.
 """
 import pytest
 
-pytestmark = pytest.mark.layer(1)
 
 
 class TestLambdaExistence:

@@ -5,7 +5,6 @@ Verify components are connected properly.
 import pytest
 from test_fixtures.integration import create_lambda_execution_role_wiring_tests
 
-pytestmark = pytest.mark.layer(3)
 
 
 # Create Lambda execution role wiring tests using lambda_config fixture
