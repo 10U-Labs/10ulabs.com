@@ -400,9 +400,9 @@ name: Workflow Controller
 on:
   # Workflowctl runs on every push to main - it determines which workflows to
   # dispatch based on changed files and the dependency graph.
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
   workflow_dispatch:
     inputs:
       force_testing:
