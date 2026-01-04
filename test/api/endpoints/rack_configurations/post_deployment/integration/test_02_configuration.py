@@ -5,7 +5,6 @@ Verify that resources created by this deployment are configured correctly.
 Three-layer testing model:
 - Layer 2: Configuration - Resources configured correctly
 """
-import pytest
 
 from naming_conventions import validate_name
 

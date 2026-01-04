@@ -6,7 +6,6 @@ Six-layer testing model:
 - Layer 4: Existence - Resource actually exists
 """
 
-import pytest
 from test_fixtures.integration import Layer4PrerequisiteExistenceTests
 
 

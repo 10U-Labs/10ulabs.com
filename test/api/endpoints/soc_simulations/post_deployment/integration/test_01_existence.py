@@ -2,7 +2,6 @@
 
 Verify that resources created by this deployment exist.
 """
-import pytest
 
 
 

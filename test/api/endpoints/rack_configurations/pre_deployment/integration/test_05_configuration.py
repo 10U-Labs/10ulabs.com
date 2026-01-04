@@ -7,7 +7,6 @@ Six-layer testing model:
 - Layer 5: Configuration - Prerequisites configured correctly
 """
 
-import pytest
 from test_fixtures.integration import skip_if_api_gateway_unavailable
 
 

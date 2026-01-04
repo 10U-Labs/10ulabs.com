@@ -3,7 +3,6 @@
 These tests verify that components are connected properly.
 Tests assume Layer 1 existence and Layer 2 configuration tests have passed.
 """
-import pytest
 
 
 

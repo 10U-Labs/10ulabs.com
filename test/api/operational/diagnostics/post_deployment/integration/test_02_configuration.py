@@ -7,7 +7,6 @@ Three-layer testing model:
 - Layer 2: Configuration - Resources configured correctly
 """
 
-import pytest
 
 from test_fixtures.integration import (
     create_lambda_configuration_tests,

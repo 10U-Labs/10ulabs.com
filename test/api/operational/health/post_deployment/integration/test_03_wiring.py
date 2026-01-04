@@ -7,7 +7,6 @@ Three-layer testing model:
 - Layer 3: Wiring - Components connected properly
 """
 
-import pytest
 from test_fixtures.integration import (
     create_lambda_api_gateway_wiring_tests,
     create_lambda_iam_wiring_tests,

@@ -6,7 +6,6 @@ Three-layer testing model:
 - Layer 2: Configuration - Resources configured correctly
 """
 
-import pytest
 
 
 

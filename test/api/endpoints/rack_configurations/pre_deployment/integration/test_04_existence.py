@@ -7,7 +7,6 @@ Six-layer testing model:
 - Layer 4: Existence - Prerequisite resources actually exist
 """
 
-import pytest
 from test_fixtures.integration import (
     assert_api_gateway_exists,
     create_ecs_runner_outputs_tests,

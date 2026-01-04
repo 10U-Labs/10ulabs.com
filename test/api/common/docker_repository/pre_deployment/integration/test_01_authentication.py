@@ -6,7 +6,6 @@ Six-layer testing model:
 - Layer 1: Authentication - Valid credentials exist
 """
 
-import pytest
 from test_fixtures.integration import Layer1AuthenticationTests
 
 

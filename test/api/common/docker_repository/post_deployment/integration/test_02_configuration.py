@@ -8,7 +8,6 @@ Three-layer testing model:
 
 import json
 
-import pytest
 
 
 

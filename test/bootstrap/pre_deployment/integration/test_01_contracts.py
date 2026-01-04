@@ -5,7 +5,6 @@ Verify cross-file compatibility between Terraform configuration files. No AWS ca
 import re
 from pathlib import Path
 
-import pytest
 
 
 

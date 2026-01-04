@@ -7,7 +7,6 @@ Three-layer testing model:
 - Layer 1: Existence - Resources were created
 """
 
-import pytest
 
 
 

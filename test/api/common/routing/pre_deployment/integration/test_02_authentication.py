@@ -2,7 +2,6 @@
 
 Verify AWS credentials are valid before testing authorization or state.
 """
-import pytest
 from test_fixtures.integration import Layer2EndpointAuthenticationTests
 
 

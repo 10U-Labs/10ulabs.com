@@ -2,7 +2,6 @@
 
 Verify prerequisite resources are configured correctly (assumes existence passed).
 """
-import pytest
 from test_fixtures.integration import Layer5IAMConfigurationTests
 
 

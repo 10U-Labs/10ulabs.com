@@ -6,7 +6,6 @@ Seven-layer testing model:
 - Layer 2: Authentication - Valid credentials exist
 """
 
-import pytest
 from test_fixtures.integration import Layer1EndpointAuthenticationTests
 
 

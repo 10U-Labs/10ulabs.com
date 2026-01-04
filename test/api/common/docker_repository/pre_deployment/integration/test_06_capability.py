@@ -6,7 +6,6 @@ Six-layer testing model:
 - Layer 6: Capability - Can perform required operations
 """
 
-import pytest
 from test_fixtures.integration import (
     Layer6IAMCapabilityTests,
     Layer6S3CapabilityTests,

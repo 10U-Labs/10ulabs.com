@@ -7,7 +7,6 @@ Six-layer testing model:
 - Layer 2: Authorization - Permission to inspect resources
 """
 
-import pytest
 from test_fixtures.integration import (
     Layer2IAMAuthorizationTests,
     Layer2S3AuthorizationTests,

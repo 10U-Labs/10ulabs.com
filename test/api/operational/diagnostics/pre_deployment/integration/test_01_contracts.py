@@ -7,7 +7,6 @@ Seven-layer testing model:
 - Layer 1: Contracts - Local files are compatible
 """
 
-import pytest
 from repo_utils import REPO_ROOT
 from test_fixtures.terraform_tests import create_remote_state_contract_tests
 

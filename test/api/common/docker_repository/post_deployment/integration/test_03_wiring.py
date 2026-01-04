@@ -9,7 +9,6 @@ For ECR, wiring tests verify that the authorization mechanism works, enabling
 other components (ECS tasks, CI/CD) to authenticate and use the repository.
 """
 
-import pytest
 
 
 

@@ -7,7 +7,6 @@ Seven-layer testing model:
 - Layer 3: Authorization - Permission to inspect resources
 """
 
-import pytest
 from test_fixtures.integration import (
     Layer2APIGatewayAuthorizationTests,
     Layer2LambdaAndIAMAuthorizationTests,

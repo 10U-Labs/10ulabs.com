@@ -7,7 +7,6 @@ Seven-layer testing model:
 - Layer 7: Capability - Can perform required operations
 """
 
-import pytest
 from test_fixtures.integration import Layer7DeploymentCapabilityTests
 
 

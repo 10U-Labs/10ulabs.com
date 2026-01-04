@@ -6,7 +6,6 @@ Three-layer testing model:
 - Layer 3: Wiring - Components connected properly
 """
 
-import pytest
 
 
 

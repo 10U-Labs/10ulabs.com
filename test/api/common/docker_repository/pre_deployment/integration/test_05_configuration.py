@@ -6,7 +6,6 @@ Six-layer testing model:
 - Layer 5: Configuration - Resource configured correctly
 """
 
-import pytest
 from test_fixtures.integration import Layer5PrerequisiteConfigurationTests
 
 

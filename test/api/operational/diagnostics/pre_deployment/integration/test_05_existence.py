@@ -8,7 +8,6 @@ Seven-layer testing model:
 - Layer 5: Existence - Prerequisite resources exist
 """
 
-import pytest
 from test_fixtures.integration import (
     Layer4APIBackendPrerequisiteTests,
     create_ecs_runner_outputs_tests,

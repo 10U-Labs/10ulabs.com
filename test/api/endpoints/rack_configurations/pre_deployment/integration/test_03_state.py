@@ -6,7 +6,6 @@ exist in AWS but not in state (orphaned) or vice versa.
 Six-layer testing model:
 - Layer 3: State - Terraform state matches AWS reality
 """
-import pytest
 
 from repo_utils import REPO_ROOT
 from terraform_drift.test_helpers import create_orphaned_resource_tests
