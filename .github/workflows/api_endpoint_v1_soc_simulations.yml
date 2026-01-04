@@ -25,7 +25,7 @@ jobs:
         uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
         with:
           directories: ${{ github.workspace }}
-          tools: pylint,mypy,yamllint
+          linters: pylint,mypy,yamllint
           verbose: true
       - continue-on-error: true
         id: no_linter_configs_sh
@@ -33,7 +33,7 @@ jobs:
         name: Assert no linter config files (self-hosted)
         run: >-
           assert-no-linter-config-files
-          --tools pylint,mypy,yamllint
+          --linters pylint,mypy,yamllint
           --verbose
           ${{ github.workspace }}
       - continue-on-error: true
