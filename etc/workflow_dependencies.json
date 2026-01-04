@@ -141,17 +141,6 @@
       "test/lib/python/**"
     ]
   },
-  "api_endpoint_v1_runners_ec2_images_post": {
-    "depends_on": [],
-    "name": "Building AMI for EC2 self-hosted runners",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_runners_ec2_images_post.yml",
-      "lib/python/**",
-      "src/api/endpoints/runners/ec2/images/post/**",
-      "test/api/endpoints/runners/ec2/images/post/**",
-      "test/lib/python/**"
-    ]
-  },
   "api_endpoint_v1_runners_ecs_images": {
     "depends_on": [
       "api_common_docker_repository",
@@ -164,17 +153,6 @@
       "src/api/endpoints/runners/ecs/images/*.tf",
       "src/api/endpoints/runners/ecs/images/lambda/**",
       "test/api/endpoints/runners/ecs/images/endpoint/**",
-      "test/lib/python/**"
-    ]
-  },
-  "api_endpoint_v1_runners_ecs_images_post": {
-    "depends_on": [],
-    "name": "Building Docker image for ECS runners",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_runners_ecs_images_post.yml",
-      "lib/python/**",
-      "src/api/endpoints/runners/ecs/images/post/**",
-      "test/api/endpoints/runners/ecs/images/post/**",
       "test/lib/python/**"
     ]
   },
