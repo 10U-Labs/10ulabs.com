@@ -169,9 +169,9 @@ class TestTerraformExists:
 class TestPythonPackagesExist:
     """Verify Python packages are installed."""
 
-    def test_assert_no_inline_lint_disables_installed(self, docker_image):
-        """Test that assert-no-inline-lint-disables is installed."""
-        cmd = "python3 -m pip show assert-no-inline-lint-disables"
+    def test_assert_no_inline_directives_installed(self, docker_image):
+        """Test that assert-no-inline-directives is installed."""
+        cmd = "python3 -m pip show assert-no-inline-directives"
         result = run_command_in_container(docker_image, cmd)
         assert result.returncode == 0
 

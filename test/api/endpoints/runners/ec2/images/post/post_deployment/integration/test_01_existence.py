@@ -329,14 +329,14 @@ class TestBuildToolsInstalled:
 class TestPipPackagesInstalled:
     """Tests for pip packages installation."""
 
-    def test_assert_no_inline_lint_disables_is_installed(
+    def test_assert_no_inline_directives_is_installed(
         self, ssm_client, test_instance, run_ssm_command
     ):
-        """Verify assert-no-inline-lint-disables is installed."""
+        """Verify assert-no-inline-directives is installed."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        cmd = "python3 -m pip show assert-no-inline-lint-disables"
+        cmd = "python3 -m pip show assert-no-inline-directives"
         output = run_ssm_command(ssm_client, test_instance, cmd)
 
         assert output["Status"] == "Success"
