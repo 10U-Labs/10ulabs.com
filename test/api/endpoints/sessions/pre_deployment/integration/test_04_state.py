@@ -9,7 +9,6 @@ from botocore.exceptions import ClientError
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 from repo_utils import REPO_ROOT
 
-pytestmark = pytest.mark.layer(4)
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
 

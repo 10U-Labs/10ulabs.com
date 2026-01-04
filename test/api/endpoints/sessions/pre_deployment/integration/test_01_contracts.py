@@ -7,7 +7,6 @@ import pytest
 
 from repo_utils import REPO_ROOT
 
-pytestmark = pytest.mark.layer(1)
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
 SESSIONS_LAMBDA_PATH = SESSIONS_SRC_PATH / "lambda"

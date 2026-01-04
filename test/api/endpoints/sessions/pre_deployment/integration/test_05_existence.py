@@ -6,7 +6,6 @@ These are resources created by OTHER workflows that must exist before deployment
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.layer(5)
 
 
 class TestApiGatewayExistence:

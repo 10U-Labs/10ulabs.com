@@ -6,7 +6,6 @@ Assumes existence and configuration tests passed.
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.layer(3)
 
 
 class TestHandlerLambdaWiring:
