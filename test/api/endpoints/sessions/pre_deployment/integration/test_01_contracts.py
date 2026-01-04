@@ -73,20 +73,40 @@ class TestEnvironmentVariableContracts:
         content = lambda_tf.read_text()
         assert "SESSION_EVENTS_TABLE" in content
 
-    def test_export_handler_uses_required_env_vars(self):
-        """Verify export_handler.py uses required environment variables."""
+    def test_export_handler_uses_dynamodb_table_arn_env_var(self):
+        """Verify export_handler.py uses DYNAMODB_TABLE_ARN environment variable."""
         export_py = SESSIONS_LAMBDAS_PATH / "export_handler.py"
         content = export_py.read_text()
         assert "DYNAMODB_TABLE_ARN" in content
+
+    def test_export_handler_uses_s3_bucket_env_var(self):
+        """Verify export_handler.py uses S3_BUCKET environment variable."""
+        export_py = SESSIONS_LAMBDAS_PATH / "export_handler.py"
+        content = export_py.read_text()
         assert "S3_BUCKET" in content
+
+    def test_export_handler_uses_s3_prefix_env_var(self):
+        """Verify export_handler.py uses S3_PREFIX environment variable."""
+        export_py = SESSIONS_LAMBDAS_PATH / "export_handler.py"
+        content = export_py.read_text()
         assert "S3_PREFIX" in content
 
-    def test_analytics_tf_provides_export_env_vars(self):
-        """Verify analytics.tf provides export environment variables."""
+    def test_analytics_tf_provides_dynamodb_table_arn_env_var(self):
+        """Verify analytics.tf provides DYNAMODB_TABLE_ARN environment variable."""
         analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
         content = analytics_tf.read_text()
         assert "DYNAMODB_TABLE_ARN" in content
+
+    def test_analytics_tf_provides_s3_bucket_env_var(self):
+        """Verify analytics.tf provides S3_BUCKET environment variable."""
+        analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
+        content = analytics_tf.read_text()
         assert "S3_BUCKET" in content
+
+    def test_analytics_tf_provides_s3_prefix_env_var(self):
+        """Verify analytics.tf provides S3_PREFIX environment variable."""
+        analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
+        content = analytics_tf.read_text()
         assert "S3_PREFIX" in content
 
     def test_crawler_trigger_uses_crawler_name_env_var(self):

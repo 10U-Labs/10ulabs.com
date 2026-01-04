@@ -5,9 +5,6 @@ Post-deployment integration tests verify:
 - Resources are configured correctly
 - Components are properly wired together
 """
-from pathlib import Path
-
-import boto3
 import pytest
 
 from repo_utils import REPO_ROOT
@@ -88,37 +85,3 @@ def api_gateway_id(request):
     return terraform_output(API_COMMON_ROUTING_PATH, "api_gateway_id")
 
 
-@pytest.fixture(scope="module")
-def dynamodb_client(aws_region):
-    """Create a DynamoDB client."""
-    return boto3.client("dynamodb", region_name=aws_region)
-
-
-@pytest.fixture(scope="module")
-def glue_client(aws_region):
-    """Create a Glue client."""
-    return boto3.client("glue", region_name=aws_region)
-
-
-@pytest.fixture(scope="module")
-def events_client(aws_region):
-    """Create an EventBridge client."""
-    return boto3.client("events", region_name=aws_region)
-
-
-@pytest.fixture(scope="module")
-def scheduler_client(aws_region):
-    """Create an EventBridge Scheduler client."""
-    return boto3.client("scheduler", region_name=aws_region)
-
-
-@pytest.fixture(scope="module")
-def backup_client(aws_region):
-    """Create an AWS Backup client."""
-    return boto3.client("backup", region_name=aws_region)
-
-
-@pytest.fixture(scope="module")
-def logs_client(aws_region):
-    """Create a CloudWatch Logs client."""
-    return boto3.client("logs", region_name=aws_region)

@@ -161,16 +161,33 @@ class TestDynamoDbConfiguration:
 class TestS3Configuration:
     """Tests for S3 bucket configuration."""
 
-    def test_s3_bucket_blocks_public_access(self, s3_client, sessions_config):
-        """Verify S3 bucket blocks public access."""
+    def test_s3_bucket_blocks_public_acls(self, s3_client, sessions_config):
+        """Verify S3 bucket blocks public ACLs."""
         response = s3_client.get_public_access_block(
             Bucket=sessions_config["s3_bucket_name"]
         )
-        config = response["PublicAccessBlockConfiguration"]
-        assert config["BlockPublicAcls"] is True
-        assert config["BlockPublicPolicy"] is True
-        assert config["IgnorePublicAcls"] is True
-        assert config["RestrictPublicBuckets"] is True
+        assert response["PublicAccessBlockConfiguration"]["BlockPublicAcls"] is True
+
+    def test_s3_bucket_blocks_public_policy(self, s3_client, sessions_config):
+        """Verify S3 bucket blocks public policy."""
+        response = s3_client.get_public_access_block(
+            Bucket=sessions_config["s3_bucket_name"]
+        )
+        assert response["PublicAccessBlockConfiguration"]["BlockPublicPolicy"] is True
+
+    def test_s3_bucket_ignores_public_acls(self, s3_client, sessions_config):
+        """Verify S3 bucket ignores public ACLs."""
+        response = s3_client.get_public_access_block(
+            Bucket=sessions_config["s3_bucket_name"]
+        )
+        assert response["PublicAccessBlockConfiguration"]["IgnorePublicAcls"] is True
+
+    def test_s3_bucket_restricts_public_buckets(self, s3_client, sessions_config):
+        """Verify S3 bucket restricts public buckets."""
+        response = s3_client.get_public_access_block(
+            Bucket=sessions_config["s3_bucket_name"]
+        )
+        assert response["PublicAccessBlockConfiguration"]["RestrictPublicBuckets"] is True
 
     def test_s3_bucket_has_90_day_lifecycle_policy(self, s3_client, sessions_config):
         """Verify S3 bucket has 90-day expiration lifecycle rule."""

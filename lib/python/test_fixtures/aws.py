@@ -205,6 +205,34 @@ def ses_client(request):
 
 
 @pytest.fixture(scope="session")
+def glue_client(request):
+    """Create a Glue client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("glue", region_name=region)
+
+
+@pytest.fixture(scope="session")
+def events_client(request):
+    """Create an EventBridge client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("events", region_name=region)
+
+
+@pytest.fixture(scope="session")
+def scheduler_client(request):
+    """Create an EventBridge Scheduler client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("scheduler", region_name=region)
+
+
+@pytest.fixture(scope="session")
+def backup_client(request):
+    """Create an AWS Backup client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("backup", region_name=region)
+
+
+@pytest.fixture(scope="session")
 def state_bucket_region(request):
     """Provide the AWS region for the state bucket."""
     return request.getfixturevalue("aws_region")

@@ -268,10 +268,14 @@ class TestJsonResponse:
         response = handler.json_response(200, {'success': True})
         assert response['headers']['Access-Control-Allow-Origin'] == '*'
 
-    def test_includes_cors_allow_methods_header(self, handler):
-        """Verify json_response includes CORS Allow-Methods header."""
+    def test_includes_cors_allow_methods_get(self, handler):
+        """Verify json_response allows GET method in CORS header."""
         response = handler.json_response(200, {'success': True})
         assert 'GET' in response['headers']['Access-Control-Allow-Methods']
+
+    def test_includes_cors_allow_methods_post(self, handler):
+        """Verify json_response allows POST method in CORS header."""
+        response = handler.json_response(200, {'success': True})
         assert 'POST' in response['headers']['Access-Control-Allow-Methods']
 
     def test_body_is_json_string(self, handler):
