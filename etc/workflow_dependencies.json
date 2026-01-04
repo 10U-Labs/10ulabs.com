@@ -117,9 +117,13 @@
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs.yml",
       "lib/python/**",
-      "src/api/endpoints/runners/ecs/**",
+      "src/api/endpoints/runners/ecs/*.tf",
+      "src/api/endpoints/runners/ecs/lambda/**",
       "test/api/conftest.py",
-      "test/api/endpoints/runners/ecs/**",
+      "test/api/endpoints/runners/ecs/conftest.py",
+      "test/api/endpoints/runners/ecs/__init__.py",
+      "test/api/endpoints/runners/ecs/pre_deployment/**",
+      "test/api/endpoints/runners/ecs/post_deployment/**",
       "test/lib/python/**"
     ]
   },
