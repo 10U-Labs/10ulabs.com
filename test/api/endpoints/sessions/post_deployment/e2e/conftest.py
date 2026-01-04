@@ -5,6 +5,27 @@ These tests make real HTTP requests to the deployed API.
 """
 import pytest
 
+from repo_utils import REPO_ROOT
+from test_fixtures.terraform import terraform_init, terraform_output
+
+SHARED_MODULE_PATH = REPO_ROOT / "src" / "shared"
+
+
+@pytest.fixture(scope="module")
+def shared_terraform_initialized():
+    """Initialize terraform for shared module state access."""
+    return terraform_init(SHARED_MODULE_PATH)
+
+
+@pytest.fixture(scope="module")
+def config(request):
+    """Provide configuration from shared terraform outputs."""
+    if not request.getfixturevalue("shared_terraform_initialized"):
+        pytest.skip("Terraform init failed for shared module")
+    return {
+        "domain_name": terraform_output(SHARED_MODULE_PATH, "domain_name"),
+    }
+
 
 @pytest.fixture(name="api_url", scope="module")
 def api_url_fixture(config):
