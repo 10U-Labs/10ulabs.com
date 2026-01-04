@@ -96,9 +96,10 @@ jobs:
             python-hcl2 \
             pyyaml \
             requests \
+            types-dockerfile-parse \
             types-paramiko \
-            types-requests \
             types-PyYAML \
+            types-requests \
             yamllint
       - name: Linting YAML files
         run: |
