@@ -158,7 +158,6 @@ jobs:
             python-hcl2 \
             pyyaml \
             requests \
-            types-dockerfile-parse \
             types-PyYAML \
             types-requests \
             yamllint

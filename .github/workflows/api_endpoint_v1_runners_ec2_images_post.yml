@@ -96,7 +96,6 @@ jobs:
             python-hcl2 \
             pyyaml \
             requests \
-            types-dockerfile-parse \
             types-paramiko \
             types-PyYAML \
             types-requests \

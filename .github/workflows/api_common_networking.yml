@@ -89,7 +89,6 @@ jobs:
             pytest-dependency \
             python-hcl2 \
             requests \
-            types-dockerfile-parse \
             types-PyYAML \
             types-requests \
             yamllint
