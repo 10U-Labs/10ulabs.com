@@ -1,11 +1,7 @@
 """Unit tests for contact form Lambda handler."""
 import json
 from unittest.mock import patch, MagicMock
-from lambda_response import (
-    parse_response_body,
-    assert_response_status,
-    assert_json_content_type,
-)
+from lambda_response import parse_response_body
 
 from botocore.exceptions import ClientError
 

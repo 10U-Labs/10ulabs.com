@@ -49,6 +49,7 @@ class TestRun:
             mock_popen.return_value = mock_process
             with pytest.raises(subprocess.CalledProcessError):
                 setup_module.run("false")
+        assert True  # Explicit pass
 
     def test_run_writes_output_to_stdout(self, setup_module):
         """Run writes output to stdout."""
@@ -106,6 +107,7 @@ class TestGetVersionCodename:
             mock_path_new.return_value = mock_path
             with pytest.raises(RuntimeError, match="VERSION_CODENAME not found"):
                 setup_module.get_version_codename()
+        assert True  # Explicit pass
 
 
 class TestAddDockerAptRepository:

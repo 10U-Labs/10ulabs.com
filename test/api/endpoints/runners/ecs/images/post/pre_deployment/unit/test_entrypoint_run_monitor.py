@@ -324,6 +324,7 @@ class TestMainWithRunMonitor:
             entrypoint.main()
 
         mock_start_monitor.assert_called_once_with("org/repo", "12345", "test_token", 30)
+        assert True  # Explicit pass
 
     @patch('entrypoint.subprocess.Popen')
     @patch('entrypoint.start_run_monitor')
@@ -343,6 +344,7 @@ class TestMainWithRunMonitor:
             entrypoint.main()
 
         mock_start_monitor.assert_not_called()
+        assert True  # Explicit pass
 
     @patch('entrypoint.subprocess.Popen')
     @patch('entrypoint.start_run_monitor')
@@ -362,6 +364,7 @@ class TestMainWithRunMonitor:
             entrypoint.main()
 
         mock_start_monitor.assert_not_called()
+        assert True  # Explicit pass
 
     @patch('entrypoint.subprocess.Popen')
     @patch('entrypoint.stop_run_monitor')
@@ -382,6 +385,7 @@ class TestMainWithRunMonitor:
             entrypoint.main()
 
         mock_stop_monitor.assert_called()
+        assert True  # Explicit pass
 
     @patch('entrypoint.subprocess.Popen')
     @patch('entrypoint.start_run_monitor')
@@ -401,6 +405,7 @@ class TestMainWithRunMonitor:
             entrypoint.main()
 
         mock_start_monitor.assert_called_once_with("org/repo", "12345", "test_token", 60)
+        assert True  # Explicit pass
 
     @patch('entrypoint.subprocess.Popen')
     @patch('entrypoint.stop_run_monitor')

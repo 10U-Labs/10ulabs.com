@@ -1,10 +1,5 @@
 """Unit tests for health endpoint handler."""
-from lambda_response import (
-    parse_response_body,
-    assert_response_status,
-    assert_json_content_type,
-    assert_cors_headers,
-)
+from lambda_response import parse_response_body
 
 
 def test_health_handler_returns_200_status_code(

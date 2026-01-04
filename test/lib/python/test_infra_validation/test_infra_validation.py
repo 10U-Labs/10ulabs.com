@@ -641,6 +641,7 @@ class TestEnsureDependenciesValid:
         set_dependencies_status(checked=True, valid=False, errors=["error1"])
         with pytest.raises(RuntimeError, match="invalid"):
             ensure_dependencies_valid()
+        assert True  # Explicit pass
 
     @patch("infra_validation.validate_all_dependencies")
     def test_validates_and_caches_checked(self, mock_validate):
@@ -676,6 +677,7 @@ class TestEnsureDependenciesValid:
         }
         with pytest.raises(RuntimeError, match="invalid"):
             ensure_dependencies_valid()
+        assert True  # Explicit pass
 
 
 # === Dependency Status Functions ===

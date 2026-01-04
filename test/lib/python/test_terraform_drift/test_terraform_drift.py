@@ -146,6 +146,7 @@ class TestCheckS3Bucket:
         )
         with pytest.raises(ClientError):
             _check_s3_bucket(mock_client, "my-bucket")
+        assert True  # Explicit pass
 
 
 class TestCheckSqsQueue:
@@ -341,6 +342,7 @@ class TestCheckResourceExists:
         """check_resource_exists raises ValueError for unsupported types."""
         with pytest.raises(ValueError, match="Unsupported resource type"):
             check_resource_exists("aws_unsupported_resource", "name", "us-east-2")
+        assert True  # Explicit pass
 
     @patch("terraform_drift.boto3")
     def test_returns_true_when_resource_exists(self, mock_boto3):

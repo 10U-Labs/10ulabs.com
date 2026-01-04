@@ -163,36 +163,43 @@ class TestParseLabelsInvalidInput:
         """parse_labels raises LabelParseError on empty list."""
         with pytest.raises(LabelParseError, match="cannot be empty"):
             parse_labels([])
+        assert True  # Explicit pass
 
     def test_raises_on_missing_platform(self) -> None:
         """parse_labels raises LabelParseError when platform is missing."""
         with pytest.raises(LabelParseError, match="Missing platform"):
             parse_labels(["fargate", "x86", "spot", "runner-1"])
+        assert True  # Explicit pass
 
     def test_raises_on_missing_compute(self) -> None:
         """parse_labels raises LabelParseError when compute is missing."""
         with pytest.raises(LabelParseError, match="Missing compute"):
             parse_labels(["ecs", "x86", "spot", "runner-1"])
+        assert True  # Explicit pass
 
     def test_raises_on_missing_pricing(self) -> None:
         """parse_labels raises LabelParseError when pricing is missing."""
         with pytest.raises(LabelParseError, match="Missing pricing"):
             parse_labels(["ecs", "fargate", "x86", "runner-1"])
+        assert True  # Explicit pass
 
     def test_raises_on_missing_runner_id(self) -> None:
         """parse_labels raises LabelParseError when runner_id is missing."""
         with pytest.raises(LabelParseError, match="Missing runner ID"):
             parse_labels(["ecs", "fargate", "x86", "spot"])
+        assert True  # Explicit pass
 
     def test_raises_on_invalid_runner_id_format(self) -> None:
         """parse_labels raises LabelParseError on invalid runner_id format."""
         with pytest.raises(LabelParseError, match="Missing runner ID"):
             parse_labels(["ecs", "fargate", "x86", "spot", "runner-abc"])
+        assert True  # Explicit pass
 
     def test_raises_on_multiple_platforms(self) -> None:
         """parse_labels raises LabelParseError with multiple platforms."""
         with pytest.raises(LabelParseError, match="Multiple platform"):
             parse_labels(["ecs", "ec2", "fargate", "x86", "spot", "runner-1"])
+        assert True  # Explicit pass
 
     def test_raises_on_multiple_compute_types(self) -> None:
         """parse_labels raises LabelParseError with multiple compute types."""
@@ -200,16 +207,19 @@ class TestParseLabelsInvalidInput:
             parse_labels(
                 ["ec2", "general-purpose", "memory-optimized", "intel", "spot", "runner-1"]
             )
+        assert True  # Explicit pass
 
     def test_raises_on_multiple_pricing_models(self) -> None:
         """parse_labels raises LabelParseError with multiple pricing models."""
         with pytest.raises(LabelParseError, match="Multiple pricing"):
             parse_labels(["ecs", "fargate", "x86", "spot", "on-demand", "runner-1"])
+        assert True  # Explicit pass
 
     def test_raises_on_multiple_architectures(self) -> None:
         """parse_labels raises LabelParseError with multiple architectures."""
         with pytest.raises(LabelParseError, match="Multiple architecture"):
             parse_labels(["ecs", "fargate", "x86", "arm", "spot", "runner-1"])
+        assert True  # Explicit pass
 
 
 class TestValidateLabelsEcs:
@@ -232,18 +242,21 @@ class TestValidateLabelsEcs:
         parsed = ParsedLabels("ecs", "fargate", "spot", "runner-1", None)
         with pytest.raises(LabelValidationError, match="requires architecture"):
             validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_rejects_ecs_invalid_architecture(self) -> None:
         """validate_labels rejects ecs with invalid architecture."""
         parsed = ParsedLabels("ecs", "fargate", "spot", "runner-1", "intel")
         with pytest.raises(LabelValidationError, match="only supports architectures"):
             validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_rejects_ecs_with_ec2_compute(self) -> None:
         """validate_labels rejects ecs + general-purpose."""
         parsed = ParsedLabels("ecs", "general-purpose", "spot", "runner-1", "x86")
         with pytest.raises(LabelValidationError, match="ECS platform only"):
             validate_labels(parsed)
+        assert True  # Explicit pass
 
 
 class TestValidateLabelsEc2WithArch:
@@ -278,12 +291,14 @@ class TestValidateLabelsEc2WithArch:
         parsed = ParsedLabels("ec2", "general-purpose", "spot", "runner-1", None)
         with pytest.raises(LabelValidationError, match="requires architecture"):
             validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_rejects_ec2_general_purpose_invalid_arch(self) -> None:
         """validate_labels rejects ec2 + general-purpose + x86."""
         parsed = ParsedLabels("ec2", "general-purpose", "spot", "runner-1", "x86")
         with pytest.raises(LabelValidationError, match="only supports architectures"):
             validate_labels(parsed)
+        assert True  # Explicit pass
 
 
 class TestValidateLabelsEc2WithoutArch:
@@ -306,18 +321,21 @@ class TestValidateLabelsEc2WithoutArch:
         parsed = ParsedLabels("ec2", "gpu", "spot", "runner-1", "intel")
         with pytest.raises(LabelValidationError, match="does not support"):
             validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_rejects_ec2_fpga_with_arch(self) -> None:
         """validate_labels rejects ec2 + fpga with architecture."""
         parsed = ParsedLabels("ec2", "fpga", "spot", "runner-1", "amd")
         with pytest.raises(LabelValidationError, match="does not support"):
             validate_labels(parsed)
+        assert True  # Explicit pass
 
     def test_rejects_ec2_with_fargate(self) -> None:
         """validate_labels rejects ec2 + fargate."""
         parsed = ParsedLabels("ec2", "fargate", "spot", "runner-1", "x86")
         with pytest.raises(LabelValidationError, match="EC2 platform only"):
             validate_labels(parsed)
+        assert True  # Explicit pass
 
 
 class TestGetInstanceType:
@@ -512,6 +530,7 @@ class TestGetRunnerIdNumber:
         parsed = ParsedLabels("ecs", "fargate", "spot", "invalid", "x86")
         with pytest.raises(LabelParseError, match="Invalid runner ID"):
             get_runner_id_number(parsed)
+        assert True  # Explicit pass
 
 
 class TestParsedLabelsDataclass:

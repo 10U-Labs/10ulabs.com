@@ -23,7 +23,7 @@ class TestRtlSimConfig:
         """Test that runner version is a valid semver string."""
         version = rtl_sim_config["runner"]["version"]
         parts = version.split(".")
-        assert len(parts) == 3 and all(part.isdigit() for part in parts), f"Invalid version: {version}"
+        assert len(parts) == 3 and all(p.isdigit() for p in parts), f"Invalid: {version}"
 
     def test_instance_type_is_c8i(self, rtl_sim_config: dict) -> None:
         """Test that instance type is c8i.4xlarge for simulation."""
