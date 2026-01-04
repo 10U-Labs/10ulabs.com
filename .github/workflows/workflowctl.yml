@@ -145,8 +145,31 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')) &&
           (github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true')
-        name: Install yamllint
-        run: python3 -m pip install yamllint==1.35.*
+        name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            pylint \
+            pytest \
+            python-hcl2 \
+            pyyaml \
+            requests \
+            types-dockerfile-parse \
+            types-PyYAML \
+            types-requests \
+            yamllint
+      - if: >-
+          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')) &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Install npm dependencies
+        run: npm install -g jscpd jsonlint
       - continue-on-error: true
         id: yamllint
         if: >-
@@ -163,14 +186,6 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/workflowctl.yml
-      - if: >-
-          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')) &&
-          (github.event.inputs.force_testing == 'true' ||
-          steps.detect-changes.outputs.workflowctl_changed == 'true')
-        name: Install jsonlint
-        run: npm install -g jsonlint
       - continue-on-error: true
         id: jsonlint
         if: >-
@@ -178,20 +193,6 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Linting JSON files
         run: jsonlint -q etc/workflow_dependencies.json
-      - if: >-
-          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')) &&
-          (github.event.inputs.force_testing == 'true' ||
-          steps.detect-changes.outputs.workflowctl_changed == 'true')
-        name: Install pylint dependencies
-        run: |
-          python3 -m pip install \
-            boto3==1.35.* \
-            botocore==1.35.* \
-            pylint==3.3.* \
-            pytest==8.3.* \
-            requests==2.32.*
       - continue-on-error: true
         id: pylint_source
         if: >-
@@ -201,17 +202,6 @@ jobs:
         run: |
           python3 -m pylint lib/python/ src/workflowctl/ \
             --fail-on=C,R,W --fail-under=10.0
-      - if: >-
-          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')) &&
-          (github.event.inputs.force_testing == 'true' ||
-          steps.detect-changes.outputs.workflowctl_changed == 'true')
-        name: Install pylint test dependencies
-        run: |
-          python3 -m pip install \
-            dnspython==2.7.* \
-            python-hcl2==6.0.*
       - continue-on-error: true
         id: pylint_tests
         if: >-
@@ -222,20 +212,6 @@ jobs:
           PYTHONPATH=lib/python python3 -m pylint \
             lib/python/ test/ \
             --fail-on=C,R,W --fail-under=10.0
-      - if: >-
-          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')) &&
-          (github.event.inputs.force_testing == 'true' ||
-          steps.detect-changes.outputs.workflowctl_changed == 'true')
-        name: Install mypy dependencies
-        run: |
-          python3 -m pip install \
-            boto3-stubs==1.35.* \
-            mypy==1.13.* \
-            types-dockerfile-parse \
-            types-PyYAML==6.0.* \
-            types-requests==2.32.*
       - continue-on-error: true
         id: mypy_source
         if: >-
@@ -252,14 +228,6 @@ jobs:
         run: |
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
             lib/python/ test/
-      - if: >-
-          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')) &&
-          (github.event.inputs.force_testing == 'true' ||
-          steps.detect-changes.outputs.workflowctl_changed == 'true')
-        name: Install jscpd
-        run: npm install -g jscpd
       - continue-on-error: true
         id: jscpd_source
         if: >-
@@ -278,14 +246,6 @@ jobs:
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
-      - if: >-
-          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')) &&
-          (github.event.inputs.force_testing == 'true' ||
-          steps.detect-changes.outputs.workflowctl_changed == 'true')
-        name: Install pytest dependencies
-        run: python3 -m pip install pytest==8.3.* pyyaml==6.0.*
       - continue-on-error: true
         id: unit_tests
         if: >-
