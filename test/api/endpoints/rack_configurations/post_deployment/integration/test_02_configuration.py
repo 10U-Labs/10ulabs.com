@@ -87,36 +87,6 @@ class TestDynamoDBConfiguration:
             f"Configurations table should have PITR enabled, got: {pitr_status}"
         )
 
-    def test_events_table_uses_pay_per_request(
-        self, dynamodb_client, events_table_name
-    ):
-        """Verify events table uses PAY_PER_REQUEST billing mode."""
-        response = dynamodb_client.describe_table(TableName=events_table_name)
-        billing_mode = response["Table"].get("BillingModeSummary", {}).get(
-            "BillingMode", "PROVISIONED"
-        )
-        assert billing_mode == "PAY_PER_REQUEST", (
-            f"Events table should use PAY_PER_REQUEST, got: {billing_mode}"
-        )
-
-    def test_events_table_has_pitr_enabled(self, dynamodb_client, events_table_name):
-        """Verify events table has point-in-time recovery enabled."""
-        response = dynamodb_client.describe_continuous_backups(
-            TableName=events_table_name
-        )
-        pitr_status = response["ContinuousBackupsDescription"][
-            "PointInTimeRecoveryDescription"
-        ]["PointInTimeRecoveryStatus"]
-        assert pitr_status == "ENABLED", (
-            f"Events table should have PITR enabled, got: {pitr_status}"
-        )
-
-    def test_events_table_has_gsi(self, dynamodb_client, events_table_name):
-        """Verify events table has global secondary indexes."""
-        response = dynamodb_client.describe_table(TableName=events_table_name)
-        gsis = response["Table"].get("GlobalSecondaryIndexes", [])
-        assert len(gsis) > 0, "Events table should have at least one GSI"
-
 
 class TestNamingConventions:
     """Layer 2: Verify resource names follow PascalCase conventions."""
@@ -132,28 +102,6 @@ class TestNamingConventions:
             f"Handler Lambda has invalid name '{actual_name}': {error}"
         )
 
-    def test_export_lambda_name_is_pascalcase(
-        self, lambda_client, export_function_name
-    ):
-        """Verify export Lambda function name uses PascalCase."""
-        response = lambda_client.get_function(FunctionName=export_function_name)
-        actual_name = response["Configuration"]["FunctionName"]
-        error = validate_name(actual_name)
-        assert error is None, (
-            f"Export Lambda has invalid name '{actual_name}': {error}"
-        )
-
-    def test_crawler_trigger_lambda_name_is_pascalcase(
-        self, lambda_client, crawler_trigger_function_name
-    ):
-        """Verify crawler trigger Lambda function name uses PascalCase."""
-        response = lambda_client.get_function(FunctionName=crawler_trigger_function_name)
-        actual_name = response["Configuration"]["FunctionName"]
-        error = validate_name(actual_name)
-        assert error is None, (
-            f"Crawler trigger Lambda has invalid name '{actual_name}': {error}"
-        )
-
     def test_handler_role_name_is_pascalcase(self, iam_client, handler_role_name):
         """Verify handler IAM role name uses PascalCase."""
         response = iam_client.get_role(RoleName=handler_role_name)
@@ -161,24 +109,4 @@ class TestNamingConventions:
         error = validate_name(actual_name)
         assert error is None, (
             f"Handler IAM role has invalid name '{actual_name}': {error}"
-        )
-
-    def test_export_role_name_is_pascalcase(self, iam_client, export_role_name):
-        """Verify export IAM role name uses PascalCase."""
-        response = iam_client.get_role(RoleName=export_role_name)
-        actual_name = response["Role"]["RoleName"]
-        error = validate_name(actual_name)
-        assert error is None, (
-            f"Export IAM role has invalid name '{actual_name}': {error}"
-        )
-
-    def test_crawler_trigger_role_name_is_pascalcase(
-        self, iam_client, crawler_trigger_role_name
-    ):
-        """Verify crawler trigger IAM role name uses PascalCase."""
-        response = iam_client.get_role(RoleName=crawler_trigger_role_name)
-        actual_name = response["Role"]["RoleName"]
-        error = validate_name(actual_name)
-        assert error is None, (
-            f"Crawler trigger IAM role has invalid name '{actual_name}': {error}"
         )

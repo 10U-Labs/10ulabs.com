@@ -33,24 +33,6 @@ def dynamodb_client(aws_region):
     return boto3.client("dynamodb", region_name=aws_region)
 
 
-@pytest.fixture(scope="session")
-def glue_client(aws_region):
-    """Create a Glue client."""
-    return boto3.client("glue", region_name=aws_region)
-
-
-@pytest.fixture(scope="session")
-def scheduler_client(aws_region):
-    """Create an EventBridge Scheduler client."""
-    return boto3.client("scheduler", region_name=aws_region)
-
-
-@pytest.fixture(scope="session")
-def events_client(aws_region):
-    """Create an EventBridge client."""
-    return boto3.client("events", region_name=aws_region)
-
-
 @pytest.fixture(scope="module")
 def resource_prefix(shared_config):
     """Get the resource prefix for rack configurations resources."""
@@ -66,20 +48,6 @@ def handler_function_name(shared_config):
 
 
 @pytest.fixture(scope="module")
-def export_function_name(request):
-    """Get the export Lambda function name."""
-    prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackConfigurationsExport"
-
-
-@pytest.fixture(scope="module")
-def crawler_trigger_function_name(request):
-    """Get the crawler trigger Lambda function name."""
-    prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackConfigurationsCrawlerTrigger"
-
-
-@pytest.fixture(scope="module")
 def handler_role_name(request):
     """Get the handler IAM role name."""
     prefix = request.getfixturevalue("resource_prefix")
@@ -87,42 +55,7 @@ def handler_role_name(request):
 
 
 @pytest.fixture(scope="module")
-def export_role_name(request):
-    """Get the export IAM role name."""
-    prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackConfigurationsExportRole"
-
-
-@pytest.fixture(scope="module")
-def crawler_trigger_role_name(request):
-    """Get the crawler trigger IAM role name."""
-    prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackConfigurationsCrawlerTriggerRole"
-
-
-@pytest.fixture(scope="module")
-def glue_crawler_role_name(request):
-    """Get the Glue crawler IAM role name."""
-    prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackConfigurationsGlueCrawlerRole"
-
-
-@pytest.fixture(scope="module")
-def scheduler_role_name(request):
-    """Get the scheduler IAM role name."""
-    prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}RackConfigurationsSchedulerRole"
-
-
-@pytest.fixture(scope="module")
 def configurations_table_name(request):
     """Get the configurations DynamoDB table name."""
     prefix = request.getfixturevalue("resource_prefix")
     return f"{prefix}-rack-configurations-configurations"
-
-
-@pytest.fixture(scope="module")
-def events_table_name(request):
-    """Get the events DynamoDB table name."""
-    prefix = request.getfixturevalue("resource_prefix")
-    return f"{prefix}-rack-configurations-events"

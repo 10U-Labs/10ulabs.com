@@ -37,14 +37,6 @@ resource "aws_iam_role_policy" "dynamodb_access" {
           "dynamodb:PutItem"
         ]
         Resource = [aws_dynamodb_table.configurations.arn]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:BatchWriteItem",
-          "dynamodb:PutItem"
-        ]
-        Resource = [aws_dynamodb_table.events.arn]
       }
     ]
   })
