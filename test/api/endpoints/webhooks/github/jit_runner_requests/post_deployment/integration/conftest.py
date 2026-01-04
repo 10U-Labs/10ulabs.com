@@ -4,8 +4,6 @@ import pytest
 
 from test_fixtures.aws import get_log_group_info
 
-# Enable layer marker plugin for test ordering
-pytest_plugins = ['pytest_layers']
 
 
 @pytest.fixture(name="sqs_client", scope="session")

@@ -18,6 +18,42 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - continue-on-error: true
+        id: no_linter_configs_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert no linter config files (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
+        with:
+          directories: ${{ github.workspace }}
+          linters: pylint,mypy,yamllint
+          verbose: true
+      - continue-on-error: true
+        id: no_linter_configs_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert no linter config files (self-hosted)
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+      - continue-on-error: true
+        id: no_inline_disables_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert no inline lint disables (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
+        with:
+          files: ${{ github.workspace }}/**/*
+          linters: pylint,mypy,yamllint
+          verbose: true
+      - continue-on-error: true
+        id: no_inline_disables_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert no inline lint disables (self-hosted)
+        run: >-
+          assert-no-inline-lint-disables
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
       - name: Verify OIDC variables
         uses: ./.github/actions/verify-oidc-vars
         with:
@@ -40,9 +76,13 @@ jobs:
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install yamllint
-        run: python3 -m pip install yamllint
-      - name: Linting YAML files
+        name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            yamllint
+      - continue-on-error: true
+        id: yamllint
+        name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -72,13 +112,17 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
-      - name: Get website bucket name
+      - continue-on-error: true
+        id: get_bucket
+        name: Get website bucket name
         run: |
           terraform -chdir=src/www/common init \
             -backend=true -input=false > /dev/null
           BUCKET_NAME=$(terraform -chdir=src/www/common output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
-      - name: Sync frontend to S3
+      - continue-on-error: true
+        id: sync_s3
+        name: Sync frontend to S3
         run: |
           aws s3 sync src/www/paths/simulations/soc/ \
             s3://${{ env.BUCKET_NAME }}/simulations/soc/ \
@@ -86,7 +130,8 @@ jobs:
             --cache-control no-cache \
             --storage-class ONEZONE_IA \
             --exclude ".gitkeep"
-      - id: check_files
+      - continue-on-error: true
+        id: check_files
         name: Check if frontend files changed
         run: |
           set -e
@@ -102,7 +147,9 @@ jobs:
             else
               echo "changed=false" >> $GITHUB_OUTPUT
             fi
-      - if: >-
+      - continue-on-error: true
+        id: invalidate_cloudfront
+        if: >-
           github.event.inputs.invalidate_cloudfront == 'true' ||
           contains(github.event.head_commit.message,
           '[invalidate cloudfront]') ||
@@ -116,6 +163,34 @@ jobs:
             --region ${{ vars.AWS_REGION }} \
             --paths "/simulations/soc/*"
       - env:
+          S01: ${{ steps.no_linter_configs_gh.outcome }}
+          S02: ${{ steps.no_linter_configs_sh.outcome }}
+          S03: ${{ steps.no_inline_disables_gh.outcome }}
+          S04: ${{ steps.no_inline_disables_sh.outcome }}
+          S05: ${{ steps.yamllint.outcome }}
+          S06: ${{ steps.get_bucket.outcome }}
+          S07: ${{ steps.sync_s3.outcome }}
+          S08: ${{ steps.check_files.outcome }}
+          S09: ${{ steps.invalidate_cloudfront.outcome }}
+        name: Assert no step failed
+        run: |
+          failed=""
+          f="failure"
+          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
+          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
+          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
+          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
+          [ "$S05" = "$f" ] && failed="$failed yamllint"
+          [ "$S06" = "$f" ] && failed="$failed get_bucket"
+          [ "$S07" = "$f" ] && failed="$failed sync_s3"
+          [ "$S08" = "$f" ] && failed="$failed check_files"
+          [ "$S09" = "$f" ] && failed="$failed invalidate_cloudfront"
+          if [ -n "$failed" ]; then
+            echo "Steps that failed:$failed"
+            exit 1
+          fi
+          echo "All steps succeeded"
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
           github.event_name == 'workflow_dispatch' &&
@@ -126,11 +201,12 @@ jobs:
         name: Dispatch descendant workflows
         run: |
           FLAGS=""
-          if [ "${{ github.event.inputs.trigger_descendants }}" = "true" ]; then
+          TRIGGER="${{ github.event.inputs.trigger_descendants }}"
+          INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
+          if [ "$TRIGGER" = "true" ]; then
             FLAGS="$FLAGS --trigger-descendants"
           fi
-          INV="${{ github.event.inputs.invalidate_cloudfront }}"
-          if [ "$INV" = "true" ]; then
+          if [ "$INVALIDATE" = "true" ]; then
             FLAGS="$FLAGS --invalidate-cloudfront"
           fi
           python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
@@ -154,7 +230,7 @@ on:
         required: false
         type: string
       trigger_descendants:
-        default: true
+        default: false
         description: Trigger descendant workflows after this workflow completes
         type: boolean
 permissions:

@@ -11,8 +11,6 @@ from ..conftest import (
     api_url_fixture,
 )
 
-pytest_plugins = ['pytest_layers']
-
 api_url = api_url_fixture
 api_key = api_key_fixture
 

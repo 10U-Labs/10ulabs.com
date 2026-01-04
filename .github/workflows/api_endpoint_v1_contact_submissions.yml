@@ -74,8 +74,22 @@ jobs:
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install yamllint
-        run: python3 -m pip install yamllint
+        name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            pylint \
+            pytest \
+            python-hcl2 \
+            requests \
+            types-dockerfile-parse \
+            types-PyYAML \
+            types-requests \
+            yamllint
       - continue-on-error: true
         id: yamllint
         name: Linting YAML files
@@ -89,20 +103,6 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_endpoint_v1_contact_submissions.yml
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install pylint
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            dnspython \
-            pylint \
-            pytest \
-            python-hcl2 \
-            requests
       - continue-on-error: true
         id: pylint_source
         name: Run pylint on source
@@ -120,18 +120,6 @@ jobs:
             lib/python/ test/ \
             --fail-on=C,R,W \
             --fail-under=10.0
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install mypy
-        run: |
-          python3 -m pip install \
-            boto3-stubs \
-            mypy \
-            types-dockerfile-parse \
-            types-PyYAML \
-            types-requests
       - continue-on-error: true
         id: mypy_source
         name: Run mypy on source
@@ -210,12 +198,6 @@ jobs:
           cd src/api/endpoints/contact_submissions && \
             tflint --init && \
             tflint
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install pytest dependencies
-        run: python3 -m pip install pytest boto3 boto3-stubs requests
       - continue-on-error: true
         id: unit_tests
         name: Run unit tests

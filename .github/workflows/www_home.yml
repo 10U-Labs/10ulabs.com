@@ -18,6 +18,42 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - continue-on-error: true
+        id: no_linter_configs_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert no linter config files (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
+        with:
+          directories: ${{ github.workspace }}
+          linters: pylint,mypy,yamllint
+          verbose: true
+      - continue-on-error: true
+        id: no_linter_configs_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert no linter config files (self-hosted)
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+      - continue-on-error: true
+        id: no_inline_disables_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert no inline lint disables (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
+        with:
+          files: ${{ github.workspace }}/**/*
+          linters: pylint,mypy,yamllint
+          verbose: true
+      - continue-on-error: true
+        id: no_inline_disables_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert no inline lint disables (self-hosted)
+        run: >-
+          assert-no-inline-lint-disables
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
       - name: Verify OIDC variables
         uses: ./.github/actions/verify-oidc-vars
         with:
@@ -40,9 +76,25 @@ jobs:
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install yamllint
-        run: python3 -m pip install yamllint
-      - name: Linting YAML files
+        name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            pylint \
+            pytest \
+            python-hcl2 \
+            requests \
+            types-dockerfile-parse \
+            types-PyYAML \
+            types-requests \
+            yamllint
+      - continue-on-error: true
+        id: yamllint
+        name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -59,7 +111,9 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jsonlint
         run: npm install -g jsonlint
-      - name: Linting JSON files
+      - continue-on-error: true
+        id: jsonlint
+        name: Linting JSON files
         run: |
           # Note: tsconfig files use JSONC (JSON with Comments) format
           # which jsonlint doesn't support, so we skip them here
@@ -71,37 +125,15 @@ jobs:
             echo "Validating $file"
             jsonlint -q "$file"
           done
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install pylint
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            dnspython \
-            pylint \
-            pytest \
-            python-hcl2 \
-            requests
-      - name: Run pylint
+      - continue-on-error: true
+        id: pylint
+        name: Run pylint
         run: |
           PYTHONPATH=lib/python python3 -m pylint lib/python/ test/www/paths/ \
             --fail-on=C,R,W --fail-under=10.0
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install mypy
-        run: |
-          python3 -m pip install \
-            boto3-stubs \
-            mypy \
-            types-dockerfile-parse \
-            types-PyYAML \
-            types-requests
-      - name: Run mypy
+      - continue-on-error: true
+        id: mypy
+        name: Run mypy
         run: |
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
             lib/python/ test/
@@ -111,20 +143,20 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
         run: npm install -g jscpd
-      - name: Check for duplicate code in test Python files
+      - continue-on-error: true
+        id: jscpd
+        name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
-      - name: Install npm dependencies
+      - continue-on-error: true
+        id: npm_install
+        name: Install npm dependencies
         run: npm ci --prefix src/www/paths/home
-      - name: Run unit tests
+      - continue-on-error: true
+        id: unit_tests
+        name: Run unit tests
         run: npm test --prefix src/www/paths/home
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install pytest dependencies
-        run: python3 -m pip install pytest boto3 requests
       - id: terraform
         if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
@@ -144,22 +176,30 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
-      - name: Run pre-deployment integration tests
+      - continue-on-error: true
+        id: pre_integration_tests
+        name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
             test/www/paths/home/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
-      - name: Get bucket name from common Terraform
+      - continue-on-error: true
+        id: terraform_init
+        name: Get bucket name from common Terraform
         run: |
           terraform -chdir=src/www/common init \
             -backend=true -input=false > /dev/null
           BUCKET_NAME=$(terraform -chdir=src/www/common output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
-      - name: Build website
+      - continue-on-error: true
+        id: build
+        name: Build website
         run: |
           npm ci --prefix src/www/paths/home && \
             npm run build --prefix src/www/paths/home
-      - name: Sync website to S3
+      - continue-on-error: true
+        id: s3_sync
+        name: Sync website to S3
         run: |
           aws s3 sync src/www/paths/home/dist/ \
             s3://${{ env.BUCKET_NAME }}/home/ --delete \
@@ -202,16 +242,68 @@ jobs:
             --fqdn "${{ env.WEBSITE_FQDN }}" \
             --region ${{ vars.AWS_REGION }} \
             --paths "/home/*"
-      - name: Install Playwright browsers
+      - continue-on-error: true
+        id: playwright_install
+        name: Install Playwright browsers
         run: npx --prefix src/www/paths/home playwright install chromium
-      - env:
+      - continue-on-error: true
+        env:
           BASE_URL: https://10ulabs.com
+        id: post_integration_tests
         name: Run post-deployment integration tests
         run: npm run test:integration --prefix src/www/paths/home
-      - env:
+      - continue-on-error: true
+        env:
           BASE_URL: https://10ulabs.com
+        id: e2e_tests
         name: Run E2E tests
         run: npm run test:e2e --prefix src/www/paths/home
+      - env:
+          S01: ${{ steps.no_linter_configs_gh.outcome }}
+          S02: ${{ steps.no_linter_configs_sh.outcome }}
+          S03: ${{ steps.no_inline_disables_gh.outcome }}
+          S04: ${{ steps.no_inline_disables_sh.outcome }}
+          S05: ${{ steps.yamllint.outcome }}
+          S06: ${{ steps.jsonlint.outcome }}
+          S07: ${{ steps.pylint.outcome }}
+          S08: ${{ steps.mypy.outcome }}
+          S09: ${{ steps.jscpd.outcome }}
+          S10: ${{ steps.npm_install.outcome }}
+          S11: ${{ steps.unit_tests.outcome }}
+          S12: ${{ steps.pre_integration_tests.outcome }}
+          S13: ${{ steps.terraform_init.outcome }}
+          S14: ${{ steps.build.outcome }}
+          S15: ${{ steps.s3_sync.outcome }}
+          S16: ${{ steps.playwright_install.outcome }}
+          S17: ${{ steps.post_integration_tests.outcome }}
+          S18: ${{ steps.e2e_tests.outcome }}
+        name: Assert no step failed
+        run: |
+          failed=""
+          f="failure"
+          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
+          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
+          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
+          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
+          [ "$S05" = "$f" ] && failed="$failed yamllint"
+          [ "$S06" = "$f" ] && failed="$failed jsonlint"
+          [ "$S07" = "$f" ] && failed="$failed pylint"
+          [ "$S08" = "$f" ] && failed="$failed mypy"
+          [ "$S09" = "$f" ] && failed="$failed jscpd"
+          [ "$S10" = "$f" ] && failed="$failed npm_install"
+          [ "$S11" = "$f" ] && failed="$failed unit_tests"
+          [ "$S12" = "$f" ] && failed="$failed pre_integration_tests"
+          [ "$S13" = "$f" ] && failed="$failed terraform_init"
+          [ "$S14" = "$f" ] && failed="$failed build"
+          [ "$S15" = "$f" ] && failed="$failed s3_sync"
+          [ "$S16" = "$f" ] && failed="$failed playwright_install"
+          [ "$S17" = "$f" ] && failed="$failed post_integration_tests"
+          [ "$S18" = "$f" ] && failed="$failed e2e_tests"
+          if [ -n "$failed" ]; then
+            echo "Steps that failed:$failed"
+            exit 1
+          fi
+          echo "All steps succeeded"
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
@@ -223,11 +315,12 @@ jobs:
         name: Dispatch descendant workflows
         run: |
           FLAGS=""
-          if [ "${{ github.event.inputs.trigger_descendants }}" = "true" ]; then
+          TRIGGER="${{ github.event.inputs.trigger_descendants }}"
+          INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
+          if [ "$TRIGGER" = "true" ]; then
             FLAGS="$FLAGS --trigger-descendants"
           fi
-          INV="${{ github.event.inputs.invalidate_cloudfront }}"
-          if [ "$INV" = "true" ]; then
+          if [ "$INVALIDATE" = "true" ]; then
             FLAGS="$FLAGS --invalidate-cloudfront"
           fi
           python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
@@ -251,7 +344,7 @@ on:
         required: false
         type: string
       trigger_descendants:
-        default: true
+        default: false
         description: Trigger descendant workflows after this workflow completes
         type: boolean
 permissions:

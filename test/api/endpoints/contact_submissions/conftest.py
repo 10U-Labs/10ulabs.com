@@ -9,7 +9,7 @@ from terraform_config import (
     extract_lambda_function_names,
 )
 
-CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact"
+CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact_submissions"
 
 
 @pytest.fixture(name="config", scope="module")

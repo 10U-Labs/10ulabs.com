@@ -8,8 +8,7 @@ import boto3
 import pytest
 from test_fixtures.config import parse_tfvars_file, parse_locals_file
 
-# Import layer-based test dependency tracking for all test subdirectories
-pytest_plugins = ['test_fixtures.aws', 'pytest_layers']
+pytest_plugins = ['test_fixtures.aws']
 
 
 def parse_bootstrap_tfvar(var_name: str) -> str:

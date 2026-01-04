@@ -13,8 +13,6 @@ from test.api.conftest import (
 import boto3
 import pytest
 
-pytest_plugins = ['pytest_layers']
-
 IMAGE_FOR_EC2_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2" / "images"
 NETWORKING_DIR = REPO_ROOT / "src" / "api" / "common" / "networking"
 

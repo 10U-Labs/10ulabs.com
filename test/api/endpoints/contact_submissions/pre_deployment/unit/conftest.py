@@ -8,7 +8,7 @@ import pytest
 from module_utils import load_module_from_path
 from repo_utils import REPO_ROOT
 
-CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact"
+CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact_submissions"
 
 
 def load_contact_handler_module() -> ModuleType:

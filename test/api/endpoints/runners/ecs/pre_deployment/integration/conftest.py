@@ -13,10 +13,6 @@ from test.api.conftest import (
 import boto3
 import pytest
 
-# Enable layer marker plugin for test ordering
-pytest_plugins = ['pytest_layers']
-
-
 @pytest.fixture(scope="session")
 def shared_config():
     """Provide shared configuration values."""

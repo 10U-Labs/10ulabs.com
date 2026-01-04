@@ -4,10 +4,6 @@ from test.api.endpoints.runners.ecs.images.conftest import get_ecr_repository
 from botocore.exceptions import ClientError
 import pytest
 
-# Enable layer marker plugin for test ordering
-pytest_plugins = ['pytest_layers']
-
-
 @pytest.fixture(scope="session")
 def ecr_repository_name():
     """Provide the ECR repository name."""

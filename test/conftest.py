@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 # Load shared fixtures for all tests - must be a module-level variable
-pytest_plugins = ['test_fixtures.unit', 'pytest_layers']
+pytest_plugins = ['test_fixtures.unit']
 
 _REPO_ROOT = Path(__file__).parent.parent
 _LIB_DIR = _REPO_ROOT / "lib" / "python"

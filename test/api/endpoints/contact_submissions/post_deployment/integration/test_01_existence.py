@@ -19,7 +19,7 @@ pytestmark = pytest.mark.layer(1)
 TestLambdaAndIAMExistence = create_lambda_existence_tests(
     function_name_config_key="contact_handler_function_name",
     default_function_name="TenULabsContactHandler",
-    terraform_path="src/api/endpoints/contact/",
+    terraform_path="src/api/endpoints/contact_submissions/",
     log_group_fixture="contact_handler_log_group",
 )
 
@@ -36,7 +36,7 @@ class TestSSMAndSESExistence:
             if e.response["Error"]["Code"] == "ParameterNotFound":
                 pytest.fail(
                     f"SSM parameter '{parameter_name}' does not exist. "
-                    "Run terraform apply in src/api/endpoints/contact/"
+                    "Run terraform apply in src/api/endpoints/contact_submissions/"
                 )
             raise
 

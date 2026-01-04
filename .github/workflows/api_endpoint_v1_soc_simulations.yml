@@ -18,6 +18,42 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - continue-on-error: true
+        id: no_linter_configs_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert no linter config files (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
+        with:
+          directories: ${{ github.workspace }}
+          linters: pylint,mypy,yamllint
+          verbose: true
+      - continue-on-error: true
+        id: no_linter_configs_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert no linter config files (self-hosted)
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+      - continue-on-error: true
+        id: no_inline_disables_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert no inline lint disables (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
+        with:
+          files: ${{ github.workspace }}/**/*
+          linters: pylint,mypy,yamllint
+          verbose: true
+      - continue-on-error: true
+        id: no_inline_disables_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert no inline lint disables (self-hosted)
+        run: >-
+          assert-no-inline-lint-disables
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
       - name: Verify OIDC variables
         uses: ./.github/actions/verify-oidc-vars
         with:
@@ -40,9 +76,25 @@ jobs:
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install yamllint
-        run: python3 -m pip install yamllint
-      - name: Linting YAML files
+        name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            pylint \
+            pytest \
+            python-hcl2 \
+            requests \
+            types-dockerfile-parse \
+            types-PyYAML \
+            types-requests \
+            yamllint
+      - continue-on-error: true
+        id: yamllint
+        name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -53,49 +105,31 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_endpoint_v1_soc_simulations.yml
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install pylint
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            dnspython \
-            pylint \
-            pytest \
-            python-hcl2 \
-            requests
-      - name: Run pylint on source
+      - continue-on-error: true
+        id: pylint_source
+        name: Run pylint on source
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
             src/api/endpoints/soc_simulations/lambda/handler.py \
             --fail-on=C,R,W \
             --fail-under=10.0
-      - name: Run pylint on tests
+      - continue-on-error: true
+        id: pylint_tests
+        name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
             lib/python/ test/ \
             --fail-on=C,R,W \
             --fail-under=10.0
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install mypy
-        run: |
-          python3 -m pip install \
-            boto3-stubs \
-            mypy \
-            types-dockerfile-parse \
-            types-PyYAML \
-            types-requests
-      - name: Run mypy on source
+      - continue-on-error: true
+        id: mypy_source
+        name: Run mypy on source
         run: |
           MYPYPATH=lib/python python3 -m mypy \
             src/api/endpoints/soc_simulations/lambda/handler.py
-      - name: Run mypy on tests
+      - continue-on-error: true
+        id: mypy_tests
+        name: Run mypy on tests
         run: |
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
             lib/python/ test/
@@ -105,11 +139,15 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
         run: npm install -g jscpd
-      - name: Check for duplicate code in source Python files
+      - continue-on-error: true
+        id: jscpd_source
+        name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ src/api/endpoints/soc_simulations/lambda/
-      - name: Check for duplicate code in test Python files
+      - continue-on-error: true
+        id: jscpd_tests
+        name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
@@ -133,11 +171,15 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
-      - name: Terraform Format Check
+      - continue-on-error: true
+        id: terraform_fmt
+        name: Terraform Format Check
         run: |
           cd src/api/endpoints/soc_simulations && \
             terraform fmt -diff -check -recursive
-      - name: Terraform Init
+      - continue-on-error: true
+        id: terraform_init
+        name: Terraform Init
         run: cd src/api/endpoints/soc_simulations && terraform init
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
@@ -147,43 +189,97 @@ jobs:
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - env:
+      - continue-on-error: true
+        env:
           GITHUB_TOKEN: ${{ github.token }}
+        id: tflint
         name: Run tflint
         run: |
           cd src/api/endpoints/soc_simulations && \
             tflint --init && \
             tflint
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install pytest dependencies
-        run: python3 -m pip install pytest boto3 boto3-stubs requests
-      - name: Run unit tests
+      - continue-on-error: true
+        id: unit_tests
+        name: Run unit tests
         run: |
           python3 -m pytest \
             test/api/endpoints/soc_simulations/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
-      - name: Run pre-deployment integration tests
+      - continue-on-error: true
+        id: pre_integration_tests
+        name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
             test/api/endpoints/soc_simulations/pre_deployment/integration/ \
-            --verbose --capture=no --pythonwarnings=error
-      - name: Terraform Apply
+            --capture=no --verbose --pythonwarnings=error
+      - continue-on-error: true
+        id: terraform_apply
+        name: Terraform Apply
         run: |
           cd src/api/endpoints/soc_simulations
           terraform apply -auto-approve
-      - name: Run post-deployment integration tests
+      - continue-on-error: true
+        id: post_integration_tests
+        name: Run post-deployment integration tests
         run: |
           python3 -m pytest \
             test/api/endpoints/soc_simulations/post_deployment/integration/ \
             --verbose --pythonwarnings=error
-      - name: Run E2E tests
+      - continue-on-error: true
+        id: e2e_tests
+        name: Run E2E tests
         run: |
           python3 -m pytest \
             test/api/endpoints/soc_simulations/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
+      - env:
+          S01: ${{ steps.no_linter_configs_gh.outcome }}
+          S02: ${{ steps.no_linter_configs_sh.outcome }}
+          S03: ${{ steps.no_inline_disables_gh.outcome }}
+          S04: ${{ steps.no_inline_disables_sh.outcome }}
+          S05: ${{ steps.yamllint.outcome }}
+          S06: ${{ steps.pylint_source.outcome }}
+          S07: ${{ steps.pylint_tests.outcome }}
+          S08: ${{ steps.mypy_source.outcome }}
+          S09: ${{ steps.mypy_tests.outcome }}
+          S10: ${{ steps.jscpd_source.outcome }}
+          S11: ${{ steps.jscpd_tests.outcome }}
+          S12: ${{ steps.terraform_fmt.outcome }}
+          S13: ${{ steps.terraform_init.outcome }}
+          S14: ${{ steps.tflint.outcome }}
+          S15: ${{ steps.unit_tests.outcome }}
+          S16: ${{ steps.pre_integration_tests.outcome }}
+          S17: ${{ steps.terraform_apply.outcome }}
+          S18: ${{ steps.post_integration_tests.outcome }}
+          S19: ${{ steps.e2e_tests.outcome }}
+        name: Assert no step failed
+        run: |
+          failed=""
+          f="failure"
+          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
+          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
+          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
+          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
+          [ "$S05" = "$f" ] && failed="$failed yamllint"
+          [ "$S06" = "$f" ] && failed="$failed pylint_source"
+          [ "$S07" = "$f" ] && failed="$failed pylint_tests"
+          [ "$S08" = "$f" ] && failed="$failed mypy_source"
+          [ "$S09" = "$f" ] && failed="$failed mypy_tests"
+          [ "$S10" = "$f" ] && failed="$failed jscpd_source"
+          [ "$S11" = "$f" ] && failed="$failed jscpd_tests"
+          [ "$S12" = "$f" ] && failed="$failed terraform_fmt"
+          [ "$S13" = "$f" ] && failed="$failed terraform_init"
+          [ "$S14" = "$f" ] && failed="$failed tflint"
+          [ "$S15" = "$f" ] && failed="$failed unit_tests"
+          [ "$S16" = "$f" ] && failed="$failed pre_integration_tests"
+          [ "$S17" = "$f" ] && failed="$failed terraform_apply"
+          [ "$S18" = "$f" ] && failed="$failed post_integration_tests"
+          [ "$S19" = "$f" ] && failed="$failed e2e_tests"
+          if [ -n "$failed" ]; then
+            echo "Steps that failed:$failed"
+            exit 1
+          fi
+          echo "All steps succeeded"
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
@@ -195,10 +291,11 @@ jobs:
         name: Dispatch descendant workflows
         run: |
           FLAGS=""
-          if [ "${{ github.event.inputs.trigger_descendants }}" = "true" ]; then
+          TRIGGER="${{ github.event.inputs.trigger_descendants }}"
+          INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
+          if [ "$TRIGGER" = "true" ]; then
             FLAGS="$FLAGS --trigger-descendants"
           fi
-          INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
           if [ "$INVALIDATE" = "true" ]; then
             FLAGS="$FLAGS --invalidate-cloudfront"
           fi
@@ -207,7 +304,8 @@ jobs:
             --repo ${{ github.repository }} \
             $FLAGS
 name: >-
-  Ensuring the /v1/soc-simulations API endpoint exists and is properly configured
+  Ensuring the /v1/soc-simulations API endpoint exists and is properly
+  configured
 on:
   workflow_dispatch:
     inputs:
@@ -224,7 +322,7 @@ on:
         required: false
         type: string
       trigger_descendants:
-        default: true
+        default: false
         description: Trigger descendant workflows after this workflow completes
         type: boolean
 permissions:

@@ -4,9 +4,6 @@ import pytest
 from test_fixtures.aws import get_log_group_info
 
 
-pytest_plugins = ['pytest_layers']
-
-
 @pytest.fixture(name="handler_log_group", scope="module")
 def handler_log_group_fixture(logs_client, shared_config):
     """Get the simulation-soc handler log group info from CloudWatch."""

@@ -15,7 +15,7 @@ from terraform_drift.test_helpers import create_orphaned_resource_tests
 pytestmark = pytest.mark.layer(3)
 
 
-CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact"
+CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact_submissions"
 
 TestOrphanedResources = create_orphaned_resource_tests(
     terraform_dir=CONTACT_SRC,

@@ -15,9 +15,6 @@ from terraform_config import TEST_AWS_REGION, get_shared_config
 from test_fixtures.aws import get_log_group_info
 from test_fixtures.terraform import terraform_init, terraform_output
 
-pytest_plugins = ['pytest_layers']
-
-
 RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 
 

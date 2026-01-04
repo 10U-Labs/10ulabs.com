@@ -5,7 +5,6 @@ from repo_utils import REPO_ROOT
 from terraform_config import TEST_AWS_REGION
 from test_fixtures.terraform import terraform_init, terraform_output
 
-pytest_plugins = ['pytest_layers']
 
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"

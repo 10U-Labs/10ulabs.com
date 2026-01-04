@@ -9,7 +9,7 @@ import pytest
 from repo_utils import REPO_ROOT
 
 
-pytest_plugins = ['pytest_layers', 'test_fixtures.aws']
+pytest_plugins = ['test_fixtures.aws']
 
 
 COMMON_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "common"

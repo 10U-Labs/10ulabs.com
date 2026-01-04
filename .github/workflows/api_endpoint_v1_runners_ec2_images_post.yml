@@ -20,6 +20,42 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - continue-on-error: true
+        id: no_linter_configs_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert no linter config files (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
+        with:
+          directories: ${{ github.workspace }}
+          linters: pylint,mypy,yamllint
+          verbose: true
+      - continue-on-error: true
+        id: no_linter_configs_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert no linter config files (self-hosted)
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+      - continue-on-error: true
+        id: no_inline_disables_gh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+        name: Assert no inline lint disables (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
+        with:
+          files: ${{ github.workspace }}/**/*
+          linters: pylint,mypy,yamllint
+          verbose: true
+      - continue-on-error: true
+        id: no_inline_disables_sh
+        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+        name: Assert no inline lint disables (self-hosted)
+        run: >-
+          assert-no-inline-lint-disables
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
       - name: Verify OIDC variables
         uses: ./.github/actions/verify-oidc-vars
         with:
@@ -42,9 +78,26 @@ jobs:
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install yamllint
-        run: python3 -m pip install yamllint
-      - name: Linting YAML files
+        name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            paramiko \
+            pylint \
+            pytest \
+            python-hcl2 \
+            pyyaml \
+            requests \
+            types-paramiko \
+            types-PyYAML \
+            yamllint
+      - continue-on-error: true
+        id: yamllint
+        name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -56,44 +109,31 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_endpoint_v1_runners_ec2_images_post.yml
           jsonlint -q src/api/endpoints/runners/ec2/images/post/config.json
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install pylint
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            dnspython \
-            pylint \
-            pytest \
-            python-hcl2 \
-            requests
-      - name: Run pylint on source
+      - continue-on-error: true
+        id: pylint_source
+        name: Run pylint on source
         run: |
           python3 -m pylint \
             lib/python/ec2_fleet/*.py \
             src/api/endpoints/runners/ec2/images/post/*.py \
             --fail-on=C,R,W --fail-under=10.0
-      - name: Run pylint on tests
+      - continue-on-error: true
+        id: pylint_tests
+        name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
             lib/python/ test/ \
             --fail-on=C,R,W --fail-under=10.0
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install mypy
-        run: >-
-          python3 -m pip install mypy boto3-stubs types-paramiko types-PyYAML
-      - name: Run mypy on source
+      - continue-on-error: true
+        id: mypy_source
+        name: Run mypy on source
         run: |
           SRC=src/api/endpoints/runners/ec2/images/post
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
             lib/python/ec2_fleet/ $SRC/*.py
-      - name: Run mypy on tests
+      - continue-on-error: true
+        id: mypy_tests
+        name: Run mypy on tests
         run: |
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
             lib/python/ test/
@@ -103,28 +143,29 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
         run: npm install -g jscpd
-      - name: Check for duplicate code in source Python files
+      - continue-on-error: true
+        id: jscpd_source
+        name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ src/api/endpoints/runners/ec2/images/post/
-      - name: Check for duplicate code in test Python files
+      - continue-on-error: true
+        id: jscpd_tests
+        name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install pytest dependencies
-        run: >-
-          python3 -m pip install pytest boto3 botocore paramiko pyyaml
-      - name: Run unit tests
+      - continue-on-error: true
+        id: unit_tests
+        name: Run unit tests
         run: |
           TEST=test/api/endpoints/runners/ec2/images/post/pre_deployment
           python3 -m pytest \
             $TEST/unit/ \
             --confcutdir=test --verbose --pythonwarnings=error
-      - name: Run pre-deployment integration tests
+      - continue-on-error: true
+        id: pre_integration_tests
+        name: Run pre-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/ec2/images/post/pre_deployment
           python3 -m pytest \
@@ -252,8 +293,7 @@ jobs:
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
       - env:
           INSTANCE_TYPES: ${{ steps.api.outputs.instance_types }}
-          PYTHONPATH: >-
-            lib/python:test/api/endpoints/runners/ec2/images/post/post_deployment
+          PYTHONPATH: lib/python:test/api/endpoints/runners/ec2/images/post
           TEST_AMI_ID: ${{ steps.build.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ steps.api.outputs.security_group_id }}
           TEST_SUBNET_IDS: ${{ steps.api.outputs.subnet_ids }}
@@ -277,8 +317,7 @@ jobs:
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - env:
           INSTANCE_TYPES: ${{ steps.api.outputs.instance_types }}
-          PYTHONPATH: >-
-            lib/python:test/api/endpoints/runners/ec2/images/post/post_deployment
+          PYTHONPATH: lib/python:test/api/endpoints/runners/ec2/images/post
           TEST_AMI_ID: ${{ steps.build.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ steps.api.outputs.security_group_id }}
           TEST_SUBNET_IDS: ${{ steps.api.outputs.subnet_ids }}
@@ -314,6 +353,61 @@ jobs:
             --purpose-value "$PURPOSE_VALUE" \
             --stable-tag "$STABLE_TAG" \
             --stable-value "$STABLE_VALUE"
+      - env:
+          S01: ${{ steps.no_linter_configs_gh.outcome }}
+          S02: ${{ steps.no_linter_configs_sh.outcome }}
+          S03: ${{ steps.no_inline_disables_gh.outcome }}
+          S04: ${{ steps.no_inline_disables_sh.outcome }}
+          S05: ${{ steps.yamllint.outcome }}
+          S06: ${{ steps.pylint_source.outcome }}
+          S07: ${{ steps.pylint_tests.outcome }}
+          S08: ${{ steps.mypy_source.outcome }}
+          S09: ${{ steps.mypy_tests.outcome }}
+          S10: ${{ steps.jscpd_source.outcome }}
+          S11: ${{ steps.jscpd_tests.outcome }}
+          S12: ${{ steps.unit_tests.outcome }}
+          S13: ${{ steps.pre_integration_tests.outcome }}
+        name: Assert no step failed
+        run: |
+          failed=""
+          f="failure"
+          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
+          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
+          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
+          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
+          [ "$S05" = "$f" ] && failed="$failed yamllint"
+          [ "$S06" = "$f" ] && failed="$failed pylint_source"
+          [ "$S07" = "$f" ] && failed="$failed pylint_tests"
+          [ "$S08" = "$f" ] && failed="$failed mypy_source"
+          [ "$S09" = "$f" ] && failed="$failed mypy_tests"
+          [ "$S10" = "$f" ] && failed="$failed jscpd_source"
+          [ "$S11" = "$f" ] && failed="$failed jscpd_tests"
+          [ "$S12" = "$f" ] && failed="$failed unit_tests"
+          [ "$S13" = "$f" ] && failed="$failed pre_integration_tests"
+          if [ -n "$failed" ]; then
+            echo "Steps that failed:$failed"
+            exit 1
+          fi
+          echo "All steps succeeded"
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          (
+          github.event.inputs.trigger_descendants == 'true' ||
+           contains(github.event.head_commit.message,
+           '[trigger descendants]'))
+        name: Dispatch descendant workflows
+        run: |
+          FLAGS=""
+          TRIGGER="${{ github.event.inputs.trigger_descendants }}"
+          if [ "$TRIGGER" = "true" ]; then
+            FLAGS="$FLAGS --trigger-descendants"
+          fi
+          python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
+            --workflow api_endpoint_v1_runners_ec2_images_post \
+            --repo ${{ github.repository }} \
+            $FLAGS
       - if: cancelled()
         name: Clean up on cancellation
         run: |
@@ -375,6 +469,10 @@ on:
         description: Spot recovery trigger reason
         required: false
         type: string
+      trigger_descendants:
+        default: false
+        description: Trigger descendant workflows after this workflow completes
+        type: boolean
 permissions:
   actions: write
   contents: read

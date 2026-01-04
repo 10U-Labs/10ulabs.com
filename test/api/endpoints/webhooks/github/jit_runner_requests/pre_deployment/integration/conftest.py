@@ -21,8 +21,6 @@ from terraform_config import get_runners_resource_names
 import boto3
 import pytest
 
-# Enable layer marker plugin for test ordering
-pytest_plugins = ['pytest_layers']
 
 
 API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"

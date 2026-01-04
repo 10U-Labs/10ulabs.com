@@ -12,7 +12,7 @@ These tests follow the 6-layer testing model from PRE_DEPLOYMENT_INTEGRATION_TES
 import pytest
 from repo_utils import REPO_ROOT
 
-pytest_plugins = ['pytest_layers', 'test_fixtures.aws']
+pytest_plugins = ['test_fixtures.aws']
 
 
 API_COMMON_DOCKER_REPOSITORY_SRC = REPO_ROOT / "src" / "api" / "common" / "docker_repository"

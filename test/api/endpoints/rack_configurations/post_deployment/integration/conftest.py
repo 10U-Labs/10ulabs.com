@@ -5,9 +5,6 @@ import pytest
 from test_fixtures.aws import get_log_group_info
 
 
-pytest_plugins = ['pytest_layers']
-
-
 @pytest.fixture(name="website_url", scope="module")
 def website_url_fixture(config):
     """Provide website URL for tests."""

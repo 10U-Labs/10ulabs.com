@@ -6,10 +6,6 @@ from test_fixtures.terraform import terraform_output
 
 from ...conftest import ECS_RUNNER_SRC
 
-# Enable layer marker plugin for test ordering
-pytest_plugins = ['pytest_layers']
-
-
 @pytest.fixture(scope="session")
 def lambda_role_name():
     """Get the Lambda execution role name from terraform outputs."""
