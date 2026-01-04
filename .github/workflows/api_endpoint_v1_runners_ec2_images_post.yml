@@ -319,6 +319,20 @@ jobs:
           python3 -m pytest \
             $TEST/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
+      - env:
+          S01: ${{ steps.post_integration_tests.outcome }}
+          S02: ${{ steps.e2e_tests.outcome }}
+        name: Assert no post-deployment step failed
+        run: |
+          failed=""
+          f="failure"
+          [ "$S01" = "$f" ] && failed="$failed post_integration_tests"
+          [ "$S02" = "$f" ] && failed="$failed e2e_tests"
+          if [ -n "$failed" ]; then
+            echo "Steps that failed:$failed"
+            exit 1
+          fi
+          echo "All post-deployment steps succeeded"
       - name: Promote AMI
         run: |
           SCRIPT=src/api/endpoints/runners/ec2/images/post
@@ -345,20 +359,6 @@ jobs:
             --purpose-value "$PURPOSE_VALUE" \
             --stable-tag "$STABLE_TAG" \
             --stable-value "$STABLE_VALUE"
-      - env:
-          S01: ${{ steps.post_integration_tests.outcome }}
-          S02: ${{ steps.e2e_tests.outcome }}
-        name: Assert no post-deployment step failed
-        run: |
-          failed=""
-          f="failure"
-          [ "$S01" = "$f" ] && failed="$failed post_integration_tests"
-          [ "$S02" = "$f" ] && failed="$failed e2e_tests"
-          if [ -n "$failed" ]; then
-            echo "Steps that failed:$failed"
-            exit 1
-          fi
-          echo "All post-deployment steps succeeded"
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
