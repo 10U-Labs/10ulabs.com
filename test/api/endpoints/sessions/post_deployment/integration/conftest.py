@@ -51,7 +51,7 @@ def sessions_config():
         "crawler_trigger_role_name": "TenULabsSessionsCrawlerTriggerRole",
         "glue_crawler_role_name": "TenULabsSessionsGlueCrawlerRole",
         "scheduler_role_name": "TenULabsSessionsSchedulerRole",
-        "backup_role_name": "TenULabsSessionsBackup-Role",
+        "backup_role_name": "TenULabs-SessionsBackup-Role",
         "dynamodb_table_name": "TenULabs-session-events",
         "s3_bucket_name": "tenulabs-sessions-analytics",
         "glue_database_name": "tenulabs_sessions_analytics",
