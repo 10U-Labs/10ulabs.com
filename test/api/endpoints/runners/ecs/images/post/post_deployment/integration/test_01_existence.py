@@ -169,79 +169,153 @@ class TestTerraformExists:
 class TestPythonPackagesExist:
     """Verify Python packages are installed."""
 
+    def test_assert_no_inline_lint_disables_installed(self, docker_image):
+        """Test that assert-no-inline-lint-disables is installed."""
+        cmd = "python3 -m pip show assert-no-inline-lint-disables"
+        result = run_command_in_container(docker_image, cmd)
+        assert result.returncode == 0
+
+    def test_assert_no_linter_config_files_installed(self, docker_image):
+        """Test that assert-no-linter-config-files is installed."""
+        cmd = "python3 -m pip show assert-no-linter-config-files"
+        result = run_command_in_container(docker_image, cmd)
+        assert result.returncode == 0
+
+    def test_assert_one_assert_per_pytest_installed(self, docker_image):
+        """Test that assert-one-assert-per-pytest is installed."""
+        cmd = "python3 -m pip show assert-one-assert-per-pytest"
+        result = run_command_in_container(docker_image, cmd)
+        assert result.returncode == 0
+
     def test_boto3_installed(self, docker_image):
         """Test that boto3 is installed."""
-        result = run_command_in_container(docker_image, "python3 -c 'import boto3'")
-        assert result.returncode == 0
-
-    def test_botocore_installed(self, docker_image):
-        """Test that botocore is installed."""
         result = run_command_in_container(
-            docker_image, "python3 -c 'import botocore'"
+            docker_image, "python3 -m pip show boto3"
         )
-        assert result.returncode == 0
-
-    def test_mypy_installed(self, docker_image):
-        """Test that mypy is installed."""
-        result = run_command_in_container(docker_image, "which mypy")
-        assert result.returncode == 0
-
-    def test_pylint_installed(self, docker_image):
-        """Test that pylint is installed."""
-        result = run_command_in_container(docker_image, "which pylint")
-        assert result.returncode == 0
-
-    def test_pytest_installed(self, docker_image):
-        """Test that pytest is installed."""
-        result = run_command_in_container(docker_image, "which pytest")
-        assert result.returncode == 0
-
-    def test_pyyaml_installed(self, docker_image):
-        """Test that PyYAML is installed."""
-        result = run_command_in_container(docker_image, "python3 -c 'import yaml'")
-        assert result.returncode == 0
-
-    def test_requests_installed(self, docker_image):
-        """Test that requests is installed."""
-        result = run_command_in_container(
-            docker_image, "python3 -c 'import requests'"
-        )
-        assert result.returncode == 0
-
-    def test_yamllint_installed(self, docker_image):
-        """Test that yamllint is installed."""
-        result = run_command_in_container(docker_image, "which yamllint")
-        assert result.returncode == 0
-
-    def test_dnspython_installed(self, docker_image):
-        """Test that dnspython is installed."""
-        result = run_command_in_container(docker_image, "python3 -c 'import dns'")
         assert result.returncode == 0
 
     def test_boto3_stubs_installed(self, docker_image):
         """Test that boto3-stubs is installed."""
         result = run_command_in_container(
-            docker_image,
-            "python3 -c \"import importlib.metadata; "
-            "importlib.metadata.version('boto3-stubs')\""
+            docker_image, "python3 -m pip show boto3-stubs"
+        )
+        assert result.returncode == 0
+
+    def test_botocore_installed(self, docker_image):
+        """Test that botocore is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show botocore"
+        )
+        assert result.returncode == 0
+
+    def test_dockerfile_parse_installed(self, docker_image):
+        """Test that dockerfile-parse is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show dockerfile-parse"
+        )
+        assert result.returncode == 0
+
+    def test_dnspython_installed(self, docker_image):
+        """Test that dnspython is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show dnspython"
+        )
+        assert result.returncode == 0
+
+    def test_mypy_installed(self, docker_image):
+        """Test that mypy is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show mypy"
+        )
+        assert result.returncode == 0
+
+    def test_paramiko_installed(self, docker_image):
+        """Test that paramiko is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show paramiko"
+        )
+        assert result.returncode == 0
+
+    def test_pyjwt_installed(self, docker_image):
+        """Test that PyJWT is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show PyJWT"
+        )
+        assert result.returncode == 0
+
+    def test_pylint_installed(self, docker_image):
+        """Test that pylint is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show pylint"
+        )
+        assert result.returncode == 0
+
+    def test_pytest_installed(self, docker_image):
+        """Test that pytest is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show pytest"
+        )
+        assert result.returncode == 0
+
+    def test_pytest_dependency_installed(self, docker_image):
+        """Test that pytest-dependency is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show pytest-dependency"
+        )
+        assert result.returncode == 0
+
+    def test_python_hcl2_installed(self, docker_image):
+        """Test that python-hcl2 is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show python-hcl2"
+        )
+        assert result.returncode == 0
+
+    def test_pyyaml_installed(self, docker_image):
+        """Test that PyYAML is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show PyYAML"
+        )
+        assert result.returncode == 0
+
+    def test_requests_installed(self, docker_image):
+        """Test that requests is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show requests"
+        )
+        assert result.returncode == 0
+
+    def test_types_dockerfile_parse_installed(self, docker_image):
+        """Test that types-dockerfile-parse is installed."""
+        cmd = "python3 -m pip show types-dockerfile-parse"
+        result = run_command_in_container(docker_image, cmd)
+        assert result.returncode == 0
+
+    def test_types_paramiko_installed(self, docker_image):
+        """Test that types-paramiko is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show types-paramiko"
         )
         assert result.returncode == 0
 
     def test_types_pyyaml_installed(self, docker_image):
         """Test that types-PyYAML is installed."""
         result = run_command_in_container(
-            docker_image,
-            "python3 -c \"import importlib.metadata; "
-            "importlib.metadata.version('types-PyYAML')\""
+            docker_image, "python3 -m pip show types-PyYAML"
         )
         assert result.returncode == 0
 
     def test_types_requests_installed(self, docker_image):
         """Test that types-requests is installed."""
         result = run_command_in_container(
-            docker_image,
-            "python3 -c \"import importlib.metadata; "
-            "importlib.metadata.version('types-requests')\""
+            docker_image, "python3 -m pip show types-requests"
+        )
+        assert result.returncode == 0
+
+    def test_yamllint_installed(self, docker_image):
+        """Test that yamllint is installed."""
+        result = run_command_in_container(
+            docker_image, "python3 -m pip show yamllint"
         )
         assert result.returncode == 0
 
