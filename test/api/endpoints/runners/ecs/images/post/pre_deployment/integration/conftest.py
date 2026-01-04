@@ -5,27 +5,14 @@ test/api/conftest.py.
 """
 from test.api.conftest import REPO_ROOT, terraform_init, terraform_output
 
-import boto3
 import pytest
 import requests
-from botocore.exceptions import ClientError
+
+pytest_plugins = ['test_fixtures.aws']
 
 API_COMMON_ECR_DIR = REPO_ROOT / "src" / "api" / "common" / "docker_repository"
-AWS_REGION = "us-east-1"
 BASE_IMAGE = "debian"
 BASE_TAG = "stable-slim"
-
-
-@pytest.fixture(scope="module")
-def sts_client():
-    """Create STS client for authentication tests."""
-    return boto3.client("sts", region_name=AWS_REGION)
-
-
-@pytest.fixture(scope="module")
-def ecr_client():
-    """Create ECR client for repository tests."""
-    return boto3.client("ecr", region_name=AWS_REGION)
 
 
 @pytest.fixture(scope="session")
@@ -49,21 +36,14 @@ def api_common_ecr_outputs(request):
 
 @pytest.fixture(scope="module")
 def ecr_repository_details(request):
-    """Get ECR repository details, skipping if not available."""
+    """Get ECR repository details."""
     client = request.getfixturevalue("ecr_client")
     outputs = request.getfixturevalue("api_common_ecr_outputs")
     repository_name = outputs.get("repository_name")
-    if not repository_name:
-        pytest.skip("repository_name output not available")
-    try:
-        response = client.describe_repositories(repositoryNames=[repository_name])
-        if not response["repositories"]:
-            pytest.skip("Repository does not exist")
-        return response["repositories"][0]
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "RepositoryNotFoundException":
-            pytest.skip("Repository does not exist")
-        raise
+    assert repository_name, "repository_name output not available"
+    response = client.describe_repositories(repositoryNames=[repository_name])
+    assert response["repositories"], "Repository does not exist"
+    return response["repositories"][0]
 
 
 @pytest.fixture(scope="module")
@@ -71,6 +51,5 @@ def docker_hub_image_data():
     """Get Docker Hub image data for base image."""
     url = f"https://hub.docker.com/v2/repositories/library/{BASE_IMAGE}/tags/{BASE_TAG}"
     response = requests.get(url, timeout=30)
-    if response.status_code != 200:
-        pytest.skip("Base image not found on Docker Hub")
+    assert response.status_code == 200, "Base image not found on Docker Hub"
     return response.json()

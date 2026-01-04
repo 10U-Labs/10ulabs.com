@@ -347,19 +347,6 @@ jobs:
           TEST=test/api/endpoints/runners/ecs/images/post/post_deployment
           python3 -m pytest \
             $TEST/e2e/ --confcutdir=test --verbose --pythonwarnings=error
-      - name: Promote image
-        run: |
-          POST_DIR=src/api/endpoints/runners/ecs/images/post
-          SCRIPT=$POST_DIR/promote_docker_image.py
-          REPO='${{ steps.config.outputs.ecr_repository_name }}'
-          BUILD_TAG='${{ steps.build.outputs.image_tag }}'
-          EC2_TAG='${{ steps.build-ec2.outputs.image_tag }}'
-          TAG="${BUILD_TAG:-$EC2_TAG}"
-          REGION='${{ vars.AWS_REGION }}'
-          python3 $SCRIPT \
-            --repository "$REPO" \
-            --image-tag "$TAG" \
-            --region "$REGION"
       - env:
           S01: ${{ steps.post_integration_tests.outcome }}
           S02: ${{ steps.e2e_tests.outcome }}
@@ -374,6 +361,19 @@ jobs:
             exit 1
           fi
           echo "All post-deployment steps succeeded"
+      - name: Promote image
+        run: |
+          POST_DIR=src/api/endpoints/runners/ecs/images/post
+          SCRIPT=$POST_DIR/promote_docker_image.py
+          REPO='${{ steps.config.outputs.ecr_repository_name }}'
+          BUILD_TAG='${{ steps.build.outputs.image_tag }}'
+          EC2_TAG='${{ steps.build-ec2.outputs.image_tag }}'
+          TAG="${BUILD_TAG:-$EC2_TAG}"
+          REGION='${{ vars.AWS_REGION }}'
+          python3 $SCRIPT \
+            --repository "$REPO" \
+            --image-tag "$TAG" \
+            --region "$REGION"
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
