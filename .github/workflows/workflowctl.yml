@@ -266,6 +266,48 @@ jobs:
             test/workflowctl/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
       - env:
+          S01: ${{ steps.no_linter_configs_gh.outcome }}
+          S02: ${{ steps.no_linter_configs_sh.outcome }}
+          S03: ${{ steps.no_inline_disables_gh.outcome }}
+          S04: ${{ steps.no_inline_disables_sh.outcome }}
+          S05: ${{ steps.one_assert_per_pytest_gh.outcome }}
+          S06: ${{ steps.one_assert_per_pytest_sh.outcome }}
+          S07: ${{ steps.yamllint.outcome }}
+          S08: ${{ steps.jsonlint.outcome }}
+          S09: ${{ steps.pylint_source.outcome }}
+          S10: ${{ steps.pylint_tests.outcome }}
+          S11: ${{ steps.mypy_source.outcome }}
+          S12: ${{ steps.mypy_tests.outcome }}
+          S13: ${{ steps.jscpd_source.outcome }}
+          S14: ${{ steps.jscpd_tests.outcome }}
+          S15: ${{ steps.unit_tests.outcome }}
+          S16: ${{ steps.pre_integration_tests.outcome }}
+        name: Assert no step failed
+        run: |
+          failed=""
+          f="failure"
+          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
+          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
+          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
+          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
+          [ "$S05" = "$f" ] && failed="$failed one_assert_per_pytest_gh"
+          [ "$S06" = "$f" ] && failed="$failed one_assert_per_pytest_sh"
+          [ "$S07" = "$f" ] && failed="$failed yamllint"
+          [ "$S08" = "$f" ] && failed="$failed jsonlint"
+          [ "$S09" = "$f" ] && failed="$failed pylint_source"
+          [ "$S10" = "$f" ] && failed="$failed pylint_tests"
+          [ "$S11" = "$f" ] && failed="$failed mypy_source"
+          [ "$S12" = "$f" ] && failed="$failed mypy_tests"
+          [ "$S13" = "$f" ] && failed="$failed jscpd_source"
+          [ "$S14" = "$f" ] && failed="$failed jscpd_tests"
+          [ "$S15" = "$f" ] && failed="$failed unit_tests"
+          [ "$S16" = "$f" ] && failed="$failed pre_integration_tests"
+          if [ -n "$failed" ]; then
+            echo "Steps that failed:$failed"
+            exit 1
+          fi
+          echo "All steps succeeded"
+      - env:
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}
         id: files
         name: Get changed files
@@ -354,48 +396,6 @@ jobs:
             --workflow "${{ inputs.start_from }}" \
             --repo "${{ github.repository }}" \
             $FLAGS
-      - env:
-          S01: ${{ steps.no_linter_configs_gh.outcome }}
-          S02: ${{ steps.no_linter_configs_sh.outcome }}
-          S03: ${{ steps.no_inline_disables_gh.outcome }}
-          S04: ${{ steps.no_inline_disables_sh.outcome }}
-          S05: ${{ steps.one_assert_per_pytest_gh.outcome }}
-          S06: ${{ steps.one_assert_per_pytest_sh.outcome }}
-          S07: ${{ steps.yamllint.outcome }}
-          S08: ${{ steps.jsonlint.outcome }}
-          S09: ${{ steps.pylint_source.outcome }}
-          S10: ${{ steps.pylint_tests.outcome }}
-          S11: ${{ steps.mypy_source.outcome }}
-          S12: ${{ steps.mypy_tests.outcome }}
-          S13: ${{ steps.jscpd_source.outcome }}
-          S14: ${{ steps.jscpd_tests.outcome }}
-          S15: ${{ steps.unit_tests.outcome }}
-          S16: ${{ steps.pre_integration_tests.outcome }}
-        name: Assert no step failed
-        run: |
-          failed=""
-          f="failure"
-          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
-          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
-          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
-          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
-          [ "$S05" = "$f" ] && failed="$failed one_assert_per_pytest_gh"
-          [ "$S06" = "$f" ] && failed="$failed one_assert_per_pytest_sh"
-          [ "$S07" = "$f" ] && failed="$failed yamllint"
-          [ "$S08" = "$f" ] && failed="$failed jsonlint"
-          [ "$S09" = "$f" ] && failed="$failed pylint_source"
-          [ "$S10" = "$f" ] && failed="$failed pylint_tests"
-          [ "$S11" = "$f" ] && failed="$failed mypy_source"
-          [ "$S12" = "$f" ] && failed="$failed mypy_tests"
-          [ "$S13" = "$f" ] && failed="$failed jscpd_source"
-          [ "$S14" = "$f" ] && failed="$failed jscpd_tests"
-          [ "$S15" = "$f" ] && failed="$failed unit_tests"
-          [ "$S16" = "$f" ] && failed="$failed pre_integration_tests"
-          if [ -n "$failed" ]; then
-            echo "Steps that failed:$failed"
-            exit 1
-          fi
-          echo "All steps succeeded"
 name: Workflow Controller
 on:
   push:
