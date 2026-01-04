@@ -11,8 +11,8 @@ from botocore.exceptions import ClientError
 
 
 
-class TestLambdaExistence:
-    """Layer 1: Verify Lambda functions were created."""
+class TestResourceExistence:
+    """Layer 1: Verify core resources were created."""
 
     def test_handler_lambda_exists(self, lambda_client, handler_function_name):
         """Verify rack designer handler Lambda function exists."""
@@ -26,10 +26,6 @@ class TestLambdaExistence:
             raise
         assert True  # Explicit pass
 
-
-class TestIAMRoleExistence:
-    """Layer 1: Verify IAM roles were created."""
-
     def test_handler_iam_role_exists(self, iam_client, handler_role_name):
         """Verify rack designer handler IAM role exists."""
         try:
@@ -39,10 +35,6 @@ class TestIAMRoleExistence:
                 pytest.fail(f"IAM role '{handler_role_name}' does not exist")
             raise
         assert True  # Explicit pass
-
-
-class TestDynamoDBAndCloudWatchExistence:
-    """Layer 1: Verify DynamoDB tables and CloudWatch log groups were created."""
 
     def test_configurations_table_exists(
         self, dynamodb_client, configurations_table_name
