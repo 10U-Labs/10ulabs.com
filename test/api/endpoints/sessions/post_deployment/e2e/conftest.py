@@ -5,32 +5,20 @@ These tests make real HTTP requests to the deployed API.
 """
 import pytest
 
-from repo_utils import REPO_ROOT
-from test_fixtures.terraform import terraform_init, terraform_output
 
-SHARED_MODULE_PATH = REPO_ROOT / "src" / "shared"
-
-
-@pytest.fixture(scope="module")
-def shared_terraform_initialized():
-    """Initialize terraform for shared module state access."""
-    return terraform_init(SHARED_MODULE_PATH)
-
-
-@pytest.fixture(scope="module")
-def config(request):
-    """Provide configuration from shared terraform outputs."""
-    if not request.getfixturevalue("shared_terraform_initialized"):
-        pytest.skip("Terraform init failed for shared module")
+@pytest.fixture(name="config", scope="module")
+def config_fixture(shared_config):
+    """Provide sessions configuration for E2E tests."""
     return {
-        "domain_name": terraform_output(SHARED_MODULE_PATH, "domain_name"),
+        "domain_name": shared_config["domain_name"],
+        "api_fqdn": f"api.{shared_config['domain_name']}",
     }
 
 
 @pytest.fixture(name="api_url", scope="module")
 def api_url_fixture(config):
     """Provide the API URL for E2E tests."""
-    return f"https://api.{config['domain_name']}"
+    return f"https://{config['api_fqdn']}"
 
 
 @pytest.fixture(name="test_device_id", scope="module")
