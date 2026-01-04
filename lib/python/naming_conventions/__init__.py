@@ -2,10 +2,12 @@
 Naming convention validation module.
 
 This module provides functions to validate AWS resource naming conventions,
-specifically for ensuring IAM roles and Lambda functions use PascalCase.
+specifically for ensuring IAM roles and Lambda functions use PascalCase,
+and infrastructure resources use kebab-case.
 
 Example usage:
     from naming_conventions import is_pascalcase, validate_name, find_violations
+    from naming_conventions import is_kebabcase, validate_kebab_name
 
     # Check if a name is PascalCase
     is_pascalcase("TenULabsMyFunction")  # True
@@ -16,6 +18,13 @@ Example usage:
 
     # Find violations in a list of names
     violations = find_violations(["TenULabsGood", "Bad-Name"])
+
+    # Check if a name is kebab-case (prefix-lowercase-words)
+    is_kebabcase("TenULabs-my-resource")  # True
+    is_kebabcase("TenULabs-MyResource")  # False (has uppercase after prefix)
+
+    # Validate kebab-case name
+    validate_kebab_name("TenULabs-my-resource")  # Returns None (valid)
 """
 
 import re
@@ -95,6 +104,92 @@ def find_violations(names: List[str]) -> List[Tuple[str, str]]:
         if error:
             violations.append((name, error))
     return violations
+
+
+def is_kebabcase(name: str) -> bool:
+    """Check if a name follows kebab-case naming convention.
+
+    Kebab-case requirements for AWS resources:
+    - Starts with a PascalCase prefix (e.g., TenULabs)
+    - Followed by a hyphen
+    - Rest is lowercase words separated by hyphens
+    - Only alphanumeric characters and hyphens allowed
+
+    Args:
+        name: The name to validate.
+
+    Returns:
+        True if the name is valid kebab-case, False otherwise.
+    """
+    if not name:
+        return False
+
+    # Must contain at least one hyphen
+    if '-' not in name:
+        return False
+
+    # Split on first hyphen to get prefix and rest
+    parts = name.split('-', 1)
+    if len(parts) != 2:
+        return False
+
+    prefix, rest = parts
+
+    # Prefix must be PascalCase (start with uppercase, alphanumeric only)
+    if not prefix or not prefix[0].isupper() or not prefix.isalnum():
+        return False
+
+    # Rest must be lowercase with hyphens only
+    if not rest:
+        return False
+
+    # Check rest is lowercase alphanumeric with hyphens
+    if not re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', rest):
+        return False
+
+    return True
+
+
+def validate_kebab_name(name: str) -> Optional[str]:
+    """Validate a kebab-case resource name and return an error message if invalid.
+
+    Expected format: PascalCasePrefix-lowercase-words-with-hyphens
+    Example: TenULabs-rack-configurations-backup
+
+    Args:
+        name: The name to validate.
+
+    Returns:
+        None if valid, or an error message string describing the issue.
+    """
+    if not name:
+        return "Name is empty"
+
+    if '-' not in name:
+        return f"Name '{name}' must contain hyphens for kebab-case format"
+
+    parts = name.split('-', 1)
+    if len(parts) != 2:
+        return f"Name '{name}' must have format: Prefix-lowercase-words"
+
+    prefix, rest = parts
+
+    if not prefix:
+        return f"Name '{name}' must start with a PascalCase prefix"
+
+    if not prefix[0].isupper():
+        return f"Name '{name}' prefix must start with uppercase letter"
+
+    if not prefix.isalnum():
+        return f"Name '{name}' prefix must be alphanumeric (PascalCase)"
+
+    if not rest:
+        return f"Name '{name}' must have content after the prefix"
+
+    if not re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', rest):
+        return f"Name '{name}' suffix must be lowercase words separated by hyphens"
+
+    return None
 
 
 def extract_iam_role_names_from_terraform(content: str) -> List[Tuple[str, str]]:

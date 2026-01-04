@@ -6,7 +6,7 @@ Three-layer testing model:
 - Layer 2: Configuration - Resources configured correctly
 """
 
-from naming_conventions import validate_name
+from naming_conventions import validate_name, validate_kebab_name
 
 
 
@@ -118,4 +118,21 @@ class TestNamingConventions:
         error = validate_name(actual_name)
         assert error is None, (
             f"Backup IAM role has invalid name '{actual_name}': {error}"
+        )
+
+    def test_configurations_table_name_is_kebabcase(
+        self, configurations_table_name
+    ):
+        """Verify configurations table name uses kebab-case."""
+        error = validate_kebab_name(configurations_table_name)
+        assert error is None, (
+            f"Configurations table has invalid name '{configurations_table_name}': "
+            f"{error}"
+        )
+
+    def test_backup_vault_name_is_kebabcase(self, backup_vault_name):
+        """Verify backup vault name uses kebab-case."""
+        error = validate_kebab_name(backup_vault_name)
+        assert error is None, (
+            f"Backup vault has invalid name '{backup_vault_name}': {error}"
         )
