@@ -23,53 +23,41 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - continue-on-error: true
-        id: no_linter_configs_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
         name: Assert no linter config files (GitHub-hosted)
         uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
         with:
           directories: ${{ github.workspace }}
           linters: pylint,mypy,yamllint
           verbose: true
-      - continue-on-error: true
-        id: no_linter_configs_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
         name: Assert no linter config files (self-hosted)
         run: >-
           assert-no-linter-config-files
           --linters pylint,mypy,yamllint
           --verbose
           ${{ github.workspace }}
-      - continue-on-error: true
-        id: no_inline_disables_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
         name: Assert no inline lint disables (GitHub-hosted)
         uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
         with:
           files: ${{ github.workspace }}/**/*
           linters: pylint,mypy,yamllint
           verbose: true
-      - continue-on-error: true
-        id: no_inline_disables_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
         name: Assert no inline lint disables (self-hosted)
         run: >-
           assert-no-inline-lint-disables
           --linters pylint,mypy,yamllint
           --verbose
           ${{ github.workspace }}/**/*
-      - continue-on-error: true
-        id: one_assert_per_pytest_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
+      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
         name: Assert one assert per pytest (GitHub-hosted)
         uses: 10U-Labs-LLC/assert-one-assert-per-pytest@latest
         with:
           files: ${{ github.workspace }}/test/**/*.py
           verbose: true
-      - continue-on-error: true
-        id: one_assert_per_pytest_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
+      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
         name: Assert one assert per pytest (self-hosted)
         run: >-
           assert-one-assert-per-pytest
@@ -115,9 +103,7 @@ jobs:
             types-PyYAML \
             types-requests \
             yamllint
-      - continue-on-error: true
-        id: yamllint
-        name: Linting YAML files
+      - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -134,48 +120,34 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install npm dependencies
         run: npm install -g jscpd jsonlint
-      - continue-on-error: true
-        id: jsonlint
-        name: Linting JSON files
+      - name: Linting JSON files
         run: |
           jsonlint -q src/api/endpoints/runners/ecs/images/post/config.json
           jsonlint -q \
             src/api/endpoints/runners/ecs/images/post/cloudwatch-agent-config.json
-      - continue-on-error: true
-        id: pylint_source
-        name: Run pylint on source
+      - name: Run pylint on source
         run: |
           python3 -m pylint \
             src/api/endpoints/runners/ecs/images/post/*.py \
             --fail-on=C,R,W --fail-under=10.0
-      - continue-on-error: true
-        id: pylint_tests
-        name: Run pylint on tests
+      - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
             lib/python/ test/ \
             --fail-on=C,R,W --fail-under=10.0
-      - continue-on-error: true
-        id: mypy_source
-        name: Run mypy on source
+      - name: Run mypy on source
         run: |
           python3 -m mypy \
             src/api/endpoints/runners/ecs/images/post/*.py
-      - continue-on-error: true
-        id: mypy_tests
-        name: Run mypy on tests
+      - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
             lib/python/ test/
-      - continue-on-error: true
-        id: jscpd_source
-        name: Check for duplicate code in source Python files
+      - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ src/api/endpoints/runners/ecs/images/post/
-      - continue-on-error: true
-        id: jscpd_tests
-        name: Check for duplicate code in test Python files
+      - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ test/
@@ -193,16 +165,12 @@ jobs:
           HADOLINT_URL="${HADOLINT_URL}/hadolint-Linux-x86_64"
           sudo curl -fsSL -o /usr/local/bin/hadolint "$HADOLINT_URL"
           sudo chmod +x /usr/local/bin/hadolint
-      - continue-on-error: true
-        id: hadolint
-        name: Validate Dockerfile
+      - name: Validate Dockerfile
         run: |
           DOCKERFILE=src/api/endpoints/runners/ecs/images/post/Dockerfile
           hadolint --ignore DL3008 --ignore DL3013 \
             --ignore DL3015 --ignore DL3016 $DOCKERFILE
-      - continue-on-error: true
-        id: unit_tests
-        name: Run unit tests
+      - name: Run unit tests
         run: |
           TEST=test/api/endpoints/runners/ecs/images/post/pre_deployment/unit/
           python3 -m pytest \
@@ -237,9 +205,7 @@ jobs:
         with:
           terraform_version: ${{ steps.config.outputs.terraform_version }}
           terraform_wrapper: false
-      - continue-on-error: true
-        id: pre_integration_tests
-        name: Run pre-deployment integration tests
+      - name: Run pre-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/ecs/images/post/pre_deployment
           python3 -m pytest \
@@ -396,53 +362,19 @@ jobs:
             --image-tag "$TAG" \
             --region "$REGION"
       - env:
-          S01: ${{ steps.no_linter_configs_gh.outcome }}
-          S02: ${{ steps.no_linter_configs_sh.outcome }}
-          S03: ${{ steps.no_inline_disables_gh.outcome }}
-          S04: ${{ steps.no_inline_disables_sh.outcome }}
-          S05: ${{ steps.one_assert_per_pytest_gh.outcome }}
-          S06: ${{ steps.one_assert_per_pytest_sh.outcome }}
-          S07: ${{ steps.yamllint.outcome }}
-          S08: ${{ steps.jsonlint.outcome }}
-          S09: ${{ steps.pylint_source.outcome }}
-          S10: ${{ steps.pylint_tests.outcome }}
-          S11: ${{ steps.mypy_source.outcome }}
-          S12: ${{ steps.mypy_tests.outcome }}
-          S13: ${{ steps.jscpd_source.outcome }}
-          S14: ${{ steps.jscpd_tests.outcome }}
-          S15: ${{ steps.hadolint.outcome }}
-          S16: ${{ steps.unit_tests.outcome }}
-          S17: ${{ steps.pre_integration_tests.outcome }}
-          S18: ${{ steps.post_integration_tests.outcome }}
-          S19: ${{ steps.e2e_tests.outcome }}
-        name: Assert no step failed
+          S01: ${{ steps.post_integration_tests.outcome }}
+          S02: ${{ steps.e2e_tests.outcome }}
+        name: Assert no post-deployment step failed
         run: |
           failed=""
           f="failure"
-          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
-          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
-          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
-          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
-          [ "$S05" = "$f" ] && failed="$failed one_assert_per_pytest_gh"
-          [ "$S06" = "$f" ] && failed="$failed one_assert_per_pytest_sh"
-          [ "$S07" = "$f" ] && failed="$failed yamllint"
-          [ "$S08" = "$f" ] && failed="$failed jsonlint"
-          [ "$S09" = "$f" ] && failed="$failed pylint_source"
-          [ "$S10" = "$f" ] && failed="$failed pylint_tests"
-          [ "$S11" = "$f" ] && failed="$failed mypy_source"
-          [ "$S12" = "$f" ] && failed="$failed mypy_tests"
-          [ "$S13" = "$f" ] && failed="$failed jscpd_source"
-          [ "$S14" = "$f" ] && failed="$failed jscpd_tests"
-          [ "$S15" = "$f" ] && failed="$failed hadolint"
-          [ "$S16" = "$f" ] && failed="$failed unit_tests"
-          [ "$S17" = "$f" ] && failed="$failed pre_integration_tests"
-          [ "$S18" = "$f" ] && failed="$failed post_integration_tests"
-          [ "$S19" = "$f" ] && failed="$failed e2e_tests"
+          [ "$S01" = "$f" ] && failed="$failed post_integration_tests"
+          [ "$S02" = "$f" ] && failed="$failed e2e_tests"
           if [ -n "$failed" ]; then
             echo "Steps that failed:$failed"
             exit 1
           fi
-          echo "All steps succeeded"
+          echo "All post-deployment steps succeeded"
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
