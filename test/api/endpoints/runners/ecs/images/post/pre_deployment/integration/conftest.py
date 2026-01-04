@@ -10,7 +10,7 @@ import pytest
 import requests
 from botocore.exceptions import ClientError
 
-API_COMMON_ECR_DIR = REPO_ROOT / "src" / "api" / "common" / "ecs_runner"
+API_COMMON_ECR_DIR = REPO_ROOT / "src" / "api" / "common" / "docker_repository"
 AWS_REGION = "us-east-1"
 BASE_IMAGE = "debian"
 BASE_TAG = "stable-slim"
