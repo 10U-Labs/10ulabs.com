@@ -9,53 +9,24 @@ class TestShouldTriggerDescendants:
 
     def test_returns_true_when_flag_is_true(self, dispatch_roots) -> None:
         """Test returns True when trigger_flag is True."""
-        assert dispatch_roots.should_trigger_descendants(True, "", [], [], None) is True
+        assert dispatch_roots.should_trigger_descendants(True, "") is True
 
     def test_returns_true_when_commit_has_tag(self, dispatch_roots) -> None:
         """Test returns True when commit message has [trigger descendants]."""
         assert dispatch_roots.should_trigger_descendants(
-            False, "feat: add feature [trigger descendants]", [], [], None
+            False, "feat: add feature [trigger descendants]"
         ) is True
 
     def test_returns_true_when_commit_has_tag_case_insensitive(self, dispatch_roots) -> None:
         """Test [Trigger Descendants] tag is case insensitive."""
         assert dispatch_roots.should_trigger_descendants(
-            False, "feat: add feature [Trigger Descendants]", [], [], None
-        ) is True
-
-    def test_returns_true_when_dependencies_changed(self, dispatch_roots) -> None:
-        """Test returns True when workflow_dependencies.json changed."""
-        assert dispatch_roots.should_trigger_descendants(
-            False, "feat: update deps", ["etc/workflow_dependencies.json"], [], None
+            False, "feat: add feature [Trigger Descendants]"
         ) is True
 
     def test_returns_false_when_no_conditions_met(self, dispatch_roots) -> None:
         """Test returns False when no conditions are met."""
         assert dispatch_roots.should_trigger_descendants(
-            False, "feat: normal commit", ["src/file.py"], [], None
-        ) is False
-
-    def test_returns_true_when_descendant_has_changes(self, dispatch_roots) -> None:
-        """Test returns True when a descendant workflow has changed files."""
-        graph = {
-            "bootstrap": {"paths": ["src/bootstrap/**"], "depends_on": []},
-            "www_common": {"paths": ["src/www/common/**"], "depends_on": ["bootstrap"]},
-        }
-        assert dispatch_roots.should_trigger_descendants(
-            False, "feat: update both",
-            ["src/bootstrap/main.tf", "src/www/common/main.tf"],
-            ["bootstrap"], graph
-        ) is True
-
-    def test_returns_false_when_only_root_has_changes(self, dispatch_roots) -> None:
-        """Test returns False when only the root workflow has changed files."""
-        graph = {
-            "bootstrap": {"paths": ["src/bootstrap/**"], "depends_on": []},
-            "www_common": {"paths": ["src/www/common/**"], "depends_on": ["bootstrap"]},
-        }
-        assert dispatch_roots.should_trigger_descendants(
-            False, "feat: update bootstrap only",
-            ["src/bootstrap/main.tf"], ["bootstrap"], graph
+            False, "feat: normal commit"
         ) is False
 
 

@@ -28,8 +28,6 @@ from utils import (
     add_changed_files_arg,
     add_running_arg,
     dispatch_gh_workflow,
-    file_matches_pattern,
-    get_all_descendants,
     parse_changed_files,
     parse_running_workflows,
     workflow_accepts_input,
@@ -72,67 +70,20 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _get_affected_workflows(
-    changed_files: list[str],
-    graph: dict
-) -> set[str]:
-    """Get workflows affected by changed files."""
-    affected: set[str] = set()
-    for workflow_key, workflow_config in graph.items():
-        patterns = workflow_config.get("paths", [])
-        for filepath in changed_files:
-            if any(file_matches_pattern(filepath, p) for p in patterns):
-                affected.add(workflow_key)
-                break
-    return affected
-
-
-def _descendants_have_changes(
-    roots: list[str],
-    changed_files: list[str],
-    graph: dict
-) -> bool:
-    """Check if any descendant of the roots has changed files."""
-    affected = _get_affected_workflows(changed_files, graph)
-
-    # Get all descendants of all roots
-    all_descendants: set[str] = set()
-    cache: dict[str, set[str]] = {}
-    for root in roots:
-        all_descendants.update(get_all_descendants(root, graph, cache))
-
-    # Check if any affected workflow is a descendant
-    return bool(affected & all_descendants)
-
-
 def should_trigger_descendants(
     trigger_flag: bool,
-    commit_message: str,
-    changed_files: list[str],
-    roots: list[str],
-    graph: dict | None
+    commit_message: str
 ) -> bool:
     """Determine if descendants should be triggered.
 
     Returns True if:
     1. trigger_flag is True (--trigger-descendants passed), OR
-    2. Commit message contains [trigger descendants], OR
-    3. etc/workflow_dependencies.json was changed, OR
-    4. Any descendant workflow also has changed files
+    2. Commit message contains [trigger descendants]
     """
     if trigger_flag:
         return True
 
-    # Check commit message
     if re.search(r"\[trigger descendants\]", commit_message, re.IGNORECASE):
-        return True
-
-    # Check if workflow_dependencies.json changed
-    if "etc/workflow_dependencies.json" in changed_files:
-        return True
-
-    # Check if any descendants also have changed files
-    if graph and _descendants_have_changes(roots, changed_files, graph):
         return True
 
     return False
@@ -201,10 +152,7 @@ def main() -> int:
     # Determine if we should trigger descendants
     trigger = should_trigger_descendants(
         args.trigger_descendants,
-        args.commit_message,
-        changed_files,
-        roots,
-        graph
+        args.commit_message
     )
 
     # Determine if we should invalidate CloudFront
