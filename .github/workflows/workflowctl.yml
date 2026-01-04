@@ -61,6 +61,76 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed != 'true'
         name: Workflowctl testing not required
         run: echo "No workflowctl-related files changed. Skipping tests."
+      - continue-on-error: true
+        id: no_linter_configs_gh
+        if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Assert no linter config files (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
+        with:
+          directories: ${{ github.workspace }}
+          linters: pylint,mypy,yamllint
+          verbose: true
+      - continue-on-error: true
+        id: no_linter_configs_sh
+        if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true' &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Assert no linter config files (self-hosted)
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+      - continue-on-error: true
+        id: no_inline_disables_gh
+        if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Assert no inline lint disables (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-no-inline-lint-disables@latest
+        with:
+          files: ${{ github.workspace }}/**/*
+          linters: pylint,mypy,yamllint
+          verbose: true
+      - continue-on-error: true
+        id: no_inline_disables_sh
+        if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true' &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Assert no inline lint disables (self-hosted)
+        run: >-
+          assert-no-inline-lint-disables
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
+      - continue-on-error: true
+        id: one_assert_per_pytest_gh
+        if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Assert one assert per pytest (GitHub-hosted)
+        uses: 10U-Labs-LLC/assert-one-assert-per-pytest@latest
+        with:
+          directories: ${{ github.workspace }}/test
+          verbose: true
+      - continue-on-error: true
+        id: one_assert_per_pytest_sh
+        if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true' &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Assert one assert per pytest (self-hosted)
+        run: >-
+          assert-one-assert-per-pytest
+          --verbose
+          ${{ github.workspace }}/test
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -77,7 +147,9 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true')
         name: Install yamllint
         run: python3 -m pip install yamllint==1.35.*
-      - if: >-
+      - continue-on-error: true
+        id: yamllint
+        if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Linting YAML files
@@ -99,7 +171,9 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true')
         name: Install jsonlint
         run: npm install -g jsonlint
-      - if: >-
+      - continue-on-error: true
+        id: jsonlint
+        if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Linting JSON files
@@ -118,7 +192,9 @@ jobs:
             pylint==3.3.* \
             pytest==8.3.* \
             requests==2.32.*
-      - if: >-
+      - continue-on-error: true
+        id: pylint_source
+        if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pylint on source
@@ -136,7 +212,9 @@ jobs:
           python3 -m pip install \
             dnspython==2.7.* \
             python-hcl2==6.0.*
-      - if: >-
+      - continue-on-error: true
+        id: pylint_tests
+        if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pylint on tests
@@ -158,12 +236,16 @@ jobs:
             types-dockerfile-parse \
             types-PyYAML==6.0.* \
             types-requests==2.32.*
-      - if: >-
+      - continue-on-error: true
+        id: mypy_source
+        if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on source
         run: python3 -m mypy lib/python/ src/workflowctl/
-      - if: >-
+      - continue-on-error: true
+        id: mypy_tests
+        if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on tests
@@ -178,14 +260,18 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true')
         name: Install jscpd
         run: npm install -g jscpd
-      - if: >-
+      - continue-on-error: true
+        id: jscpd_source
+        if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ src/workflowctl/
-      - if: >-
+      - continue-on-error: true
+        id: jscpd_tests
+        if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Check for duplicate code in test Python files
@@ -200,7 +286,9 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true')
         name: Install pytest dependencies
         run: python3 -m pip install pytest==8.3.* pyyaml==6.0.*
-      - if: >-
+      - continue-on-error: true
+        id: unit_tests
+        if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run unit tests
@@ -208,7 +296,9 @@ jobs:
           python3 -m pytest \
             test/workflowctl/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
-      - if: >-
+      - continue-on-error: true
+        id: pre_integration_tests
+        if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pre-deployment integration tests
@@ -305,6 +395,48 @@ jobs:
             --workflow "${{ inputs.start_from }}" \
             --repo "${{ github.repository }}" \
             $FLAGS
+      - env:
+          S01: ${{ steps.no_linter_configs_gh.outcome }}
+          S02: ${{ steps.no_linter_configs_sh.outcome }}
+          S03: ${{ steps.no_inline_disables_gh.outcome }}
+          S04: ${{ steps.no_inline_disables_sh.outcome }}
+          S05: ${{ steps.one_assert_per_pytest_gh.outcome }}
+          S06: ${{ steps.one_assert_per_pytest_sh.outcome }}
+          S07: ${{ steps.yamllint.outcome }}
+          S08: ${{ steps.jsonlint.outcome }}
+          S09: ${{ steps.pylint_source.outcome }}
+          S10: ${{ steps.pylint_tests.outcome }}
+          S11: ${{ steps.mypy_source.outcome }}
+          S12: ${{ steps.mypy_tests.outcome }}
+          S13: ${{ steps.jscpd_source.outcome }}
+          S14: ${{ steps.jscpd_tests.outcome }}
+          S15: ${{ steps.unit_tests.outcome }}
+          S16: ${{ steps.pre_integration_tests.outcome }}
+        name: Assert no step failed
+        run: |
+          failed=""
+          f="failure"
+          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
+          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
+          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
+          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
+          [ "$S05" = "$f" ] && failed="$failed one_assert_per_pytest_gh"
+          [ "$S06" = "$f" ] && failed="$failed one_assert_per_pytest_sh"
+          [ "$S07" = "$f" ] && failed="$failed yamllint"
+          [ "$S08" = "$f" ] && failed="$failed jsonlint"
+          [ "$S09" = "$f" ] && failed="$failed pylint_source"
+          [ "$S10" = "$f" ] && failed="$failed pylint_tests"
+          [ "$S11" = "$f" ] && failed="$failed mypy_source"
+          [ "$S12" = "$f" ] && failed="$failed mypy_tests"
+          [ "$S13" = "$f" ] && failed="$failed jscpd_source"
+          [ "$S14" = "$f" ] && failed="$failed jscpd_tests"
+          [ "$S15" = "$f" ] && failed="$failed unit_tests"
+          [ "$S16" = "$f" ] && failed="$failed pre_integration_tests"
+          if [ -n "$failed" ]; then
+            echo "Steps that failed:$failed"
+            exit 1
+          fi
+          echo "All steps succeeded"
 name: Workflow Controller
 on:
   push:
