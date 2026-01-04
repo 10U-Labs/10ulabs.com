@@ -170,6 +170,30 @@ def start_runner_and_get_info(config):
     return get_runner_and_cleanup(container, config["pat"], config["repo"])
 
 
+def wait_for_runner_online(pat, repo, runner_name, max_attempts=10):
+    """Wait for a runner to come online with exponential backoff.
+
+    Args:
+        pat: GitHub personal access token
+        repo: Repository in owner/repo format
+        runner_name: Name of the runner to wait for
+        max_attempts: Maximum number of polling attempts
+
+    Returns:
+        Runner info dict if found and online, None otherwise
+    """
+    attempt = 0
+    while attempt < max_attempts:
+        wait_time = 2 ** attempt
+        time.sleep(wait_time)
+        runners = get_github_runners(pat, repo)
+        runner_info = find_runner_by_name(runners, runner_name)
+        if runner_info is not None and runner_info.get("status") == "online":
+            return runner_info
+        attempt = attempt + 1
+    return runner_info
+
+
 def create_shared_runner_context(image_uri, repo, token, region, pat):
     """Create and return a shared runner context for tests."""
     login_to_ecr(region)
@@ -186,10 +210,7 @@ def create_shared_runner_context(image_uri, repo, token, region, pat):
     }
     container = RunnerContainer(config)
 
-    time.sleep(30)
-
-    runners = get_github_runners(pat, repo)
-    runner_info = find_runner_by_name(runners, runner_name)
+    runner_info = wait_for_runner_online(pat, repo, runner_name)
 
     return {
         "container": container,
