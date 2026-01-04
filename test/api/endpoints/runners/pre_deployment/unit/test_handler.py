@@ -246,7 +246,6 @@ class TestRouteToRunner:
         with patch('urllib.request.urlopen', side_effect=mock_error):
             with pytest.raises(urllib.error.URLError):
                 handler_module._route_to_runner('ec2', {'job_id': 123})
-        assert True  # Explicit pass
 
     def test_route_to_runner_includes_api_key_header(self, handler_module):
         """Test _route_to_runner includes x-api-key header."""

@@ -41,7 +41,6 @@ class TestFleetError:
         """FleetError can be raised with a message."""
         with pytest.raises(FleetError, match="test message"):
             raise FleetError("test message")
-        assert True  # Explicit pass
 
 
 class TestCapacityError:
@@ -55,7 +54,6 @@ class TestCapacityError:
         """CapacityError can be raised with a message."""
         with pytest.raises(CapacityError, match="no capacity"):
             raise CapacityError("no capacity")
-        assert True  # Explicit pass
 
 
 # === LaunchOptions Dataclass ===
@@ -383,7 +381,6 @@ class TestExtractInstanceId:
         response = {"Instances": []}
         with pytest.raises(CapacityError, match="No instances launched"):
             _extract_instance_id(response)
-        assert True  # Explicit pass
 
     def test_extract_instance_id_with_errors(self):
         """_extract_instance_id raises CapacityError with error messages."""
@@ -393,14 +390,12 @@ class TestExtractInstanceId:
         }
         with pytest.raises(CapacityError, match="InsufficientCapacity"):
             _extract_instance_id(response)
-        assert True  # Explicit pass
 
     def test_extract_instance_id_empty_instance_ids(self):
         """_extract_instance_id raises when InstanceIds is empty."""
         response = {"Instances": [{"InstanceIds": []}]}
         with pytest.raises(CapacityError, match="No instances launched"):
             _extract_instance_id(response)
-        assert True  # Explicit pass
 
 
 class TestCreateFleetInstance:
@@ -497,7 +492,6 @@ class TestGetInstanceState:
         )
         with pytest.raises(ClientError):
             get_instance_state(mock_client, "i-123")
-        assert True  # Explicit pass
 
     def test_get_instance_state_no_reservations(self):
         """get_instance_state returns unknown for empty reservations."""
@@ -546,7 +540,6 @@ class TestWaitForInstanceRunning:
         }
         with pytest.raises(RuntimeError, match="terminated"):
             wait_for_instance_running(mock_client, "i-123", max_attempts=1)
-        assert True  # Explicit pass
 
     def test_wait_for_instance_running_timeout(self):
         """wait_for_instance_running raises on timeout."""
@@ -559,7 +552,6 @@ class TestWaitForInstanceRunning:
                 wait_for_instance_running(
                     mock_client, "i-123", max_attempts=2, poll_interval=0
                 )
-        assert True  # Explicit pass
 
     def test_wait_for_instance_running_shutting_down(self):
         """wait_for_instance_running raises if instance shutting down."""
@@ -569,7 +561,6 @@ class TestWaitForInstanceRunning:
         }
         with pytest.raises(RuntimeError, match="shutting-down"):
             wait_for_instance_running(mock_client, "i-123", max_attempts=1)
-        assert True  # Explicit pass
 
 
 class TestWaitForStatusChecks:
@@ -600,7 +591,6 @@ class TestWaitForStatusChecks:
         }
         with pytest.raises(RuntimeError, match="terminated"):
             wait_for_status_checks(mock_client, "i-123", max_attempts=1)
-        assert True  # Explicit pass
 
     def test_wait_for_status_checks_timeout(self):
         """wait_for_status_checks raises on timeout."""
@@ -621,7 +611,6 @@ class TestWaitForStatusChecks:
                 wait_for_status_checks(
                     mock_client, "i-123", max_attempts=2, poll_interval=0
                 )
-        assert True  # Explicit pass
 
     def test_wait_for_status_checks_empty_statuses(self):
         """wait_for_status_checks handles empty InstanceStatuses."""
@@ -635,7 +624,6 @@ class TestWaitForStatusChecks:
                 wait_for_status_checks(
                     mock_client, "i-123", max_attempts=2, poll_interval=0
                 )
-        assert True  # Explicit pass
 
 
 # === Terminate Instance ===
@@ -1077,7 +1065,6 @@ class TestLaunchInstanceWithRetry:
         )
         with pytest.raises(CapacityError, match="Failed to launch instance"):
             launch_instance_with_retry(mock_client, {"ami_id": "ami-123"}, opts)
-        assert True  # Explicit pass
 
     def test_launch_instance_with_retry_no_subnets(self):
         """launch_instance_with_retry raises when no subnets available."""
@@ -1093,4 +1080,3 @@ class TestLaunchInstanceWithRetry:
         )
         with pytest.raises(CapacityError, match="No subnets available"):
             launch_instance_with_retry(mock_client, {"ami_id": "ami-123"}, opts)
-        assert True  # Explicit pass

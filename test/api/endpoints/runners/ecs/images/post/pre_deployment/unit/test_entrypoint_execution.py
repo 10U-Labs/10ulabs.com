@@ -92,4 +92,3 @@ def test_run_sh_not_called_when_config_fails(mock_run, mock_popen, entrypoint):
     with pytest.raises(SystemExit):
         entrypoint.main()
     mock_popen.assert_not_called()
-    assert True  # Explicit pass

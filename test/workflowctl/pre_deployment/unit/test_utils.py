@@ -55,7 +55,6 @@ class TestAddChangedFilesArg:
         with patch.object(sys, "argv", ["prog"]):
             with pytest.raises(SystemExit):
                 parser.parse_args()
-        assert True  # Explicit pass
 
 
 class TestAddRunningArg:
@@ -155,7 +154,6 @@ class TestLoadDependencyGraph:
         with patch("builtins.open", side_effect=FileNotFoundError()):
             with pytest.raises(FileNotFoundError):
                 utils.load_dependency_graph("missing.json")
-        assert True  # Explicit pass
 
 
 class TestLoadGraphWithError:

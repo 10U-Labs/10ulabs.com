@@ -628,7 +628,6 @@ class TestWriteAheadLoggerAdvanced:
         event = {'httpMethod': 'POST', 'headers': {}, 'body': '{}'}
         with pytest.raises(ClientError):
             logger.log_request_received(event)
-        assert True  # Explicit pass
 
     @patch('audit_logger._get_dynamodb_client')
     def test_update_status_handles_error_gracefully(self, mock_ddb):
@@ -686,7 +685,6 @@ class TestAuditRequestDecoratorAdvanced:
         with patch.dict('os.environ', {'AUDIT_ENABLED': 'true', 'AUDIT_TABLE_NAME': 'test'}):
             with pytest.raises(ValueError, match="Something went wrong"):
                 handler(event, None)
-        assert True  # Explicit pass
 
     @patch('audit_logger._get_dynamodb_client')
     @patch('audit_logger._get_sqs_client')
