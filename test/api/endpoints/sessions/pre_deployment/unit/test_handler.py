@@ -1,10 +1,17 @@
 """Unit tests for sessions Lambda handler."""
 import os
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
-from .conftest import create_mock_dynamodb
+
+def create_mock_dynamodb(method_name: str, return_value=None):
+    """Create a mock DynamoDB client with a specified method returning a value."""
+    if return_value is None:
+        return_value = {}
+    mock_dynamodb = MagicMock()
+    getattr(mock_dynamodb, method_name).return_value = return_value
+    return mock_dynamodb
 
 
 class TestExtractSessionIdFromPath:
