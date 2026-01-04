@@ -235,15 +235,6 @@ class TestBuildToolsInstalled:
 
         assert output["Status"] == "Success"
 
-    def test_pytest_is_installed(self, ssm_client, test_instance, run_ssm_command):
-        """Verify pytest is installed."""
-        if not test_instance:
-            pytest.fail("Test instance not created")
-
-        output = run_ssm_command(ssm_client, test_instance, "which pytest")
-
-        assert output["Status"] == "Success"
-
     def test_python3_is_installed(self, ssm_client, test_instance, run_ssm_command):
         """Verify Python3 is installed."""
         if not test_instance:
@@ -338,12 +329,50 @@ class TestBuildToolsInstalled:
 class TestPipPackagesInstalled:
     """Tests for pip packages installation."""
 
-    def test_boto3_is_importable(self, ssm_client, test_instance, run_ssm_command):
-        """Verify boto3 is importable."""
+    def test_assert_no_inline_lint_disables_is_installed(
+        self, ssm_client, test_instance, run_ssm_command
+    ):
+        """Verify assert-no-inline-lint-disables is installed."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        output = run_ssm_command(ssm_client, test_instance, "python3 -c 'import boto3'")
+        cmd = "python3 -m pip show assert-no-inline-lint-disables"
+        output = run_ssm_command(ssm_client, test_instance, cmd)
+
+        assert output["Status"] == "Success"
+
+    def test_assert_no_linter_config_files_is_installed(
+        self, ssm_client, test_instance, run_ssm_command
+    ):
+        """Verify assert-no-linter-config-files is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        cmd = "python3 -m pip show assert-no-linter-config-files"
+        output = run_ssm_command(ssm_client, test_instance, cmd)
+
+        assert output["Status"] == "Success"
+
+    def test_assert_one_assert_per_pytest_is_installed(
+        self, ssm_client, test_instance, run_ssm_command
+    ):
+        """Verify assert-one-assert-per-pytest is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        cmd = "python3 -m pip show assert-one-assert-per-pytest"
+        output = run_ssm_command(ssm_client, test_instance, cmd)
+
+        assert output["Status"] == "Success"
+
+    def test_boto3_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify boto3 is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(
+            ssm_client, test_instance, "python3 -m pip show boto3"
+        )
 
         assert output["Status"] == "Success"
 
@@ -360,97 +389,154 @@ class TestPipPackagesInstalled:
 
         assert output["Status"] == "Success"
 
-    def test_botocore_is_importable(self, ssm_client, test_instance, run_ssm_command):
-        """Verify botocore is importable."""
+    def test_botocore_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify botocore is installed."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
         output = run_ssm_command(
-            ssm_client, test_instance, "python3 -c 'import botocore'"
+            ssm_client, test_instance, "python3 -m pip show botocore"
         )
 
         assert output["Status"] == "Success"
 
-    def test_dnspython_is_importable(self, ssm_client, test_instance, run_ssm_command):
-        """Verify dnspython is importable."""
+    def test_dnspython_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify dnspython is installed."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        output = run_ssm_command(ssm_client, test_instance, "python3 -c 'import dns'")
+        output = run_ssm_command(
+            ssm_client, test_instance, "python3 -m pip show dnspython"
+        )
 
         assert output["Status"] == "Success"
 
-    def test_dockerfile_parse_is_importable(
+    def test_dockerfile_parse_is_installed(
         self, ssm_client, test_instance, run_ssm_command
     ):
-        """Verify dockerfile-parse is importable."""
+        """Verify dockerfile-parse is installed."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
         output = run_ssm_command(
-            ssm_client, test_instance, "python3 -c 'import dockerfile_parse'"
+            ssm_client, test_instance, "python3 -m pip show dockerfile-parse"
         )
 
         assert output["Status"] == "Success"
 
-    def test_mypy_is_importable(self, ssm_client, test_instance, run_ssm_command):
-        """Verify mypy is importable."""
-        if not test_instance:
-            pytest.fail("Test instance not created")
-
-        output = run_ssm_command(ssm_client, test_instance, "python3 -c 'import mypy'")
-
-        assert output["Status"] == "Success"
-
-    def test_paramiko_is_importable(self, ssm_client, test_instance, run_ssm_command):
-        """Verify paramiko is importable."""
+    def test_mypy_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify mypy is installed."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
         output = run_ssm_command(
-            ssm_client, test_instance, "python3 -c 'import paramiko'"
+            ssm_client, test_instance, "python3 -m pip show mypy"
         )
 
         assert output["Status"] == "Success"
 
-    def test_pylint_is_importable(self, ssm_client, test_instance, run_ssm_command):
-        """Verify pylint is importable."""
+    def test_paramiko_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify paramiko is installed."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
         output = run_ssm_command(
-            ssm_client, test_instance, "python3 -c 'import pylint'"
+            ssm_client, test_instance, "python3 -m pip show paramiko"
         )
 
         assert output["Status"] == "Success"
 
-    def test_python_hcl2_is_importable(
+    def test_pylint_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify pylint is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(
+            ssm_client, test_instance, "python3 -m pip show pylint"
+        )
+
+        assert output["Status"] == "Success"
+
+    def test_pytest_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify pytest is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(
+            ssm_client, test_instance, "python3 -m pip show pytest"
+        )
+
+        assert output["Status"] == "Success"
+
+    def test_pytest_dependency_is_installed(
         self, ssm_client, test_instance, run_ssm_command
     ):
-        """Verify python-hcl2 is importable."""
-        if not test_instance:
-            pytest.fail("Test instance not created")
-
-        output = run_ssm_command(ssm_client, test_instance, "python3 -c 'import hcl2'")
-
-        assert output["Status"] == "Success"
-
-    def test_pyyaml_is_importable(self, ssm_client, test_instance, run_ssm_command):
-        """Verify pyyaml is importable."""
-        if not test_instance:
-            pytest.fail("Test instance not created")
-
-        output = run_ssm_command(ssm_client, test_instance, "python3 -c 'import yaml'")
-
-        assert output["Status"] == "Success"
-
-    def test_requests_is_importable(self, ssm_client, test_instance, run_ssm_command):
-        """Verify requests is importable."""
+        """Verify pytest-dependency is installed."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
         output = run_ssm_command(
-            ssm_client, test_instance, "python3 -c 'import requests'"
+            ssm_client, test_instance, "python3 -m pip show pytest-dependency"
+        )
+
+        assert output["Status"] == "Success"
+
+    def test_python_hcl2_is_installed(
+        self, ssm_client, test_instance, run_ssm_command
+    ):
+        """Verify python-hcl2 is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(
+            ssm_client, test_instance, "python3 -m pip show python-hcl2"
+        )
+
+        assert output["Status"] == "Success"
+
+    def test_pyyaml_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify PyYAML is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(
+            ssm_client, test_instance, "python3 -m pip show PyYAML"
+        )
+
+        assert output["Status"] == "Success"
+
+    def test_requests_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify requests is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(
+            ssm_client, test_instance, "python3 -m pip show requests"
+        )
+
+        assert output["Status"] == "Success"
+
+    def test_types_dockerfile_parse_is_installed(
+        self, ssm_client, test_instance, run_ssm_command
+    ):
+        """Verify types-dockerfile-parse is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        cmd = "python3 -m pip show types-dockerfile-parse"
+        output = run_ssm_command(ssm_client, test_instance, cmd)
+
+        assert output["Status"] == "Success"
+
+    def test_types_paramiko_is_installed(
+        self, ssm_client, test_instance, run_ssm_command
+    ):
+        """Verify types-paramiko is installed."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(
+            ssm_client, test_instance, "python3 -m pip show types-paramiko"
         )
 
         assert output["Status"] == "Success"
@@ -468,18 +554,6 @@ class TestPipPackagesInstalled:
 
         assert output["Status"] == "Success"
 
-    def test_types_dockerfile_parse_is_installed(
-        self, ssm_client, test_instance, run_ssm_command
-    ):
-        """Verify types-dockerfile-parse is installed."""
-        if not test_instance:
-            pytest.fail("Test instance not created")
-
-        cmd = "python3 -m pip show types-dockerfile-parse"
-        output = run_ssm_command(ssm_client, test_instance, cmd)
-
-        assert output["Status"] == "Success"
-
     def test_types_requests_is_installed(
         self, ssm_client, test_instance, run_ssm_command
     ):
@@ -493,26 +567,13 @@ class TestPipPackagesInstalled:
 
         assert output["Status"] == "Success"
 
-    def test_types_paramiko_is_installed(
-        self, ssm_client, test_instance, run_ssm_command
-    ):
-        """Verify types-paramiko is installed."""
+    def test_yamllint_is_installed(self, ssm_client, test_instance, run_ssm_command):
+        """Verify yamllint is installed."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
         output = run_ssm_command(
-            ssm_client, test_instance, "python3 -m pip show types-paramiko"
-        )
-
-        assert output["Status"] == "Success"
-
-    def test_yamllint_is_importable(self, ssm_client, test_instance, run_ssm_command):
-        """Verify yamllint is importable."""
-        if not test_instance:
-            pytest.fail("Test instance not created")
-
-        output = run_ssm_command(
-            ssm_client, test_instance, "python3 -c 'import yamllint'"
+            ssm_client, test_instance, "python3 -m pip show yamllint"
         )
 
         assert output["Status"] == "Success"

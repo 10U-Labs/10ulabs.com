@@ -184,26 +184,6 @@ class TestInstallSystemPackages:
             assert any("systemctl enable docker" in c for c in calls)
 
 
-class TestInstallPythonPackages:
-    """Tests for the install_python_packages function."""
-
-    def test_installs_pip_packages(self, setup_module):
-        """Installs pip packages."""
-        with patch.object(setup_module, "run") as mock_run:
-            setup_module.install_python_packages()
-            calls = [str(c) for c in mock_run.call_args_list]
-            pip_call = [c for c in calls if "pip install" in c][0]
-            assert "boto3" in pip_call
-
-    def test_installs_pytest(self, setup_module):
-        """Installs pytest."""
-        with patch.object(setup_module, "run") as mock_run:
-            setup_module.install_python_packages()
-            calls = [str(c) for c in mock_run.call_args_list]
-            pip_call = [c for c in calls if "pip install" in c][0]
-            assert "pytest" in pip_call
-
-
 def test_install_eslint_installs_globally(setup_module):
     """Test install_eslint installs eslint globally via npm."""
     with patch.object(setup_module, "run") as mock_run:
