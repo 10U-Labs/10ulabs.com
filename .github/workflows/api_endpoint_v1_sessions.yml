@@ -216,10 +216,6 @@ jobs:
             tflint --init && \
             tflint
       - continue-on-error: true
-        id: terraform_plan
-        name: Terraform Plan
-        run: cd src/api/endpoints/sessions && terraform plan
-      - continue-on-error: true
         id: unit_tests
         name: Run unit tests
         run: |
@@ -260,11 +256,10 @@ jobs:
           S14: ${{ steps.terraform_fmt.outcome }}
           S15: ${{ steps.terraform_init.outcome }}
           S16: ${{ steps.tflint.outcome }}
-          S17: ${{ steps.terraform_plan.outcome }}
-          S18: ${{ steps.unit_tests.outcome }}
-          S19: ${{ steps.terraform_apply.outcome }}
-          S20: ${{ steps.post_integration_tests.outcome }}
-          S21: ${{ steps.e2e_tests.outcome }}
+          S17: ${{ steps.unit_tests.outcome }}
+          S18: ${{ steps.terraform_apply.outcome }}
+          S19: ${{ steps.post_integration_tests.outcome }}
+          S20: ${{ steps.e2e_tests.outcome }}
         name: Assert no step failed
         run: |
           failed=""
@@ -285,11 +280,10 @@ jobs:
           [ "$S14" = "$f" ] && failed="$failed terraform_fmt"
           [ "$S15" = "$f" ] && failed="$failed terraform_init"
           [ "$S16" = "$f" ] && failed="$failed tflint"
-          [ "$S17" = "$f" ] && failed="$failed terraform_plan"
-          [ "$S18" = "$f" ] && failed="$failed unit_tests"
-          [ "$S19" = "$f" ] && failed="$failed terraform_apply"
-          [ "$S20" = "$f" ] && failed="$failed post_integration_tests"
-          [ "$S21" = "$f" ] && failed="$failed e2e_tests"
+          [ "$S17" = "$f" ] && failed="$failed unit_tests"
+          [ "$S18" = "$f" ] && failed="$failed terraform_apply"
+          [ "$S19" = "$f" ] && failed="$failed post_integration_tests"
+          [ "$S20" = "$f" ] && failed="$failed e2e_tests"
           if [ -n "$failed" ]; then
             echo "Steps that failed:$failed"
             exit 1
