@@ -9,7 +9,6 @@ import pytest
 
 from repo_utils import REPO_ROOT
 
-pytestmark = pytest.mark.layer(1)
 
 SOC_SIMULATIONS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "soc_simulations"
 

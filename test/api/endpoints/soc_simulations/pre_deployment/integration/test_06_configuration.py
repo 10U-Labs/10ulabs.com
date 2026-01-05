@@ -10,7 +10,6 @@ from test_fixtures.integration import (
     Layer6APIGatewayRegionalTests,
 )
 
-pytestmark = pytest.mark.layer(6)
 
 pytest_plugins = ['test_fixtures.aws']
 

@@ -11,7 +11,6 @@ from test_fixtures.integration import (
     Layer3LambdaAndIAMAuthorizationTests,
 )
 
-pytestmark = pytest.mark.layer(3)
 
 pytest_plugins = ['test_fixtures.aws']
 

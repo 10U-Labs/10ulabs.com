@@ -5,7 +5,6 @@ Verify that resources created by this deployment exist.
 import pytest
 from botocore.exceptions import ClientError
 
-pytestmark = pytest.mark.layer(1)
 
 pytest_plugins = ['test_fixtures.aws']
 

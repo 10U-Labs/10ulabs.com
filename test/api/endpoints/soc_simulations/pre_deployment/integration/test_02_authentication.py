@@ -6,7 +6,6 @@ import pytest
 
 from test_fixtures.integration import Layer2EndpointAuthenticationTests
 
-pytestmark = pytest.mark.layer(2)
 
 pytest_plugins = ['test_fixtures.aws']
 

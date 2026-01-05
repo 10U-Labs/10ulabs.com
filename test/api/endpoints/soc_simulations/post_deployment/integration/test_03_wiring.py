@@ -6,7 +6,6 @@ import json
 
 import pytest
 
-pytestmark = pytest.mark.layer(3)
 
 pytest_plugins = ['test_fixtures.aws']
 

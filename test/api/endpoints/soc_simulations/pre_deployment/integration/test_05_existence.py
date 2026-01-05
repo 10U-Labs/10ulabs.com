@@ -10,7 +10,6 @@ from test_fixtures.integration import (
     Layer5APIBackendPrerequisiteTests,
 )
 
-pytestmark = pytest.mark.layer(5)
 
 pytest_plugins = ['test_fixtures.aws']
 

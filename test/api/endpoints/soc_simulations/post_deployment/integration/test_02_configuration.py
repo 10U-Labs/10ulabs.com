@@ -4,7 +4,6 @@ Verify that resources created by this deployment are configured correctly.
 """
 import pytest
 
-pytestmark = pytest.mark.layer(2)
 
 pytest_plugins = ['test_fixtures.aws']
 
