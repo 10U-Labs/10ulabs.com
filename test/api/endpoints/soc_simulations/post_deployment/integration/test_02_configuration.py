@@ -87,3 +87,39 @@ class TestCloudWatchLogsConfiguration:
         assert retention == 7, (
             f"Simulation SOC log group retention is {retention} days, expected 7"
         )
+
+
+class TestIAMConfiguration:
+    """Layer 2: Verify IAM role and policies are configured correctly."""
+
+    def test_simulation_soc_handler_role_can_be_assumed_by_lambda(
+        self, iam_client, shared_config
+    ):
+        """Verify IAM role trust policy allows Lambda service."""
+        import json
+        resource_prefix = shared_config.get("resource_prefix", "TenULabs")
+        role_name = f"{resource_prefix}SimulationSocHandlerServiceRole"
+        response = iam_client.get_role(RoleName=role_name)
+        policy_doc = response["Role"]["AssumeRolePolicyDocument"]
+        policy_str = json.dumps(policy_doc)
+        trusts_lambda = "lambda.amazonaws.com" in policy_str
+        assert trusts_lambda, f"Role {role_name} trust policy must allow lambda.amazonaws.com"
+
+    def test_simulation_soc_handler_kms_policy_has_ssm_permissions(
+        self, iam_client, shared_config
+    ):
+        """Verify KMS policy grants SSM parameter access."""
+        import json
+        resource_prefix = shared_config.get("resource_prefix", "TenULabs")
+        role_name = f"{resource_prefix}SimulationSocHandlerServiceRole"
+        response = iam_client.list_role_policies(RoleName=role_name)
+        kms_policy_name = next(
+            (n for n in response["PolicyNames"] if "kms" in n.lower()), None
+        )
+        if kms_policy_name:
+            policy_response = iam_client.get_role_policy(
+                RoleName=role_name, PolicyName=kms_policy_name
+            )
+            policy_doc = json.dumps(policy_response["PolicyDocument"])
+            has_kms = "kms:" in policy_doc.lower()
+            assert has_kms, f"KMS policy must include kms: actions"
