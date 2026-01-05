@@ -21,12 +21,12 @@ class TestAPIGatewayConfiguration(Layer6APIGatewayRegionalTests):
     """Tests that API Gateway is configured correctly."""
 
 
-def test_state_bucket_versioning_status_is_valid(s3_client, state_bucket_name):
-    """Verify state bucket versioning status is queryable."""
+def test_state_bucket_versioning_is_disabled(s3_client, state_bucket_name):
+    """Verify state bucket versioning is disabled."""
     response = s3_client.get_bucket_versioning(Bucket=state_bucket_name)
     status = response.get("Status")
-    valid_status = status in ("Enabled", "Suspended", None)
-    assert valid_status, f"State bucket {state_bucket_name} has invalid versioning status"
+    is_disabled = status in ("Suspended", None)
+    assert is_disabled, f"State bucket {state_bucket_name} must have versioning disabled"
 
 
 def test_state_bucket_has_encryption_enabled(s3_client, state_bucket_name):
