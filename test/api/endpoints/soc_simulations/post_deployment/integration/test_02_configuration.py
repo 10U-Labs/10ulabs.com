@@ -11,14 +11,14 @@ class TestLambdaConfiguration:
     """Layer 2: Verify Lambda function is configured correctly."""
 
     def test_simulation_soc_handler_has_correct_runtime(self, lambda_client, shared_config):
-        """Verify simulation-soc handler uses Python 3.12 runtime."""
+        """Verify simulation-soc handler uses Python 3.13 runtime."""
         function_name = shared_config.get("lambda_handler_names", {}).get(
             "simulation_soc", "TenULabsSimulationSocHandler"
         )
         response = lambda_client.get_function(FunctionName=function_name)
         runtime = response["Configuration"]["Runtime"]
-        is_python312 = runtime == "python3.12"
-        assert is_python312, f"Lambda runtime is {runtime}, expected python3.12"
+        is_python313 = runtime == "python3.13"
+        assert is_python313, f"Lambda runtime is {runtime}, expected python3.13"
 
     def test_simulation_soc_handler_has_correct_architecture(
         self, lambda_client, shared_config
