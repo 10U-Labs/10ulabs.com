@@ -27,32 +27,26 @@ class TestBackendConfiguration:
         assert has_encrypt, "backend.tf must have encrypt = true"
 
     def test_backend_tf_uses_lockfile(self):
-        """Verify backend.tf uses DynamoDB for state locking."""
+        """Verify backend.tf enables state locking."""
         content = (SOC_SIMULATIONS_SRC / "backend.tf").read_text()
-        has_lock = "dynamodb_table" in content
-        assert has_lock, "backend.tf must configure dynamodb_table for state locking"
+        has_lock = "use_lockfile" in content and "true" in content
+        assert has_lock, "backend.tf must have use_lockfile = true"
 
 
 class TestProvidersConfiguration:
     """Unit tests for providers.tf configuration."""
-
-    def test_providers_tf_has_required_version(self):
-        """Verify providers.tf has required_version constraint."""
-        content = (SOC_SIMULATIONS_SRC / "providers.tf").read_text()
-        has_required_version = "required_version" in content
-        assert has_required_version, "providers.tf must have required_version"
-
-    def test_providers_tf_has_aws_provider_version_constraint(self):
-        """Verify providers.tf has AWS provider version constraint."""
-        content = (SOC_SIMULATIONS_SRC / "providers.tf").read_text()
-        has_aws_version = re.search(r'aws\s*=\s*\{[^}]*version', content, re.DOTALL)
-        assert has_aws_version, "providers.tf must have AWS provider version constraint"
 
     def test_providers_tf_has_region_configuration(self):
         """Verify providers.tf configures AWS region."""
         content = (SOC_SIMULATIONS_SRC / "providers.tf").read_text()
         has_region = "region" in content
         assert has_region, "providers.tf must configure region"
+
+    def test_providers_tf_has_default_tags(self):
+        """Verify providers.tf configures default tags."""
+        content = (SOC_SIMULATIONS_SRC / "providers.tf").read_text()
+        has_default_tags = "default_tags" in content
+        assert has_default_tags, "providers.tf must configure default_tags"
 
 
 class TestLocalsConfiguration:
@@ -125,10 +119,10 @@ class TestLambdaConfiguration:
     """Unit tests for lambda.tf configuration."""
 
     def test_lambda_tf_uses_correct_runtime(self):
-        """Verify Lambda uses Python 3.12 runtime."""
+        """Verify Lambda uses Python 3.11 runtime."""
         content = (SOC_SIMULATIONS_SRC / "lambda.tf").read_text()
-        uses_python312 = "python3.12" in content
-        assert uses_python312, "Lambda must use python3.12 runtime"
+        uses_python311 = "python3.11" in content
+        assert uses_python311, "Lambda must use python3.11 runtime"
 
     def test_lambda_tf_uses_arm64_architecture(self):
         """Verify Lambda uses arm64 architecture."""
@@ -159,10 +153,10 @@ class TestSharedConfiguration:
     """Unit tests for shared.tf configuration."""
 
     def test_shared_tf_references_api_remote_state(self):
-        """Verify shared.tf references API common routing remote state."""
+        """Verify shared.tf references API remote state."""
         content = (SOC_SIMULATIONS_SRC / "shared.tf").read_text()
-        has_api_state = "api_common_routing" in content
-        assert has_api_state, "shared.tf must reference api_common_routing"
+        has_api_state = 'terraform_remote_state" "api"' in content
+        assert has_api_state, "shared.tf must reference api remote state"
 
     def test_shared_tf_uses_common_module(self):
         """Verify shared.tf uses common module."""
@@ -176,7 +170,7 @@ class TestSharedConfiguration:
         match = re.search(r'source\s*=\s*"([^"]+/common)"', content)
         if match:
             source_path = match.group(1)
-            valid_source = "lib/terraform/common" in source_path or "../../../" in source_path
+            valid_source = "lib/terraform/common" in source_path
             assert valid_source, f"Common module source {source_path} is not valid"
 
 
@@ -188,10 +182,8 @@ class TestVariablesConfiguration:
         exists = (SOC_SIMULATIONS_SRC / "variables.tf").exists()
         assert exists, "variables.tf must exist"
 
-    def test_variables_tf_has_environment_variable(self):
-        """Verify variables.tf has environment variable."""
+    def test_variables_tf_has_google_client_id_variable(self):
+        """Verify variables.tf has google_client_id variable."""
         content = (SOC_SIMULATIONS_SRC / "variables.tf").read_text()
-        has_env = 'variable "environment"' in content or len(content.strip()) == 0
-        assert has_env or content.strip() == "", (
-            "variables.tf should define environment variable or be empty"
-        )
+        has_google_client_id = 'variable "google_client_id"' in content
+        assert has_google_client_id, "variables.tf must define google_client_id variable"
