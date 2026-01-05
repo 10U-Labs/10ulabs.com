@@ -32,8 +32,8 @@ class TestLambdaContracts:
         """Verify lambda.tf references handler.handler."""
         lambda_tf = SOC_SIMULATIONS_SRC / "lambda.tf"
         content = lambda_tf.read_text()
-        has_handler_ref = 'handler = "handler.handler"' in content
-        assert has_handler_ref, "lambda.tf must reference handler = 'handler.handler'"
+        has_handler_ref = re.search(r'handler\s*=\s*"handler\.handler"', content)
+        assert has_handler_ref, "lambda.tf must reference handler.handler"
 
 
 class TestTerraformContracts:
@@ -80,11 +80,11 @@ class TestTerraformContracts:
         assert has_common_ref, "shared.tf must reference module 'common'"
 
     def test_shared_tf_references_api_remote_state(self):
-        """Verify shared.tf references API common routing remote state."""
+        """Verify shared.tf references API remote state."""
         shared_path = SOC_SIMULATIONS_SRC / "shared.tf"
         content = shared_path.read_text()
-        has_api_state = 'api_common_routing' in content
-        assert has_api_state, "shared.tf must reference api_common_routing remote state"
+        has_api_state = 'terraform_remote_state" "api"' in content
+        assert has_api_state, "shared.tf must reference api remote state"
 
     def test_iam_tf_exists(self):
         """Verify iam.tf exists."""
