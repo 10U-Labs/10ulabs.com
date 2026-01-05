@@ -539,3 +539,134 @@ def test_compute_memory_stall_cpi_is_positive(simulation_soc_handler):
     result = simulation_soc_handler.compute_memory_stall_cpi(workload, 1000, 1000)
     cpi_positive = result > 0
     assert cpi_positive
+
+
+def test_compute_fence_stall_cycles_with_fence_per_store(simulation_soc_handler):
+    """Verify fence stall cycles computed when fence_per_store is True."""
+    from unittest.mock import patch
+    mock_params = {
+        'test_persona': {
+            'flags_live_rate': 0.0,
+            'flags_uops_per_live': 0,
+            'fence_per_store': True,
+            'extra_decode_stages': 0
+        }
+    }
+    with patch.object(simulation_soc_handler, 'TRIMODE_OVERHEAD_PARAMS', mock_params):
+        result = simulation_soc_handler.compute_fence_stall_cycles('test_persona', 100.0)
+        expected = (100.0 / 32) * 6  # store_count / STORE_BUFFER_ENTRIES * FENCE_LATENCY
+        assert result == expected
+
+
+def test_verify_google_token_returns_none_without_client_id(simulation_soc_handler):
+    """Verify verify_google_token returns None when GOOGLE_CLIENT_ID is not set."""
+    from unittest.mock import patch
+    with patch.object(simulation_soc_handler, 'GOOGLE_CLIENT_ID', None):
+        result = simulation_soc_handler.verify_google_token('fake_token')
+        assert result is None
+
+
+def test_verify_google_token_returns_data_on_success(simulation_soc_handler):
+    """Verify verify_google_token returns user data on successful verification."""
+    from unittest.mock import patch, MagicMock
+    import json
+    mock_data = {'aud': 'test_client_id', 'email': 'test@example.com'}
+    mock_response = MagicMock()
+    mock_response.read.return_value = json.dumps(mock_data).encode('utf-8')
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+    with patch.object(simulation_soc_handler, 'GOOGLE_CLIENT_ID', 'test_client_id'):
+        with patch('urllib.request.urlopen', return_value=mock_response):
+            result = simulation_soc_handler.verify_google_token('valid_token')
+            assert result == mock_data
+
+
+def test_verify_google_token_returns_none_on_aud_mismatch(simulation_soc_handler):
+    """Verify verify_google_token returns None when audience doesn't match."""
+    from unittest.mock import patch, MagicMock
+    import json
+    mock_data = {'aud': 'wrong_client_id', 'email': 'test@example.com'}
+    mock_response = MagicMock()
+    mock_response.read.return_value = json.dumps(mock_data).encode('utf-8')
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+    with patch.object(simulation_soc_handler, 'GOOGLE_CLIENT_ID', 'test_client_id'):
+        with patch('urllib.request.urlopen', return_value=mock_response):
+            result = simulation_soc_handler.verify_google_token('valid_token')
+            assert result is None
+
+
+def test_verify_google_token_returns_none_on_url_error(simulation_soc_handler):
+    """Verify verify_google_token returns None on URL error."""
+    from unittest.mock import patch
+    import urllib.error
+    with patch.object(simulation_soc_handler, 'GOOGLE_CLIENT_ID', 'test_client_id'):
+        with patch('urllib.request.urlopen', side_effect=urllib.error.URLError('error')):
+            result = simulation_soc_handler.verify_google_token('bad_token')
+            assert result is None
+
+
+def test_handler_returns_401_when_not_in_test_mode_without_token(
+        simulation_soc_handler, lambda_context):
+    """Verify handler returns 401 when not in test mode and no auth token."""
+    event = {
+        'httpMethod': 'POST',
+        'path': '/v1/soc-simulations',
+        'headers': {},  # No X-Test-Mode header
+        'body': '{"persona": "riscv"}'
+    }
+    response = simulation_soc_handler.handler(event, lambda_context)
+    assert response['statusCode'] == 401
+
+
+def test_handler_returns_401_when_token_invalid(
+        simulation_soc_handler, lambda_context):
+    """Verify handler returns 401 when token verification fails."""
+    from unittest.mock import patch
+    event = {
+        'httpMethod': 'POST',
+        'path': '/v1/soc-simulations',
+        'headers': {'Authorization': 'Bearer invalid_token'},
+        'body': '{"persona": "riscv"}'
+    }
+    with patch.object(simulation_soc_handler, 'verify_google_token', return_value=None):
+        response = simulation_soc_handler.handler(event, lambda_context)
+        assert response['statusCode'] == 401
+
+
+def test_handler_returns_500_on_value_error(
+        simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    """Verify handler returns 500 on ValueError during simulation."""
+    from unittest.mock import patch
+    event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
+    with patch.object(
+        simulation_soc_handler, 'compute_simulation', side_effect=ValueError('test error')
+    ):
+        response = simulation_soc_handler.handler(event, lambda_context)
+        assert response['statusCode'] == 500
+
+
+def test_handler_returns_500_on_key_error(
+        simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    """Verify handler returns 500 on KeyError during simulation."""
+    from unittest.mock import patch
+    event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
+    with patch.object(
+        simulation_soc_handler, 'compute_simulation', side_effect=KeyError('missing_key')
+    ):
+        response = simulation_soc_handler.handler(event, lambda_context)
+        assert response['statusCode'] == 500
+
+
+def test_get_auth_token_returns_none_when_no_auth_header(simulation_soc_handler):
+    """Verify get_auth_token returns None when no Authorization header."""
+    event = {'headers': {'Content-Type': 'application/json'}}
+    result = simulation_soc_handler.get_auth_token(event)
+    assert result is None
+
+
+def test_get_auth_token_returns_raw_token_without_bearer_prefix(simulation_soc_handler):
+    """Verify get_auth_token returns raw token when not prefixed with Bearer."""
+    event = {'headers': {'Authorization': 'raw_token_value'}}
+    result = simulation_soc_handler.get_auth_token(event)
+    assert result == 'raw_token_value'
