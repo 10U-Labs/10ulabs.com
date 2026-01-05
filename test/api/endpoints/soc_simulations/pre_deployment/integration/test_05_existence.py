@@ -23,13 +23,10 @@ class TestAPIBackendPrerequisites(Layer5APIBackendPrerequisiteTests):
     """Tests that API Gateway backend prerequisites exist."""
 
 
-class TestAPIGatewayExistence:
-    """Tests that API Gateway exists from api_common_routing."""
-
-    def test_api_gateway_exists(self, api_gateway_info):
-        """Verify API Gateway exists."""
-        api_exists = api_gateway_info.get("exists") is True
-        assert api_exists, (
-            f"API Gateway {api_gateway_info.get('id')} does not exist. "
-            "Deploy api_common_routing first."
-        )
+def test_api_gateway_exists(api_gateway_info):
+    """Verify API Gateway exists."""
+    api_exists = api_gateway_info.get("exists") is True
+    assert api_exists, (
+        f"API Gateway {api_gateway_info.get('id')} does not exist. "
+        "Deploy api_common_routing first."
+    )

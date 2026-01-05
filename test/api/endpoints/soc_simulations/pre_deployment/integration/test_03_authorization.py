@@ -24,17 +24,14 @@ class TestLambdaAndIAMAuthorization(Layer3LambdaAndIAMAuthorizationTests):
     """Authorization tests for Lambda and IAM inspection."""
 
 
-class TestKMSAuthorization:
-    """Authorization tests for KMS key inspection."""
-
-    def test_can_list_kms_keys(self, kms_client):
-        """Verify permission to list KMS keys."""
-        try:
-            kms_client.list_keys(Limit=1)
-            can_list = True
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                can_list = False
-            else:
-                raise
-        assert can_list, "No permission to list KMS keys"
+def test_can_list_kms_keys(kms_client):
+    """Verify permission to list KMS keys."""
+    try:
+        kms_client.list_keys(Limit=1)
+        can_list = True
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDeniedException":
+            can_list = False
+        else:
+            raise
+    assert can_list, "No permission to list KMS keys"
