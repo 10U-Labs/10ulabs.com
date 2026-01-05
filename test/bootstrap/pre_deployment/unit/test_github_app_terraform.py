@@ -84,12 +84,12 @@ class TestGitHubAppPrivateKeyParameter:
         assert param['tags']['Name'] == 'github-app-private-key'
 
 
-@pytest.mark.parametrize("param_name,expected_type", [
-    ("github_app_id", "String"),
-    ("github_app_installation_id", "String"),
-    ("github_app_private_key", "SecureString"),
+@pytest.mark.parametrize("param_name", [
+    "github_app_id",
+    "github_app_installation_id",
+    "github_app_private_key",
 ])
-def test_all_github_app_parameters_exist(bootstrap_dir, param_name, expected_type):
+def test_all_github_app_parameters_exist(bootstrap_dir, param_name):
     """Verify all GitHub App SSM parameters are defined in terraform."""
     tf_config = _load_github_app_tf(bootstrap_dir)
     param = _find_ssm_parameter(tf_config, param_name)
