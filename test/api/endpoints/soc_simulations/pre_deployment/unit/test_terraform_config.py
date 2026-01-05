@@ -119,10 +119,10 @@ class TestLambdaConfiguration:
     """Unit tests for lambda.tf configuration."""
 
     def test_lambda_tf_uses_correct_runtime(self):
-        """Verify Lambda uses Python 3.11 runtime."""
+        """Verify Lambda uses Python 3.13 runtime."""
         content = (SOC_SIMULATIONS_SRC / "lambda.tf").read_text()
-        uses_python311 = "python3.11" in content
-        assert uses_python311, "Lambda must use python3.11 runtime"
+        uses_python313 = "python3.13" in content
+        assert uses_python313, "Lambda must use python3.13 runtime"
 
     def test_lambda_tf_uses_arm64_architecture(self):
         """Verify Lambda uses arm64 architecture."""

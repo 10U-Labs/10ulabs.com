@@ -17,7 +17,7 @@ resource "aws_lambda_function" "simulation_soc_handler" {
   role             = aws_iam_role.lambda_simulation_soc_handler.arn
   handler          = "handler.handler"
   source_code_hash = data.archive_file.simulation_soc_handler.output_base64sha256
-  runtime          = "python3.11"
+  runtime          = "python3.13"
   architectures    = ["arm64"]
   timeout          = 10
   description      = "Tri-mode SoC simulation endpoint for API"
