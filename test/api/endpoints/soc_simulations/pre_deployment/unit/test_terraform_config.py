@@ -14,11 +14,11 @@ class TestBackendConfiguration:
     """Unit tests for backend.tf configuration."""
 
     def test_backend_tf_has_valid_state_key(self):
-        """Verify backend.tf has a valid state key containing simulation_soc."""
+        """Verify backend.tf has a valid state key containing soc_simulations."""
         content = (SOC_SIMULATIONS_SRC / "backend.tf").read_text()
         match = re.search(r'key\s*=\s*"([^"]+)"', content)
-        has_valid_key = match is not None and "simulation_soc" in match.group(1)
-        assert has_valid_key, "backend.tf key must contain 'simulation_soc'"
+        has_valid_key = match is not None and "soc_simulations" in match.group(1)
+        assert has_valid_key, "backend.tf key must contain 'soc_simulations'"
 
     def test_backend_tf_has_encryption_enabled(self):
         """Verify backend.tf enables encryption."""
