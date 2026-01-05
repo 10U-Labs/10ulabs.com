@@ -1,6 +1,8 @@
 """Unit tests for the simulation-soc Lambda handler."""
 import json
+import urllib.error
 from typing import Any, Dict
+from unittest.mock import MagicMock, patch
 
 
 def parse_response_body(response: Dict[str, Any]) -> Any:
@@ -543,7 +545,6 @@ def test_compute_memory_stall_cpi_is_positive(simulation_soc_handler):
 
 def test_compute_fence_stall_cycles_with_fence_per_store(simulation_soc_handler):
     """Verify fence stall cycles computed when fence_per_store is True."""
-    from unittest.mock import patch
     mock_params = {
         'test_persona': {
             'flags_live_rate': 0.0,
@@ -560,21 +561,24 @@ def test_compute_fence_stall_cycles_with_fence_per_store(simulation_soc_handler)
 
 def test_verify_google_token_returns_none_without_client_id(simulation_soc_handler):
     """Verify verify_google_token returns None when GOOGLE_CLIENT_ID is not set."""
-    from unittest.mock import patch
     with patch.object(simulation_soc_handler, 'GOOGLE_CLIENT_ID', None):
         result = simulation_soc_handler.verify_google_token('fake_token')
         assert result is None
 
 
-def test_verify_google_token_returns_data_on_success(simulation_soc_handler):
-    """Verify verify_google_token returns user data on successful verification."""
-    from unittest.mock import patch, MagicMock
-    import json
-    mock_data = {'aud': 'test_client_id', 'email': 'test@example.com'}
+def _create_mock_urlopen_response(data: dict) -> MagicMock:
+    """Create a mock response for urllib.request.urlopen."""
     mock_response = MagicMock()
-    mock_response.read.return_value = json.dumps(mock_data).encode('utf-8')
+    mock_response.read.return_value = json.dumps(data).encode('utf-8')
     mock_response.__enter__ = MagicMock(return_value=mock_response)
     mock_response.__exit__ = MagicMock(return_value=False)
+    return mock_response
+
+
+def test_verify_google_token_returns_data_on_success(simulation_soc_handler):
+    """Verify verify_google_token returns user data on successful verification."""
+    mock_data = {'aud': 'test_client_id', 'email': 'test@example.com'}
+    mock_response = _create_mock_urlopen_response(mock_data)
     with patch.object(simulation_soc_handler, 'GOOGLE_CLIENT_ID', 'test_client_id'):
         with patch('urllib.request.urlopen', return_value=mock_response):
             result = simulation_soc_handler.verify_google_token('valid_token')
@@ -583,13 +587,8 @@ def test_verify_google_token_returns_data_on_success(simulation_soc_handler):
 
 def test_verify_google_token_returns_none_on_aud_mismatch(simulation_soc_handler):
     """Verify verify_google_token returns None when audience doesn't match."""
-    from unittest.mock import patch, MagicMock
-    import json
     mock_data = {'aud': 'wrong_client_id', 'email': 'test@example.com'}
-    mock_response = MagicMock()
-    mock_response.read.return_value = json.dumps(mock_data).encode('utf-8')
-    mock_response.__enter__ = MagicMock(return_value=mock_response)
-    mock_response.__exit__ = MagicMock(return_value=False)
+    mock_response = _create_mock_urlopen_response(mock_data)
     with patch.object(simulation_soc_handler, 'GOOGLE_CLIENT_ID', 'test_client_id'):
         with patch('urllib.request.urlopen', return_value=mock_response):
             result = simulation_soc_handler.verify_google_token('valid_token')
@@ -598,8 +597,6 @@ def test_verify_google_token_returns_none_on_aud_mismatch(simulation_soc_handler
 
 def test_verify_google_token_returns_none_on_url_error(simulation_soc_handler):
     """Verify verify_google_token returns None on URL error."""
-    from unittest.mock import patch
-    import urllib.error
     with patch.object(simulation_soc_handler, 'GOOGLE_CLIENT_ID', 'test_client_id'):
         with patch('urllib.request.urlopen', side_effect=urllib.error.URLError('error')):
             result = simulation_soc_handler.verify_google_token('bad_token')
@@ -622,7 +619,6 @@ def test_handler_returns_401_when_not_in_test_mode_without_token(
 def test_handler_returns_401_when_token_invalid(
         simulation_soc_handler, lambda_context):
     """Verify handler returns 401 when token verification fails."""
-    from unittest.mock import patch
     event = {
         'httpMethod': 'POST',
         'path': '/v1/soc-simulations',
@@ -637,7 +633,6 @@ def test_handler_returns_401_when_token_invalid(
 def test_handler_returns_500_on_value_error(
         simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
     """Verify handler returns 500 on ValueError during simulation."""
-    from unittest.mock import patch
     event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
     with patch.object(
         simulation_soc_handler, 'compute_simulation', side_effect=ValueError('test error')
@@ -649,7 +644,6 @@ def test_handler_returns_500_on_value_error(
 def test_handler_returns_500_on_key_error(
         simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
     """Verify handler returns 500 on KeyError during simulation."""
-    from unittest.mock import patch
     event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
     with patch.object(
         simulation_soc_handler, 'compute_simulation', side_effect=KeyError('missing_key')

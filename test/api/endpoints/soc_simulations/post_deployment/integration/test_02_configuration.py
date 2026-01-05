@@ -2,6 +2,7 @@
 
 Verify that resources created by this deployment are configured correctly.
 """
+import json
 
 
 pytest_plugins = ['test_fixtures.aws']
@@ -96,7 +97,6 @@ class TestIAMConfiguration:
         self, iam_client, shared_config
     ):
         """Verify IAM role trust policy allows Lambda service."""
-        import json
         resource_prefix = shared_config.get("resource_prefix", "TenULabs")
         role_name = f"{resource_prefix}SimulationSocHandlerServiceRole"
         response = iam_client.get_role(RoleName=role_name)
@@ -109,7 +109,6 @@ class TestIAMConfiguration:
         self, iam_client, shared_config
     ):
         """Verify KMS policy grants SSM parameter access."""
-        import json
         resource_prefix = shared_config.get("resource_prefix", "TenULabs")
         role_name = f"{resource_prefix}SimulationSocHandlerServiceRole"
         response = iam_client.list_role_policies(RoleName=role_name)
@@ -122,4 +121,4 @@ class TestIAMConfiguration:
             )
             policy_doc = json.dumps(policy_response["PolicyDocument"])
             has_kms = "kms:" in policy_doc.lower()
-            assert has_kms, f"KMS policy must include kms: actions"
+            assert has_kms, "KMS policy must include kms: actions"
