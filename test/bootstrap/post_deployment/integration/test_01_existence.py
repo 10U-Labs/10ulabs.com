@@ -19,7 +19,14 @@ def test_central_logs_bucket_exists(s3_client, config):
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
 
-def test_terraform_state_exists(s3_client, config):
+def test_terraform_state_bucket_exists(s3_client, config):
+    """Test that Terraform state bucket exists."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    response = s3_client.head_bucket(Bucket=bucket_name)
+    assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
+
+def test_terraform_state_file_exists(s3_client, config):
     """Test that Terraform state file exists in S3."""
     bucket_name = config['name_for_terraform_state_bucket']
     s3_client.head_object(
@@ -135,5 +142,32 @@ def test_github_pat_parameter_exists(ssm_client, config):
     """Test that GitHub PAT parameter exists in SSM."""
     response = ssm_client.describe_parameters(
         Filters=[{'Key': 'Name', 'Values': [config['ssm_parameter_name_for_github_pat']]}]
+    )
+    assert len(response['Parameters']) == 1
+
+
+def test_github_app_id_parameter_exists(ssm_client, config):
+    """Test that GitHub App ID parameter exists in SSM."""
+    param_name = f"{config['github_app_ssm_prefix']}/id"
+    response = ssm_client.describe_parameters(
+        Filters=[{'Key': 'Name', 'Values': [param_name]}]
+    )
+    assert len(response['Parameters']) == 1
+
+
+def test_github_app_installation_id_parameter_exists(ssm_client, config):
+    """Test that GitHub App installation ID parameter exists in SSM."""
+    param_name = f"{config['github_app_ssm_prefix']}/installation_id"
+    response = ssm_client.describe_parameters(
+        Filters=[{'Key': 'Name', 'Values': [param_name]}]
+    )
+    assert len(response['Parameters']) == 1
+
+
+def test_github_app_private_key_parameter_exists(ssm_client, config):
+    """Test that GitHub App private key parameter exists in SSM."""
+    param_name = f"{config['github_app_ssm_prefix']}/private_key"
+    response = ssm_client.describe_parameters(
+        Filters=[{'Key': 'Name', 'Values': [param_name]}]
     )
     assert len(response['Parameters']) == 1

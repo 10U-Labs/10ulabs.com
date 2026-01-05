@@ -106,6 +106,23 @@ def test_central_logs_bucket_versioning_disabled(s3_client, config):
     assert versioning.get('Status') != 'Enabled'
 
 
+def test_central_logs_bucket_has_log_delivery_write_acl(s3_client, config):
+    """Test that central logs bucket has log-delivery-write ACL."""
+    bucket_name = config['name_for_central_logs_bucket']
+    acl = s3_client.get_bucket_acl(Bucket=bucket_name)
+    grantees = [g['Grantee'].get('URI', '') for g in acl.get('Grants', [])]
+    log_delivery_uri = 'http://acs.amazonaws.com/groups/s3/LogDelivery'
+    assert any(log_delivery_uri in g for g in grantees)
+
+
+def test_central_logs_bucket_ownership_is_bucket_owner_preferred(s3_client, config):
+    """Test that central logs bucket ownership is BucketOwnerPreferred."""
+    bucket_name = config['name_for_central_logs_bucket']
+    ownership = s3_client.get_bucket_ownership_controls(Bucket=bucket_name)
+    rules = ownership['OwnershipControls']['Rules']
+    assert rules[0]['ObjectOwnership'] == 'BucketOwnerPreferred'
+
+
 def test_central_logs_bucket_has_lifecycle_configuration(s3_client, config):
     """Test that central logs bucket has lifecycle configuration."""
     bucket_name = config['name_for_central_logs_bucket']
@@ -230,6 +247,13 @@ def test_cloudtrail_includes_global_service_events(cloudtrail_client):
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     assert trail['IncludeGlobalServiceEvents'] is True
+
+
+def test_cloudtrail_has_log_file_validation_enabled(cloudtrail_client):
+    """Test that CloudTrail has log file validation enabled."""
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    assert trail['LogFileValidationEnabled'] is True
 
 
 def test_cloudtrail_is_actively_logging(cloudtrail_client):
@@ -487,6 +511,13 @@ def test_github_actions_role_name_is_pascalcase(iam_client, config):
     assert True  # Explicit pass
 
 
+def test_cloudtrail_iam_role_name_is_pascalcase(config):
+    """Verify CloudTrail IAM role name uses PascalCase."""
+    role_name = config.get('name_for_cloudtrail_iam_role')
+    error = validate_name(role_name)
+    assert error is None, f"CloudTrail IAM role name '{role_name}' is not PascalCase: {error}"
+
+
 # =============================================================================
 # OIDC Configuration
 # =============================================================================
@@ -538,3 +569,120 @@ def test_github_pat_parameter_value_is_not_placeholder(ssm_client, config):
     response = ssm_client.get_parameter(Name=param_name, WithDecryption=True)
     parameter_value = response['Parameter']['Value']
     assert not parameter_value.startswith('PLACEHOLDER')
+
+
+def test_github_app_id_parameter_type_is_string(ssm_client, config):
+    """Test that GitHub App ID parameter type is String."""
+    param_name = f"{config['github_app_ssm_prefix']}/id"
+    response = ssm_client.describe_parameters(
+        Filters=[{'Key': 'Name', 'Values': [param_name]}]
+    )
+    assert response['Parameters'][0]['Type'] == 'String'
+
+
+def test_github_app_installation_id_parameter_type_is_string(ssm_client, config):
+    """Test that GitHub App installation ID parameter type is String."""
+    param_name = f"{config['github_app_ssm_prefix']}/installation_id"
+    response = ssm_client.describe_parameters(
+        Filters=[{'Key': 'Name', 'Values': [param_name]}]
+    )
+    assert response['Parameters'][0]['Type'] == 'String'
+
+
+def test_github_app_private_key_parameter_type_is_secure_string(ssm_client, config):
+    """Test that GitHub App private key parameter type is SecureString."""
+    param_name = f"{config['github_app_ssm_prefix']}/private_key"
+    response = ssm_client.describe_parameters(
+        Filters=[{'Key': 'Name', 'Values': [param_name]}]
+    )
+    assert response['Parameters'][0]['Type'] == 'SecureString'
+
+
+def test_github_app_private_key_parameter_has_value(ssm_client, config):
+    """Test that GitHub App private key parameter has a value."""
+    param_name = f"{config['github_app_ssm_prefix']}/private_key"
+    response = ssm_client.get_parameter(Name=param_name, WithDecryption=True)
+    assert response['Parameter']['Value'] != ''
+
+
+# =============================================================================
+# Terraform State Bucket Configuration
+# =============================================================================
+
+
+def test_terraform_state_bucket_has_encryption(s3_client, config):
+    """Test that terraform state bucket has encryption enabled."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
+    assert 'ServerSideEncryptionConfiguration' in encryption
+
+
+def test_terraform_state_bucket_encryption_is_aes256(s3_client, config):
+    """Test that terraform state bucket uses AES256 encryption."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
+    rules = encryption['ServerSideEncryptionConfiguration']['Rules']
+    algorithm = rules[0]['ApplyServerSideEncryptionByDefault']['SSEAlgorithm']
+    assert algorithm == 'AES256'
+
+
+def test_terraform_state_bucket_blocks_public_acls(s3_client, config):
+    """Test that terraform state bucket blocks public ACLs."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    public_access = s3_client.get_public_access_block(Bucket=bucket_name)
+    block_config = public_access['PublicAccessBlockConfiguration']
+    assert block_config['BlockPublicAcls'] is True
+
+
+def test_terraform_state_bucket_blocks_public_policy(s3_client, config):
+    """Test that terraform state bucket blocks public policy."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    public_access = s3_client.get_public_access_block(Bucket=bucket_name)
+    block_config = public_access['PublicAccessBlockConfiguration']
+    assert block_config['BlockPublicPolicy'] is True
+
+
+def test_terraform_state_bucket_ignores_public_acls(s3_client, config):
+    """Test that terraform state bucket ignores public ACLs."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    public_access = s3_client.get_public_access_block(Bucket=bucket_name)
+    block_config = public_access['PublicAccessBlockConfiguration']
+    assert block_config['IgnorePublicAcls'] is True
+
+
+def test_terraform_state_bucket_restricts_public_buckets(s3_client, config):
+    """Test that terraform state bucket restricts public buckets."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    public_access = s3_client.get_public_access_block(Bucket=bucket_name)
+    block_config = public_access['PublicAccessBlockConfiguration']
+    assert block_config['RestrictPublicBuckets'] is True
+
+
+def test_terraform_state_bucket_has_policy(s3_client, config):
+    """Test that terraform state bucket has a bucket policy."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    policy = s3_client.get_bucket_policy(Bucket=bucket_name)
+    assert 'Policy' in policy
+
+
+def test_terraform_state_bucket_policy_denies_insecure_transport(s3_client, config):
+    """Test that terraform state bucket policy denies insecure transport."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    policy = s3_client.get_bucket_policy(Bucket=bucket_name)
+    policy_doc = policy['Policy']
+    assert 'aws:SecureTransport' in policy_doc
+
+
+def test_terraform_state_bucket_has_logging_enabled(s3_client, config):
+    """Test that terraform state bucket has logging enabled."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    logging = s3_client.get_bucket_logging(Bucket=bucket_name)
+    assert 'LoggingEnabled' in logging
+
+
+def test_terraform_state_bucket_logs_to_central_logs(s3_client, config):
+    """Test that terraform state bucket logs to central logs bucket."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    logging = s3_client.get_bucket_logging(Bucket=bucket_name)
+    target_bucket = logging['LoggingEnabled']['TargetBucket']
+    assert target_bucket == config['name_for_central_logs_bucket']

@@ -11,6 +11,8 @@ Bootstrap is self-bootstrapping - it creates its own prerequisites. Layers 5-7
 (Existence, Configuration, Capability) test prerequisite resources created by
 OTHER workflows, which don't exist for bootstrap. Therefore, these layers are
 not applicable here.
+
+Note: pytest_plugins are loaded from test/bootstrap/conftest.py (parent conftest)
 """
 import re
 from pathlib import Path
@@ -18,8 +20,6 @@ from pathlib import Path
 import pytest
 
 from repo_utils import REPO_ROOT
-
-pytest_plugins = ['test_fixtures.aws']
 
 
 def _extract_output_names(outputs_content: str) -> set[str]:
