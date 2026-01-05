@@ -43,14 +43,13 @@ def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
 def _add_derived_config(result: Dict[str, str]) -> None:
     """Add derived configuration values based on prefix and lambda function name."""
     prefix = result['resource_prefix']
-    stack_name = result.get('stack_name', prefix)
     lambda_fn = result.get('lambda_function_name', '')
     result['circuit_breaker_state_table_name'] = f"{prefix}-circuit-breaker-state"
     result['firehose_delivery_stream_name'] = f"{prefix}-CloudWatchLogs"
-    result['firehose_role_name'] = f"{prefix}-FirehoseCloudWatchLogs"
-    result['cloudwatch_logs_firehose_role_name'] = f"{prefix}-CloudWatchLogsFirehose"
-    # API Gateway CloudWatch role uses stack_name (not resource_prefix)
-    result['api_gateway_cloudwatch_role_name'] = f"{stack_name}-api-gateway-cloudwatch"
+    result['firehose_role_name'] = f"{prefix}FirehoseCloudWatchLogs"
+    result['cloudwatch_logs_firehose_role_name'] = f"{prefix}CloudWatchLogsFirehose"
+    # API Gateway CloudWatch role uses PascalCase
+    result['api_gateway_cloudwatch_role_name'] = f"{prefix}ApiGatewayCloudwatch"
     result['lambda_runners_role_name'] = f"{lambda_fn}-ServiceRole"
     result['webhook_handler_service_role_name'] = f"{lambda_fn}-ServiceRole"
 
