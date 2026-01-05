@@ -4,7 +4,6 @@ Verify that components are connected properly. Assumes existence and configurati
 """
 import json
 
-import pytest
 
 
 pytest_plugins = ['test_fixtures.aws']

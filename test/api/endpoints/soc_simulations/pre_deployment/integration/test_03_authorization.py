@@ -3,7 +3,6 @@
 Tests that credentials have permission to INSPECT prerequisite resources.
 Not existence, not capability - just authorization to check.
 """
-import pytest
 from botocore.exceptions import ClientError
 
 from test_fixtures.integration import (

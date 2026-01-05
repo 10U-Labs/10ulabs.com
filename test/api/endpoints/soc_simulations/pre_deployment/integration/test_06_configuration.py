@@ -3,7 +3,6 @@
 Tests that prerequisite resources are configured correctly.
 Assumes existence passed.
 """
-import pytest
 
 from test_fixtures.integration import (
     Layer5S3ConfigurationTests,

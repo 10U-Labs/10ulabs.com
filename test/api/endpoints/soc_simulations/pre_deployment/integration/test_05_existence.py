@@ -3,7 +3,6 @@
 Tests that prerequisite resources exist. Assumes authorization passed.
 These test resources created by OTHER workflows that this endpoint depends on.
 """
-import pytest
 
 from test_fixtures.integration import (
     Layer4TerraformStateExistenceTests,

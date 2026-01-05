@@ -5,7 +5,6 @@ No AWS calls. These tests catch contract mismatches between files before deploym
 """
 import re
 
-import pytest
 
 from repo_utils import REPO_ROOT
 

@@ -4,7 +4,6 @@ Tests that you can perform required operations. Assumes configuration passed.
 """
 import uuid
 
-import pytest
 
 from test_fixtures.integration import Layer7DeploymentCapabilityTests
 

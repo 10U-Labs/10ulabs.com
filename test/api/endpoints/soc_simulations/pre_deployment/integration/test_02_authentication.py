@@ -2,7 +2,6 @@
 
 Tests that AWS credentials are valid. No authorization or resource checks.
 """
-import pytest
 
 from test_fixtures.integration import Layer2EndpointAuthenticationTests
 

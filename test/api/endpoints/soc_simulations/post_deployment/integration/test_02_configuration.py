@@ -2,7 +2,6 @@
 
 Verify that resources created by this deployment are configured correctly.
 """
-import pytest
 
 
 pytest_plugins = ['test_fixtures.aws']
