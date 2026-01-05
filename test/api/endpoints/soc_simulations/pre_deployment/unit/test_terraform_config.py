@@ -114,6 +114,12 @@ class TestIAMConfiguration:
         has_basic_exec = "AWSLambdaBasicExecutionRole" in content
         assert has_basic_exec, "IAM must attach AWSLambdaBasicExecutionRole"
 
+    def test_iam_tf_has_kms_policy(self):
+        """Verify IAM has KMS policy for SSM parameter access."""
+        content = (SOC_SIMULATIONS_SRC / "iam.tf").read_text()
+        has_kms_policy = "aws_iam_role_policy" in content and "kms" in content.lower()
+        assert has_kms_policy, "IAM must have KMS policy"
+
 
 class TestLambdaConfiguration:
     """Unit tests for lambda.tf configuration."""
@@ -147,6 +153,24 @@ class TestLambdaConfiguration:
         content = (SOC_SIMULATIONS_SRC / "lambda.tf").read_text()
         has_google_client = "GOOGLE_CLIENT_ID" in content
         assert has_google_client, "Lambda must have GOOGLE_CLIENT_ID env var"
+
+    def test_lambda_tf_has_archive_file_data_source(self):
+        """Verify Lambda uses archive_file data source for deployment package."""
+        content = (SOC_SIMULATIONS_SRC / "lambda.tf").read_text()
+        has_archive = 'data "archive_file"' in content
+        assert has_archive, "Lambda must use archive_file data source"
+
+    def test_lambda_tf_has_cloudwatch_log_group(self):
+        """Verify Lambda has CloudWatch log group resource."""
+        content = (SOC_SIMULATIONS_SRC / "lambda.tf").read_text()
+        has_log_group = 'resource "aws_cloudwatch_log_group"' in content
+        assert has_log_group, "Lambda must have CloudWatch log group"
+
+    def test_lambda_tf_has_api_gateway_permission(self):
+        """Verify Lambda has API Gateway invoke permission."""
+        content = (SOC_SIMULATIONS_SRC / "lambda.tf").read_text()
+        has_permission = 'resource "aws_lambda_permission"' in content
+        assert has_permission, "Lambda must have API Gateway permission"
 
 
 class TestSharedConfiguration:
