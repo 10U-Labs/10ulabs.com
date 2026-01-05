@@ -273,10 +273,11 @@ def test_github_actions_role_has_required_policy(iam_client, config):
     policy_arns = [p["PolicyArn"] for p in response["AttachedPolicies"]]
     assert config["required_policy_arn"] in policy_arns
 
-def test_state_bucket_has_versioning_enabled(s3_client, config):
-    """Verify state bucket has versioning enabled."""
+def test_state_bucket_versioning_disabled(s3_client, config):
+    """Verify state bucket has versioning disabled."""
     response = s3_client.get_bucket_versioning(Bucket=config["state_bucket_name"])
-    assert response.get("Status") == "Enabled"
+    status = response.get("Status")
+    assert status in ("Suspended", None)
 
 def test_api_gateway_has_jit_runner_requests_resource(apigateway_client, config):
     """Verify API Gateway has /v1/webhooks/github/jit-runner-requests resource."""

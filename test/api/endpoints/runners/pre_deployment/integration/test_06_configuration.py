@@ -21,15 +21,15 @@ class TestAPIGatewayAndStateBucketConfiguration:
             "The runners endpoint requires a REGIONAL API Gateway."
         )
 
-    def test_state_bucket_has_versioning(self, s3_client, state_bucket_name):
-        """Verify state bucket has versioning enabled or was enabled (Suspended)."""
+    def test_state_bucket_versioning_disabled(self, s3_client, state_bucket_name):
+        """Verify state bucket has versioning disabled."""
         try:
             response = s3_client.get_bucket_versioning(Bucket=state_bucket_name)
-            status = response.get("Status", "")
-            # Enabled = versioning active, Suspended = was enabled (versions preserved)
-            assert status in ("Enabled", "Suspended"), (
-                f"State bucket '{state_bucket_name}' has never had versioning enabled. "
-                "Terraform state buckets should have versioning for safety."
+            status = response.get("Status")
+            is_disabled = status in ("Suspended", None)
+            assert is_disabled, (
+                f"State bucket '{state_bucket_name}' must have versioning disabled. "
+                f"Current status: {status}"
             )
         except ClientError as e:
             if e.response["Error"]["Code"] in ("AccessDenied", "AccessDeniedException"):
