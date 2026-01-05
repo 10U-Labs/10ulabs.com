@@ -80,3 +80,99 @@ def test_templatefile_vars_all_used(openapi_path: Path, apigateway_path: Path):
         f"  apigateway.tf provides: {sorted(templatefile_vars)}\n"
         f"  openapi.json uses: {sorted(openapi_vars)}"
     )
+
+
+# =============================================================================
+# Lambda Handler Contract Tests
+# =============================================================================
+
+
+def _extract_lambda_handlers_from_tf(lambda_tf_path: Path) -> list[tuple[str, str]]:
+    """Extract Lambda handler references from lambda.tf.
+
+    Returns list of (resource_name, handler_ref) tuples.
+    handler_ref format: "filename.function_name"
+    """
+    content = lambda_tf_path.read_text()
+    handlers = []
+
+    # Match resource "aws_lambda_function" "name" blocks and their handler attribute
+    resource_pattern = r'resource\s+"aws_lambda_function"\s+"(\w+)"'
+    handler_pattern = r'handler\s*=\s*"([^"]+)"'
+
+    # Find all lambda function resources
+    for resource_match in re.finditer(resource_pattern, content):
+        resource_name = resource_match.group(1)
+        # Find the handler in the block following this resource
+        start = resource_match.end()
+        # Find next resource or end of file to limit search scope
+        next_resource = re.search(r'\nresource\s+', content[start:])
+        end = start + next_resource.start() if next_resource else len(content)
+        block_content = content[start:end]
+
+        handler_match = re.search(handler_pattern, block_content)
+        if handler_match:
+            handler_ref = handler_match.group(1)
+            handlers.append((resource_name, handler_ref))
+
+    return handlers
+
+
+def _extract_function_names_from_py(py_path: Path) -> set[str]:
+    """Extract top-level function names from Python file."""
+    content = py_path.read_text()
+    # Match def function_name( at start of line (no indentation)
+    pattern = r'^def\s+(\w+)\s*\('
+    return set(re.findall(pattern, content, re.MULTILINE))
+
+
+def test_lambda_handler_exports_match_terraform_references(
+    lambda_tf_path: Path, lambdas_dir: Path
+):
+    """Verify Lambda handler exports match Terraform handler references.
+
+    Terraform handler = "catchall.handler" means:
+    - File: lambdas/catchall.py
+    - Function: handler()
+
+    This test verifies that each handler reference in lambda.tf
+    corresponds to an actual function export in the Python file.
+    """
+    if not lambda_tf_path.exists():
+        pytest.skip("lambda.tf not found")
+
+    handlers = _extract_lambda_handlers_from_tf(lambda_tf_path)
+    if not handlers:
+        pytest.skip("No Lambda handler references found in lambda.tf")
+
+    errors = []
+    for resource_name, handler_ref in handlers:
+        # Parse handler reference (format: filename.function_name)
+        parts = handler_ref.split(".")
+        if len(parts) != 2:
+            errors.append(
+                f"  {resource_name}: Invalid handler format '{handler_ref}' "
+                f"(expected 'filename.function_name')"
+            )
+            continue
+
+        expected_module, expected_function = parts
+        py_file = lambdas_dir / f"{expected_module}.py"
+
+        if not py_file.exists():
+            errors.append(
+                f"  {resource_name}: Handler references '{expected_module}.py' "
+                f"but file does not exist at {py_file}"
+            )
+            continue
+
+        functions = _extract_function_names_from_py(py_file)
+        if expected_function not in functions:
+            errors.append(
+                f"  {resource_name}: Handler references function '{expected_function}' "
+                f"but {expected_module}.py only exports: {sorted(functions)}"
+            )
+
+    assert not errors, (
+        "Lambda handler contracts violated:\n" + "\n".join(errors)
+    )

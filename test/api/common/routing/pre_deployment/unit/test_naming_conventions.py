@@ -11,11 +11,22 @@ from terraform_config import extract_iam_role_names, extract_lambda_function_nam
 from repo_utils import REPO_ROOT
 
 BACKEND_SRC = REPO_ROOT / "src" / "api" / "common" / "routing"
-IAM_FILE = BACKEND_SRC / "iam.tf"
+
+# Files containing IAM roles (all files that define aws_iam_role resources)
+IAM_FILES = [
+    BACKEND_SRC / "iam.tf",
+    BACKEND_SRC / "apigateway.tf",
+    BACKEND_SRC / "firehose.tf",
+    BACKEND_SRC / "iam_api_gateway_sqs.tf",
+]
+
 LAMBDA_FILE = BACKEND_SRC / "lambda.tf"
 
-# Collect resources at module load time
-IAM_ROLES = extract_iam_role_names(IAM_FILE)
+# Collect resources at module load time from all files
+IAM_ROLES = []
+for iam_file in IAM_FILES:
+    IAM_ROLES.extend(extract_iam_role_names(iam_file))
+
 LAMBDA_FUNCTIONS = extract_lambda_function_names(LAMBDA_FILE, use_handler_names=True)
 
 

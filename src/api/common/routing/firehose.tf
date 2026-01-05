@@ -25,7 +25,7 @@ resource "aws_kinesis_firehose_delivery_stream" "cloudwatch_logs" {
 }
 
 resource "aws_iam_role" "firehose_cloudwatch_logs" {
-  name = "${local.resource_prefix}-FirehoseCloudWatchLogs"
+  name = "${local.resource_prefix}FirehoseCloudWatchLogs"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -39,7 +39,7 @@ resource "aws_iam_role" "firehose_cloudwatch_logs" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-FirehoseCloudWatchLogs"
+    Name = "${local.resource_prefix}FirehoseCloudWatchLogs"
   })
 }
 
@@ -70,7 +70,7 @@ resource "aws_iam_role_policy" "firehose_s3_access" {
 }
 
 resource "aws_iam_role" "cloudwatch_logs_firehose" {
-  name = "${local.resource_prefix}-CloudWatchLogsFirehose"
+  name = "${local.resource_prefix}CloudWatchLogsFirehose"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -89,7 +89,7 @@ resource "aws_iam_role" "cloudwatch_logs_firehose" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-CloudWatchLogsFirehose"
+    Name = "${local.resource_prefix}CloudWatchLogsFirehose"
   })
 }
 
@@ -138,7 +138,7 @@ resource "aws_kinesis_firehose_delivery_stream" "waf_logs" {
 }
 
 resource "aws_iam_role" "firehose_waf_logs" {
-  name = "${local.resource_prefix}-FirehoseWafLogs"
+  name = "${local.resource_prefix}FirehoseWafLogs"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -152,7 +152,7 @@ resource "aws_iam_role" "firehose_waf_logs" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-FirehoseWafLogs"
+    Name = "${local.resource_prefix}FirehoseWafLogs"
   })
 }
 
@@ -183,7 +183,7 @@ resource "aws_iam_role_policy" "firehose_waf_s3_access" {
 }
 
 resource "aws_iam_role" "cloudwatch_logs_firehose_waf" {
-  name = "${local.resource_prefix}-CloudWatchLogsFirehoseWaf"
+  name = "${local.resource_prefix}CloudWatchLogsFirehoseWaf"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -202,7 +202,7 @@ resource "aws_iam_role" "cloudwatch_logs_firehose_waf" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-CloudWatchLogsFirehoseWaf"
+    Name = "${local.resource_prefix}CloudWatchLogsFirehoseWaf"
   })
 }
 

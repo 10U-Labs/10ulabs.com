@@ -142,7 +142,7 @@ resource "aws_api_gateway_account" "main" {
 }
 
 resource "aws_iam_role" "api_gateway_cloudwatch" {
-  name = "${var.stack_name}-api-gateway-cloudwatch"
+  name = "${local.resource_prefix}ApiGatewayCloudwatch"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -158,7 +158,7 @@ resource "aws_iam_role" "api_gateway_cloudwatch" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${var.stack_name}-api-gateway-cloudwatch"
+    Name = "${local.resource_prefix}ApiGatewayCloudwatch"
   })
 }
 

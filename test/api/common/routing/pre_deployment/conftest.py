@@ -16,3 +16,15 @@ def openapi_path_fixture() -> Path:
 def apigateway_path_fixture() -> Path:
     """Get the apigateway.tf path."""
     return REPO_ROOT / "src" / "api" / "common" / "routing" / "apigateway.tf"
+
+
+@pytest.fixture(name="lambda_tf_path")
+def lambda_tf_path_fixture() -> Path:
+    """Get the lambda.tf path."""
+    return REPO_ROOT / "src" / "api" / "common" / "routing" / "lambda.tf"
+
+
+@pytest.fixture(name="lambdas_dir")
+def lambdas_dir_fixture() -> Path:
+    """Get the lambdas directory path."""
+    return REPO_ROOT / "src" / "api" / "common" / "routing" / "lambdas"
