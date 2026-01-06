@@ -100,17 +100,51 @@ class TestFileExtensionPassthrough:
         response = handler(event, None)
         assert response["uri"] == uri
 
-    def test_file_uri_is_not_modified(self):
-        """Test that file URIs are returned without modification."""
-        event = make_event(host="www.example.com", uri="/assets/logo.svg")
+    def test_non_asset_file_uri_is_not_modified(self):
+        """Test that non-asset file URIs are returned without modification."""
+        event = make_event(host="www.example.com", uri="/images/logo.svg")
         response = handler(event, None)
-        assert response["uri"] == "/assets/logo.svg"
+        assert response["uri"] == "/images/logo.svg"
 
     def test_file_request_does_not_redirect(self):
         """Test that file requests do not trigger a redirect."""
-        event = make_event(host="www.example.com", uri="/assets/logo.svg")
+        event = make_event(host="www.example.com", uri="/images/logo.svg")
         response = handler(event, None)
         assert "status" not in response
+
+
+class TestAssetsRewrite:
+    """Tests for /assets/* rewrite to /home/assets/*."""
+
+    def test_assets_js_rewrites_to_home(self):
+        """Test that /assets/*.js rewrites to /home/assets/*.js."""
+        event = make_event(host="www.example.com", uri="/assets/index-abc123.js")
+        response = handler(event, None)
+        assert response["uri"] == "/home/assets/index-abc123.js"
+
+    def test_assets_css_rewrites_to_home(self):
+        """Test that /assets/*.css rewrites to /home/assets/*.css."""
+        event = make_event(host="www.example.com", uri="/assets/index-xyz789.css")
+        response = handler(event, None)
+        assert response["uri"] == "/home/assets/index-xyz789.css"
+
+    def test_assets_svg_rewrites_to_home(self):
+        """Test that /assets/*.svg rewrites to /home/assets/*.svg."""
+        event = make_event(host="www.example.com", uri="/assets/logo.svg")
+        response = handler(event, None)
+        assert response["uri"] == "/home/assets/logo.svg"
+
+    def test_assets_request_does_not_redirect(self):
+        """Test that /assets/* requests do not trigger a redirect."""
+        event = make_event(host="www.example.com", uri="/assets/file.js")
+        response = handler(event, None)
+        assert "status" not in response
+
+    def test_home_assets_does_not_double_rewrite(self):
+        """Test that /home/assets/* is not rewritten again."""
+        event = make_event(host="www.example.com", uri="/home/assets/file.js")
+        response = handler(event, None)
+        assert response["uri"] == "/home/assets/file.js"
 
 
 class TestSpaRouting:

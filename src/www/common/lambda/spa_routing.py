@@ -30,6 +30,11 @@ def handler(event, _context):
             }
         }
 
+    # Rewrite /assets/* to /home/assets/* for home page static files
+    if uri.startswith("/assets/"):
+        request["uri"] = "/home" + uri
+        return request
+
     # Serve files with extensions as-is
     if "." in uri:
         return request
