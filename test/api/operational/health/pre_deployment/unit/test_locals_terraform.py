@@ -30,11 +30,21 @@ def test_locals_resource_prefix_references_module_common(health_src_dir):
     assert "resource_prefix  = module.common.resource_prefix" in content
 
 
-def test_locals_github_repo_full_constructed(health_src_dir):
-    """Verify github_repo_full is constructed from module.common."""
+def test_locals_github_repo_full_defined(health_src_dir):
+    """Verify github_repo_full local is defined."""
     content = (health_src_dir / "locals.tf").read_text()
     assert "github_repo_full" in content
+
+
+def test_locals_github_repo_full_uses_github_org(health_src_dir):
+    """Verify github_repo_full uses module.common.github_org."""
+    content = (health_src_dir / "locals.tf").read_text()
     assert "module.common.github_org" in content
+
+
+def test_locals_github_repo_full_uses_name_for_github_repo(health_src_dir):
+    """Verify github_repo_full uses module.common.name_for_github_repo."""
+    content = (health_src_dir / "locals.tf").read_text()
     assert "module.common.name_for_github_repo" in content
 
 
@@ -42,6 +52,11 @@ def test_locals_lambda_role_name_defined(health_src_dir):
     """Verify lambda_role_name local is defined."""
     content = (health_src_dir / "locals.tf").read_text()
     assert "lambda_role_name" in content
+
+
+def test_locals_lambda_role_name_value(health_src_dir):
+    """Verify lambda_role_name contains HealthHandlerServiceRole."""
+    content = (health_src_dir / "locals.tf").read_text()
     assert "HealthHandlerServiceRole" in content
 
 

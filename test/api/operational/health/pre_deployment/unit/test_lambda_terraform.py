@@ -66,10 +66,15 @@ def test_lambda_function_has_description(health_src_dir):
     assert 'description      = "Health check endpoint for API"' in content
 
 
-def test_lambda_function_has_logging_config(health_src_dir):
-    """Verify Lambda function has logging configuration."""
+def test_lambda_function_has_logging_config_block(health_src_dir):
+    """Verify Lambda function has logging_config block."""
     content = (health_src_dir / "lambda.tf").read_text()
     assert "logging_config {" in content
+
+
+def test_lambda_function_log_format_is_text(health_src_dir):
+    """Verify Lambda function log format is Text."""
+    content = (health_src_dir / "lambda.tf").read_text()
     assert 'log_format = "Text"' in content
 
 
@@ -97,10 +102,15 @@ def test_lambda_cloudwatch_log_group_retention_7_days(health_src_dir):
     assert "retention_in_days = 7" in content
 
 
-def test_lambda_permission_for_api_gateway(health_src_dir):
-    """Verify Lambda permission for API Gateway invocation."""
+def test_lambda_permission_resource_exists(health_src_dir):
+    """Verify Lambda permission resource is defined."""
     content = (health_src_dir / "lambda.tf").read_text()
     assert 'resource "aws_lambda_permission" "api_gateway"' in content
+
+
+def test_lambda_permission_principal_is_api_gateway(health_src_dir):
+    """Verify Lambda permission principal is API Gateway."""
+    content = (health_src_dir / "lambda.tf").read_text()
     assert 'principal     = "apigateway.amazonaws.com"' in content
 
 

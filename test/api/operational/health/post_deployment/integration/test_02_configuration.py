@@ -33,7 +33,7 @@ TestNamingConventions = create_naming_convention_tests(
 )
 
 
-class TestHealthLambdaTimeout:
+class TestHealthLambdaTimeout:  # pylint: disable=too-few-public-methods
     """Health-specific Lambda timeout configuration test."""
 
     def test_handler_has_10_second_timeout(self, lambda_client, config):
