@@ -64,21 +64,19 @@ class TestLambdaAssetRewrite:
             f"Lambda file not found at {LAMBDA_FILE}"
         )
 
-    def test_lambda_has_assets_rewrite_rule(self):
-        """Verify Lambda contains /assets/ to /home/assets/ rewrite."""
+    def test_lambda_has_assets_prefix_check(self):
+        """Verify Lambda checks for /assets/ prefix."""
         if not LAMBDA_FILE.exists():
             return
         content = LAMBDA_FILE.read_text()
-        has_assets_check = 'uri.startswith("/assets/")' in content
-        has_home_rewrite = '"/home"' in content or "/home" in content
-        assert has_assets_check, (
-            "Lambda spa_routing.py missing /assets/ prefix check. "
-            "Add: if uri.startswith(\"/assets/\"): request[\"uri\"] = \"/home\" + uri"
-        )
-        assert has_home_rewrite, (
-            "Lambda spa_routing.py missing /home rewrite. "
-            "Requests to /assets/* must be rewritten to /home/assets/*"
-        )
+        assert 'uri.startswith("/assets/")' in content
+
+    def test_lambda_has_home_rewrite(self):
+        """Verify Lambda rewrites to /home prefix."""
+        if not LAMBDA_FILE.exists():
+            return
+        content = LAMBDA_FILE.read_text()
+        assert '"/home"' in content or "/home" in content
 
     def test_lambda_rewrite_before_extension_passthrough(self):
         """Verify /assets/ rewrite happens before generic extension passthrough."""
