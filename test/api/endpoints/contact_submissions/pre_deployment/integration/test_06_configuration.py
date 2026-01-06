@@ -6,10 +6,8 @@ Assumes existence passed.
 Seven-layer testing model:
 - Layer 6: Configuration - Prerequisites configured correctly
 """
-import pytest
 from test_fixtures.integration import skip_if_api_gateway_unavailable
 
-pytestmark = pytest.mark.layer(6)
 
 
 class TestPrerequisiteConfiguration:

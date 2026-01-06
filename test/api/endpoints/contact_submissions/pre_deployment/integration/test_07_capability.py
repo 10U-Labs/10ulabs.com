@@ -6,10 +6,8 @@ These tests verify we have the capability to deploy the contact endpoint.
 Seven-layer testing model:
 - Layer 7: Capability - Can perform required operations
 """
-import pytest
 from test_fixtures.integration import create_layer6_capability_tests
 
-pytestmark = pytest.mark.layer(7)
 
 
 TestDeploymentCapabilities = create_layer6_capability_tests(

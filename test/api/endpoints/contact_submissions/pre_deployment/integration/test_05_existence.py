@@ -6,10 +6,8 @@ These tests verify resources from OTHER workflows that THIS workflow depends on.
 Seven-layer testing model:
 - Layer 5: Existence - Prerequisite resources exist
 """
-import pytest
 from test_fixtures.integration import assert_api_gateway_exists
 
-pytestmark = pytest.mark.layer(5)
 
 
 class TestPrerequisiteExistence:

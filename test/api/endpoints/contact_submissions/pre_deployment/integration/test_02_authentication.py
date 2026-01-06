@@ -5,10 +5,8 @@ Tests ONLY that AWS credentials are valid. No authorization or resource checks.
 Seven-layer testing model:
 - Layer 2: Authentication - Valid credentials exist
 """
-import pytest
 from test_fixtures.integration import Layer2EndpointAuthenticationTests
 
-pytestmark = pytest.mark.layer(2)
 
 
 class TestAWSAuthentication(Layer2EndpointAuthenticationTests):

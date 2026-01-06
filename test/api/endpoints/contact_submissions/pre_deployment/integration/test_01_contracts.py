@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.layer(1)
 
 # Path from test file to repo root:
 # test/api/endpoints/contact_submissions/pre_deployment/integration/test_01_contracts.py
