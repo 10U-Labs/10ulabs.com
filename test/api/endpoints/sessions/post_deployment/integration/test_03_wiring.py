@@ -3,11 +3,7 @@
 Wiring tests verify that components are connected properly.
 Assumes existence and configuration tests passed.
 """
-import pytest
 from botocore.exceptions import ClientError
-
-
-pytestmark = pytest.mark.layer(3)
 
 
 class TestHandlerLambdaWiring:

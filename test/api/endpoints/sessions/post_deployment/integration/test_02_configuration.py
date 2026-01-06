@@ -3,10 +3,6 @@
 Configuration tests verify that resources have correct settings.
 Assumes existence tests passed.
 """
-import pytest
-
-
-pytestmark = pytest.mark.layer(2)
 
 
 class TestHandlerLambdaConfiguration:

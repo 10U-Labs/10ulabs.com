@@ -3,10 +3,6 @@
 Existence tests verify that prerequisite resources exist.
 These are resources created by OTHER workflows that must exist before deployment.
 """
-import pytest
-
-
-pytestmark = pytest.mark.layer(5)
 
 
 class TestApiGatewayExistence:

@@ -3,11 +3,7 @@
 Authorization tests verify permission to INSPECT prerequisite resources.
 Not existence, not capability - just permission to check.
 """
-import pytest
 from botocore.exceptions import ClientError
-
-
-pytestmark = pytest.mark.layer(3)
 
 
 class TestIamAuthorization:

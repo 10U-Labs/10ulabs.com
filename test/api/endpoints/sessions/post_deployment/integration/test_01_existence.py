@@ -3,10 +3,6 @@
 Existence tests verify that resources created by terraform apply exist.
 No configuration checks - just existence.
 """
-import pytest
-
-
-pytestmark = pytest.mark.layer(1)
 
 
 class TestLambdaExistence:

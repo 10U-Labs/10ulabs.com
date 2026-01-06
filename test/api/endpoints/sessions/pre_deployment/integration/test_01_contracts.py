@@ -3,12 +3,7 @@
 Contract tests verify that local files that must work together are compatible.
 No AWS calls are made in these tests.
 """
-import pytest
-
 from repo_utils import REPO_ROOT
-
-
-pytestmark = pytest.mark.layer(1)
 
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"

@@ -122,8 +122,7 @@ class TestBackendConfiguration:
         """Verify S3 backend has encryption enabled."""
         backend_tf = SESSIONS_SRC_PATH / "backend.tf"
         content = backend_tf.read_text()
-        assert 'encrypt' in content
-        assert 'true' in content
+        assert 'encrypt' in content and 'true' in content
 
     def test_backend_uses_lockfile(self):
         """Verify S3 backend uses lockfile for state locking."""
@@ -175,8 +174,7 @@ class TestProviderConfiguration:
         """Verify default tags include ManagedBy = terraform."""
         providers_tf = SESSIONS_SRC_PATH / "providers.tf"
         content = providers_tf.read_text()
-        assert 'ManagedBy' in content
-        assert 'terraform' in content
+        assert 'ManagedBy' in content and 'terraform' in content
 
 
 class TestSharedModuleConfiguration:
@@ -208,15 +206,13 @@ class TestDynamoDbConfiguration:
         """Verify DynamoDB table uses session_id as hash key."""
         dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
         content = dynamodb_tf.read_text()
-        assert 'hash_key' in content
-        assert 'session_id' in content
+        assert 'hash_key' in content and 'session_id' in content
 
     def test_dynamodb_table_has_timestamp_range_key(self):
         """Verify DynamoDB table uses timestamp as range key."""
         dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
         content = dynamodb_tf.read_text()
-        assert 'range_key' in content
-        assert 'timestamp' in content
+        assert 'range_key' in content and 'timestamp' in content
 
     def test_dynamodb_table_has_event_type_gsi(self):
         """Verify DynamoDB table has event_type-index GSI."""
@@ -234,8 +230,7 @@ class TestDynamoDbConfiguration:
         """Verify DynamoDB table has point-in-time recovery enabled."""
         dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
         content = dynamodb_tf.read_text()
-        assert 'point_in_time_recovery' in content
-        assert 'enabled = true' in content
+        assert 'point_in_time_recovery' in content and 'enabled = true' in content
 
     def test_dynamodb_table_has_event_type_attribute(self):
         """Verify DynamoDB table defines event_type attribute."""
@@ -281,8 +276,7 @@ class TestBackupConfiguration:
         """Verify backup IAM role is defined."""
         backup_tf = SESSIONS_SRC_PATH / "backup.tf"
         content = backup_tf.read_text()
-        assert 'aws_iam_role' in content
-        assert 'backup' in content.lower()
+        assert 'aws_iam_role' in content and 'backup' in content.lower()
 
     def test_backup_selection_defined(self):
         """Verify backup selection resource is defined."""
@@ -346,14 +340,12 @@ class TestLocalsConfiguration:
         """Verify locals defines aws_region from common module."""
         locals_tf = SESSIONS_SRC_PATH / "locals.tf"
         content = locals_tf.read_text()
-        assert 'aws_region' in content
         assert 'module.common.aws_region' in content
 
     def test_locals_defines_resource_prefix(self):
         """Verify locals defines resource_prefix from common module."""
         locals_tf = SESSIONS_SRC_PATH / "locals.tf"
         content = locals_tf.read_text()
-        assert 'resource_prefix' in content
         assert 'module.common.resource_prefix' in content
 
     def test_locals_defines_common_tags(self):
@@ -366,5 +358,4 @@ class TestLocalsConfiguration:
         """Verify common_tags include Purpose = sessions."""
         locals_tf = SESSIONS_SRC_PATH / "locals.tf"
         content = locals_tf.read_text()
-        assert 'Purpose' in content
-        assert 'sessions' in content
+        assert 'Purpose' in content and 'sessions' in content

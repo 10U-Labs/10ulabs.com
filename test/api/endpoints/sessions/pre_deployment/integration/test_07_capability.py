@@ -5,11 +5,7 @@ These test that deployment prerequisites allow required actions.
 """
 import uuid
 
-import pytest
 from botocore.exceptions import ClientError
-
-
-pytestmark = pytest.mark.layer(7)
 
 
 class TestTerraformStateCapability:

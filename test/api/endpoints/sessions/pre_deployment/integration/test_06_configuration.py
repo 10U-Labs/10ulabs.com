@@ -3,10 +3,6 @@
 Configuration tests verify that prerequisite resources are configured correctly.
 These are resources created by OTHER workflows that must be properly configured.
 """
-import pytest
-
-
-pytestmark = pytest.mark.layer(6)
 
 
 class TestApiGatewayConfiguration:

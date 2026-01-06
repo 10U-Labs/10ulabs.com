@@ -3,11 +3,7 @@
 State tests verify that Terraform state matches AWS reality.
 Resources should be checked for potential orphaned state.
 """
-import pytest
 from botocore.exceptions import ClientError
-
-
-pytestmark = pytest.mark.layer(4)
 
 
 class TestNoOrphanedLambdaFunctions:
