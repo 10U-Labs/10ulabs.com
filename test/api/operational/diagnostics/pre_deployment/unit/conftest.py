@@ -1,5 +1,6 @@
 """Pytest fixtures for diagnostics handler pre-deployment unit tests."""
 import json
+from pathlib import Path
 from types import ModuleType
 
 import pytest
@@ -8,6 +9,12 @@ from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
 
 DIAGNOSTICS_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
+
+
+@pytest.fixture
+def diagnostics_src_dir() -> Path:
+    """Provide the diagnostics endpoint source directory path."""
+    return DIAGNOSTICS_SRC
 
 # Create loader for diagnostics lambda directory
 _load_lambda = create_lambda_loader(DIAGNOSTICS_SRC / "lambda")
