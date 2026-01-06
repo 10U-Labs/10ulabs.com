@@ -1,4 +1,5 @@
 """Pytest fixtures for health endpoint pre-deployment tests."""
+from pathlib import Path
 from types import ModuleType
 
 from test.api.operational.health.conftest import HEALTH_SRC
@@ -24,3 +25,9 @@ def health_handler() -> ModuleType:
 def health_get_event():
     """Create GET /health event fixture."""
     return {'path': '/health', 'httpMethod': 'GET'}
+
+
+@pytest.fixture
+def health_src_dir() -> Path:
+    """Provide the health endpoint source directory path."""
+    return HEALTH_SRC

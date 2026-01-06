@@ -32,17 +32,17 @@ TestIAMPolicyWiring = create_lambda_iam_wiring_tests(
 class TestHealthSpecificIAMWiring:
     """Health-specific IAM wiring tests."""
 
-    def test_health_handler_role_has_ec2_describe_policy(self, iam_client, config):
-        """Verify IAM role has EC2 describe inline policy."""
+    def test_health_handler_role_has_kms_inline_policy(self, iam_client, config):
+        """Verify IAM role has KMS decrypt inline policy."""
         function_name = config.get(
             'health_handler_function_name', 'TenULabsHealthHandler'
         )
         role_name = f"{function_name}ServiceRole"
         response = iam_client.list_role_policies(RoleName=role_name)
         inline_policies = response.get("PolicyNames", [])
-        # Check for an inline policy that grants EC2 describe permissions
-        assert len(inline_policies) > 0, (
-            f"IAM role '{role_name}' has no inline policies for EC2 describe"
+        assert "KMSDecryptPermissions" in inline_policies, (
+            f"IAM role '{role_name}' missing 'KMSDecryptPermissions' inline policy. "
+            f"Found policies: {inline_policies}"
         )
 
     def test_health_handler_role_has_lambda_trust_relationship(self, iam_client, config):
