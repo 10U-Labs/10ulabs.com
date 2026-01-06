@@ -25,10 +25,20 @@ def test_locals_has_aws_region(diagnostics_src_dir):
 
 
 def test_locals_has_github_repo_full(diagnostics_src_dir):
-    """Verify locals defines github_repo_full from common module."""
+    """Verify locals defines github_repo_full."""
     content = (diagnostics_src_dir / "locals.tf").read_text()
     assert "github_repo_full" in content
+
+
+def test_locals_github_repo_full_uses_github_org(diagnostics_src_dir):
+    """Verify github_repo_full uses module.common.github_org."""
+    content = (diagnostics_src_dir / "locals.tf").read_text()
     assert "module.common.github_org" in content
+
+
+def test_locals_github_repo_full_uses_name_for_github_repo(diagnostics_src_dir):
+    """Verify github_repo_full uses module.common.name_for_github_repo."""
+    content = (diagnostics_src_dir / "locals.tf").read_text()
     assert "module.common.name_for_github_repo" in content
 
 
@@ -36,6 +46,11 @@ def test_locals_has_diagnostics_handler_role_name(diagnostics_src_dir):
     """Verify locals defines diagnostics_handler_role_name."""
     content = (diagnostics_src_dir / "locals.tf").read_text()
     assert "diagnostics_handler_role_name" in content
+
+
+def test_locals_diagnostics_handler_role_name_value(diagnostics_src_dir):
+    """Verify diagnostics_handler_role_name ends with DiagnosticsHandlerServiceRole."""
+    content = (diagnostics_src_dir / "locals.tf").read_text()
     assert "DiagnosticsHandlerServiceRole" in content
 
 

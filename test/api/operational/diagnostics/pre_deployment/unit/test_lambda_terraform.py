@@ -138,8 +138,13 @@ def test_lambda_permission_action(diagnostics_src_dir):
     assert 'action        = "lambda:InvokeFunction"' in content
 
 
-def test_lambda_permission_source_arn_uses_locals(diagnostics_src_dir):
-    """Verify Lambda permission source ARN uses local values."""
+def test_lambda_permission_source_arn_uses_local_region(diagnostics_src_dir):
+    """Verify Lambda permission source ARN uses local.aws_region."""
     content = (diagnostics_src_dir / "lambda.tf").read_text()
     assert "local.aws_region" in content
+
+
+def test_lambda_permission_source_arn_uses_local_account_id(diagnostics_src_dir):
+    """Verify Lambda permission source ARN uses local.aws_account_id."""
+    content = (diagnostics_src_dir / "lambda.tf").read_text()
     assert "local.aws_account_id" in content

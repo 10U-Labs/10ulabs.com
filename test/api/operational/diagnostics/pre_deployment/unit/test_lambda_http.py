@@ -39,10 +39,14 @@ class TestJsonResponse:
         expected = 'Content-Type,x-api-key,x-test-mode'
         assert response['headers']['Access-Control-Allow-Headers'] == expected
 
-    def test_json_response_body_is_json_string(self):
-        """Verify json_response body is a JSON string."""
+    def test_json_response_body_is_string(self):
+        """Verify json_response body is a string."""
         response = json_response(200, {'key': 'value'})
         assert isinstance(response['body'], str)
+
+    def test_json_response_body_is_valid_json(self):
+        """Verify json_response body contains the expected data."""
+        response = json_response(200, {'key': 'value'})
         parsed = json.loads(response['body'])
         assert parsed == {'key': 'value'}
 
