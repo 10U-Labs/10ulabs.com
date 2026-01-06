@@ -6,6 +6,8 @@ import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration.helpers import check_s3_head_bucket_permission
 
+pytestmark = pytest.mark.layer(3)
+
 
 
 def test_can_call_iam_get_role(iam_client, github_actions_role_name):

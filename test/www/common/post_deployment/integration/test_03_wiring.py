@@ -4,6 +4,8 @@ Verify components are connected properly. Assumes configuration tests passed.
 """
 import pytest
 
+pytestmark = pytest.mark.layer(3)
+
 
 
 @pytest.fixture(name="cloudfront_origins", scope="module")

@@ -60,3 +60,58 @@ def test_rack_designer_returns_html_content(website_url):
     response = requests.get(f"{website_url}/rack-designer", timeout=30, allow_redirects=False)
     content_type = response.headers.get('Content-Type', '')
     assert 'text/html' in content_type
+
+
+def test_homepage_returns_200(website_response):
+    """Test that homepage returns 200 status."""
+    assert website_response.status_code == 200
+
+
+def test_homepage_returns_html_content(website_response):
+    """Test that homepage returns HTML content type."""
+    content_type = website_response.headers.get('Content-Type', '')
+    assert 'text/html' in content_type
+
+
+def test_hsts_max_age_is_reasonable(website_response):
+    """Test that HSTS max-age is at least one year."""
+    hsts = website_response.headers.get('Strict-Transport-Security', '')
+    assert 'max-age=' in hsts
+
+
+def test_hsts_includes_subdomains(website_response):
+    """Test that HSTS includes includeSubDomains."""
+    hsts = website_response.headers.get('Strict-Transport-Security', '')
+    assert 'includeSubDomains' in hsts
+
+
+def test_hsts_includes_preload(website_response):
+    """Test that HSTS includes preload directive."""
+    hsts = website_response.headers.get('Strict-Transport-Security', '')
+    assert 'preload' in hsts
+
+
+def test_website_served_by_cloudfront(website_response):
+    """Test that website is served by CloudFront."""
+    server = website_response.headers.get('Server', '')
+    x_cache = website_response.headers.get('X-Cache', '')
+    has_cloudfront_marker = 'CloudFront' in server or 'cloudfront' in x_cache.lower()
+    assert has_cloudfront_marker
+
+
+def test_privacy_page_accessible(website_url):
+    """Test that privacy page is accessible."""
+    response = requests.get(f"{website_url}/privacy", timeout=30)
+    assert response.status_code == 200
+
+
+def test_robots_txt_accessible(website_url):
+    """Test that robots.txt is accessible."""
+    response = requests.get(f"{website_url}/robots.txt", timeout=30)
+    assert response.status_code == 200
+
+
+def test_ads_txt_accessible(website_url):
+    """Test that ads.txt is accessible."""
+    response = requests.get(f"{website_url}/ads.txt", timeout=30)
+    assert response.status_code == 200

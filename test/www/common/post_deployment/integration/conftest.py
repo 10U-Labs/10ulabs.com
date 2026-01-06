@@ -2,6 +2,14 @@
 import pytest
 
 
+def pytest_configure(config):
+    """Register the layer marker."""
+    config.addinivalue_line(
+        "markers",
+        "layer(num): mark test as belonging to layer N"
+    )
+
+
 @pytest.fixture(name="distribution_config", scope="module")
 def distribution_config_fixture(cloudfront_client, config):
     """Get CloudFront distribution config for website domain."""

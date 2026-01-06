@@ -6,6 +6,14 @@ from terraform_config import TEST_AWS_REGION
 from test_fixtures.terraform import terraform_init, terraform_output
 
 
+def pytest_configure(config):
+    """Register the layer marker."""
+    config.addinivalue_line(
+        "markers",
+        "layer(num): mark test as belonging to layer N"
+    )
+
+
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 

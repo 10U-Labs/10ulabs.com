@@ -4,6 +4,8 @@ Verify resources are configured correctly. Assumes existence tests passed.
 """
 import pytest
 
+pytestmark = pytest.mark.layer(2)
+
 
 
 def test_acm_certificate_is_issued(acm_client):
