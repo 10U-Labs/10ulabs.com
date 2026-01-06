@@ -6,11 +6,8 @@ Resources should be checked for potential orphaned state.
 import pytest
 from botocore.exceptions import ClientError
 
-from terraform_drift.test_helpers import create_orphaned_resource_tests
-from repo_utils import REPO_ROOT
 
-
-SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
+pytestmark = pytest.mark.layer(4)
 
 
 class TestNoOrphanedLambdaFunctions:

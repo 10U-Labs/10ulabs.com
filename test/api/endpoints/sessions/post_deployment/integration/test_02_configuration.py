@@ -4,8 +4,9 @@ Configuration tests verify that resources have correct settings.
 Assumes existence tests passed.
 """
 import pytest
-from botocore.exceptions import ClientError
 
+
+pytestmark = pytest.mark.layer(2)
 
 
 class TestHandlerLambdaConfiguration:

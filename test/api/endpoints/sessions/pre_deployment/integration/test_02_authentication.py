@@ -6,6 +6,8 @@ No authorization or resource checks are performed.
 import pytest
 
 
+pytestmark = pytest.mark.layer(2)
+
 
 class TestAwsAuthentication:
     """Tests for AWS authentication."""

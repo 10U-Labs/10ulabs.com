@@ -7,6 +7,8 @@ import pytest
 from botocore.exceptions import ClientError
 
 
+pytestmark = pytest.mark.layer(3)
+
 
 class TestIamAuthorization:
     """Tests for IAM inspection authorization."""
