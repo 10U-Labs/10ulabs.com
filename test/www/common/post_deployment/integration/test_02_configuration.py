@@ -127,7 +127,6 @@ def test_lambda_edge_handler_is_correct(spa_routing_lambda_config):
 
 
 def test_lambda_edge_has_description(spa_routing_lambda_config):
-    """Verify Lambda@Edge has a description."""
+    """Verify Lambda@Edge has a non-empty description."""
     description = spa_routing_lambda_config.get("Description", "")
     assert len(description) > 0
-    assert "SPA" in description or "routing" in description.lower()

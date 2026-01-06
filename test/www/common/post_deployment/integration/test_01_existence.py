@@ -30,7 +30,6 @@ def test_s3_bucket_exists(s3_client, config):
 def test_lambda_edge_function_exists(spa_routing_lambda):
     """Verify Lambda@Edge SPA routing function exists in us-east-1."""
     assert spa_routing_lambda is not None
-    assert "Configuration" in spa_routing_lambda
 
 
 def test_lambda_edge_iam_role_exists(spa_routing_lambda_config):

@@ -117,12 +117,19 @@ def test_ads_txt_accessible(website_url):
     assert response.status_code == 200
 
 
-def test_assets_js_returns_javascript_content_type(website_response, website_url):
-    """Test that /assets/*.js returns JavaScript content, not HTML fallback.
+def test_assets_js_returns_200_status(website_response, website_url):
+    """Test that /assets/*.js returns 200 status code."""
+    import re
+    html = website_response.text
+    js_match = re.search(r'src="(/assets/[^"]+\.js)"', html)
+    if js_match:
+        js_path = js_match.group(1)
+        response = requests.get(f"{website_url}{js_path}", timeout=30)
+        assert response.status_code == 200
 
-    This prevents the bug where assets are not found and the SPA fallback
-    serves index.html instead of the actual JavaScript bundle.
-    """
+
+def test_assets_js_returns_javascript_content_type(website_response, website_url):
+    """Test that /assets/*.js returns JavaScript content-type, not HTML fallback."""
     import re
     html = website_response.text
     js_match = re.search(r'src="(/assets/[^"]+\.js)"', html)
@@ -130,15 +137,22 @@ def test_assets_js_returns_javascript_content_type(website_response, website_url
         js_path = js_match.group(1)
         response = requests.get(f"{website_url}{js_path}", timeout=30)
         content_type = response.headers.get("Content-Type", "")
-        assert response.status_code == 200, f"JS asset {js_path} returned {response.status_code}"
-        assert "javascript" in content_type.lower(), (
-            f"JS asset {js_path} returned {content_type}, expected JavaScript. "
-            "This indicates the Lambda@Edge /assets/* rewrite is not working."
-        )
+        assert "javascript" in content_type.lower()
+
+
+def test_assets_css_returns_200_status(website_response, website_url):
+    """Test that /assets/*.css returns 200 status code."""
+    import re
+    html = website_response.text
+    css_match = re.search(r'href="(/assets/[^"]+\.css)"', html)
+    if css_match:
+        css_path = css_match.group(1)
+        response = requests.get(f"{website_url}{css_path}", timeout=30)
+        assert response.status_code == 200
 
 
 def test_assets_css_returns_css_content_type(website_response, website_url):
-    """Test that /assets/*.css returns CSS content, not HTML fallback."""
+    """Test that /assets/*.css returns CSS content-type, not HTML fallback."""
     import re
     html = website_response.text
     css_match = re.search(r'href="(/assets/[^"]+\.css)"', html)
@@ -146,8 +160,4 @@ def test_assets_css_returns_css_content_type(website_response, website_url):
         css_path = css_match.group(1)
         response = requests.get(f"{website_url}{css_path}", timeout=30)
         content_type = response.headers.get("Content-Type", "")
-        assert response.status_code == 200, f"CSS asset {css_path} returned {response.status_code}"
-        assert "css" in content_type.lower(), (
-            f"CSS asset {css_path} returned {content_type}, expected CSS. "
-            "This indicates the Lambda@Edge /assets/* rewrite is not working."
-        )
+        assert "css" in content_type.lower()

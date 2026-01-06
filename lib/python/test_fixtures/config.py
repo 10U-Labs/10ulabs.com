@@ -100,6 +100,11 @@ def create_website_config(
     website_locals = parse_locals_file(locals_path, shared_config)
     domain_name = shared_config.get('domain_name', '')
 
+    # Compute resource_prefix: shared prefix + "Website"
+    # This handles the Terraform interpolation: "${module.common.resource_prefix}Website"
+    base_prefix = shared_config.get('resource_prefix', '')
+    resource_prefix = f"{base_prefix}Website" if base_prefix else ''
+
     return {
         'aws_region': shared_config['aws_region'],
         'aws_account_id': website_locals.get('aws_account_id', ''),
@@ -112,6 +117,6 @@ def create_website_config(
             f"{shared_config.get('github_org', '')}/"
             f"{shared_config.get('name_for_github_repo', '')}"
         ),
-        'resource_prefix': website_locals.get('resource_prefix', ''),
+        'resource_prefix': resource_prefix,
         'hosted_zone_id': hosted_zone_id,
     }
