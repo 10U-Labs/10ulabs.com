@@ -24,7 +24,7 @@ def create_website_fixtures() -> Tuple:
         return f"https://{config['website_fqdn']}"
 
     @pytest.fixture(name="website_response", scope="module")
-    def _website_response_fixture(website_url):  # pylint: disable=redefined-outer-name
+    def _website_response_fixture(website_url):
         """Fetch and return the website homepage response."""
         return requests.get(website_url, timeout=30)
 
