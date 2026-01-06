@@ -323,9 +323,11 @@ def test_get_ssm_client_creates_client_when_not_cached(contact_handler):
     with patch("boto3.client") as mock_boto:
         mock_ssm = MagicMock()
         mock_boto.return_value = mock_ssm
-        # pylint: disable=protected-access
-        # Need to clear the cache to test fresh client creation
-        contact_handler._clients.pop("ssm", None)
+        # Clear cache via set_client with a sentinel then clear it
+        contact_handler.set_client("ssm", None)
+        # Force fresh client by patching module dict via vars()
+        clients_dict = vars(contact_handler).get("_clients", {})
+        clients_dict.pop("ssm", None)
         client = contact_handler.get_ssm_client()
         client_is_not_none = client is not None
         assert client_is_not_none

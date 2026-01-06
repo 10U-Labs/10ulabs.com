@@ -18,64 +18,70 @@ ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact_submissions"
 LAMBDA_DIR = ENDPOINT_SRC / "lambda"
 
 
+def _get_terraform_handler():
+    """Extract handler value from lambda.tf."""
+    lambda_tf_path = ENDPOINT_SRC / "lambda.tf"
+    content = lambda_tf_path.read_text()
+    match = re.search(r'handler\s*=\s*"([^"]+)"', content)
+    return match.group(1) if match else None
+
+
 def test_lambda_handler_function_exists():
     """Verify Lambda handler.py exports a handler function."""
     handler_path = LAMBDA_DIR / "handler.py"
     content = handler_path.read_text()
     has_handler = "def handler(" in content
-    assert has_handler, (
-        "handler.py must export a 'handler' function. "
-        "Terraform expects handler.handler as the entry point."
-    )
+    assert has_handler
 
 
-def test_terraform_handler_matches_lambda_export():
-    """Verify Terraform handler config matches Lambda export."""
-    lambda_tf_path = ENDPOINT_SRC / "lambda.tf"
-    content = lambda_tf_path.read_text()
+def test_terraform_lambda_tf_has_handler_config():
+    """Verify lambda.tf has a handler configuration."""
+    terraform_handler = _get_terraform_handler()
+    handler_is_configured = terraform_handler is not None
+    assert handler_is_configured
 
-    # Extract handler value from Terraform
-    match = re.search(r'handler\s*=\s*"([^"]+)"', content)
-    terraform_handler = match.group(1) if match else None
-    assert terraform_handler is not None, "Could not find handler in lambda.tf"
 
-    # Parse file.function format
-    parts = terraform_handler.split(".")
+def test_terraform_handler_has_correct_format():
+    """Verify Terraform handler is in file.function format."""
+    terraform_handler = _get_terraform_handler()
+    parts = terraform_handler.split(".") if terraform_handler else []
     handler_has_two_parts = len(parts) == 2
-    assert handler_has_two_parts, (
-        f"Handler '{terraform_handler}' should be in format 'file.function'"
-    )
+    assert handler_has_two_parts
 
+
+def test_terraform_handler_file_exists():
+    """Verify the file referenced by Terraform handler exists."""
+    terraform_handler = _get_terraform_handler()
+    parts = terraform_handler.split(".") if terraform_handler else []
+    handler_file = parts[0] if len(parts) == 2 else None
+    handler_py_path = LAMBDA_DIR / f"{handler_file}.py" if handler_file else None
+    handler_file_exists = handler_py_path.exists() if handler_py_path else False
+    assert handler_file_exists
+
+
+def test_terraform_handler_function_exists_in_file():
+    """Verify the function referenced by Terraform handler exists."""
+    terraform_handler = _get_terraform_handler()
+    parts = terraform_handler.split(".") if terraform_handler else []
+    if len(parts) != 2:
+        pytest.skip("Handler format invalid")
     handler_file, handler_function = parts
-
-    # Verify the file exists
     handler_py_path = LAMBDA_DIR / f"{handler_file}.py"
-    handler_file_exists = handler_py_path.exists()
-    assert handler_file_exists, (
-        f"Terraform references {handler_file}.py but file does not exist at "
-        f"{handler_py_path}"
-    )
-
-    # Verify the function exists in the file
     handler_content = handler_py_path.read_text()
     function_pattern = rf"def {handler_function}\s*\("
     function_exists = re.search(function_pattern, handler_content) is not None
-    assert function_exists, (
-        f"Terraform expects function '{handler_function}' in {handler_file}.py "
-        f"but it was not found"
-    )
+    assert function_exists
 
 
 def test_lambda_directory_exists():
     """Verify Lambda source directory exists."""
     lambda_dir_exists = LAMBDA_DIR.exists()
-    assert lambda_dir_exists, f"Lambda directory not found at {LAMBDA_DIR}"
+    assert lambda_dir_exists
 
 
-def test_terraform_files_exist():
-    """Verify required Terraform files exist."""
-    required_files = ["lambda.tf", "iam.tf", "variables.tf"]
-    for tf_file in required_files:
-        tf_path = ENDPOINT_SRC / tf_file
-        file_exists = tf_path.exists()
-        assert file_exists, f"Required Terraform file not found: {tf_path}"
+@pytest.mark.parametrize("tf_file", ["lambda.tf", "iam.tf", "variables.tf"])
+def test_terraform_file_exists(tf_file):
+    """Verify required Terraform file exists."""
+    tf_path = ENDPOINT_SRC / tf_file
+    file_exists = tf_path.exists()
+    assert file_exists
