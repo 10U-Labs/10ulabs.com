@@ -100,3 +100,34 @@ def test_s3_bucket_logging_target_is_central_logs(s3_client, config):
     response = s3_client.get_bucket_logging(Bucket=config["website_bucket_name"])
     target_bucket = response["LoggingEnabled"]["TargetBucket"]
     assert config["central_logs_bucket"] in target_bucket
+
+
+def test_lambda_edge_runtime_is_python312(spa_routing_lambda_config):
+    """Verify Lambda@Edge uses Python 3.12 runtime."""
+    runtime = spa_routing_lambda_config.get("Runtime", "")
+    assert runtime == "python3.12"
+
+
+def test_lambda_edge_timeout_is_5_seconds(spa_routing_lambda_config):
+    """Verify Lambda@Edge timeout is 5 seconds (Lambda@Edge limit)."""
+    timeout = spa_routing_lambda_config.get("Timeout", 0)
+    assert timeout == 5
+
+
+def test_lambda_edge_memory_is_128mb(spa_routing_lambda_config):
+    """Verify Lambda@Edge memory is 128 MB."""
+    memory = spa_routing_lambda_config.get("MemorySize", 0)
+    assert memory == 128
+
+
+def test_lambda_edge_handler_is_correct(spa_routing_lambda_config):
+    """Verify Lambda@Edge handler is spa_routing.handler."""
+    handler = spa_routing_lambda_config.get("Handler", "")
+    assert handler == "spa_routing.handler"
+
+
+def test_lambda_edge_has_description(spa_routing_lambda_config):
+    """Verify Lambda@Edge has a description."""
+    description = spa_routing_lambda_config.get("Description", "")
+    assert len(description) > 0
+    assert "SPA" in description or "routing" in description.lower()

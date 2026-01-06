@@ -1,4 +1,5 @@
 """Pytest fixtures for www_common post-deployment integration tests."""
+import boto3
 import pytest
 
 
@@ -40,3 +41,22 @@ def public_access_block_fixture(s3_client, config):
     """Get S3 bucket public access block configuration."""
     response = s3_client.get_public_access_block(Bucket=config["website_bucket_name"])
     return response["PublicAccessBlockConfiguration"]
+
+
+@pytest.fixture(name="lambda_client_us_east_1", scope="module")
+def lambda_client_us_east_1_fixture():
+    """Create a Lambda client for us-east-1 (required for Lambda@Edge)."""
+    return boto3.client("lambda", region_name="us-east-1")
+
+
+@pytest.fixture(name="spa_routing_lambda", scope="module")
+def spa_routing_lambda_fixture(lambda_client_us_east_1, config):
+    """Get the SPA routing Lambda function configuration."""
+    function_name = f"{config['resource_prefix']}SpaRouting"
+    return lambda_client_us_east_1.get_function(FunctionName=function_name)
+
+
+@pytest.fixture(name="spa_routing_lambda_config", scope="module")
+def spa_routing_lambda_config_fixture(spa_routing_lambda):
+    """Get the SPA routing Lambda function configuration details."""
+    return spa_routing_lambda["Configuration"]
