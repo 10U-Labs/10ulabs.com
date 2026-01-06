@@ -33,16 +33,13 @@ TestNamingConventions = create_naming_convention_tests(
 )
 
 
-class TestHealthLambdaTimeout:  # pylint: disable=too-few-public-methods
-    """Health-specific Lambda timeout configuration test."""
-
-    def test_handler_has_10_second_timeout(self, lambda_client, config):
-        """Verify Lambda function has 10 second timeout."""
-        function_name = config.get(
-            'health_handler_function_name', 'TenULabsHealthHandler'
-        )
-        response = lambda_client.get_function(FunctionName=function_name)
-        timeout = response["Configuration"]["Timeout"]
-        assert timeout == 10, (
-            f"Lambda timeout should be 10 seconds, got: {timeout}"
-        )
+def test_health_handler_has_10_second_timeout(lambda_client, config):
+    """Verify Lambda function has 10 second timeout."""
+    function_name = config.get(
+        'health_handler_function_name', 'TenULabsHealthHandler'
+    )
+    response = lambda_client.get_function(FunctionName=function_name)
+    timeout = response["Configuration"]["Timeout"]
+    assert timeout == 10, (
+        f"Lambda timeout should be 10 seconds, got: {timeout}"
+    )
