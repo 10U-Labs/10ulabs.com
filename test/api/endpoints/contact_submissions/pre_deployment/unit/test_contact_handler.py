@@ -1,5 +1,6 @@
 """Unit tests for contact form Lambda handler."""
 import json
+import urllib.error
 from unittest.mock import patch, MagicMock
 from lambda_response import parse_response_body
 
@@ -301,3 +302,157 @@ def test_handler_returns_404_for_unknown_path(contact_handler, lambda_context):
     }
     response = contact_handler.handler(event, lambda_context)
     assert response['statusCode'] == 404
+
+
+def test_get_header_case_insensitive_with_none_value(contact_handler):
+    """Test that None header value returns empty string."""
+    headers = {"X-Test-Header": None}
+    result = contact_handler.get_header_case_insensitive(headers, "x-test-header")
+    assert result == ''
+
+
+def test_get_header_case_insensitive_header_not_found(contact_handler):
+    """Test that missing header returns empty string."""
+    headers = {"X-Some-Other-Header": "value"}
+    result = contact_handler.get_header_case_insensitive(headers, "x-test-header")
+    assert result == ''
+
+
+def test_get_ssm_client_creates_client_when_not_cached(contact_handler):
+    """Test that get_ssm_client creates a client when not cached."""
+    with patch("boto3.client") as mock_boto:
+        mock_ssm = MagicMock()
+        mock_boto.return_value = mock_ssm
+        # pylint: disable=protected-access
+        # Need to clear the cache to test fresh client creation
+        contact_handler._clients.pop("ssm", None)
+        client = contact_handler.get_ssm_client()
+        client_is_not_none = client is not None
+        assert client_is_not_none
+
+
+def test_set_client_stores_client_retrievable_via_getter(contact_handler):
+    """Test that set_client stores a client that can be retrieved."""
+    mock_client = MagicMock()
+    # Use set_client to override the ssm client
+    contact_handler.set_client("ssm", mock_client)
+    retrieved = contact_handler.get_ssm_client()
+    assert retrieved is mock_client
+
+
+def test_get_recaptcha_secret_returns_secret_from_ssm(contact_handler):
+    """Test that get_recaptcha_secret returns secret from SSM."""
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {
+        "Parameter": {"Value": "test-secret-key"}
+    }
+    with patch.object(contact_handler, "get_ssm_client", return_value=mock_ssm):
+        with patch.dict("os.environ", {"RECAPTCHA_SECRET_PARAMETER_NAME": "/test/param"}):
+            result = contact_handler.get_recaptcha_secret()
+            assert result == "test-secret-key"
+
+
+def test_get_recaptcha_secret_returns_empty_when_no_parameter_name(contact_handler):
+    """Test that get_recaptcha_secret returns empty when parameter name not set."""
+    with patch.dict("os.environ", {"RECAPTCHA_SECRET_PARAMETER_NAME": ""}):
+        result = contact_handler.get_recaptcha_secret()
+        assert result == ""
+
+
+def test_get_recaptcha_secret_returns_empty_on_client_error(contact_handler):
+    """Test that get_recaptcha_secret returns empty on ClientError."""
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.side_effect = ClientError(
+        {"Error": {"Code": "ParameterNotFound", "Message": "Not found"}},
+        "GetParameter"
+    )
+    with patch.object(contact_handler, "get_ssm_client", return_value=mock_ssm):
+        with patch.dict("os.environ", {"RECAPTCHA_SECRET_PARAMETER_NAME": "/test/param"}):
+            result = contact_handler.get_recaptcha_secret()
+            assert result == ""
+
+
+def test_get_recaptcha_secret_returns_empty_on_key_error(contact_handler):
+    """Test that get_recaptcha_secret returns empty on KeyError."""
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {"Parameter": {}}  # Missing 'Value' key
+    with patch.object(contact_handler, "get_ssm_client", return_value=mock_ssm):
+        with patch.dict("os.environ", {"RECAPTCHA_SECRET_PARAMETER_NAME": "/test/param"}):
+            result = contact_handler.get_recaptcha_secret()
+            assert result == ""
+
+
+def test_verify_recaptcha_returns_true_on_success(contact_handler):
+    """Test that verify_recaptcha returns true on successful verification."""
+    mock_response = MagicMock()
+    mock_response.read.return_value = b'{"success": true, "score": 0.9}'
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+    with patch("urllib.request.urlopen", return_value=mock_response):
+        result = contact_handler.verify_recaptcha("test-token", "test-secret")
+        assert result is True
+
+
+def test_verify_recaptcha_returns_false_on_low_score(contact_handler):
+    """Test that verify_recaptcha returns false on low score."""
+    mock_response = MagicMock()
+    mock_response.read.return_value = b'{"success": true, "score": 0.3}'
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+    with patch("urllib.request.urlopen", return_value=mock_response):
+        result = contact_handler.verify_recaptcha("test-token", "test-secret")
+        result_is_false = result is False
+        assert result_is_false
+
+
+def test_verify_recaptcha_returns_false_on_success_false(contact_handler):
+    """Test that verify_recaptcha returns false when success is false."""
+    mock_response = MagicMock()
+    mock_response.read.return_value = b'{"success": false, "score": 0.9}'
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+    with patch("urllib.request.urlopen", return_value=mock_response):
+        result = contact_handler.verify_recaptcha("test-token", "test-secret")
+        result_is_false = result is False
+        assert result_is_false
+
+
+def test_verify_recaptcha_returns_false_on_url_error(contact_handler):
+    """Test that verify_recaptcha returns false on URLError."""
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.URLError("Connection failed")
+        result = contact_handler.verify_recaptcha("test-token", "test-secret")
+        result_is_false = result is False
+        assert result_is_false
+
+
+def test_verify_recaptcha_returns_false_on_http_error(contact_handler):
+    """Test that verify_recaptcha returns false on HTTPError."""
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            "http://test", 500, "Server Error", {}, None
+        )
+        result = contact_handler.verify_recaptcha("test-token", "test-secret")
+        result_is_false = result is False
+        assert result_is_false
+
+
+def test_verify_recaptcha_returns_false_on_os_error(contact_handler):
+    """Test that verify_recaptcha returns false on OSError."""
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_urlopen.side_effect = OSError("Network error")
+        result = contact_handler.verify_recaptcha("test-token", "test-secret")
+        result_is_false = result is False
+        assert result_is_false
+
+
+def test_verify_recaptcha_returns_false_on_json_decode_error(contact_handler):
+    """Test that verify_recaptcha returns false on invalid JSON."""
+    mock_response = MagicMock()
+    mock_response.read.return_value = b'not valid json'
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+    with patch("urllib.request.urlopen", return_value=mock_response):
+        result = contact_handler.verify_recaptcha("test-token", "test-secret")
+        result_is_false = result is False
+        assert result_is_false

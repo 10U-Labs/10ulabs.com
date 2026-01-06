@@ -1,14 +1,16 @@
-"""Layer 3: State tests for contact endpoint pre-deployment.
+"""Layer 4: State tests for contact endpoint pre-deployment.
 
 Tests that Terraform state matches AWS reality. Resources Terraform plans
 to create should not already exist in AWS.
 
-Six-layer testing model:
-- Layer 3: State - Terraform state matches AWS reality
+Seven-layer testing model:
+- Layer 4: State - Terraform state matches AWS reality
 """
-
+import pytest
 from repo_utils import REPO_ROOT
 from terraform_drift.test_helpers import create_orphaned_resource_tests
+
+pytestmark = pytest.mark.layer(4)
 
 
 
