@@ -8,5 +8,5 @@ ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "rack_configurations"
 
 TestLambdaLifecycle = create_lambda_lifecycle_tests(
     endpoint_src=ENDPOINT_SRC,
-    tf_files=["lambda.tf", "analytics.tf"],
+    tf_files=["lambda.tf"],
 )

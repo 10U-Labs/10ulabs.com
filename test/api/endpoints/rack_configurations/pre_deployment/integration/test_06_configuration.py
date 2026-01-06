@@ -1,10 +1,10 @@
-"""Layer 5: Configuration tests for rack_configurations endpoint pre-deployment.
+"""Layer 6: Configuration tests for rack_configurations endpoint pre-deployment.
 
 Tests that prerequisite resources are configured correctly.
 Assumes existence passed. Not capability - just configuration.
 
-Six-layer testing model:
-- Layer 5: Configuration - Prerequisites configured correctly
+Seven-layer testing model:
+- Layer 6: Configuration - Prerequisites configured correctly
 """
 
 from test_fixtures.integration import skip_if_api_gateway_unavailable
@@ -13,7 +13,7 @@ from test_fixtures.integration import skip_if_api_gateway_unavailable
 
 
 class TestAPIGatewayConfiguration:
-    """Layer 5: Verify API Gateway is configured correctly."""
+    """Layer 6: Verify API Gateway is configured correctly."""
 
     def test_api_gateway_is_regional(self, api_gateway_info):
         """Verify API Gateway is configured as regional endpoint."""

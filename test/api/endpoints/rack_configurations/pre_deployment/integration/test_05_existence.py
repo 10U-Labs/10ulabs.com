@@ -1,10 +1,10 @@
-"""Layer 4: Existence tests for rack_configurations endpoint pre-deployment.
+"""Layer 5: Existence tests for rack_configurations endpoint pre-deployment.
 
 Tests that prerequisite resources from OTHER workflows exist.
 Not configuration, not capability - just existence.
 
-Six-layer testing model:
-- Layer 4: Existence - Prerequisite resources actually exist
+Seven-layer testing model:
+- Layer 5: Existence - Prerequisite resources actually exist
 """
 
 from test_fixtures.integration import (
@@ -18,7 +18,7 @@ from test_fixtures.integration import (
 
 
 class TestAPIBackendPrerequisites:
-    """Layer 4: Verify api_common_routing resources exist."""
+    """Layer 5: Verify api_common_routing resources exist."""
 
     def test_api_common_routing_outputs_provides_gateway_id(self, api_common_routing_outputs):
         """Verify api_common_routing terraform outputs provide api_gateway_id."""

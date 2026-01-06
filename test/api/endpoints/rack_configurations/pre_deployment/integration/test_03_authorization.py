@@ -1,38 +1,38 @@
-"""Layer 2: Authorization tests for rack_configurations endpoint pre-deployment.
+"""Layer 3: Authorization tests for rack_configurations endpoint pre-deployment.
 
 Tests that credentials have permission to INSPECT prerequisite resources.
 Not existence, not capability - just authorization to check.
 
-Six-layer testing model:
-- Layer 2: Authorization - Permission to inspect resources
+Seven-layer testing model:
+- Layer 3: Authorization - Permission to inspect resources
 """
 
 import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration import (
-    Layer2APIGatewayAuthorizationTests,
-    Layer2LambdaAndIAMAuthorizationTests,
+    Layer3APIGatewayAuthorizationTests,
+    Layer3LambdaAndIAMAuthorizationTests,
 )
 
 
 
 
-class TestAPIGatewayAuthorization(Layer2APIGatewayAuthorizationTests):
-    """Layer 2: Verify permission to inspect API Gateway resources.
+class TestAPIGatewayAuthorization(Layer3APIGatewayAuthorizationTests):
+    """Layer 3: Verify permission to inspect API Gateway resources.
 
     All tests inherited from base class.
     """
 
 
-class TestLambdaAndIAMAuthorization(Layer2LambdaAndIAMAuthorizationTests):
-    """Layer 2: Verify permission to inspect Lambda and IAM resources.
+class TestLambdaAndIAMAuthorization(Layer3LambdaAndIAMAuthorizationTests):
+    """Layer 3: Verify permission to inspect Lambda and IAM resources.
 
     All tests inherited from base class.
     """
 
 
 class TestDynamoDBAndS3Authorization:
-    """Layer 2: Verify permission to inspect DynamoDB and S3 resources."""
+    """Layer 3: Verify permission to inspect DynamoDB and S3 resources."""
 
     def test_can_list_tables(self, dynamodb_client):
         """Verify permission to list DynamoDB tables."""

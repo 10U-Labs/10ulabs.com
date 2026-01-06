@@ -10,13 +10,10 @@ RACK_CONFIGURATIONS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "rack_config
 
 IAM_ROLES = (
     extract_iam_role_names(RACK_CONFIGURATIONS_SRC / "iam.tf")
-    + extract_iam_role_names(RACK_CONFIGURATIONS_SRC / "analytics.tf")
+    + extract_iam_role_names(RACK_CONFIGURATIONS_SRC / "backup.tf")
 )
-LAMBDA_FUNCTIONS = (
-    extract_lambda_function_names(RACK_CONFIGURATIONS_SRC / "lambda.tf", use_handler_names=True)
-    + extract_lambda_function_names(
-        RACK_CONFIGURATIONS_SRC / "analytics.tf", use_handler_names=True
-    )
+LAMBDA_FUNCTIONS = extract_lambda_function_names(
+    RACK_CONFIGURATIONS_SRC / "lambda.tf", use_handler_names=True
 )
 
 if IAM_ROLES:

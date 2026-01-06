@@ -1,10 +1,10 @@
-"""Layer 3: State tests for rack_configurations endpoint pre-deployment.
+"""Layer 4: State tests for rack_configurations endpoint pre-deployment.
 
 Tests that Terraform state matches AWS reality. Detects resources that
 exist in AWS but not in state (orphaned) or vice versa.
 
-Six-layer testing model:
-- Layer 3: State - Terraform state matches AWS reality
+Seven-layer testing model:
+- Layer 4: State - Terraform state matches AWS reality
 """
 
 from repo_utils import REPO_ROOT
