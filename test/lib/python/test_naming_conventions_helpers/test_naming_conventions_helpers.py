@@ -55,9 +55,8 @@ class TestCreateIamRoleTests:
         roles = [("bad_role", "TenU-Labs-BadRole")]
         TestClass = create_iam_role_tests(roles)
         instance = TestClass()
-        with pytest.raises(AssertionError) as exc_info:
+        with pytest.raises(AssertionError, match="invalid name"):
             instance.test_iam_role_name_is_pascalcase("bad_role", "TenU-Labs-BadRole")
-        assert "invalid name" in str(exc_info.value)
 
 
 # === create_lambda_function_tests Factory ===
@@ -107,11 +106,10 @@ class TestCreateLambdaFunctionTests:
         functions = [("bad_func", "TenU-Labs-BadFunc")]
         TestClass = create_lambda_function_tests(functions)
         instance = TestClass()
-        with pytest.raises(AssertionError) as exc_info:
+        with pytest.raises(AssertionError, match="invalid name"):
             instance.test_lambda_function_name_is_pascalcase(
                 "bad_func", "TenU-Labs-BadFunc"
             )
-        assert "invalid name" in str(exc_info.value)
 
 
 # === create_sqs_queue_tests Factory ===
@@ -168,15 +166,13 @@ class TestCreateSqsQueueTests:
         queues = [("bad_queue", "TenU-Labs-BadQueue")]
         TestClass = create_sqs_queue_tests(queues)
         instance = TestClass()
-        with pytest.raises(AssertionError) as exc_info:
+        with pytest.raises(AssertionError, match="invalid name"):
             instance.test_sqs_queue_name_is_pascalcase("bad_queue", "TenU-Labs-BadQueue")
-        assert "invalid name" in str(exc_info.value)
 
     def test_test_method_fails_for_invalid_fifo_queue(self):
         """create_sqs_queue_tests test fails for invalid FIFO queue name."""
         queues = [("bad_fifo", "Bad-Queue.fifo")]
         TestClass = create_sqs_queue_tests(queues)
         instance = TestClass()
-        with pytest.raises(AssertionError) as exc_info:
+        with pytest.raises(AssertionError, match="invalid name"):
             instance.test_sqs_queue_name_is_pascalcase("bad_fifo", "Bad-Queue.fifo")
-        assert "invalid name" in str(exc_info.value)

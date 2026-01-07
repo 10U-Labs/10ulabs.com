@@ -28,6 +28,37 @@ def _create_mock_test_context(layer_id, passed=True):
     return mock_item, mock_call, mock_outcome
 
 
+def _create_multi_marker_context(layer_ids, passed=True):
+    """Create mock context with multiple layer markers."""
+    mock_item = MagicMock()
+    markers = [MagicMock(args=(lid,)) for lid in layer_ids]
+    mock_item.iter_markers.return_value = markers
+    mock_call = MagicMock()
+    mock_result = MagicMock()
+    mock_result.when = 'call'
+    mock_result.passed = passed
+    mock_result.failed = not passed
+    mock_outcome = MagicMock()
+    mock_outcome.get_result.return_value = mock_result
+    return mock_item, mock_call, mock_outcome
+
+
+def _create_skipped_test_context(layer_id):
+    """Create mock context for a skipped test (passed=False, failed=False)."""
+    mock_item = MagicMock()
+    mock_marker = MagicMock()
+    mock_marker.args = (layer_id,)
+    mock_item.iter_markers.return_value = [mock_marker]
+    mock_call = MagicMock()
+    mock_result = MagicMock()
+    mock_result.when = 'call'
+    mock_result.passed = False
+    mock_result.failed = False
+    mock_outcome = MagicMock()
+    mock_outcome.get_result.return_value = mock_result
+    return mock_item, mock_call, mock_outcome
+
+
 def _run_makereport(mock_item, mock_call, mock_outcome):
     """Execute the pytest_runtest_makereport generator."""
     gen = pytest_layers.pytest_runtest_makereport(mock_item, mock_call)
@@ -163,52 +194,41 @@ class TestLayerResultsTracking:
 
         assert pytest_layers._layer_results[5]['passed'] == 3
 
-    def test_multiple_layer_markers_with_failed_result(self):
-        """Test that failed result iterates through multiple layer markers."""
+    def test_multiple_layer_markers_with_failed_result_first_layer(self):
+        """Test that first layer increments failed count with multiple markers."""
         pytest_layers._layer_results.clear()
-
-        # Create mock with multiple layer markers
-        mock_item = MagicMock()
-        mock_marker1 = MagicMock()
-        mock_marker1.args = (8,)
-        mock_marker2 = MagicMock()
-        mock_marker2.args = (9,)
-        mock_item.iter_markers.return_value = [mock_marker1, mock_marker2]
-
-        mock_call = MagicMock()
-        mock_result = MagicMock()
-        mock_result.when = 'call'
-        mock_result.passed = False
-        mock_result.failed = True
-        mock_outcome = MagicMock()
-        mock_outcome.get_result.return_value = mock_result
-
+        mock_item, mock_call, mock_outcome = _create_multi_marker_context(
+            layer_ids=[8, 9], passed=False
+        )
         _run_makereport(mock_item, mock_call, mock_outcome)
-
-        # Both layers should have failed count incremented
         assert pytest_layers._layer_results[8]['failed'] == 1
+
+    def test_multiple_layer_markers_with_failed_result_second_layer(self):
+        """Test that second layer increments failed count with multiple markers."""
+        pytest_layers._layer_results.clear()
+        mock_item, mock_call, mock_outcome = _create_multi_marker_context(
+            layer_ids=[8, 9], passed=False
+        )
+        _run_makereport(mock_item, mock_call, mock_outcome)
         assert pytest_layers._layer_results[9]['failed'] == 1
 
-    def test_skipped_test_does_not_increment_counters(self):
-        """Test that skipped tests (passed=False, failed=False) don't increment."""
+    def test_skipped_test_layer_exists_in_results(self):
+        """Test that skipped tests create layer entry in results."""
         pytest_layers._layer_results.clear()
-
-        mock_item = MagicMock()
-        mock_marker = MagicMock()
-        mock_marker.args = (10,)
-        mock_item.iter_markers.return_value = [mock_marker]
-
-        mock_call = MagicMock()
-        mock_result = MagicMock()
-        mock_result.when = 'call'
-        mock_result.passed = False
-        mock_result.failed = False  # Skipped test case
-        mock_outcome = MagicMock()
-        mock_outcome.get_result.return_value = mock_result
-
+        mock_item, mock_call, mock_outcome = _create_skipped_test_context(layer_id=10)
         _run_makereport(mock_item, mock_call, mock_outcome)
-
-        # Layer should exist but both counters should be 0
         assert 10 in pytest_layers._layer_results
-        assert pytest_layers._layer_results[10]['passed'] == 0
-        assert pytest_layers._layer_results[10]['failed'] == 0
+
+    def test_skipped_test_does_not_increment_passed_counter(self):
+        """Test that skipped tests don't increment passed counter."""
+        pytest_layers._layer_results.clear()
+        mock_item, mock_call, mock_outcome = _create_skipped_test_context(layer_id=11)
+        _run_makereport(mock_item, mock_call, mock_outcome)
+        assert pytest_layers._layer_results[11]['passed'] == 0
+
+    def test_skipped_test_does_not_increment_failed_counter(self):
+        """Test that skipped tests don't increment failed counter."""
+        pytest_layers._layer_results.clear()
+        mock_item, mock_call, mock_outcome = _create_skipped_test_context(layer_id=12)
+        _run_makereport(mock_item, mock_call, mock_outcome)
+        assert pytest_layers._layer_results[12]['failed'] == 0

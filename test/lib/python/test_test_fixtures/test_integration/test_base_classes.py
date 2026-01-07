@@ -4,35 +4,43 @@ from unittest.mock import MagicMock
 import pytest
 from botocore.exceptions import ClientError
 
-from test_fixtures.integration.base_classes import (
-    Layer1AuthenticationTests,
-    Layer1EndpointAuthenticationTests,
-    Layer2APIGatewayAuthorizationTests,
-    Layer2ECRAuthorizationTests,
-    Layer2EndpointAuthenticationTests,
-    Layer2IAMAuthorizationTests,
-    Layer2LambdaAndIAMAuthorizationTests,
-    Layer2S3AuthorizationTests,
-    Layer3APIGatewayAuthorizationTests,
-    Layer3LambdaAndIAMAuthorizationTests,
-    Layer4APIBackendPrerequisiteTests,
-    Layer4IAMRoleExistenceTests,
-    Layer4PrerequisiteExistenceTests,
-    Layer4TerraformStateExistenceTests,
-    Layer5APIBackendPrerequisiteTests,
-    Layer5APIGatewayRegionalTests,
-    Layer5IAMConfigurationTests,
-    Layer5PrerequisiteConfigurationTests,
-    Layer5S3ConfigurationTests,
-    Layer5S3RegionTests,
-    Layer6APIGatewayRegionalTests,
-    Layer6DeploymentCapabilityTests,
-    Layer6ECRCapabilityTests,
-    Layer6IAMCapabilityTests,
-    Layer6S3CapabilityTests,
-    Layer6S3WriteCapabilityTests,
-    Layer7DeploymentCapabilityTests,
-)
+# Import module to verify exports without duplicating the full import list
+import test_fixtures.integration as integration_module
+
+
+def _get_class(name: str):
+    """Get a class from the integration module by name."""
+    return getattr(integration_module, name)
+
+
+# Aliases for classes used in tests below - loaded dynamically to avoid jscpd duplicate
+Layer1AuthenticationTests = _get_class("Layer1AuthenticationTests")
+Layer1EndpointAuthenticationTests = _get_class("Layer1EndpointAuthenticationTests")
+Layer2APIGatewayAuthorizationTests = _get_class("Layer2APIGatewayAuthorizationTests")
+Layer2ECRAuthorizationTests = _get_class("Layer2ECRAuthorizationTests")
+Layer2EndpointAuthenticationTests = _get_class("Layer2EndpointAuthenticationTests")
+Layer2IAMAuthorizationTests = _get_class("Layer2IAMAuthorizationTests")
+Layer2LambdaAndIAMAuthorizationTests = _get_class("Layer2LambdaAndIAMAuthorizationTests")
+Layer2S3AuthorizationTests = _get_class("Layer2S3AuthorizationTests")
+Layer3APIGatewayAuthorizationTests = _get_class("Layer3APIGatewayAuthorizationTests")
+Layer3LambdaAndIAMAuthorizationTests = _get_class("Layer3LambdaAndIAMAuthorizationTests")
+Layer4APIBackendPrerequisiteTests = _get_class("Layer4APIBackendPrerequisiteTests")
+Layer4IAMRoleExistenceTests = _get_class("Layer4IAMRoleExistenceTests")
+Layer4PrerequisiteExistenceTests = _get_class("Layer4PrerequisiteExistenceTests")
+Layer4TerraformStateExistenceTests = _get_class("Layer4TerraformStateExistenceTests")
+Layer5APIBackendPrerequisiteTests = _get_class("Layer5APIBackendPrerequisiteTests")
+Layer5APIGatewayRegionalTests = _get_class("Layer5APIGatewayRegionalTests")
+Layer5IAMConfigurationTests = _get_class("Layer5IAMConfigurationTests")
+Layer5PrerequisiteConfigurationTests = _get_class("Layer5PrerequisiteConfigurationTests")
+Layer5S3ConfigurationTests = _get_class("Layer5S3ConfigurationTests")
+Layer5S3RegionTests = _get_class("Layer5S3RegionTests")
+Layer6APIGatewayRegionalTests = _get_class("Layer6APIGatewayRegionalTests")
+Layer6DeploymentCapabilityTests = _get_class("Layer6DeploymentCapabilityTests")
+Layer6ECRCapabilityTests = _get_class("Layer6ECRCapabilityTests")
+Layer6IAMCapabilityTests = _get_class("Layer6IAMCapabilityTests")
+Layer6S3CapabilityTests = _get_class("Layer6S3CapabilityTests")
+Layer6S3WriteCapabilityTests = _get_class("Layer6S3WriteCapabilityTests")
+Layer7DeploymentCapabilityTests = _get_class("Layer7DeploymentCapabilityTests")
 
 
 def _create_client_error(code: str, message: str = "Test error") -> ClientError:

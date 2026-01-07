@@ -84,6 +84,18 @@ class TestNoOrphanedResourcesNoCreates:
         instance.test_no_orphaned_resources()
 
 
+def _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=False):
+    """Configure mocks for a single Lambda function resource."""
+    mock_get_planned.return_value = [
+        {
+            "type": "aws_lambda_function",
+            "name": "MyFunction",
+            "address": "aws_lambda_function.my_func",
+        }
+    ]
+    mock_check_exists.return_value = exists
+
+
 class TestNoOrphanedResourcesNoOrphans:
     """Tests for test_no_orphaned_resources when there are creates but no orphans."""
 
@@ -93,14 +105,7 @@ class TestNoOrphanedResourcesNoOrphans:
         self, mock_get_planned, mock_check_exists
     ):
         """test_no_orphaned_resources passes when planned resources don't exist in AWS."""
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "MyFunction",
-                "address": "aws_lambda_function.my_func",
-            }
-        ]
-        mock_check_exists.return_value = False
+        _setup_single_resource_mock(mock_get_planned, mock_check_exists)
 
         TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
         instance = TestClass()
@@ -114,14 +119,7 @@ class TestNoOrphanedResourcesNoOrphans:
         self, mock_get_planned, mock_check_exists
     ):
         """test_no_orphaned_resources calls check_resource_exists with correct type."""
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "MyFunction",
-                "address": "aws_lambda_function.my_func",
-            }
-        ]
-        mock_check_exists.return_value = False
+        _setup_single_resource_mock(mock_get_planned, mock_check_exists)
 
         TestClass = create_orphaned_resource_tests(
             Path("/tmp/terraform"), region="us-west-2"
@@ -137,14 +135,7 @@ class TestNoOrphanedResourcesNoOrphans:
         self, mock_get_planned, mock_check_exists
     ):
         """test_no_orphaned_resources calls check_resource_exists with correct name."""
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "MyFunction",
-                "address": "aws_lambda_function.my_func",
-            }
-        ]
-        mock_check_exists.return_value = False
+        _setup_single_resource_mock(mock_get_planned, mock_check_exists)
 
         TestClass = create_orphaned_resource_tests(
             Path("/tmp/terraform"), region="us-west-2"
@@ -160,14 +151,7 @@ class TestNoOrphanedResourcesNoOrphans:
         self, mock_get_planned, mock_check_exists
     ):
         """test_no_orphaned_resources calls check_resource_exists with correct region."""
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "MyFunction",
-                "address": "aws_lambda_function.my_func",
-            }
-        ]
-        mock_check_exists.return_value = False
+        _setup_single_resource_mock(mock_get_planned, mock_check_exists)
 
         TestClass = create_orphaned_resource_tests(
             Path("/tmp/terraform"), region="us-west-2"

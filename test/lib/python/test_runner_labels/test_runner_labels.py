@@ -950,52 +950,88 @@ class TestGetRunnerTypeFromLabelsExtended:
         result = get_runner_type_from_labels(labels)
         assert len(result) == 2
 
-    def test_ecs_non_e2e_returns_fargate(self):
-        """get_runner_type_from_labels returns fargate for ECS non-e2e."""
+    def test_ecs_non_e2e_returns_fargate_runner_type(self):
+        """get_runner_type_from_labels returns fargate runner_type for ECS non-e2e."""
         labels = ["ecs", "fargate", "x86", "spot", "runner-12345"]
-        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        runner_type, _ = get_runner_type_from_labels(labels)
         assert runner_type == "fargate"
+
+    def test_ecs_non_e2e_returns_ecs_endpoint_suffix(self):
+        """get_runner_type_from_labels returns ecs endpoint_suffix for ECS non-e2e."""
+        labels = ["ecs", "fargate", "x86", "spot", "runner-12345"]
+        _, endpoint_suffix = get_runner_type_from_labels(labels)
         assert endpoint_suffix == "ecs"
 
-    def test_ecs_e2e_returns_fargate_e2e(self):
-        """get_runner_type_from_labels returns fargate-e2e for ECS e2e."""
+    def test_ecs_e2e_returns_fargate_e2e_runner_type(self):
+        """get_runner_type_from_labels returns fargate-e2e runner_type for ECS e2e."""
         labels = ["ecs", "fargate", "x86", "spot", "runner-12345", "e2e"]
-        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        runner_type, _ = get_runner_type_from_labels(labels)
         assert runner_type == "fargate-e2e"
+
+    def test_ecs_e2e_returns_ecs_endpoint_suffix(self):
+        """get_runner_type_from_labels returns ecs endpoint_suffix for ECS e2e."""
+        labels = ["ecs", "fargate", "x86", "spot", "runner-12345", "e2e"]
+        _, endpoint_suffix = get_runner_type_from_labels(labels)
         assert endpoint_suffix == "ecs"
 
-    def test_ec2_non_e2e_returns_ec2(self):
-        """get_runner_type_from_labels returns ec2 for EC2 non-e2e."""
+    def test_ec2_non_e2e_returns_ec2_runner_type(self):
+        """get_runner_type_from_labels returns ec2 runner_type for EC2 non-e2e."""
         labels = ["ec2", "general-purpose", "intel", "spot", "runner-12345"]
-        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        runner_type, _ = get_runner_type_from_labels(labels)
         assert runner_type == "ec2"
+
+    def test_ec2_non_e2e_returns_ec2_endpoint_suffix(self):
+        """get_runner_type_from_labels returns ec2 endpoint_suffix for EC2 non-e2e."""
+        labels = ["ec2", "general-purpose", "intel", "spot", "runner-12345"]
+        _, endpoint_suffix = get_runner_type_from_labels(labels)
         assert endpoint_suffix == "ec2"
 
-    def test_ec2_e2e_returns_ec2_e2e(self):
-        """get_runner_type_from_labels returns ec2-e2e for EC2 e2e."""
+    def test_ec2_e2e_returns_ec2_e2e_runner_type(self):
+        """get_runner_type_from_labels returns ec2-e2e runner_type for EC2 e2e."""
         labels = ["ec2", "general-purpose", "intel", "spot", "runner-12345", "e2e"]
-        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        runner_type, _ = get_runner_type_from_labels(labels)
         assert runner_type == "ec2-e2e"
+
+    def test_ec2_e2e_returns_ec2_endpoint_suffix(self):
+        """get_runner_type_from_labels returns ec2 endpoint_suffix for EC2 e2e."""
+        labels = ["ec2", "general-purpose", "intel", "spot", "runner-12345", "e2e"]
+        _, endpoint_suffix = get_runner_type_from_labels(labels)
         assert endpoint_suffix == "ec2"
 
-    def test_invalid_labels_returns_none(self):
-        """get_runner_type_from_labels returns None values for invalid labels."""
+    def test_invalid_labels_returns_none_runner_type(self):
+        """get_runner_type_from_labels returns None runner_type for invalid labels."""
         labels = ["invalid", "labels", "only"]
-        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        runner_type, _ = get_runner_type_from_labels(labels)
         assert runner_type is None
+
+    def test_invalid_labels_returns_none_endpoint_suffix(self):
+        """get_runner_type_from_labels returns None endpoint_suffix for invalid."""
+        labels = ["invalid", "labels", "only"]
+        _, endpoint_suffix = get_runner_type_from_labels(labels)
         assert endpoint_suffix is None
 
-    def test_empty_labels_returns_none(self):
-        """get_runner_type_from_labels returns None values for empty labels."""
+    def test_empty_labels_returns_none_runner_type(self):
+        """get_runner_type_from_labels returns None runner_type for empty labels."""
         labels = []
-        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        runner_type, _ = get_runner_type_from_labels(labels)
         assert runner_type is None
+
+    def test_empty_labels_returns_none_endpoint_suffix(self):
+        """get_runner_type_from_labels returns None endpoint_suffix for empty."""
+        labels = []
+        _, endpoint_suffix = get_runner_type_from_labels(labels)
         assert endpoint_suffix is None
 
-    def test_missing_required_labels_returns_none(self):
-        """get_runner_type_from_labels returns None when labels incomplete."""
+    def test_missing_required_labels_returns_none_runner_type(self):
+        """get_runner_type_from_labels returns None runner_type when incomplete."""
         # Missing runner ID
         labels = ["ecs", "fargate", "x86", "spot"]
-        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        runner_type, _ = get_runner_type_from_labels(labels)
         assert runner_type is None
+
+    def test_missing_required_labels_returns_none_endpoint_suffix(self):
+        """get_runner_type_from_labels returns None endpoint_suffix when incomplete."""
+        # Missing runner ID
+        labels = ["ecs", "fargate", "x86", "spot"]
+        _, endpoint_suffix = get_runner_type_from_labels(labels)
         assert endpoint_suffix is None
