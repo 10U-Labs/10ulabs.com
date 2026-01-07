@@ -609,16 +609,24 @@ class TestAnalyticsJSSessionContext:
         content = (RACK_DESIGNER_DIR / "js" / "analytics.js").read_text()
         assert "referrer:" in content
 
-    def test_analytics_js_collects_screen_dimensions(self):
-        """Test that analytics.js collects screen dimensions."""
+    def test_analytics_js_collects_screen_width(self):
+        """Test that analytics.js collects screen width."""
         content = (RACK_DESIGNER_DIR / "js" / "analytics.js").read_text()
         assert "screen_width:" in content
+
+    def test_analytics_js_collects_screen_height(self):
+        """Test that analytics.js collects screen height."""
+        content = (RACK_DESIGNER_DIR / "js" / "analytics.js").read_text()
         assert "screen_height:" in content
 
-    def test_analytics_js_collects_viewport_dimensions(self):
-        """Test that analytics.js collects viewport dimensions."""
+    def test_analytics_js_collects_viewport_width(self):
+        """Test that analytics.js collects viewport width."""
         content = (RACK_DESIGNER_DIR / "js" / "analytics.js").read_text()
         assert "viewport_width:" in content
+
+    def test_analytics_js_collects_viewport_height(self):
+        """Test that analytics.js collects viewport height."""
+        content = (RACK_DESIGNER_DIR / "js" / "analytics.js").read_text()
         assert "viewport_height:" in content
 
     def test_analytics_js_collects_timezone(self):
