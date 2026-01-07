@@ -61,16 +61,16 @@ class TestS3BucketConfiguration:
                 pytest.skip("Bucket does not exist")
             raise
 
-    def test_s3_bucket_accepts_put_operations(self, s3_client, www_common_outputs):
-        """Verify S3 bucket permissions allow put operations (tested via list)."""
+    def test_s3_bucket_accepts_list_operations(self, s3_client, www_common_outputs):
+        """Verify S3 bucket permissions allow list operations."""
         bucket_name = www_common_outputs.get("bucket_name")
         if not bucket_name:
             pytest.skip("bucket_name output not available")
         try:
             response = s3_client.list_objects_v2(Bucket=bucket_name, MaxKeys=1)
-            # If we can list, we have read access
-            can_list = "Contents" in response or "KeyCount" in response
-            assert can_list or response.get("KeyCount", 0) >= 0
+            # If we can list, we have read access (KeyCount is always present)
+            can_list = "KeyCount" in response
+            assert can_list, "Should be able to list bucket objects"
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchBucket":
                 pytest.skip("Bucket does not exist")

@@ -35,12 +35,12 @@ def _get_cloudfront_distribution(client, outputs):
         return None
 
 
-# pylint: disable=redefined-outer-name
 @pytest.fixture(scope="module")
-def cloudfront_distribution(cloudfront_client, www_common_outputs):
+def cloudfront_distribution(request):
     """Get CloudFront distribution details."""
-    return _get_cloudfront_distribution(cloudfront_client, www_common_outputs)
-# pylint: enable=redefined-outer-name
+    cf_client = request.getfixturevalue("cloudfront_client")
+    outputs = request.getfixturevalue("www_common_outputs")
+    return _get_cloudfront_distribution(cf_client, outputs)
 
 
 # Create www_common fixtures with CloudFront and website domain
