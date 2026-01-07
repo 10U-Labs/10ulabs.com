@@ -340,64 +340,6 @@ def test_can_write_to_dynamodb(dynamodb_client, config):
 
 **Always clean up in `finally` blocks.**
 
-## Layer Marker Implementation
-
-Tests use `pytest.mark.layer(N)` to enforce execution order. Layer N tests automatically skip if any test in layers 1 through N-1 failed.
-
-### Usage
-
-Apply the marker at the module level:
-
-```python
-# test_01_contracts.py
-pytestmark = pytest.mark.layer(1)
-
-# test_02_authentication.py
-pytestmark = pytest.mark.layer(2)
-
-# test_03_authorization.py
-pytestmark = pytest.mark.layer(3)
-
-# ... and so on for each layer
-```
-
-### How It Works
-
-The layer system is implemented in `conftest.py` using three pytest hooks:
-
-1. **`pytest_configure`** - Registers the `layer` marker
-2. **`pytest_runtest_makereport`** - Tracks pass/fail counts per layer
-3. **`pytest_runtest_setup`** - Skips tests if earlier layers failed
-
-```python
-# conftest.py implementation pattern
-_layer_results: Dict[int, Dict[str, int]] = {}
-
-def pytest_configure(config):
-    config.addinivalue_line(
-        "markers",
-        "layer(num): mark test as belonging to layer N"
-    )
-
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    del call  # Required by hook signature but unused
-    outcome = yield
-    result = outcome.get_result()
-    if result.when == "call":
-        for marker in item.iter_markers("layer"):
-            layer_num = marker.args[0]
-            # Track pass/fail for this layer
-            ...
-
-def pytest_runtest_setup(item):
-    for marker in item.iter_markers("layer"):
-        layer_num = marker.args[0]
-        for prev_layer in range(1, layer_num):
-            if _layer_results.get(prev_layer, {}).get("failed", 0) > 0:
-                pytest.skip(f"Skipped: layer {prev_layer} had failures")
-```
-
 ## Fail Fast with Granular Diagnostics
 
 Cryptic errors like "AccessDenied: Access Denied" are unacceptable.

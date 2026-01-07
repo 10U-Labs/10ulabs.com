@@ -7,7 +7,6 @@ import re
 import pytest
 from repo_utils import REPO_ROOT
 
-pytestmark = pytest.mark.layer(1)
 
 
 

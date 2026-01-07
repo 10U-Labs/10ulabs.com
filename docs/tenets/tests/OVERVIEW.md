@@ -200,22 +200,6 @@ If your fixture is useful beyond your specific test file:
 - Put it in the appropriate conftest.py level
 - Or add it to lib/python/ if it's broadly reusable
 
-## Layer Marker System
-
-Integration tests use a layer marker for organization and result tracking. All tests
-run regardless of failures in other layers.
-
-```python
-# In test file
-pytestmark = pytest.mark.layer(N)
-```
-
-Layers are used to categorize tests (e.g., layer 1 for infrastructure, layer 2 for
-authorization) but do not affect test execution. All issues are reported in a single
-test run.
-
-See [PRE_DEPLOYMENT_INTEGRATION_TESTS.md](PRE_DEPLOYMENT_INTEGRATION_TESTS.md) and [POST_DEPLOYMENT_INTEGRATION_TESTS.md](POST_DEPLOYMENT_INTEGRATION_TESTS.md) for layer definitions.
-
 ## Static Analysis in Workflows
 
 Linting and type checking must run separately for source and test code.

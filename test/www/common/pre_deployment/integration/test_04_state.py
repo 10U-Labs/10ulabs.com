@@ -10,7 +10,6 @@ from repo_utils import REPO_ROOT
 from terraform_config import TEST_AWS_REGION
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
-pytestmark = pytest.mark.layer(4)
 
 
 WWW_SHARED_SRC = REPO_ROOT / "src" / "www" / "common"

@@ -4,7 +4,6 @@ Verify resources are configured correctly. Assumes existence tests passed.
 """
 import pytest
 
-pytestmark = pytest.mark.layer(2)
 
 
 

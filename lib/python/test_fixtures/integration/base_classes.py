@@ -11,8 +11,6 @@ These classes implement the 7-layer testing model documented in docs/tenets/test
     Layer 5: Existence         Layer5     Required resources exist
     Layer 6: Configuration     Layer6     Resources configured correctly
     Layer 7: Capability        Layer7     Can perform required operations
-
-Use pytestmark = pytest.mark.layer(N) where N matches the documentation layer (1-7).
 """
 import uuid
 

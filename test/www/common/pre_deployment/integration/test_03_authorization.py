@@ -6,7 +6,6 @@ import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration.helpers import check_s3_head_bucket_permission
 
-pytestmark = pytest.mark.layer(3)
 
 
 

@@ -5,7 +5,6 @@ Verify AWS credentials are valid before testing authorization, existence, or cap
 import pytest
 from test_fixtures.integration import create_simple_layer1_authentication_tests
 
-pytestmark = pytest.mark.layer(2)
 
 
 TestAWSAuthentication = create_simple_layer1_authentication_tests()
