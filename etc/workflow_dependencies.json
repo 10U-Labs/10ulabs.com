@@ -258,10 +258,10 @@
       "lib/terraform/write_ahead_queue/**",
       "src/www/common/**",
       "test/lib/python/**",
-      "test/lib/terraform/modules/cloudfront_waf/**",
-      "test/lib/terraform/modules/common/**",
-      "test/lib/terraform/modules/s3_bucket/**",
-      "test/lib/terraform/modules/write_ahead_queue/**",
+      "test/lib/terraform/cloudfront_waf/**",
+      "test/lib/terraform/common/**",
+      "test/lib/terraform/s3_bucket/**",
+      "test/lib/terraform/write_ahead_queue/**",
       "test/www/common/**"
     ]
   },
