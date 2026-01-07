@@ -162,3 +162,53 @@ class TestLayerResultsTracking:
             _run_makereport(mock_item, mock_call, mock_outcome)
 
         assert pytest_layers._layer_results[5]['passed'] == 3
+
+    def test_multiple_layer_markers_with_failed_result(self):
+        """Test that failed result iterates through multiple layer markers."""
+        pytest_layers._layer_results.clear()
+
+        # Create mock with multiple layer markers
+        mock_item = MagicMock()
+        mock_marker1 = MagicMock()
+        mock_marker1.args = (8,)
+        mock_marker2 = MagicMock()
+        mock_marker2.args = (9,)
+        mock_item.iter_markers.return_value = [mock_marker1, mock_marker2]
+
+        mock_call = MagicMock()
+        mock_result = MagicMock()
+        mock_result.when = 'call'
+        mock_result.passed = False
+        mock_result.failed = True
+        mock_outcome = MagicMock()
+        mock_outcome.get_result.return_value = mock_result
+
+        _run_makereport(mock_item, mock_call, mock_outcome)
+
+        # Both layers should have failed count incremented
+        assert pytest_layers._layer_results[8]['failed'] == 1
+        assert pytest_layers._layer_results[9]['failed'] == 1
+
+    def test_skipped_test_does_not_increment_counters(self):
+        """Test that skipped tests (passed=False, failed=False) don't increment."""
+        pytest_layers._layer_results.clear()
+
+        mock_item = MagicMock()
+        mock_marker = MagicMock()
+        mock_marker.args = (10,)
+        mock_item.iter_markers.return_value = [mock_marker]
+
+        mock_call = MagicMock()
+        mock_result = MagicMock()
+        mock_result.when = 'call'
+        mock_result.passed = False
+        mock_result.failed = False  # Skipped test case
+        mock_outcome = MagicMock()
+        mock_outcome.get_result.return_value = mock_result
+
+        _run_makereport(mock_item, mock_call, mock_outcome)
+
+        # Layer should exist but both counters should be 0
+        assert 10 in pytest_layers._layer_results
+        assert pytest_layers._layer_results[10]['passed'] == 0
+        assert pytest_layers._layer_results[10]['failed'] == 0

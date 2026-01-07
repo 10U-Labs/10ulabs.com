@@ -33,25 +33,49 @@ import json
 _CONFIG_FILENAME = "runners.json"
 
 
-def _find_config_file() -> Path:
-    """Locate runners.json configuration file for library usage."""
-    # Library path: relative to this module (lib/python/runner_labels -> etc/)
-    lib_config = Path(__file__).parent.parent.parent.parent / "etc" / _CONFIG_FILENAME
-    if lib_config.exists():
+def _find_config_file_from_paths(
+    lib_config: Optional[Path] = None,
+    env_path: Optional[str] = None,
+    cwd: Optional[Path] = None,
+) -> Path:
+    """Locate runners.json configuration file from provided paths.
+
+    Args:
+        lib_config: Library config path to check first.
+        env_path: Environment ETC_PATH value.
+        cwd: Current working directory for fallback.
+
+    Returns:
+        Path to the configuration file.
+
+    Raises:
+        FileNotFoundError: If no configuration file is found.
+    """
+    # Library path check
+    if lib_config and lib_config.exists():
         return lib_config
 
     # Environment override for deployment scenarios
-    if etc_env := os.environ.get("ETC_PATH"):
-        env_config = Path(etc_env) / _CONFIG_FILENAME
+    if env_path:
+        env_config = Path(env_path) / _CONFIG_FILENAME
         if env_config.exists():
             return env_config
 
     # Working directory fallback
-    cwd_config = Path.cwd() / "etc" / _CONFIG_FILENAME
-    if cwd_config.exists():
-        return cwd_config
+    if cwd:
+        cwd_config = cwd / "etc" / _CONFIG_FILENAME
+        if cwd_config.exists():
+            return cwd_config
 
     raise FileNotFoundError(f"Cannot locate etc/{_CONFIG_FILENAME}")
+
+
+def _find_config_file() -> Path:
+    """Locate runners.json configuration file for library usage."""
+    lib_config = Path(__file__).parent.parent.parent.parent / "etc" / _CONFIG_FILENAME
+    env_path = os.environ.get("ETC_PATH")
+    cwd = Path.cwd()
+    return _find_config_file_from_paths(lib_config, env_path, cwd)
 
 
 def _load_config() -> Dict[str, Any]:
@@ -392,7 +416,7 @@ def get_runner_type_from_labels(
         if parsed.platform == "ec2":
             runner_type = "ec2-e2e" if is_e2e else "ec2"
             endpoint_suffix = "ec2"
-        elif parsed.platform == "ecs":
+        else:  # parsed.platform == "ecs" (only valid option after validation)
             runner_type = "fargate-e2e" if is_e2e else "fargate"
             endpoint_suffix = "ecs"
     except (LabelParseError, LabelValidationError):

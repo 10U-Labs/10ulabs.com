@@ -1,12 +1,16 @@
 """Unit tests for terraform_config module."""
 import pytest
 
+from unittest.mock import patch
+
 from terraform_config import (
     _parse_map_block,
     _resolve_prefix_refs,
     _resolve_local_interpolations,
     _resolve_all_refs,
     _resolve_lambda_function_name,
+    get_tfvars_values,
+    get_shared_config,
 )
 
 
@@ -625,3 +629,223 @@ resource "aws_sqs_queue" "my_queue" {
 ''')
         result = extract_sqs_queue_names(sqs_file)
         assert result[0] == ("my_queue", "LocalQueueName")
+
+
+class TestResolveLocalInterpolationsMaxIterations:
+    """Tests for max iterations edge case in _resolve_local_interpolations."""
+
+    def test_handles_circular_reference_without_infinite_loop(self):
+        """Test handles circular reference by stopping at max iterations."""
+        # Create a circular reference that never resolves
+        value = "${local.a}"
+        local_values = {
+            "a": "${local.b}",
+            "b": "${local.a}",  # Circular!
+        }
+        # Should not hang - returns after max iterations
+        result = _resolve_local_interpolations(value, local_values)
+        # Result will alternate but won't be fully resolved
+        assert result in ["${local.a}", "${local.b}"]
+
+    def test_handles_deep_nesting_beyond_resolution(self):
+        """Test handles nesting deeper than max iterations."""
+        # Create nesting that requires > 10 iterations
+        value = "${local.level0}"
+        local_values = {f"level{i}": f"${{local.level{i+1}}}" for i in range(15)}
+        local_values["level15"] = "final"
+
+        result = _resolve_local_interpolations(value, local_values)
+        # Should stop before fully resolving due to max iterations
+        assert "${local." in result or result == "final"
+
+
+class TestGetTfvarsValuesAdditional:
+    """Additional tests for get_tfvars_values function."""
+
+    def test_parses_string_values(self, tmp_path):
+        """Test parses string values from tfvars file."""
+        tfvars_file = tmp_path / "terraform.tfvars"
+        tfvars_file.write_text('region = "us-east-1"\n')
+
+        result = get_tfvars_values(tmp_path)
+        assert result.get("region") == "us-east-1"
+
+    def test_parses_list_values(self, tmp_path):
+        """Test parses list values from tfvars file."""
+        tfvars_file = tmp_path / "terraform.tfvars"
+        tfvars_file.write_text('tags = ["tag1", "tag2"]\n')
+
+        result = get_tfvars_values(tmp_path)
+        assert result.get("tags") == ["tag1", "tag2"]
+
+    def test_skips_comments_and_empty_lines(self, tmp_path):
+        """Test skips comments and empty lines."""
+        tfvars_file = tmp_path / "terraform.tfvars"
+        tfvars_file.write_text('# comment\n\nregion = "us-east-1"\n')
+
+        result = get_tfvars_values(tmp_path)
+        assert result.get("region") == "us-east-1"
+
+    def test_skips_non_matching_lines(self, tmp_path):
+        """Test skips lines that don't match string or list patterns."""
+        tfvars_file = tmp_path / "terraform.tfvars"
+        tfvars_file.write_text('some_number = 42\nregion = "us-east-1"\n')
+
+        result = get_tfvars_values(tmp_path)
+        # Number assignment doesn't match, but string does
+        assert "some_number" not in result
+        assert result.get("region") == "us-east-1"
+
+    def test_returns_empty_dict_when_file_missing(self, tmp_path):
+        """Test returns empty dict when tfvars file doesn't exist."""
+        result = get_tfvars_values(tmp_path)
+        assert result == {}
+
+
+class TestGetSharedConfigDomainName:
+    """Tests for domain_name handling in get_shared_config."""
+
+    @patch('terraform_config.parse_locals')
+    @patch('terraform_config.parse_outputs')
+    @patch('terraform_config.parse_lambda_handler_names')
+    def test_sets_api_fqdn_when_domain_name_present(
+        self, mock_handlers, mock_outputs, mock_locals
+    ):
+        """Test sets api_fqdn when domain_name is present."""
+        mock_locals.return_value = {"domain_name": "example.com"}
+        mock_outputs.return_value = {}
+        mock_handlers.return_value = {}
+
+        result = get_shared_config()
+        assert result.get("api_fqdn") == "api.example.com"
+
+    @patch('terraform_config.parse_locals')
+    @patch('terraform_config.parse_outputs')
+    @patch('terraform_config.parse_lambda_handler_names')
+    def test_no_api_fqdn_when_domain_name_empty(
+        self, mock_handlers, mock_outputs, mock_locals
+    ):
+        """Test does not set api_fqdn when domain_name is empty."""
+        mock_locals.return_value = {"domain_name": ""}
+        mock_outputs.return_value = {}
+        mock_handlers.return_value = {}
+
+        result = get_shared_config()
+        assert "api_fqdn" not in result
+
+    @patch('terraform_config.parse_locals')
+    @patch('terraform_config.parse_outputs')
+    @patch('terraform_config.parse_lambda_handler_names')
+    def test_no_api_fqdn_when_domain_name_missing(
+        self, mock_handlers, mock_outputs, mock_locals
+    ):
+        """Test does not set api_fqdn when domain_name key is missing."""
+        mock_locals.return_value = {}
+        mock_outputs.return_value = {}
+        mock_handlers.return_value = {}
+
+        result = get_shared_config()
+        assert "api_fqdn" not in result
+
+
+class TestResolveLocalInterpolationsMaxIterationsExhaustion:
+    """Tests for exhausting max iterations in _resolve_local_interpolations."""
+
+    def test_exhausts_max_iterations_with_growing_pattern(self):
+        """Test that loop exhausts all iterations without early break."""
+        # Create a self-referencing pattern that grows with each iteration
+        # Each iteration replaces ${local.a} with a longer string containing ${local.a}
+        # This ensures new_value != value on every iteration, preventing early break
+        value = "${local.a}"
+        local_values = {"a": "x${local.a}y"}
+
+        result = _resolve_local_interpolations(value, local_values)
+        # After 10 iterations, we'll have: x^10 + ${local.a} + y^10
+        # The string keeps growing but never fully resolves
+        assert "${local.a}" in result
+        # Verify it ran all iterations by checking the growth pattern
+        assert result.count("x") == 10
+        assert result.count("y") == 10
+
+
+class TestGetEndpointLocalValuesMissingHandler:
+    """Tests for handler_key not in handler_names branch."""
+
+    def test_handler_key_not_in_handler_names(self, tmp_path):
+        """Test that handler references not in handler_names are skipped."""
+        from terraform_config import get_endpoint_local_values
+        locals_file = tmp_path / "locals.tf"
+        # Reference a handler that won't be in the mocked handler_names
+        locals_file.write_text(
+            'locals {\n  handler = module.common.lambda_handler_names.nonexistent\n}\n'
+        )
+        with patch("terraform_config.parse_lambda_handler_names") as mock_handlers:
+            mock_handlers.return_value = {"webhook": "WebhookHandler"}  # No "nonexistent"
+            with patch("terraform_config.get_resource_prefix") as mock_prefix:
+                mock_prefix.return_value = "TenULabs"
+                result = get_endpoint_local_values(tmp_path)
+        # The "handler" key should not be in result since "nonexistent" wasn't found
+        assert "handler" not in result
+
+
+class TestExtractIamRoleNamesUnmatchedPattern:
+    """Tests for IAM role name patterns that don't match any resolution."""
+
+    def test_role_with_unresolvable_expression(self, tmp_path):
+        """Test role with name expression that doesn't match any pattern."""
+        from terraform_config import extract_iam_role_names
+        iam_file = tmp_path / "iam.tf"
+        # Use an expression that won't match quoted, local, or var patterns
+        iam_file.write_text('''
+resource "aws_iam_role" "my_role" {
+  name = data.aws_caller_identity.current.account_id
+  assume_role_policy = jsonencode({})
+}
+''')
+        (tmp_path / "locals.tf").write_text("")
+        (tmp_path / "terraform.tfvars").write_text("")
+        result = extract_iam_role_names(iam_file)
+        # Role should not be extracted since name doesn't match any pattern
+        assert len(result) == 0
+
+
+class TestExtractLambdaFunctionNamesUnresolvable:
+    """Tests for Lambda functions with unresolvable function names."""
+
+    def test_function_with_unresolvable_name(self, tmp_path):
+        """Test Lambda function with function_name that can't be resolved."""
+        from terraform_config import extract_lambda_function_names
+        lambda_file = tmp_path / "lambda.tf"
+        # Use an expression that doesn't match any resolution pattern
+        lambda_file.write_text('''
+resource "aws_lambda_function" "my_func" {
+  function_name = data.aws_caller_identity.current.account_id
+  handler = "index.handler"
+  runtime = "python3.11"
+}
+''')
+        (tmp_path / "locals.tf").write_text("")
+        (tmp_path / "terraform.tfvars").write_text("")
+        result = extract_lambda_function_names(lambda_file)
+        # Function should not be in result since name couldn't be resolved
+        assert len(result) == 0
+
+
+class TestExtractSqsQueueNamesUnmatchedLocal:
+    """Tests for SQS queue names with unresolvable local references."""
+
+    def test_queue_with_local_not_in_values(self, tmp_path):
+        """Test SQS queue with local reference that's not in local_values."""
+        from terraform_config import extract_sqs_queue_names
+        sqs_file = tmp_path / "sqs.tf"
+        # Reference a local that won't be in local_values
+        sqs_file.write_text('''
+resource "aws_sqs_queue" "my_queue" {
+  name = local.undefined_queue_name
+}
+''')
+        # Empty locals.tf so undefined_queue_name won't be found
+        (tmp_path / "locals.tf").write_text('locals {\n  other_var = "value"\n}\n')
+        result = extract_sqs_queue_names(sqs_file)
+        # Queue should not be in result since local reference wasn't found
+        assert len(result) == 0

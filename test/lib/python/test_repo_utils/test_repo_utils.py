@@ -1,7 +1,14 @@
 """Comprehensive tests for repo_utils module."""
 from pathlib import Path
+from unittest.mock import patch, MagicMock
+import pytest
 
-from repo_utils import extract_brace_block, find_repo_root, REPO_ROOT
+from repo_utils import (
+    extract_brace_block,
+    find_repo_root,
+    _find_repo_root_from_path,
+    REPO_ROOT,
+)
 
 
 class TestFindRepoRoot:
@@ -20,6 +27,17 @@ class TestFindRepoRoot:
     def test_repo_root_constant_matches_function(self):
         """REPO_ROOT constant matches find_repo_root result."""
         assert REPO_ROOT == find_repo_root()
+
+    def test_raises_runtime_error_when_no_git_directory(self, tmp_path):
+        """Test RuntimeError when no .git directory found in any parent."""
+        # Create a temporary directory structure with no .git
+        # tmp_path itself and its parents don't have .git in the temp location
+        isolated_dir = tmp_path / "isolated" / "deep" / "path"
+        isolated_dir.mkdir(parents=True)
+
+        # Use the actual function with a path that has no .git
+        with pytest.raises(RuntimeError, match="Could not find repository root"):
+            _find_repo_root_from_path(isolated_dir)
 
 
 class TestExtractBraceBlock:

@@ -491,6 +491,44 @@ class TestGetPlannedCreates:
         result = get_planned_creates(Path("/tmp/terraform"))
         assert result == []
 
+    @patch("terraform_drift.subprocess.run")
+    def test_ignores_create_with_empty_resource_name(self, mock_run):
+        """get_planned_creates ignores creates where resource name is empty."""
+        # Create a plan output with empty function_name
+        plan_with_empty_name = json.dumps({
+            "type": "planned_change",
+            "change": {
+                "action": "create",
+                "resource": {
+                    "resource_type": "aws_lambda_function",
+                    "addr": "aws_lambda_function.my_func"
+                },
+                "change": {"after": {"function_name": ""}},  # Empty name
+            },
+        })
+        mock_run.return_value = MagicMock(stdout=plan_with_empty_name, returncode=0)
+        result = get_planned_creates(Path("/tmp/terraform"))
+        assert result == []
+
+    @patch("terraform_drift.subprocess.run")
+    def test_ignores_create_with_missing_name_field(self, mock_run):
+        """get_planned_creates ignores creates where name field is missing."""
+        # Create a plan output without the function_name key
+        plan_with_missing_name = json.dumps({
+            "type": "planned_change",
+            "change": {
+                "action": "create",
+                "resource": {
+                    "resource_type": "aws_lambda_function",
+                    "addr": "aws_lambda_function.my_func"
+                },
+                "change": {"after": {"runtime": "python3.11"}},  # No function_name
+            },
+        })
+        mock_run.return_value = MagicMock(stdout=plan_with_missing_name, returncode=0)
+        result = get_planned_creates(Path("/tmp/terraform"))
+        assert result == []
+
 
 class TestGetTerraformStateResources:
     """Tests for get_terraform_state_resources function."""

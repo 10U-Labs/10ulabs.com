@@ -124,11 +124,7 @@ def is_kebabcase(name: str) -> bool:
     if not name or '-' not in name:
         return False
 
-    parts = name.split('-', 1)
-    if len(parts) != 2:
-        return False
-
-    prefix, rest = parts
+    prefix, rest = name.split('-', 1)
 
     # Validate prefix (PascalCase) and rest (lowercase with hyphens)
     prefix_valid = bool(prefix) and prefix[0].isupper() and prefix.isalnum()

@@ -3,7 +3,9 @@ import pytest
 
 from naming_conventions import (
     is_pascalcase,
+    is_kebabcase,
     validate_name,
+    validate_kebab_name,
     find_violations,
     extract_iam_role_names_from_terraform,
     extract_lambda_function_names_from_terraform,
@@ -462,3 +464,113 @@ class TestResolveTerraformInterpolation:
             resource_prefix="TenULabs",
         )
         assert result == "TenULabs-my-function"
+
+
+# === is_kebabcase Function ===
+
+
+class TestIsKebabcase:
+    """Tests for is_kebabcase function."""
+
+    def test_valid_kebabcase_simple(self):
+        """is_kebabcase returns True for simple kebab-case."""
+        assert is_kebabcase("TenULabs-my-resource") is True
+
+    def test_valid_kebabcase_single_suffix_word(self):
+        """is_kebabcase returns True for single suffix word."""
+        assert is_kebabcase("TenULabs-resource") is True
+
+    def test_valid_kebabcase_multiple_suffix_words(self):
+        """is_kebabcase returns True for multiple suffix words."""
+        assert is_kebabcase("TenULabs-rack-configurations-backup") is True
+
+    def test_valid_kebabcase_with_numbers_in_suffix(self):
+        """is_kebabcase returns True for numbers in suffix."""
+        assert is_kebabcase("TenULabs-resource123") is True
+
+    def test_invalid_empty_string(self):
+        """is_kebabcase returns False for empty string."""
+        assert is_kebabcase("") is False
+
+    def test_invalid_no_hyphen(self):
+        """is_kebabcase returns False when no hyphen."""
+        assert is_kebabcase("TenULabsResource") is False
+
+    def test_invalid_lowercase_prefix(self):
+        """is_kebabcase returns False for lowercase prefix."""
+        assert is_kebabcase("tenulabs-resource") is False
+
+    def test_invalid_uppercase_in_suffix(self):
+        """is_kebabcase returns False for uppercase in suffix."""
+        assert is_kebabcase("TenULabs-MyResource") is False
+
+    def test_invalid_empty_suffix(self):
+        """is_kebabcase returns False for empty suffix."""
+        assert is_kebabcase("TenULabs-") is False
+
+    def test_invalid_empty_prefix(self):
+        """is_kebabcase returns False for empty prefix."""
+        assert is_kebabcase("-resource") is False
+
+    def test_invalid_special_chars_in_suffix(self):
+        """is_kebabcase returns False for special chars in suffix."""
+        assert is_kebabcase("TenULabs-resource_name") is False
+
+    def test_invalid_non_alphanumeric_prefix(self):
+        """is_kebabcase returns False for non-alphanumeric prefix."""
+        assert is_kebabcase("TenU@Labs-resource") is False
+
+
+# === validate_kebab_name Function ===
+
+
+class TestValidateKebabName:
+    """Tests for validate_kebab_name function."""
+
+    def test_valid_name_returns_none(self):
+        """validate_kebab_name returns None for valid names."""
+        assert validate_kebab_name("TenULabs-my-resource") is None
+
+    def test_valid_name_multiple_words_returns_none(self):
+        """validate_kebab_name returns None for multiple words."""
+        assert validate_kebab_name("TenULabs-rack-configurations-backup") is None
+
+    def test_empty_name_returns_error(self):
+        """validate_kebab_name returns error for empty name."""
+        result = validate_kebab_name("")
+        assert result == "Name is empty"
+
+    def test_no_hyphen_returns_error(self):
+        """validate_kebab_name returns error when no hyphen."""
+        result = validate_kebab_name("TenULabsResource")
+        assert "must contain hyphens" in result
+
+    def test_lowercase_prefix_returns_error(self):
+        """validate_kebab_name returns error for lowercase prefix."""
+        result = validate_kebab_name("tenulabs-resource")
+        assert "prefix must be PascalCase" in result
+
+    def test_non_alphanumeric_prefix_returns_error(self):
+        """validate_kebab_name returns error for non-alphanumeric prefix."""
+        result = validate_kebab_name("Ten-U-resource")
+        assert "suffix must be lowercase" in result
+
+    def test_uppercase_suffix_returns_error(self):
+        """validate_kebab_name returns error for uppercase in suffix."""
+        result = validate_kebab_name("TenULabs-MyResource")
+        assert "suffix must be lowercase" in result
+
+    def test_empty_suffix_returns_error(self):
+        """validate_kebab_name returns error for empty suffix."""
+        result = validate_kebab_name("TenULabs-")
+        assert "suffix must be lowercase" in result
+
+    def test_special_chars_in_suffix_returns_error(self):
+        """validate_kebab_name returns error for special chars in suffix."""
+        result = validate_kebab_name("TenULabs-resource_name")
+        assert "suffix must be lowercase" in result
+
+    def test_empty_prefix_returns_error(self):
+        """validate_kebab_name returns error for empty prefix."""
+        result = validate_kebab_name("-resource")
+        assert "prefix must be PascalCase" in result

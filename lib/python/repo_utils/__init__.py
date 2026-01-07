@@ -3,13 +3,27 @@
 from pathlib import Path
 
 
-def find_repo_root() -> Path:
-    """Find the repository root by looking for .git directory."""
-    current = Path(__file__).resolve()
-    for parent in [current] + list(current.parents):
+def _find_repo_root_from_path(start_path: Path) -> Path:
+    """Find the repository root starting from a given path.
+
+    Args:
+        start_path: The path to start searching from.
+
+    Returns:
+        The repository root path.
+
+    Raises:
+        RuntimeError: If no .git directory is found in any parent.
+    """
+    for parent in [start_path] + list(start_path.parents):
         if (parent / ".git").exists():
             return parent
     raise RuntimeError("Could not find repository root")
+
+
+def find_repo_root() -> Path:
+    """Find the repository root by looking for .git directory."""
+    return _find_repo_root_from_path(Path(__file__).resolve())
 
 
 REPO_ROOT = find_repo_root()

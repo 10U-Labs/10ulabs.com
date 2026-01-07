@@ -216,16 +216,13 @@ def skip_if_api_gateway_unavailable(api_gateway_info):
     Args:
         api_gateway_info: Dictionary with 'id' and 'exists' keys
 
-    Returns:
-        True if the test should continue, False if skipped
+    Raises:
+        pytest.skip: If api_gateway_id is unavailable or API doesn't exist
     """
     if api_gateway_info.get("id") is None:
         pytest.skip("api_gateway_id output not available")
-        return False
     if not api_gateway_info.get("exists"):
         pytest.skip("API Gateway does not exist")
-        return False
-    return True
 
 
 def check_state_file_readable(s3_client, bucket_name: str, state_key: str):

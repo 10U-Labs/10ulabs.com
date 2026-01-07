@@ -1,7 +1,8 @@
 """Comprehensive tests for runner_labels module."""
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from pathlib import Path
+import os
 
 from runner_labels import (
     ParsedLabels,
@@ -15,6 +16,7 @@ from runner_labels import (
     is_spot,
     get_runner_id_number,
     get_runner_type_from_labels,
+    _find_config_file_from_paths,
     PLATFORMS,
     PRICING_MODELS,
     ECS_COMPUTE,
@@ -831,3 +833,169 @@ class TestDefaultValues:
     def test_default_runner_id_matches_pattern(self):
         """DEFAULT_RUNNER_ID matches the runner ID pattern."""
         assert RUNNER_ID_PATTERN.match(DEFAULT_RUNNER_ID) is not None
+
+
+# === _find_config_file Fallback Paths ===
+
+
+class TestFindConfigFileFallbacks:
+    """Tests for _find_config_file_from_paths fallback paths."""
+
+    def test_lib_config_used_when_exists(self, tmp_path):
+        """_find_config_file_from_paths returns lib config when it exists."""
+        config_file = tmp_path / "runners.json"
+        config_file.write_text('{"platforms": ["ecs"]}')
+
+        result = _find_config_file_from_paths(lib_config=config_file)
+        assert result == config_file
+
+    def test_env_path_fallback_used_when_lib_path_not_found(self, tmp_path):
+        """_find_config_file_from_paths uses env path when lib path doesn't exist."""
+        config_file = tmp_path / "runners.json"
+        config_file.write_text('{"platforms": ["ecs"]}')
+
+        # Pass non-existent lib config, but valid env path
+        nonexistent_lib = tmp_path / "nonexistent" / "runners.json"
+        result = _find_config_file_from_paths(
+            lib_config=nonexistent_lib,
+            env_path=str(tmp_path),
+        )
+        assert result == config_file
+
+    def test_env_path_fallback_when_lib_config_is_none(self, tmp_path):
+        """_find_config_file_from_paths uses env path when lib config is None."""
+        config_file = tmp_path / "runners.json"
+        config_file.write_text('{"platforms": ["ecs"]}')
+
+        result = _find_config_file_from_paths(
+            lib_config=None,
+            env_path=str(tmp_path),
+        )
+        assert result == config_file
+
+    def test_cwd_fallback_used_when_lib_and_env_not_found(self, tmp_path):
+        """_find_config_file_from_paths uses cwd fallback when lib and env don't exist."""
+        # Create config in cwd/etc
+        etc_dir = tmp_path / "etc"
+        etc_dir.mkdir()
+        config_file = etc_dir / "runners.json"
+        config_file.write_text('{"platforms": ["ecs"]}')
+
+        result = _find_config_file_from_paths(
+            lib_config=None,
+            env_path=None,
+            cwd=tmp_path,
+        )
+        assert result == config_file
+
+    def test_cwd_fallback_when_env_path_has_no_config(self, tmp_path):
+        """_find_config_file_from_paths uses cwd when env path exists but has no config."""
+        # Create config in cwd/etc only
+        etc_dir = tmp_path / "etc"
+        etc_dir.mkdir()
+        config_file = etc_dir / "runners.json"
+        config_file.write_text('{"platforms": ["ecs"]}')
+
+        # env_path directory exists but doesn't have runners.json
+        env_dir = tmp_path / "env_dir"
+        env_dir.mkdir()
+
+        result = _find_config_file_from_paths(
+            lib_config=None,
+            env_path=str(env_dir),
+            cwd=tmp_path,
+        )
+        assert result == config_file
+
+    def test_file_not_found_when_no_config_exists(self, tmp_path):
+        """_find_config_file_from_paths raises FileNotFoundError when no config found."""
+        with pytest.raises(FileNotFoundError, match="Cannot locate"):
+            _find_config_file_from_paths(
+                lib_config=None,
+                env_path=None,
+                cwd=None,
+            )
+
+    def test_file_not_found_when_all_paths_invalid(self, tmp_path):
+        """_find_config_file_from_paths raises when all paths exist but have no config."""
+        nonexistent = tmp_path / "nonexistent" / "runners.json"
+        empty_env = tmp_path / "empty_env"
+        empty_env.mkdir()
+        empty_cwd = tmp_path / "empty_cwd"
+        empty_cwd.mkdir()
+
+        with pytest.raises(FileNotFoundError, match="Cannot locate"):
+            _find_config_file_from_paths(
+                lib_config=nonexistent,
+                env_path=str(empty_env),
+                cwd=empty_cwd,
+            )
+
+
+# === get_runner_type_from_labels Function (Additional Tests) ===
+
+
+class TestGetRunnerTypeFromLabelsExtended:
+    """Additional tests for get_runner_type_from_labels function."""
+
+    def test_returns_tuple(self):
+        """get_runner_type_from_labels returns a tuple."""
+        labels = ["ecs", "fargate", "x86", "spot", "runner-12345"]
+        result = get_runner_type_from_labels(labels)
+        assert isinstance(result, tuple)
+
+    def test_returns_two_elements(self):
+        """get_runner_type_from_labels returns tuple with two elements."""
+        labels = ["ecs", "fargate", "x86", "spot", "runner-12345"]
+        result = get_runner_type_from_labels(labels)
+        assert len(result) == 2
+
+    def test_ecs_non_e2e_returns_fargate(self):
+        """get_runner_type_from_labels returns fargate for ECS non-e2e."""
+        labels = ["ecs", "fargate", "x86", "spot", "runner-12345"]
+        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        assert runner_type == "fargate"
+        assert endpoint_suffix == "ecs"
+
+    def test_ecs_e2e_returns_fargate_e2e(self):
+        """get_runner_type_from_labels returns fargate-e2e for ECS e2e."""
+        labels = ["ecs", "fargate", "x86", "spot", "runner-12345", "e2e"]
+        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        assert runner_type == "fargate-e2e"
+        assert endpoint_suffix == "ecs"
+
+    def test_ec2_non_e2e_returns_ec2(self):
+        """get_runner_type_from_labels returns ec2 for EC2 non-e2e."""
+        labels = ["ec2", "general-purpose", "intel", "spot", "runner-12345"]
+        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        assert runner_type == "ec2"
+        assert endpoint_suffix == "ec2"
+
+    def test_ec2_e2e_returns_ec2_e2e(self):
+        """get_runner_type_from_labels returns ec2-e2e for EC2 e2e."""
+        labels = ["ec2", "general-purpose", "intel", "spot", "runner-12345", "e2e"]
+        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        assert runner_type == "ec2-e2e"
+        assert endpoint_suffix == "ec2"
+
+    def test_invalid_labels_returns_none(self):
+        """get_runner_type_from_labels returns None values for invalid labels."""
+        labels = ["invalid", "labels", "only"]
+        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        assert runner_type is None
+        assert endpoint_suffix is None
+
+    def test_empty_labels_returns_none(self):
+        """get_runner_type_from_labels returns None values for empty labels."""
+        labels = []
+        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        assert runner_type is None
+        assert endpoint_suffix is None
+
+    def test_missing_required_labels_returns_none(self):
+        """get_runner_type_from_labels returns None when labels incomplete."""
+        # Missing runner ID
+        labels = ["ecs", "fargate", "x86", "spot"]
+        runner_type, endpoint_suffix = get_runner_type_from_labels(labels)
+        assert runner_type is None
+        assert endpoint_suffix is None
