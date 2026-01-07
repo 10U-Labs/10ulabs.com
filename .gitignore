@@ -25,3 +25,4 @@ __pycache__/
 .terraform/
 .terraform.lock.hcl
 coverage.json
+.coverage
