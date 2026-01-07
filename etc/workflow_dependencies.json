@@ -253,11 +253,15 @@
       ".github/workflows/www_common.yml",
       "lib/python/**",
       "lib/terraform/cloudfront_waf/**",
+      "lib/terraform/common/**",
       "lib/terraform/s3_bucket/**",
+      "lib/terraform/write_ahead_queue/**",
       "src/www/common/**",
       "test/lib/python/**",
-      "test/lib/terraform/cloudfront_waf/**",
-      "test/lib/terraform/s3_bucket/**",
+      "test/lib/terraform/modules/cloudfront_waf/**",
+      "test/lib/terraform/modules/common/**",
+      "test/lib/terraform/modules/s3_bucket/**",
+      "test/lib/terraform/modules/write_ahead_queue/**",
       "test/www/common/**"
     ]
   },
