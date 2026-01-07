@@ -99,7 +99,8 @@ class TestCreateLayer6CapabilityTestsLambdaTestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.list_functions.return_value = {"Functions": []}
-        instance.test_can_list_lambda_functions(mock_client)
+        result = instance.test_can_list_lambda_functions(mock_client)
+        assert result is None
 
     def test_fails_on_client_error(self):
         """test_can_list_lambda_functions fails on ClientError."""
@@ -132,7 +133,8 @@ class TestCreateLayer6CapabilityTestsIAMTestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.list_roles.return_value = {"Roles": []}
-        instance.test_can_list_iam_roles(mock_client)
+        result = instance.test_can_list_iam_roles(mock_client)
+        assert result is None
 
     def test_fails_on_client_error(self):
         """test_can_list_iam_roles fails on ClientError."""
@@ -170,7 +172,8 @@ class TestCreateLayer6CapabilityTestsSSMTestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.describe_parameters.return_value = {"Parameters": []}
-        instance.test_can_describe_ssm_parameters(mock_client)
+        result = instance.test_can_describe_ssm_parameters(mock_client)
+        assert result is None
 
     def test_fails_on_client_error(self):
         """test_can_describe_ssm_parameters fails on ClientError."""
@@ -208,7 +211,8 @@ class TestCreateLayer6CapabilityTestsDynamoDBTestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.list_tables.return_value = {"TableNames": []}
-        instance.test_can_list_dynamodb_tables(mock_client)
+        result = instance.test_can_list_dynamodb_tables(mock_client)
+        assert result is None
 
     def test_fails_on_client_error(self):
         """test_can_list_dynamodb_tables fails on ClientError."""
@@ -246,7 +250,8 @@ class TestCreateLayer6CapabilityTestsLogsTestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {"logGroups": []}
-        instance.test_can_list_log_groups(mock_client)
+        result = instance.test_can_list_log_groups(mock_client)
+        assert result is None
 
     def test_fails_on_client_error(self):
         """test_can_list_log_groups fails on ClientError."""
@@ -284,7 +289,8 @@ class TestCreateLayer6CapabilityTestsS3TestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.list_buckets.return_value = {"Buckets": []}
-        instance.test_can_list_s3_buckets(mock_client)
+        result = instance.test_can_list_s3_buckets(mock_client)
+        assert result is None
 
     def test_fails_on_client_error(self):
         """test_can_list_s3_buckets fails on ClientError."""

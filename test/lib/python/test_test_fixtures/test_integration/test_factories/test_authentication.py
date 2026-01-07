@@ -63,7 +63,8 @@ class TestCreateLayer1AuthenticationTestsCredentialsAvailable:
         test_class = create_layer1_authentication_tests()
         instance = test_class()
         mock_client = MagicMock()
-        instance.test_credentials_available(mock_client)
+        result = instance.test_credentials_available(mock_client)
+        assert result is None
 
 
 class TestCreateLayer1AuthenticationTestsCanCallStsApi:
@@ -75,7 +76,8 @@ class TestCreateLayer1AuthenticationTestsCanCallStsApi:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        instance.test_can_call_sts_api(mock_client)
+        result = instance.test_can_call_sts_api(mock_client)
+        assert result is None
 
     def test_fails_when_response_has_no_account(self):
         """test_can_call_sts_api fails when response has no Account."""
@@ -107,7 +109,8 @@ class TestCreateLayer1AuthenticationTestsIdentityHasArn:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Arn": "arn:aws:iam::123:role/Test"}
-        instance.test_identity_has_arn(mock_client)
+        result = instance.test_identity_has_arn(mock_client)
+        assert result is None
 
     def test_fails_when_arn_missing(self):
         """test_identity_has_arn fails when Arn missing."""
@@ -159,7 +162,8 @@ class TestCreateSimpleLayer1AuthenticationTestsCredentialsValid:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        instance.test_aws_credentials_valid(mock_client)
+        result = instance.test_aws_credentials_valid(mock_client)
+        assert result is None
 
     def test_fails_when_account_is_none(self):
         """test_aws_credentials_valid fails when Account is None."""
@@ -180,7 +184,8 @@ class TestCreateSimpleLayer1AuthenticationTestsCredentialsNotExpired:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Arn": "arn:aws:iam::123:role/Test"}
-        instance.test_aws_credentials_not_expired(mock_client)
+        result = instance.test_aws_credentials_not_expired(mock_client)
+        assert result is None
 
     def test_fails_when_arn_missing(self):
         """test_aws_credentials_not_expired fails when Arn missing."""
@@ -232,7 +237,8 @@ class TestCreateLayer2S3AuthorizationTestsCanCallHeadBucket:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
-        instance.test_can_call_s3_head_bucket(mock_client, "my-bucket")
+        result = instance.test_can_call_s3_head_bucket(mock_client, "my-bucket")
+        assert result is None
 
 
 class TestCreateLayer2S3AuthorizationTestsBucketNameConfigured:
@@ -242,7 +248,8 @@ class TestCreateLayer2S3AuthorizationTestsBucketNameConfigured:
         """test_bucket_name_is_configured does not raise with bucket name."""
         test_class = create_layer2_s3_authorization_tests()
         instance = test_class()
-        instance.test_bucket_name_is_configured("my-bucket")
+        result = instance.test_bucket_name_is_configured("my-bucket")
+        assert result is None
 
     def test_fails_when_bucket_name_empty(self):
         """test_bucket_name_is_configured fails when bucket name empty."""

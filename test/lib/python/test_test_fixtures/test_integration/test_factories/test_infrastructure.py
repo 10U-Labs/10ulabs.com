@@ -74,7 +74,8 @@ class TestCreateEcsRunnerOutputsTestsTaskDefinitionArn:
         test_class = create_ecs_runner_outputs_tests()
         instance = test_class()
         outputs = {"task_definition_arn": "arn:aws:ecs:us-east-1:123:task-def"}
-        instance.test_task_definition_arn_output_exists(outputs)
+        result = instance.test_task_definition_arn_output_exists(outputs)
+        assert result is None
 
     def test_fails_when_output_missing(self):
         """test_task_definition_arn_output_exists fails when output missing."""
@@ -93,7 +94,8 @@ class TestCreateEcsRunnerOutputsTestsClusterArn:
         test_class = create_ecs_runner_outputs_tests()
         instance = test_class()
         outputs = {"cluster_arn": "arn:aws:ecs:us-east-1:123:cluster/test"}
-        instance.test_cluster_arn_output_exists(outputs)
+        result = instance.test_cluster_arn_output_exists(outputs)
+        assert result is None
 
     def test_fails_when_output_missing(self):
         """test_cluster_arn_output_exists fails when output missing."""
@@ -174,7 +176,8 @@ class TestCreateWwwCommonS3ExistenceTestsBucketNameOutput:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
         outputs = {"bucket_name": "my-bucket"}
-        instance.test_bucket_name_output_exists(outputs)
+        result = instance.test_bucket_name_output_exists(outputs)
+        assert result is None
 
     def test_fails_when_output_missing(self):
         """test_bucket_name_output_exists fails when output missing."""
