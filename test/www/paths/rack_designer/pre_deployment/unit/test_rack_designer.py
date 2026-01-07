@@ -104,10 +104,6 @@ class TestRackDesignerHTMLStructure:
         content = (RACK_DESIGNER_DIR / "index.html").read_text()
         assert 'src="js/analytics.js"' in content
 
-
-class TestRackDesignerPrivacyLink:
-    """Tests for privacy notice link in rack_designer."""
-
     def test_index_html_has_privacy_link(self):
         """Test that index.html has privacy notice link."""
         content = (RACK_DESIGNER_DIR / "index.html").read_text()
@@ -143,17 +139,13 @@ class TestRackDesignerAnalyticsJS:
         assert "flush: flush" in content
 
 
-class TestRackDesignerAppJS:
-    """Tests for app.js file content."""
+class TestRackDesignerStaticAssets:
+    """Tests for static asset files."""
 
     def test_app_js_is_not_empty(self):
         """Test that app.js is not empty."""
         content = (RACK_DESIGNER_DIR / "js" / "app.js").read_text()
         assert len(content.strip()) > 0
-
-
-class TestRackDesignerStylesCSS:
-    """Tests for styles.css file content."""
 
     def test_styles_css_is_not_empty(self):
         """Test that styles.css is not empty."""
