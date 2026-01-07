@@ -260,6 +260,7 @@
       "test/lib/python/**",
       "test/lib/terraform/cloudfront_waf/**",
       "test/lib/terraform/common/**",
+      "test/lib/terraform/conftest.py",
       "test/lib/terraform/s3_bucket/**",
       "test/lib/terraform/write_ahead_queue/**",
       "test/www/common/**"

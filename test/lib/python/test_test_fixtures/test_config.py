@@ -210,13 +210,15 @@ class TestCreateWebsiteConfig:
         result = create_website_config(tf_file(''), shared_config)
         assert result['github_repo'] == 'myorg/myrepo'
 
-    def test_includes_resource_prefix_from_locals(self, tf_file, base_shared_config):
-        """Test that resource_prefix is extracted from locals file."""
-        result = create_website_config(
-            tf_file('  resource_prefix = "my-prefix"\n'),
-            base_shared_config
-        )
-        assert result['resource_prefix'] == 'my-prefix'
+    def test_includes_resource_prefix_from_shared_config(self, tf_file):
+        """Test that resource_prefix is computed from shared_config with Website suffix."""
+        shared_config = {
+            'aws_region': 'us-east-1',
+            'domain_name': 'example.com',
+            'resource_prefix': 'MyPrefix',
+        }
+        result = create_website_config(tf_file(''), shared_config)
+        assert result['resource_prefix'] == 'MyPrefixWebsite'
 
     def test_includes_central_logs_bucket(self, tf_file):
         """Test that central_logs_bucket is included from shared_config."""
