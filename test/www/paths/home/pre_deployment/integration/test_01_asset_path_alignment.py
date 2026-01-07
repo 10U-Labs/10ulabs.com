@@ -9,7 +9,6 @@ If any of these are misaligned, the React app fails to load.
 """
 
 import re
-from pathlib import Path
 
 from repo_utils import REPO_ROOT
 

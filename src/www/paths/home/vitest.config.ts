@@ -33,7 +33,7 @@ export default defineConfig({
     environment: "jsdom",
     exclude: ["node_modules/**"],
     globals: true,
-    include: [path.join(testDir, "**/*.test.tsx")],
+    include: [path.join(testDir, "**/*.test.{ts,tsx}")],
     setupFiles: [path.join(testDir, "setup.ts")],
   },
 });

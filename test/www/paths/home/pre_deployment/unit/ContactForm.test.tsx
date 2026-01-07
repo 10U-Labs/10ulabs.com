@@ -1,11 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "./utils";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor } from "./utils";
 import userEvent from "@testing-library/user-event";
 import { ContactForm } from "@/components/ContactForm";
 
+const mockToast = vi.fn();
+
 vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({
-    toast: vi.fn(),
+    toast: mockToast,
+  }),
+}));
+
+vi.mock("@/hooks/use_toast", () => ({
+  useToast: () => ({
+    toast: mockToast,
   }),
 }));
 
@@ -104,6 +112,177 @@ describe("ContactForm", () => {
       const button = screen.getByRole("button", { name: "Send Message" });
       const isEnabled = !button.hasAttribute("disabled");
       expect(isEnabled).toBe(true);
+    });
+  });
+
+  describe("email input", () => {
+    it("email input has correct type attribute", () => {
+      render(<ContactForm />);
+      const emailInput = screen.getByPlaceholderText("Email *");
+      const hasEmailType = emailInput.getAttribute("type") === "email";
+      expect(hasEmailType).toBe(true);
+    });
+  });
+
+  describe("successful submission", () => {
+    beforeEach(() => {
+      mockToast.mockClear();
+      vi.stubGlobal("grecaptcha", {
+        ready: (cb: () => void) => cb(),
+        execute: () => Promise.resolve("test-token"),
+      });
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true }),
+        })
+      ));
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("clears form after successful submission", async () => {
+      const user = userEvent.setup();
+      render(<ContactForm />);
+      const nameInput = screen.getByPlaceholderText("Name *") as HTMLInputElement;
+      const emailInput = screen.getByPlaceholderText("Email *") as HTMLInputElement;
+      const messageInput = screen.getByPlaceholderText("Message *") as HTMLTextAreaElement;
+      await user.type(nameInput, "John Doe");
+      await user.type(emailInput, "john@example.com");
+      await user.type(messageInput, "Test message");
+      await user.click(screen.getByRole("button", { name: "Send Message" }));
+      await waitFor(() => {
+        const formCleared = nameInput.value === "" && emailInput.value === "" && messageInput.value === "";
+        expect(formCleared).toBe(true);
+      });
+    });
+
+    it("shows success toast after submission", async () => {
+      const user = userEvent.setup();
+      render(<ContactForm />);
+      await user.type(screen.getByPlaceholderText("Name *"), "John Doe");
+      await user.type(screen.getByPlaceholderText("Email *"), "john@example.com");
+      await user.type(screen.getByPlaceholderText("Message *"), "Test message");
+      await user.click(screen.getByRole("button", { name: "Send Message" }));
+      await waitFor(() => {
+        const toastCalled = mockToast.mock.calls.length > 0;
+        expect(toastCalled).toBe(true);
+      });
+    });
+  });
+
+  describe("API error handling", () => {
+    beforeEach(() => {
+      mockToast.mockClear();
+      vi.stubGlobal("grecaptcha", {
+        ready: (cb: () => void) => cb(),
+        execute: () => Promise.resolve("test-token"),
+      });
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("shows error toast when API returns error", async () => {
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({ error: "Server error" }),
+        })
+      ));
+      const user = userEvent.setup();
+      render(<ContactForm />);
+      await user.type(screen.getByPlaceholderText("Name *"), "John Doe");
+      await user.type(screen.getByPlaceholderText("Email *"), "john@example.com");
+      await user.type(screen.getByPlaceholderText("Message *"), "Test message");
+      await user.click(screen.getByRole("button", { name: "Send Message" }));
+      await waitFor(() => {
+        const errorToastShown = mockToast.mock.calls.some(
+          (call) => call[0]?.variant === "destructive"
+        );
+        expect(errorToastShown).toBe(true);
+      });
+    });
+
+    it("shows default error message when API returns no error details", async () => {
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          json: () => Promise.reject(new Error("Parse error")),
+        })
+      ));
+      const user = userEvent.setup();
+      render(<ContactForm />);
+      await user.type(screen.getByPlaceholderText("Name *"), "John Doe");
+      await user.type(screen.getByPlaceholderText("Email *"), "john@example.com");
+      await user.type(screen.getByPlaceholderText("Message *"), "Test message");
+      await user.click(screen.getByRole("button", { name: "Send Message" }));
+      await waitFor(() => {
+        const toastWasCalled = mockToast.mock.calls.length > 0;
+        expect(toastWasCalled).toBe(true);
+      });
+    });
+  });
+
+  describe("reCAPTCHA behavior", () => {
+    beforeEach(() => {
+      mockToast.mockClear();
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("shows error when reCAPTCHA fails to load", async () => {
+      vi.stubGlobal("grecaptcha", undefined);
+      const user = userEvent.setup();
+      render(<ContactForm />);
+      await user.type(screen.getByPlaceholderText("Name *"), "John Doe");
+      await user.type(screen.getByPlaceholderText("Email *"), "john@example.com");
+      await user.type(screen.getByPlaceholderText("Message *"), "Test message");
+      await user.click(screen.getByRole("button", { name: "Send Message" }));
+      await waitFor(() => {
+        const errorToastShown = mockToast.mock.calls.some(
+          (call) => call[0]?.variant === "destructive"
+        );
+        expect(errorToastShown).toBe(true);
+      });
+    });
+  });
+
+  describe("field length validation", () => {
+    beforeEach(() => {
+      vi.stubGlobal("grecaptcha", {
+        ready: (cb: () => void) => cb(),
+        execute: () => Promise.resolve("test-token"),
+      });
+    });
+
+    it("shows error when name exceeds max length", async () => {
+      const user = userEvent.setup();
+      render(<ContactForm />);
+      const longName = "a".repeat(101);
+      await user.type(screen.getByPlaceholderText("Name *"), longName);
+      await user.type(screen.getByPlaceholderText("Email *"), "john@example.com");
+      await user.type(screen.getByPlaceholderText("Message *"), "Test message");
+      await user.click(screen.getByRole("button", { name: "Send Message" }));
+      const errorVisible = await screen.findByText("Name must be less than 100 characters");
+      expect(errorVisible !== null).toBe(true);
+    });
+
+    it("shows error when message exceeds max length", async () => {
+      const user = userEvent.setup();
+      render(<ContactForm />);
+      const longMessage = "a".repeat(1001);
+      await user.type(screen.getByPlaceholderText("Name *"), "John Doe");
+      await user.type(screen.getByPlaceholderText("Email *"), "john@example.com");
+      await user.type(screen.getByPlaceholderText("Message *"), longMessage);
+      await user.click(screen.getByRole("button", { name: "Send Message" }));
+      const errorVisible = await screen.findByText("Message must be less than 1000 characters");
+      expect(errorVisible !== null).toBe(true);
     });
   });
 });
