@@ -583,20 +583,23 @@ class TestLayer1AuthenticationTestsExecution:
         instance = Layer1AuthenticationTests()
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123"}
-        instance.test_aws_credentials_are_available(mock_client)
+        result = instance.test_aws_credentials_are_available(mock_client)
+        assert result is None
 
     def test_credentials_are_valid_success(self):
         """Test test_aws_credentials_are_valid with valid client."""
         instance = Layer1AuthenticationTests()
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123"}
-        instance.test_aws_credentials_are_valid(mock_client)
+        result = instance.test_aws_credentials_are_valid(mock_client)
+        assert result is None
 
     def test_credentials_return_account_success(self):
         """Test test_aws_credentials_return_account with Account in response."""
         instance = Layer1AuthenticationTests()
         caller_identity = {"Account": "123456789012", "Arn": "arn:aws:..."}
-        instance.test_aws_credentials_return_account(caller_identity)
+        result = instance.test_aws_credentials_return_account(caller_identity)
+        assert result is None
 
     def test_credentials_return_account_fails_without_account(self):
         """Test test_aws_credentials_return_account fails without Account."""
@@ -609,7 +612,8 @@ class TestLayer1AuthenticationTestsExecution:
         """Test test_aws_credentials_return_arn with Arn in response."""
         instance = Layer1AuthenticationTests()
         caller_identity = {"Account": "123", "Arn": "arn:aws:sts::123:assumed-role/r/s"}
-        instance.test_aws_credentials_return_arn(caller_identity)
+        result = instance.test_aws_credentials_return_arn(caller_identity)
+        assert result is None
 
     def test_credentials_return_arn_fails_without_arn(self):
         """Test test_aws_credentials_return_arn fails without Arn."""
@@ -622,13 +626,15 @@ class TestLayer1AuthenticationTestsExecution:
         """Test test_caller_identity_is_role with assumed-role ARN."""
         instance = Layer1AuthenticationTests()
         caller_identity = {"Arn": "arn:aws:sts::123:assumed-role/MyRole/session"}
-        instance.test_caller_identity_is_role(caller_identity)
+        result = instance.test_caller_identity_is_role(caller_identity)
+        assert result is None
 
     def test_caller_identity_is_role_with_role_arn(self):
         """Test test_caller_identity_is_role with role ARN."""
         instance = Layer1AuthenticationTests()
         caller_identity = {"Arn": "arn:aws:iam::123:role/MyRole"}
-        instance.test_caller_identity_is_role(caller_identity)
+        result = instance.test_caller_identity_is_role(caller_identity)
+        assert result is None
 
     def test_caller_identity_is_role_fails_with_user(self):
         """Test test_caller_identity_is_role fails with user ARN."""
@@ -646,7 +652,8 @@ class TestLayer2IAMAuthorizationTestsExecution:
         instance = Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {}}
-        instance.test_can_call_iam_get_role_api(mock_client, "MyRole")
+        result = instance.test_can_call_iam_get_role_api(mock_client, "MyRole")
+        assert result is None
 
     def test_can_call_iam_get_role_api_skips_when_no_role_name(self):
         """Test test_can_call_iam_get_role_api skips when role name empty."""
@@ -668,7 +675,8 @@ class TestLayer2IAMAuthorizationTestsExecution:
         instance = Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
         mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
-        instance.test_can_call_iam_get_role_api(mock_client, "MyRole")
+        result = instance.test_can_call_iam_get_role_api(mock_client, "MyRole")
+        assert result is None
 
     def test_can_call_iam_get_role_api_reraises_other_errors(self):
         """Test test_can_call_iam_get_role_api re-raises other errors."""
@@ -683,7 +691,8 @@ class TestLayer2IAMAuthorizationTestsExecution:
         instance = Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
         mock_client.list_attached_role_policies.return_value = {"AttachedPolicies": []}
-        instance.test_can_list_attached_policies(mock_client, "MyRole")
+        result = instance.test_can_list_attached_policies(mock_client, "MyRole")
+        assert result is None
 
     def test_can_list_attached_policies_skips_when_no_role_name(self):
         """Test test_can_list_attached_policies skips when role name empty."""
@@ -709,7 +718,8 @@ class TestLayer2IAMAuthorizationTestsExecution:
         mock_client.list_attached_role_policies.side_effect = _create_client_error(
             "NoSuchEntity"
         )
-        instance.test_can_list_attached_policies(mock_client, "MyRole")
+        result = instance.test_can_list_attached_policies(mock_client, "MyRole")
+        assert result is None
 
     def test_can_list_attached_policies_reraises_other_errors(self):
         """Test test_can_list_attached_policies re-raises other errors."""
@@ -730,7 +740,8 @@ class TestLayer2S3AuthorizationTestsExecution:
         instance = Layer2S3AuthorizationTests()
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
-        instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket")
+        result = instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket")
+        assert result is None
 
     def test_can_call_s3_head_bucket_api_fails_on_403(self):
         """Test test_can_call_s3_head_bucket_api fails on 403."""
@@ -745,7 +756,8 @@ class TestLayer2S3AuthorizationTestsExecution:
         instance = Layer2S3AuthorizationTests()
         mock_client = MagicMock()
         mock_client.head_bucket.side_effect = _create_client_error("404")
-        instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket")
+        result = instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket")
+        assert result is None
 
     def test_can_call_s3_head_bucket_api_reraises_other_errors(self):
         """Test test_can_call_s3_head_bucket_api re-raises other errors."""
@@ -758,7 +770,8 @@ class TestLayer2S3AuthorizationTestsExecution:
     def test_state_bucket_name_configured_success(self):
         """Test test_state_bucket_name_configured with valid name."""
         instance = Layer2S3AuthorizationTests()
-        instance.test_state_bucket_name_configured("my-state-bucket")
+        result = instance.test_state_bucket_name_configured("my-state-bucket")
+        assert result is None
 
     def test_state_bucket_name_configured_fails_when_empty(self):
         """Test test_state_bucket_name_configured fails when empty."""
@@ -775,7 +788,8 @@ class TestLayer2ECRAuthorizationTestsExecution:
         instance = Layer2ECRAuthorizationTests()
         mock_client = MagicMock()
         mock_client.describe_repositories.return_value = {"repositories": []}
-        instance.test_can_call_ecr_describe_repositories_api(mock_client)
+        result = instance.test_can_call_ecr_describe_repositories_api(mock_client)
+        assert result is None
 
     def test_can_call_ecr_describe_repositories_api_fails_on_access_denied(self):
         """Test test_can_call_ecr_describe_repositories_api fails on AccessDeniedException."""
@@ -801,7 +815,8 @@ class TestLayer2ECRAuthorizationTestsExecution:
         """Test test_ecr_client_is_valid with valid client."""
         instance = Layer2ECRAuthorizationTests()
         mock_client = MagicMock()
-        instance.test_ecr_client_is_valid(mock_client)
+        result = instance.test_ecr_client_is_valid(mock_client)
+        assert result is None
 
     def test_ecr_client_is_valid_fails_when_none(self):
         """Test test_ecr_client_is_valid fails when None."""
