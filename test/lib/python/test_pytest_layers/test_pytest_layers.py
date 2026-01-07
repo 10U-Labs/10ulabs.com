@@ -44,7 +44,7 @@ class TestPytestConfigure:
     def test_registers_layer_marker(self, mock_config):
         """Test that pytest_configure registers the layer marker."""
         pytest_layers.pytest_configure(mock_config)
-        mock_config.addinivalue_line.assert_called_once()
+        assert mock_config.addinivalue_line.call_count == 1
 
     def test_registered_marker_contains_layer(self, mock_config):
         """Test that the registered marker contains 'layer'."""

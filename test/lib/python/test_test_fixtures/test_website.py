@@ -63,7 +63,7 @@ class TestWebsiteResponseFixture:
         mock_response = MagicMock()
         mock_get.return_value = mock_response
         website_response_fixture.__wrapped__('https://www.example.com')
-        mock_get.assert_called_once()
+        assert mock_get.call_count == 1
 
     @patch('test_fixtures.website.requests.get')
     def test_website_response_passes_url(self, mock_get):
@@ -72,7 +72,7 @@ class TestWebsiteResponseFixture:
         mock_response = MagicMock()
         mock_get.return_value = mock_response
         website_response_fixture.__wrapped__('https://www.test.com')
-        mock_get.assert_called_with('https://www.test.com', timeout=30)
+        assert mock_get.call_args[0][0] == 'https://www.test.com'
 
     @patch('test_fixtures.website.requests.get')
     def test_website_response_uses_30_second_timeout(self, mock_get):
