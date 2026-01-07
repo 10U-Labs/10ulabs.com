@@ -349,3 +349,400 @@ class TestCreateKmsPolicyTestReturnsFunction:
         """create_kms_policy_test returns function with correct name."""
         test_func = create_kms_policy_test("role_name_fixture")
         assert test_func.__name__ == "test_lambda_role_has_kms_policy"
+
+
+# === Method Execution Tests ===
+
+
+class TestEcsRunnerOutputsClusterNameExecution:
+    """Tests that execute test_cluster_name_output_exists."""
+
+    def test_passes_when_output_exists(self):
+        """test_cluster_name_output_exists passes when output exists."""
+        test_class = create_ecs_runner_outputs_tests()
+        instance = test_class()
+        outputs = {"cluster_name": "my-cluster"}
+        result = instance.test_cluster_name_output_exists(outputs)
+        assert result is None
+
+    def test_fails_when_output_missing(self):
+        """test_cluster_name_output_exists fails when output missing."""
+        test_class = create_ecs_runner_outputs_tests()
+        instance = test_class()
+        outputs = {}
+        with pytest.raises(AssertionError):
+            instance.test_cluster_name_output_exists(outputs)
+
+
+class TestEcsRunnerOutputsLambdaFunctionNameExecution:
+    """Tests that execute test_lambda_function_name_output_exists."""
+
+    def test_passes_when_output_exists(self):
+        """test_lambda_function_name_output_exists passes when output exists."""
+        test_class = create_ecs_runner_outputs_tests()
+        instance = test_class()
+        outputs = {"lambda_function_name": "my-function"}
+        result = instance.test_lambda_function_name_output_exists(outputs)
+        assert result is None
+
+    def test_fails_when_output_missing(self):
+        """test_lambda_function_name_output_exists fails when output missing."""
+        test_class = create_ecs_runner_outputs_tests()
+        instance = test_class()
+        outputs = {}
+        with pytest.raises(AssertionError):
+            instance.test_lambda_function_name_output_exists(outputs)
+
+
+class TestEcsRunnerLambdaExistenceExecution:
+    """Tests that execute ECS runner Lambda existence test methods."""
+
+    def test_lambda_function_exists_success(self):
+        """test_lambda_function_exists passes when Lambda exists."""
+        test_class = create_ecs_runner_lambda_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_function.return_value = {"Configuration": {"FunctionName": "my-func"}}
+        outputs = {"lambda_function_name": "my-func"}
+        result = instance.test_lambda_function_exists(mock_client, outputs)
+        assert result is None
+
+    def test_lambda_function_exists_skips_when_no_output(self):
+        """test_lambda_function_exists skips when output missing."""
+        test_class = create_ecs_runner_lambda_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        outputs = {}
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_lambda_function_exists(mock_client, outputs)
+
+    def test_lambda_function_exists_fails_on_not_found(self):
+        """test_lambda_function_exists fails when Lambda not found."""
+        test_class = create_ecs_runner_lambda_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_function.side_effect = _create_client_error("ResourceNotFoundException")
+        outputs = {"lambda_function_name": "my-func"}
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_lambda_function_exists(mock_client, outputs)
+
+    def test_lambda_function_exists_reraises_other_errors(self):
+        """test_lambda_function_exists reraises other errors."""
+        test_class = create_ecs_runner_lambda_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_function.side_effect = _create_client_error("ServiceException")
+        outputs = {"lambda_function_name": "my-func"}
+        with pytest.raises(ClientError):
+            instance.test_lambda_function_exists(mock_client, outputs)
+
+    def test_lambda_function_is_active_success(self):
+        """test_lambda_function_is_active passes when Lambda is active."""
+        test_class = create_ecs_runner_lambda_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_function.return_value = {"Configuration": {"State": "Active"}}
+        outputs = {"lambda_function_name": "my-func"}
+        result = instance.test_lambda_function_is_active(mock_client, outputs)
+        assert result is None
+
+    def test_lambda_function_is_active_skips_when_no_output(self):
+        """test_lambda_function_is_active skips when output missing."""
+        test_class = create_ecs_runner_lambda_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        outputs = {}
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_lambda_function_is_active(mock_client, outputs)
+
+    def test_lambda_function_is_active_fails_when_not_active(self):
+        """test_lambda_function_is_active fails when Lambda not active."""
+        test_class = create_ecs_runner_lambda_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_function.return_value = {"Configuration": {"State": "Pending"}}
+        outputs = {"lambda_function_name": "my-func"}
+        with pytest.raises(AssertionError):
+            instance.test_lambda_function_is_active(mock_client, outputs)
+
+    def test_lambda_function_is_active_skips_on_not_found(self):
+        """test_lambda_function_is_active skips when Lambda not found."""
+        test_class = create_ecs_runner_lambda_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_function.side_effect = _create_client_error("ResourceNotFoundException")
+        outputs = {"lambda_function_name": "my-func"}
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_lambda_function_is_active(mock_client, outputs)
+
+    def test_lambda_function_is_active_reraises_other_errors(self):
+        """test_lambda_function_is_active reraises other errors."""
+        test_class = create_ecs_runner_lambda_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_function.side_effect = _create_client_error("ServiceException")
+        outputs = {"lambda_function_name": "my-func"}
+        with pytest.raises(ClientError):
+            instance.test_lambda_function_is_active(mock_client, outputs)
+
+
+class TestWwwCommonS3ExistenceS3BucketExistsExecution:
+    """Tests that execute test_s3_bucket_exists method."""
+
+    def test_s3_bucket_exists_success(self):
+        """test_s3_bucket_exists passes when bucket exists."""
+        test_class = create_www_common_s3_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.head_bucket.return_value = {}
+        outputs = {"bucket_name": "my-bucket"}
+        result = instance.test_s3_bucket_exists(mock_client, outputs)
+        assert result is None
+
+    def test_s3_bucket_exists_skips_when_no_output(self):
+        """test_s3_bucket_exists skips when output missing."""
+        test_class = create_www_common_s3_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        outputs = {}
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_s3_bucket_exists(mock_client, outputs)
+
+    def test_s3_bucket_exists_fails_on_404(self):
+        """test_s3_bucket_exists fails when bucket not found."""
+        test_class = create_www_common_s3_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.head_bucket.side_effect = _create_client_error("404")
+        outputs = {"bucket_name": "my-bucket"}
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_s3_bucket_exists(mock_client, outputs)
+
+    def test_s3_bucket_exists_reraises_other_errors(self):
+        """test_s3_bucket_exists reraises other errors."""
+        test_class = create_www_common_s3_existence_tests()
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.head_bucket.side_effect = _create_client_error("500")
+        outputs = {"bucket_name": "my-bucket"}
+        with pytest.raises(ClientError):
+            instance.test_s3_bucket_exists(mock_client, outputs)
+
+
+class TestSqsFifoQueueTestsExecution:
+    """Tests that execute SQS FIFO queue test methods."""
+
+    def test_queue_exists_success(self):
+        """test_queue_exists passes when queue exists."""
+        test_class = create_sqs_fifo_queue_tests("queue_name")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        result = instance.test_queue_exists(mock_client, mock_request)
+        assert result is None
+
+    def test_queue_exists_skips_on_non_existent(self):
+        """test_queue_exists skips when queue doesn't exist (fail_on_missing=False)."""
+        test_class = create_sqs_fifo_queue_tests("queue_name", fail_on_missing=False)
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.side_effect = _create_client_error(
+            "AWS.SimpleQueueService.NonExistentQueue"
+        )
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_queue_exists(mock_client, mock_request)
+
+    def test_queue_exists_fails_on_non_existent_when_fail_on_missing(self):
+        """test_queue_exists fails when queue doesn't exist (fail_on_missing=True)."""
+        test_class = create_sqs_fifo_queue_tests("queue_name", fail_on_missing=True)
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.side_effect = _create_client_error(
+            "AWS.SimpleQueueService.NonExistentQueue"
+        )
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_queue_exists(mock_client, mock_request)
+
+    def test_queue_exists_reraises_other_errors(self):
+        """test_queue_exists reraises other errors."""
+        test_class = create_sqs_fifo_queue_tests("queue_name")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.side_effect = _create_client_error("ServiceException")
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        with pytest.raises(ClientError):
+            instance.test_queue_exists(mock_client, mock_request)
+
+    def test_queue_is_fifo_success(self):
+        """test_queue_is_fifo passes when queue is FIFO."""
+        test_class = create_sqs_fifo_queue_tests("queue_name")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
+        mock_client.get_queue_attributes.return_value = {
+            "Attributes": {"FifoQueue": "true"}
+        }
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        result = instance.test_queue_is_fifo(mock_client, mock_request)
+        assert result is None
+
+    def test_queue_is_fifo_fails_when_not_fifo(self):
+        """test_queue_is_fifo fails when queue is not FIFO."""
+        test_class = create_sqs_fifo_queue_tests("queue_name")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
+        mock_client.get_queue_attributes.return_value = {
+            "Attributes": {"FifoQueue": "false"}
+        }
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        with pytest.raises(AssertionError):
+            instance.test_queue_is_fifo(mock_client, mock_request)
+
+    def test_queue_is_fifo_skips_on_non_existent(self):
+        """test_queue_is_fifo skips when queue doesn't exist."""
+        test_class = create_sqs_fifo_queue_tests("queue_name")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.side_effect = _create_client_error(
+            "AWS.SimpleQueueService.NonExistentQueue"
+        )
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_queue_is_fifo(mock_client, mock_request)
+
+    def test_queue_has_deduplication_success(self):
+        """test_queue_has_deduplication passes when deduplication enabled."""
+        test_class = create_sqs_fifo_queue_tests("queue_name")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
+        mock_client.get_queue_attributes.return_value = {
+            "Attributes": {"ContentBasedDeduplication": "true"}
+        }
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        result = instance.test_queue_has_deduplication(mock_client, mock_request)
+        assert result is None
+
+    def test_queue_has_deduplication_fails_when_disabled(self):
+        """test_queue_has_deduplication fails when deduplication disabled."""
+        test_class = create_sqs_fifo_queue_tests("queue_name")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
+        mock_client.get_queue_attributes.return_value = {
+            "Attributes": {"ContentBasedDeduplication": "false"}
+        }
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        with pytest.raises(AssertionError):
+            instance.test_queue_has_deduplication(mock_client, mock_request)
+
+    def test_queue_has_deduplication_skips_on_non_existent(self):
+        """test_queue_has_deduplication skips when queue doesn't exist."""
+        test_class = create_sqs_fifo_queue_tests("queue_name")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.side_effect = _create_client_error(
+            "AWS.SimpleQueueService.NonExistentQueue"
+        )
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_queue_has_deduplication(mock_client, mock_request)
+
+
+class TestSecurityGroupExistenceExecution:
+    """Tests that execute security group existence test."""
+
+    def test_security_group_exists_success(self):
+        """test_security_group_exists passes when SG exists."""
+        test_func = create_security_group_existence_test("outputs_fixture")
+        mock_client = MagicMock()
+        mock_client.describe_security_groups.return_value = {"SecurityGroups": [{}]}
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"runner_security_group_id": "sg-123"}
+        result = test_func(None, mock_client, mock_request)
+        assert result is None
+
+    def test_security_group_exists_skips_when_no_output(self):
+        """test_security_group_exists skips when output missing."""
+        test_func = create_security_group_existence_test("outputs_fixture")
+        mock_client = MagicMock()
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {}
+        with pytest.raises(pytest.skip.Exception):
+            test_func(None, mock_client, mock_request)
+
+    def test_security_group_exists_fails_on_not_found(self):
+        """test_security_group_exists fails when SG not found."""
+        test_func = create_security_group_existence_test("outputs_fixture")
+        mock_client = MagicMock()
+        mock_client.describe_security_groups.side_effect = _create_client_error(
+            "InvalidGroup.NotFound"
+        )
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"runner_security_group_id": "sg-123"}
+        with pytest.raises(pytest.fail.Exception):
+            test_func(None, mock_client, mock_request)
+
+    def test_security_group_exists_reraises_other_errors(self):
+        """test_security_group_exists reraises other errors."""
+        test_func = create_security_group_existence_test("outputs_fixture")
+        mock_client = MagicMock()
+        mock_client.describe_security_groups.side_effect = _create_client_error("ServiceException")
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"runner_security_group_id": "sg-123"}
+        with pytest.raises(ClientError):
+            test_func(None, mock_client, mock_request)
+
+
+class TestLogGroupConfigurationExecution:
+    """Tests that execute log group configuration test methods."""
+
+    def test_log_group_has_retention_set_success(self):
+        """test_handler_log_group_has_retention_set passes when retention set."""
+        test_class = create_log_group_configuration_tests("log_group_fixture")
+        instance = test_class()
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 7}
+        result = instance.test_handler_log_group_has_retention_set(mock_request)
+        assert result is None
+
+    def test_log_group_has_retention_set_fails_when_none(self):
+        """test_handler_log_group_has_retention_set fails when retention is None."""
+        test_class = create_log_group_configuration_tests("log_group_fixture")
+        instance = test_class()
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": None}
+        with pytest.raises(AssertionError):
+            instance.test_handler_log_group_has_retention_set(mock_request)
+
+    def test_log_group_retention_is_expected_success(self):
+        """test_handler_log_group_retention_is_expected passes when retention matches."""
+        test_class = create_log_group_configuration_tests("log_group_fixture", expected_retention=7)
+        instance = test_class()
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 7}
+        result = instance.test_handler_log_group_retention_is_expected(mock_request)
+        assert result is None
+
+    def test_log_group_retention_is_expected_fails_when_different(self):
+        """test_handler_log_group_retention_is_expected fails when retention differs."""
+        test_class = create_log_group_configuration_tests("log_group_fixture", expected_retention=7)
+        instance = test_class()
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 30}
+        with pytest.raises(AssertionError):
+            instance.test_handler_log_group_retention_is_expected(mock_request)

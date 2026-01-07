@@ -823,3 +823,322 @@ class TestLayer2ECRAuthorizationTestsExecution:
         instance = Layer2ECRAuthorizationTests()
         with pytest.raises(AssertionError):
             instance.test_ecr_client_is_valid(None)
+
+
+class TestLayer4TerraformStateExistenceTestsExecution:
+    """Tests that execute Layer4TerraformStateExistenceTests methods."""
+
+    def test_state_bucket_exists_success(self):
+        """Test test_state_bucket_exists with existing bucket."""
+        instance = Layer4TerraformStateExistenceTests()
+        mock_client = MagicMock()
+        mock_client.head_bucket.return_value = {}
+        result = instance.test_state_bucket_exists(mock_client, "my-state-bucket")
+        assert result is None
+
+    def test_state_bucket_exists_fails_on_404(self):
+        """Test test_state_bucket_exists fails when bucket doesn't exist."""
+        instance = Layer4TerraformStateExistenceTests()
+        mock_client = MagicMock()
+        mock_client.head_bucket.side_effect = _create_client_error("404")
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_state_bucket_exists(mock_client, "my-state-bucket")
+
+    def test_state_bucket_exists_reraises_other_errors(self):
+        """Test test_state_bucket_exists re-raises other errors."""
+        instance = Layer4TerraformStateExistenceTests()
+        mock_client = MagicMock()
+        mock_client.head_bucket.side_effect = _create_client_error("500")
+        with pytest.raises(ClientError):
+            instance.test_state_bucket_exists(mock_client, "my-state-bucket")
+
+    def test_state_bucket_has_name_success(self):
+        """Test test_state_bucket_has_name with valid name."""
+        instance = Layer4TerraformStateExistenceTests()
+        result = instance.test_state_bucket_has_name("my-state-bucket")
+        assert result is None
+
+    def test_state_bucket_has_name_fails_when_empty(self):
+        """Test test_state_bucket_has_name fails when empty."""
+        instance = Layer4TerraformStateExistenceTests()
+        with pytest.raises(AssertionError):
+            instance.test_state_bucket_has_name("")
+
+
+class TestLayer5S3ConfigurationTestsExecution:
+    """Tests that execute Layer5S3ConfigurationTests methods."""
+
+    def test_state_bucket_is_encrypted_success(self):
+        """Test test_state_bucket_is_encrypted with encryption enabled."""
+        instance = Layer5S3ConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_encryption.return_value = {
+            "ServerSideEncryptionConfiguration": {
+                "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]
+            }
+        }
+        result = instance.test_state_bucket_is_encrypted(mock_client, "my-bucket")
+        assert result is None
+
+    def test_state_bucket_is_encrypted_fails_with_no_rules(self):
+        """Test test_state_bucket_is_encrypted fails with no rules."""
+        instance = Layer5S3ConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_encryption.return_value = {
+            "ServerSideEncryptionConfiguration": {"Rules": []}
+        }
+        with pytest.raises(AssertionError):
+            instance.test_state_bucket_is_encrypted(mock_client, "my-bucket")
+
+    def test_state_bucket_is_encrypted_fails_on_not_found(self):
+        """Test test_state_bucket_is_encrypted fails when no encryption configured."""
+        instance = Layer5S3ConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_encryption.side_effect = _create_client_error(
+            "ServerSideEncryptionConfigurationNotFoundError"
+        )
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_state_bucket_is_encrypted(mock_client, "my-bucket")
+
+    def test_state_bucket_is_encrypted_reraises_other_errors(self):
+        """Test test_state_bucket_is_encrypted re-raises other errors."""
+        instance = Layer5S3ConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_encryption.side_effect = _create_client_error("InternalError")
+        with pytest.raises(ClientError):
+            instance.test_state_bucket_is_encrypted(mock_client, "my-bucket")
+
+    def test_state_bucket_versioning_disabled_when_disabled(self):
+        """Test test_state_bucket_versioning_disabled passes when disabled."""
+        instance = Layer5S3ConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_versioning.return_value = {"Status": "Suspended"}
+        result = instance.test_state_bucket_versioning_disabled(mock_client, "my-bucket")
+        assert result is None
+
+    def test_state_bucket_versioning_disabled_when_not_set(self):
+        """Test test_state_bucket_versioning_disabled passes when not set."""
+        instance = Layer5S3ConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_versioning.return_value = {}
+        result = instance.test_state_bucket_versioning_disabled(mock_client, "my-bucket")
+        assert result is None
+
+    def test_state_bucket_versioning_disabled_fails_when_enabled(self):
+        """Test test_state_bucket_versioning_disabled fails when enabled."""
+        instance = Layer5S3ConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_versioning.return_value = {"Status": "Enabled"}
+        with pytest.raises(AssertionError):
+            instance.test_state_bucket_versioning_disabled(mock_client, "my-bucket")
+
+
+class TestLayer6S3CapabilityTestsExecution:
+    """Tests that execute Layer6S3CapabilityTests methods."""
+
+    def test_can_list_bucket_objects_success(self):
+        """Test test_can_list_bucket_objects with successful call."""
+        instance = Layer6S3CapabilityTests()
+        mock_client = MagicMock()
+        mock_client.list_objects_v2.return_value = {"Contents": []}
+        result = instance.test_can_list_bucket_objects(mock_client, "my-bucket")
+        assert result is None
+
+    def test_can_list_bucket_objects_fails_on_error(self):
+        """Test test_can_list_bucket_objects fails on ClientError."""
+        instance = Layer6S3CapabilityTests()
+        mock_client = MagicMock()
+        mock_client.list_objects_v2.side_effect = _create_client_error("AccessDenied")
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_can_list_bucket_objects(mock_client, "my-bucket")
+
+    def test_can_get_bucket_location_success(self):
+        """Test test_can_get_bucket_location with successful call."""
+        instance = Layer6S3CapabilityTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_location.return_value = {"LocationConstraint": "us-west-2"}
+        result = instance.test_can_get_bucket_location(mock_client, "my-bucket")
+        assert result is None
+
+    def test_can_get_bucket_location_fails_on_error(self):
+        """Test test_can_get_bucket_location fails on ClientError."""
+        instance = Layer6S3CapabilityTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_location.side_effect = _create_client_error("AccessDenied")
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_can_get_bucket_location(mock_client, "my-bucket")
+
+
+class TestLayer4IAMRoleExistenceTestsExecution:
+    """Tests that execute Layer4IAMRoleExistenceTests methods."""
+
+    def test_iam_role_exists_success(self):
+        """Test test_iam_role_exists with existing role."""
+        instance = Layer4IAMRoleExistenceTests()
+        mock_client = MagicMock()
+        mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
+        result = instance.test_iam_role_exists(mock_client, "MyRole")
+        assert result is None
+
+    def test_iam_role_exists_skips_when_no_role_name(self):
+        """Test test_iam_role_exists skips when role name empty."""
+        instance = Layer4IAMRoleExistenceTests()
+        mock_client = MagicMock()
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_iam_role_exists(mock_client, "")
+
+    def test_iam_role_exists_fails_on_no_such_entity(self):
+        """Test test_iam_role_exists fails when role doesn't exist."""
+        instance = Layer4IAMRoleExistenceTests()
+        mock_client = MagicMock()
+        mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_iam_role_exists(mock_client, "MyRole")
+
+    def test_iam_role_exists_reraises_other_errors(self):
+        """Test test_iam_role_exists re-raises other errors."""
+        instance = Layer4IAMRoleExistenceTests()
+        mock_client = MagicMock()
+        mock_client.get_role.side_effect = _create_client_error("InternalError")
+        with pytest.raises(ClientError):
+            instance.test_iam_role_exists(mock_client, "MyRole")
+
+    def test_current_role_name_is_configured_success(self):
+        """Test test_current_role_name_is_configured with valid name."""
+        instance = Layer4IAMRoleExistenceTests()
+        result = instance.test_current_role_name_is_configured("MyRole")
+        assert result is None
+
+    def test_current_role_name_is_configured_fails_when_empty(self):
+        """Test test_current_role_name_is_configured fails when empty."""
+        instance = Layer4IAMRoleExistenceTests()
+        with pytest.raises(AssertionError):
+            instance.test_current_role_name_is_configured("")
+
+
+class TestLayer5IAMConfigurationTestsExecution:
+    """Tests that execute Layer5IAMConfigurationTests methods."""
+
+    def test_role_has_administrator_access_policy_success(self):
+        """Test test_role_has_administrator_access_policy with policy attached."""
+        instance = Layer5IAMConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.list_attached_role_policies.return_value = {
+            "AttachedPolicies": [{"PolicyName": "AdministratorAccess", "PolicyArn": "arn:..."}]
+        }
+        result = instance.test_role_has_administrator_access_policy(mock_client, "MyRole")
+        assert result is None
+
+    def test_role_has_administrator_access_policy_skips_when_no_role(self):
+        """Test test_role_has_administrator_access_policy skips when no role."""
+        instance = Layer5IAMConfigurationTests()
+        mock_client = MagicMock()
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_role_has_administrator_access_policy(mock_client, "")
+
+    def test_role_has_administrator_access_policy_fails_without_policy(self):
+        """Test test_role_has_administrator_access_policy fails without policy."""
+        instance = Layer5IAMConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.list_attached_role_policies.return_value = {
+            "AttachedPolicies": [{"PolicyName": "ReadOnlyAccess", "PolicyArn": "arn:..."}]
+        }
+        with pytest.raises(AssertionError):
+            instance.test_role_has_administrator_access_policy(mock_client, "MyRole")
+
+    def test_role_has_administrator_access_policy_skips_on_access_denied(self):
+        """Test test_role_has_administrator_access_policy skips on AccessDenied."""
+        instance = Layer5IAMConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.list_attached_role_policies.side_effect = _create_client_error("AccessDenied")
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_role_has_administrator_access_policy(mock_client, "MyRole")
+
+    def test_role_has_administrator_access_policy_reraises_other_errors(self):
+        """Test test_role_has_administrator_access_policy re-raises other errors."""
+        instance = Layer5IAMConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.list_attached_role_policies.side_effect = _create_client_error("InternalError")
+        with pytest.raises(ClientError):
+            instance.test_role_has_administrator_access_policy(mock_client, "MyRole")
+
+    def test_role_has_at_least_one_policy_success(self):
+        """Test test_role_has_at_least_one_policy with policies attached."""
+        instance = Layer5IAMConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.list_attached_role_policies.return_value = {
+            "AttachedPolicies": [{"PolicyName": "SomePolicy", "PolicyArn": "arn:..."}]
+        }
+        result = instance.test_role_has_at_least_one_policy(mock_client, "MyRole")
+        assert result is None
+
+    def test_role_has_at_least_one_policy_skips_when_no_role(self):
+        """Test test_role_has_at_least_one_policy skips when no role."""
+        instance = Layer5IAMConfigurationTests()
+        mock_client = MagicMock()
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_role_has_at_least_one_policy(mock_client, "")
+
+    def test_role_has_at_least_one_policy_fails_without_policies(self):
+        """Test test_role_has_at_least_one_policy fails without policies."""
+        instance = Layer5IAMConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.list_attached_role_policies.return_value = {"AttachedPolicies": []}
+        with pytest.raises(AssertionError):
+            instance.test_role_has_at_least_one_policy(mock_client, "MyRole")
+
+    def test_role_has_at_least_one_policy_skips_on_access_denied(self):
+        """Test test_role_has_at_least_one_policy skips on AccessDenied."""
+        instance = Layer5IAMConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.list_attached_role_policies.side_effect = _create_client_error("AccessDenied")
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_role_has_at_least_one_policy(mock_client, "MyRole")
+
+    def test_role_has_at_least_one_policy_reraises_other_errors(self):
+        """Test test_role_has_at_least_one_policy re-raises other errors."""
+        instance = Layer5IAMConfigurationTests()
+        mock_client = MagicMock()
+        mock_client.list_attached_role_policies.side_effect = _create_client_error("InternalError")
+        with pytest.raises(ClientError):
+            instance.test_role_has_at_least_one_policy(mock_client, "MyRole")
+
+
+class TestLayer5S3RegionTestsExecution:
+    """Tests that execute Layer5S3RegionTests methods."""
+
+    def test_bucket_in_expected_region_success(self):
+        """Test test_bucket_in_expected_region with correct region."""
+        instance = Layer5S3RegionTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_location.return_value = {"LocationConstraint": "us-west-2"}
+        result = instance.test_bucket_in_expected_region(mock_client, "my-bucket", "us-west-2")
+        assert result is None
+
+    def test_bucket_in_expected_region_us_east_1_none(self):
+        """Test test_bucket_in_expected_region handles us-east-1 as None."""
+        instance = Layer5S3RegionTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_location.return_value = {"LocationConstraint": None}
+        result = instance.test_bucket_in_expected_region(mock_client, "my-bucket", "us-east-1")
+        assert result is None
+
+    def test_bucket_in_expected_region_fails_with_wrong_region(self):
+        """Test test_bucket_in_expected_region fails with wrong region."""
+        instance = Layer5S3RegionTests()
+        mock_client = MagicMock()
+        mock_client.get_bucket_location.return_value = {"LocationConstraint": "eu-west-1"}
+        with pytest.raises(AssertionError):
+            instance.test_bucket_in_expected_region(mock_client, "my-bucket", "us-west-2")
+
+    def test_expected_region_is_configured_success(self):
+        """Test test_expected_region_is_configured with valid region."""
+        instance = Layer5S3RegionTests()
+        result = instance.test_expected_region_is_configured("us-west-2")
+        assert result is None
+
+    def test_expected_region_is_configured_fails_when_empty(self):
+        """Test test_expected_region_is_configured fails when empty."""
+        instance = Layer5S3RegionTests()
+        with pytest.raises(AssertionError):
+            instance.test_expected_region_is_configured("")
