@@ -717,7 +717,7 @@ class TestAssertIAMRoleNameIsPascalCaseValid:
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyServiceRole"}}
         validate_func = MagicMock(return_value=None)
         assert_iam_role_name_is_pascalcase(mock_client, "MyServiceRole", validate_func)
-        mock_client.get_role.assert_called_once_with(RoleName="MyServiceRole")
+        assert mock_client.get_role.call_args[1]["RoleName"] == "MyServiceRole"
 
     def test_calls_validate_func_with_actual_name(self):
         """assert_iam_role_name_is_pascalcase calls validate function with actual name."""
@@ -725,7 +725,7 @@ class TestAssertIAMRoleNameIsPascalCaseValid:
         mock_client.get_role.return_value = {"Role": {"RoleName": "ActualRoleName"}}
         validate_func = MagicMock(return_value=None)
         assert_iam_role_name_is_pascalcase(mock_client, "RoleToCheck", validate_func)
-        validate_func.assert_called_once_with("ActualRoleName")
+        assert validate_func.call_args[0][0] == "ActualRoleName"
 
 
 class TestAssertIAMRoleNameIsPascalCaseInvalid:

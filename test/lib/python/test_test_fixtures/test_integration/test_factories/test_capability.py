@@ -308,19 +308,37 @@ class TestCreateLayer6CapabilityTestsS3TestBehavior:
 class TestCreateLayer6CapabilityTestsMultipleCapabilities:
     """Tests for create_layer6_capability_tests with multiple capabilities."""
 
-    def test_has_all_specified_capabilities(self):
-        """create_layer6_capability_tests includes all specified capabilities."""
+    def _get_all_capabilities(self):
+        """Get capabilities from class with all capabilities enabled."""
         test_class = create_layer6_capability_tests(
             frozenset({"lambda", "iam", "ssm", "dynamodb", "logs", "s3"})
         )
         instance = test_class()
-        capabilities = instance.get_enabled_capabilities()
-        assert "lambda" in capabilities
-        assert "iam" in capabilities
-        assert "ssm" in capabilities
-        assert "dynamodb" in capabilities
-        assert "logs" in capabilities
-        assert "s3" in capabilities
+        return instance.get_enabled_capabilities()
+
+    def test_has_lambda_when_all_specified(self):
+        """create_layer6_capability_tests includes lambda when all specified."""
+        assert "lambda" in self._get_all_capabilities()
+
+    def test_has_iam_when_all_specified(self):
+        """create_layer6_capability_tests includes iam when all specified."""
+        assert "iam" in self._get_all_capabilities()
+
+    def test_has_ssm_when_all_specified(self):
+        """create_layer6_capability_tests includes ssm when all specified."""
+        assert "ssm" in self._get_all_capabilities()
+
+    def test_has_dynamodb_when_all_specified(self):
+        """create_layer6_capability_tests includes dynamodb when all specified."""
+        assert "dynamodb" in self._get_all_capabilities()
+
+    def test_has_logs_when_all_specified(self):
+        """create_layer6_capability_tests includes logs when all specified."""
+        assert "logs" in self._get_all_capabilities()
+
+    def test_has_s3_when_all_specified(self):
+        """create_layer6_capability_tests includes s3 when all specified."""
+        assert "s3" in self._get_all_capabilities()
 
 
 class TestCreateLayer6CapabilityTestsEmptyCapabilities:

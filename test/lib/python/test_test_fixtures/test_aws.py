@@ -858,8 +858,8 @@ class TestApiGatewayInfoFixtureExecution:
         result = api_gateway_info.__wrapped__(mock_request)
         assert result == {"id": None, "exists": False, "accessible": False}
 
-    def test_api_gateway_info_returns_success_when_api_exists(self):
-        """Test api_gateway_info returns success when API exists."""
+    def _create_success_mock_request(self):
+        """Create mock request for successful API gateway info tests."""
         from test_fixtures.aws import api_gateway_info
         mock_request = MagicMock()
         mock_client = MagicMock()
@@ -873,11 +873,31 @@ class TestApiGatewayInfoFixtureExecution:
             "apigateway_client": mock_client,
             "api_common_routing_outputs": {"api_gateway_id": "abc123"}
         }[name]
-        result = api_gateway_info.__wrapped__(mock_request)
+        return api_gateway_info.__wrapped__(mock_request)
+
+    def test_api_gateway_info_returns_correct_id_when_api_exists(self):
+        """Test api_gateway_info returns correct id when API exists."""
+        result = self._create_success_mock_request()
         assert result["id"] == "abc123"
+
+    def test_api_gateway_info_returns_exists_true_when_api_exists(self):
+        """Test api_gateway_info returns exists=True when API exists."""
+        result = self._create_success_mock_request()
         assert result["exists"] is True
+
+    def test_api_gateway_info_returns_accessible_true_when_api_exists(self):
+        """Test api_gateway_info returns accessible=True when API exists."""
+        result = self._create_success_mock_request()
         assert result["accessible"] is True
+
+    def test_api_gateway_info_returns_endpoint_types_when_api_exists(self):
+        """Test api_gateway_info returns endpoint_types when API exists."""
+        result = self._create_success_mock_request()
         assert result["endpoint_types"] == ["REGIONAL"]
+
+    def test_api_gateway_info_returns_paths_when_api_exists(self):
+        """Test api_gateway_info returns paths when API exists."""
+        result = self._create_success_mock_request()
         assert result["paths"] == ["/", "/items"]
 
     def test_api_gateway_info_handles_access_denied(self):

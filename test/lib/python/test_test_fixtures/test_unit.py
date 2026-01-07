@@ -403,12 +403,12 @@ value = os.environ.get('MY_VAR')
 other = os.environ['OTHER_VAR']
 """
         path = lambda_file_factory(content)
-        assert_no_hardcoded_env_defaults(path)  # Should not raise
+        assert assert_no_hardcoded_env_defaults(path) is None
 
     def test_passes_for_empty_file(self, lambda_file_factory):
         """assert_no_hardcoded_env_defaults passes for empty file."""
         path = lambda_file_factory("")
-        assert_no_hardcoded_env_defaults(path)  # Should not raise
+        assert assert_no_hardcoded_env_defaults(path) is None
 
     def test_passes_for_no_environ_usage(self, lambda_file_factory):
         """assert_no_hardcoded_env_defaults passes with no environ usage."""
@@ -417,7 +417,7 @@ def handler(event, context):
     return {'statusCode': 200}
 """
         path = lambda_file_factory(content)
-        assert_no_hardcoded_env_defaults(path)  # Should not raise
+        assert assert_no_hardcoded_env_defaults(path) is None
 
     def test_fails_for_single_quoted_default(self, lambda_file_factory):
         """assert_no_hardcoded_env_defaults fails for single-quoted default."""
@@ -447,13 +447,13 @@ var2 = os.environ.get('VAR2', 'default2')
         """assert_no_hardcoded_env_defaults passes for None default."""
         content = "value = os.environ.get('MY_VAR', None)"
         path = lambda_file_factory(content)
-        assert_no_hardcoded_env_defaults(path)  # Should not raise
+        assert assert_no_hardcoded_env_defaults(path) is None
 
     def test_passes_for_integer_default(self, lambda_file_factory):
         """assert_no_hardcoded_env_defaults passes for integer default."""
         content = "value = os.environ.get('MY_VAR', 0)"
         path = lambda_file_factory(content)
-        assert_no_hardcoded_env_defaults(path)  # Should not raise
+        assert assert_no_hardcoded_env_defaults(path) is None
 
 
 # === Fixture Tests ===

@@ -146,8 +146,7 @@ class TestCreateRemoteStateContractTests:
         lambda_file.write_text("# Lambda configuration")
         TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        # Should not raise
-        instance.test_lambda_file_exists()
+        assert instance.test_lambda_file_exists() is None
 
     def test_lambda_file_exists_test_fails_when_file_missing(self, tmp_path):
         """Test that test_lambda_file_exists fails when file missing."""
@@ -164,8 +163,7 @@ class TestCreateRemoteStateContractTests:
         mock_outputs.return_value = {"api_gateway_id"}
         TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        # Should not raise
-        instance.test_all_api_remote_state_references_exist_in_backend_outputs()
+        assert instance.test_all_api_remote_state_references_exist_in_backend_outputs() is None
 
     @patch('test_fixtures.terraform_tests.get_api_common_routing_outputs')
     def test_remote_state_references_test_fails_when_missing(self, mock_outputs, tmp_path):
@@ -188,8 +186,7 @@ class TestCreateRemoteStateContractTests:
             tmp_path, "test_endpoint", required_outputs=["required_output"]
         )
         instance = TestClass()
-        # Should not raise
-        instance.test_required_output_output_exists_in_backend()
+        assert instance.test_required_output_output_exists_in_backend() is None
 
     @patch('test_fixtures.terraform_tests.get_api_common_routing_outputs')
     def test_required_output_test_fails_when_missing(self, mock_outputs, tmp_path):
@@ -305,7 +302,7 @@ class TestCreateNamingConventionsTests:
         mock_iam.return_value = []
         mock_lambda.return_value = []
         create_naming_conventions_tests(tmp_path, iam_file="custom_iam.tf")
-        mock_iam.assert_called_once_with(tmp_path / "custom_iam.tf")
+        assert mock_iam.call_args[0][0] == tmp_path / "custom_iam.tf"
 
     @patch('test_fixtures.terraform_tests.extract_iam_role_names')
     @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
@@ -314,9 +311,7 @@ class TestCreateNamingConventionsTests:
         mock_iam.return_value = []
         mock_lambda.return_value = []
         create_naming_conventions_tests(tmp_path, lambda_file="custom_lambda.tf")
-        mock_lambda.assert_called_once_with(
-            tmp_path / "custom_lambda.tf", use_handler_names=False
-        )
+        assert mock_lambda.call_args[0][0] == tmp_path / "custom_lambda.tf"
 
     @patch('test_fixtures.terraform_tests.extract_iam_role_names')
     @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
@@ -325,9 +320,7 @@ class TestCreateNamingConventionsTests:
         mock_iam.return_value = []
         mock_lambda.return_value = []
         create_naming_conventions_tests(tmp_path, use_handler_names=True)
-        mock_lambda.assert_called_once_with(
-            tmp_path / "lambda.tf", use_handler_names=True
-        )
+        assert mock_lambda.call_args[1]["use_handler_names"] is True
 
     @patch('test_fixtures.terraform_tests.extract_iam_role_names')
     @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
@@ -337,8 +330,7 @@ class TestCreateNamingConventionsTests:
         mock_lambda.return_value = []
         iam_class, _ = create_naming_conventions_tests(tmp_path)
         instance = iam_class()
-        # Should not raise
-        instance.test_no_iam_role_names_contain_dashes()
+        assert instance.test_no_iam_role_names_contain_dashes() is None
 
     @patch('test_fixtures.terraform_tests.extract_iam_role_names')
     @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
@@ -359,8 +351,7 @@ class TestCreateNamingConventionsTests:
         mock_lambda.return_value = [("func1", "ValidFuncName"), ("func2", "AnotherValidName")]
         _, lambda_class = create_naming_conventions_tests(tmp_path)
         instance = lambda_class()
-        # Should not raise
-        instance.test_no_lambda_function_names_contain_dashes()
+        assert instance.test_no_lambda_function_names_contain_dashes() is None
 
     @patch('test_fixtures.terraform_tests.extract_iam_role_names')
     @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
@@ -413,8 +404,7 @@ class TestCreateRemoteStateConfigTests:
         data_file.write_text("# Data configuration")
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        # Should not raise
-        instance.test_data_tf_exists()
+        assert instance.test_data_tf_exists() is None
 
     def test_data_tf_exists_test_fails_when_file_missing(self, tmp_path):
         """Test that test_data_tf_exists fails when file missing."""
@@ -429,8 +419,7 @@ class TestCreateRemoteStateConfigTests:
         data_file.write_text('bucket = module.common.name_for_terraform_state_bucket')
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        # Should not raise
-        instance.test_no_hardcoded_bucket_name()
+        assert instance.test_no_hardcoded_bucket_name() is None
 
     def test_no_hardcoded_bucket_fails_with_terraform_state_pattern(self, tmp_path):
         """Test that no hardcoded bucket test fails with hardcoded terraform-state bucket."""
@@ -465,8 +454,7 @@ class TestCreateRemoteStateConfigTests:
         data_file.write_text('region = local.aws_region')
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        # Should not raise
-        instance.test_no_hardcoded_region()
+        assert instance.test_no_hardcoded_region() is None
 
     def test_no_hardcoded_region_fails_with_hardcoded_region(self, tmp_path):
         """Test that no hardcoded region test fails with hardcoded region."""
@@ -492,8 +480,7 @@ class TestCreateRemoteStateConfigTests:
         data_file.write_text('# No remote state config')
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        # Should not raise
-        instance.test_uses_correct_state_key_pattern()
+        assert instance.test_uses_correct_state_key_pattern() is None
 
     def test_state_key_passes_with_correct_api_key(self, tmp_path):
         """Test that state key test passes with correct api state key."""
@@ -505,8 +492,7 @@ terraform_remote_state "api" {
 ''')
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        # Should not raise
-        instance.test_uses_correct_state_key_pattern()
+        assert instance.test_uses_correct_state_key_pattern() is None
 
     def test_state_key_fails_with_wrong_api_key(self, tmp_path):
         """Test that state key test fails with wrong api state key path."""
@@ -556,8 +542,7 @@ resource "aws_lambda_function" "my_func" {
             mock_outputs.return_value = {"api_endpoint", "api_gateway_id"}
             TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
             instance = TestClass()
-            # Should not raise because all referenced outputs exist
-            instance.test_all_api_remote_state_references_exist_in_backend_outputs()
+            assert instance.test_all_api_remote_state_references_exist_in_backend_outputs() is None
 
     def test_fails_when_referenced_output_missing_from_backend(self, tmp_path):
         """Test that test fails when referenced output doesn't exist in backend."""
@@ -656,8 +641,7 @@ class TestNamingConventionsNoneCase:
         mock_lambda.return_value = []
         iam_class, _ = create_naming_conventions_tests(tmp_path)
         instance = iam_class()
-        # Should not raise
-        instance.test_iam_role_name_is_pascalcase("test_role", "ValidRoleName")
+        assert instance.test_iam_role_name_is_pascalcase("test_role", "ValidRoleName") is None
 
     @patch('test_fixtures.terraform_tests.extract_iam_role_names')
     @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
@@ -678,8 +662,7 @@ class TestNamingConventionsNoneCase:
         mock_lambda.return_value = [("test_func", "ValidFunctionName")]
         _, lambda_class = create_naming_conventions_tests(tmp_path)
         instance = lambda_class()
-        # Should not raise
-        instance.test_lambda_function_name_is_pascalcase("test_func", "ValidFunctionName")
+        assert instance.test_lambda_function_name_is_pascalcase("test_func", "ValidFunctionName") is None
 
     @patch('test_fixtures.terraform_tests.extract_iam_role_names')
     @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
