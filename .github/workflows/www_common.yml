@@ -238,6 +238,8 @@ jobs:
           python3 -m pytest \
             test/lib/terraform/modules/s3_bucket/unit/ \
             test/lib/terraform/modules/cloudfront_waf/unit/ \
+            test/lib/terraform/modules/write_ahead_queue/unit/ \
+            test/lib/terraform/modules/common/unit/ \
             --verbose --pythonwarnings=error
       - continue-on-error: true
         id: unit_tests
