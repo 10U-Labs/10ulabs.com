@@ -918,15 +918,14 @@ class TestApiGatewayInfoFixtureExecution:
         mock_request = MagicMock()
         mock_client = MagicMock()
         mock_client.get_rest_api.side_effect = ClientError(
-            {"Error": {"Code": "InternalError"}}, "GetRestApi"
+            {"Error": {"Code": "InternalError", "Message": "Test"}}, "GetRestApi"
         )
         mock_request.getfixturevalue.side_effect = lambda name: {
             "apigateway_client": mock_client,
             "api_common_routing_outputs": {"api_gateway_id": "abc123"}
         }[name]
-        with pytest.raises(ClientError) as exc_info:
+        with pytest.raises(ClientError, match="InternalError"):
             api_gateway_info.__wrapped__(mock_request)
-        assert exc_info.value.response["Error"]["Code"] == "InternalError"
 
 
 class TestApiUrlFixtureExecution:

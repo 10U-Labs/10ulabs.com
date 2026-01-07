@@ -686,14 +686,20 @@ class TestGetTfvarsValuesAdditional:
         result = get_tfvars_values(tmp_path)
         assert result.get("region") == "us-east-1"
 
-    def test_skips_non_matching_lines(self, tmp_path):
-        """Test skips lines that don't match string or list patterns."""
+    def test_skips_non_matching_number_lines(self, tmp_path):
+        """Test skips lines with number assignments."""
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('some_number = 42\nregion = "us-east-1"\n')
 
         result = get_tfvars_values(tmp_path)
-        # Number assignment doesn't match, but string does
         assert "some_number" not in result
+
+    def test_parses_string_after_skipping_number(self, tmp_path):
+        """Test parses string values after skipping non-matching lines."""
+        tfvars_file = tmp_path / "terraform.tfvars"
+        tfvars_file.write_text('some_number = 42\nregion = "us-east-1"\n')
+
+        result = get_tfvars_values(tmp_path)
         assert result.get("region") == "us-east-1"
 
     def test_returns_empty_dict_when_file_missing(self, tmp_path):
@@ -751,20 +757,28 @@ class TestGetSharedConfigDomainName:
 class TestResolveLocalInterpolationsMaxIterationsExhaustion:
     """Tests for exhausting max iterations in _resolve_local_interpolations."""
 
-    def test_exhausts_max_iterations_with_growing_pattern(self):
-        """Test that loop exhausts all iterations without early break."""
-        # Create a self-referencing pattern that grows with each iteration
-        # Each iteration replaces ${local.a} with a longer string containing ${local.a}
-        # This ensures new_value != value on every iteration, preventing early break
+    def test_exhausts_max_iterations_leaves_unresolved_reference(self):
+        """Test that unresolved reference remains after max iterations."""
         value = "${local.a}"
         local_values = {"a": "x${local.a}y"}
 
         result = _resolve_local_interpolations(value, local_values)
-        # After 10 iterations, we'll have: x^10 + ${local.a} + y^10
-        # The string keeps growing but never fully resolves
         assert "${local.a}" in result
-        # Verify it ran all iterations by checking the growth pattern
+
+    def test_exhausts_max_iterations_adds_prefix_each_iteration(self):
+        """Test that prefix is added on each iteration."""
+        value = "${local.a}"
+        local_values = {"a": "x${local.a}y"}
+
+        result = _resolve_local_interpolations(value, local_values)
         assert result.count("x") == 10
+
+    def test_exhausts_max_iterations_adds_suffix_each_iteration(self):
+        """Test that suffix is added on each iteration."""
+        value = "${local.a}"
+        local_values = {"a": "x${local.a}y"}
+
+        result = _resolve_local_interpolations(value, local_values)
         assert result.count("y") == 10
 
 

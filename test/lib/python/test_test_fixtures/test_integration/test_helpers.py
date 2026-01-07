@@ -73,9 +73,8 @@ class TestCheckLambdaFunctionExistsNotFound:
         mock_client.get_function.side_effect = _create_client_error(
             "ResourceNotFoundException"
         )
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="MyFunction"):
             check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
-        assert "MyFunction" in str(exc_info.value)
 
     def test_error_message_contains_terraform_path(self):
         """check_lambda_function_exists error contains terraform path."""
@@ -83,9 +82,8 @@ class TestCheckLambdaFunctionExistsNotFound:
         mock_client.get_function.side_effect = _create_client_error(
             "ResourceNotFoundException"
         )
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="custom/path"):
             check_lambda_function_exists(mock_client, "MyFunction", "custom/path")
-        assert "custom/path" in str(exc_info.value)
 
 
 class TestCheckLambdaFunctionExistsOtherErrors:
@@ -95,9 +93,8 @@ class TestCheckLambdaFunctionExistsOtherErrors:
         """check_lambda_function_exists reraises non-ResourceNotFoundException errors."""
         mock_client = MagicMock()
         mock_client.get_function.side_effect = _create_client_error("AccessDenied")
-        with pytest.raises(ClientError) as exc_info:
+        with pytest.raises(ClientError, match="AccessDenied"):
             check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
-        assert exc_info.value.response["Error"]["Code"] == "AccessDenied"
 
 
 # === check_iam_role_exists ===
@@ -134,9 +131,8 @@ class TestCheckIAMRoleExistsNotFound:
         """check_iam_role_exists error contains role name."""
         mock_client = MagicMock()
         mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="MyRole"):
             check_iam_role_exists(mock_client, "MyRole", "terraform/path")
-        assert "MyRole" in str(exc_info.value)
 
 
 class TestCheckIAMRoleExistsOtherErrors:
@@ -146,9 +142,8 @@ class TestCheckIAMRoleExistsOtherErrors:
         """check_iam_role_exists reraises non-NoSuchEntity errors."""
         mock_client = MagicMock()
         mock_client.get_role.side_effect = _create_client_error("AccessDenied")
-        with pytest.raises(ClientError) as exc_info:
+        with pytest.raises(ClientError, match="AccessDenied"):
             check_iam_role_exists(mock_client, "MyRole", "terraform/path")
-        assert exc_info.value.response["Error"]["Code"] == "AccessDenied"
 
 
 # === check_lambda_role_has_policy ===
@@ -187,9 +182,8 @@ class TestCheckLambdaRoleHasPolicyMissing:
         """check_lambda_role_has_policy error contains policy name."""
         mock_client = MagicMock()
         mock_client.list_role_policies.return_value = {"PolicyNames": []}
-        with pytest.raises(AssertionError) as exc_info:
+        with pytest.raises(AssertionError, match="MissingPolicy"):
             check_lambda_role_has_policy(mock_client, "MyRole", "MissingPolicy")
-        assert "MissingPolicy" in str(exc_info.value)
 
 
 class TestCheckLambdaRoleHasPolicyRoleNotFound:
@@ -210,9 +204,8 @@ class TestCheckLambdaRoleHasPolicyOtherErrors:
         """check_lambda_role_has_policy reraises non-NoSuchEntity errors."""
         mock_client = MagicMock()
         mock_client.list_role_policies.side_effect = _create_client_error("AccessDenied")
-        with pytest.raises(ClientError) as exc_info:
+        with pytest.raises(ClientError, match="AccessDenied"):
             check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
-        assert exc_info.value.response["Error"]["Code"] == "AccessDenied"
 
 
 # === fail_no_credentials ===
@@ -228,9 +221,8 @@ class TestFailNoCredentials:
 
     def test_error_message_contains_credentials_message(self):
         """fail_no_credentials error contains NO_CREDENTIALS_MESSAGE."""
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="(?i)credentials"):
             fail_no_credentials()
-        assert "credentials" in str(exc_info.value).lower()
 
 
 # === check_credentials_available ===
@@ -302,9 +294,8 @@ class TestCheckCredentialsValidInvalid:
         mock_client.get_caller_identity.side_effect = _create_client_error(
             "ExpiredTokenException", "Token has expired"
         )
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="Token has expired"):
             check_credentials_valid(mock_client)
-        assert "Token has expired" in str(exc_info.value)
 
 
 # === check_service_can_assume_role ===
@@ -400,13 +391,27 @@ class TestGetAWSAccountIdViaCLISuccess:
         assert result == "123456789012"
 
     @patch("test_fixtures.integration.helpers.subprocess.run")
-    def test_calls_aws_sts_command(self, mock_run):
-        """get_aws_account_id_via_cli calls aws sts get-caller-identity."""
+    def test_calls_aws_command(self, mock_run):
+        """get_aws_account_id_via_cli calls aws command."""
         mock_run.return_value = MagicMock(returncode=0, stdout="123456789012")
         get_aws_account_id_via_cli()
         call_args = mock_run.call_args[0][0]
         assert "aws" in call_args
+
+    @patch("test_fixtures.integration.helpers.subprocess.run")
+    def test_calls_sts_service(self, mock_run):
+        """get_aws_account_id_via_cli calls sts service."""
+        mock_run.return_value = MagicMock(returncode=0, stdout="123456789012")
+        get_aws_account_id_via_cli()
+        call_args = mock_run.call_args[0][0]
         assert "sts" in call_args
+
+    @patch("test_fixtures.integration.helpers.subprocess.run")
+    def test_calls_get_caller_identity_action(self, mock_run):
+        """get_aws_account_id_via_cli calls get-caller-identity action."""
+        mock_run.return_value = MagicMock(returncode=0, stdout="123456789012")
+        get_aws_account_id_via_cli()
+        call_args = mock_run.call_args[0][0]
         assert "get-caller-identity" in call_args
 
 
@@ -438,20 +443,18 @@ class TestHandleECRAuthorizationErrorAccessDenied:
     def test_error_message_contains_operation(self):
         """handle_ecr_authorization_error error contains operation."""
         error = _create_client_error("AccessDeniedException")
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="ecr:DescribeRepositories"):
             handle_ecr_authorization_error(
                 error, "ecr:DescribeRepositories", "my-repo"
             )
-        assert "ecr:DescribeRepositories" in str(exc_info.value)
 
     def test_error_message_contains_repository_name(self):
         """handle_ecr_authorization_error error contains repository name."""
         error = _create_client_error("AccessDeniedException")
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="my-repo"):
             handle_ecr_authorization_error(
                 error, "ecr:DescribeRepositories", "my-repo"
             )
-        assert "my-repo" in str(exc_info.value)
 
 
 class TestHandleECRAuthorizationErrorRepositoryNotFound:
@@ -469,9 +472,8 @@ class TestHandleECRAuthorizationErrorOtherErrors:
     def test_reraises_other_errors(self):
         """handle_ecr_authorization_error reraises other errors."""
         error = _create_client_error("ServiceException")
-        with pytest.raises(ClientError) as exc_info:
+        with pytest.raises(ClientError, match="ServiceException"):
             handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo")
-        assert exc_info.value.response["Error"]["Code"] == "ServiceException"
 
 
 # === check_s3_head_bucket_permission ===
@@ -515,9 +517,8 @@ class TestCheckS3HeadBucketPermissionAccessDenied:
         """check_s3_head_bucket_permission error contains bucket name."""
         mock_client = MagicMock()
         mock_client.head_bucket.side_effect = _create_client_error("403")
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="my-bucket"):
             check_s3_head_bucket_permission(mock_client, "my-bucket")
-        assert "my-bucket" in str(exc_info.value)
 
 
 class TestCheckS3HeadBucketPermissionBucketNotFound:
@@ -537,9 +538,8 @@ class TestCheckS3HeadBucketPermissionOtherErrors:
         """check_s3_head_bucket_permission reraises other errors."""
         mock_client = MagicMock()
         mock_client.head_bucket.side_effect = _create_client_error("ServiceException")
-        with pytest.raises(ClientError) as exc_info:
+        with pytest.raises(ClientError, match="ServiceException"):
             check_s3_head_bucket_permission(mock_client, "my-bucket")
-        assert exc_info.value.response["Error"]["Code"] == "ServiceException"
 
 
 # === skip_if_api_gateway_unavailable ===
@@ -613,11 +613,10 @@ class TestCheckStateFileReadableAccessDenied:
         """check_state_file_readable error contains state key."""
         mock_client = MagicMock()
         mock_client.head_object.side_effect = _create_client_error("403")
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="state/terraform.tfstate"):
             check_state_file_readable(
                 mock_client, "my-bucket", "state/terraform.tfstate"
             )
-        assert "state/terraform.tfstate" in str(exc_info.value)
 
 
 class TestCheckStateFileReadableNotFound:
@@ -640,11 +639,10 @@ class TestCheckStateFileReadableOtherErrors:
         """check_state_file_readable reraises other errors."""
         mock_client = MagicMock()
         mock_client.head_object.side_effect = _create_client_error("ServiceException")
-        with pytest.raises(ClientError) as exc_info:
+        with pytest.raises(ClientError, match="ServiceException"):
             check_state_file_readable(
                 mock_client, "my-bucket", "state/terraform.tfstate"
             )
-        assert exc_info.value.response["Error"]["Code"] == "ServiceException"
 
 
 # === assert_api_gateway_exists ===
@@ -681,16 +679,14 @@ class TestAssertAPIGatewayExistsDoesNotExist:
     def test_error_message_contains_api_id(self):
         """assert_api_gateway_exists error contains API ID."""
         api_gateway_info = {"id": "abc123xyz", "exists": False}
-        with pytest.raises(AssertionError) as exc_info:
+        with pytest.raises(AssertionError, match="abc123xyz"):
             assert_api_gateway_exists(api_gateway_info)
-        assert "abc123xyz" in str(exc_info.value)
 
     def test_error_message_contains_terraform_path(self):
         """assert_api_gateway_exists error contains terraform path."""
         api_gateway_info = {"id": "abc123", "exists": False}
-        with pytest.raises(AssertionError) as exc_info:
+        with pytest.raises(AssertionError, match="custom/terraform/path"):
             assert_api_gateway_exists(api_gateway_info, "custom/terraform/path")
-        assert "custom/terraform/path" in str(exc_info.value)
 
 
 # === assert_iam_role_name_is_pascalcase ===
@@ -741,18 +737,16 @@ class TestAssertIAMRoleNameIsPascalCaseInvalid:
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "bad_name"}}
         validate_func = MagicMock(return_value="not PascalCase")
-        with pytest.raises(AssertionError) as exc_info:
+        with pytest.raises(AssertionError, match="bad_name"):
             assert_iam_role_name_is_pascalcase(mock_client, "bad_name", validate_func)
-        assert "bad_name" in str(exc_info.value)
 
     def test_error_message_contains_validation_error(self):
         """assert_iam_role_name_is_pascalcase error contains validation error."""
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "bad_name"}}
         validate_func = MagicMock(return_value="contains_underscore")
-        with pytest.raises(AssertionError) as exc_info:
+        with pytest.raises(AssertionError, match="contains_underscore"):
             assert_iam_role_name_is_pascalcase(mock_client, "bad_name", validate_func)
-        assert "contains_underscore" in str(exc_info.value)
 
 
 # === NO_CREDENTIALS_MESSAGE ===

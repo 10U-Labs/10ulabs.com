@@ -246,16 +246,14 @@ class TestHandleEcrErrorAccessDenied:
     def test_error_message_contains_operation(self):
         """handle_ecr_error error message contains operation."""
         error = _create_client_error("AccessDeniedException")
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="ecr:ListImages"):
             handle_ecr_error(error, "ecr:ListImages", "my-repo")
-        assert "ecr:ListImages" in str(exc_info.value)
 
     def test_error_message_contains_repository_name(self):
         """handle_ecr_error error message contains repository name."""
         error = _create_client_error("AccessDeniedException")
-        with pytest.raises(pytest.fail.Exception) as exc_info:
+        with pytest.raises(pytest.fail.Exception, match="my-repo"):
             handle_ecr_error(error, "ecr:ListImages", "my-repo")
-        assert "my-repo" in str(exc_info.value)
 
 
 class TestHandleEcrErrorOtherErrors:
@@ -264,9 +262,8 @@ class TestHandleEcrErrorOtherErrors:
     def test_reraises_other_errors(self):
         """handle_ecr_error reraises other errors."""
         error = _create_client_error("ServiceException")
-        with pytest.raises(ClientError) as exc_info:
+        with pytest.raises(ClientError, match="ServiceException"):
             handle_ecr_error(error, "ecr:ListImages", "my-repo")
-        assert exc_info.value.response["Error"]["Code"] == "ServiceException"
 
 
 # === create_security_group_existence_test ===
