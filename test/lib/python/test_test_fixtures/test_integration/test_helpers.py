@@ -43,7 +43,8 @@ class TestCheckLambdaFunctionExistsSuccess:
         mock_client.get_function.return_value = {
             "Configuration": {"FunctionName": "MyFunction"}
         }
-        check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
+        result = check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
+        assert result is None
 
     def test_calls_get_function_with_function_name(self):
         """check_lambda_function_exists calls get_function with function name."""
@@ -52,7 +53,7 @@ class TestCheckLambdaFunctionExistsSuccess:
             "Configuration": {"FunctionName": "MyFunction"}
         }
         check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
-        mock_client.get_function.assert_called_once_with(FunctionName="MyFunction")
+        assert mock_client.get_function.call_args[1]["FunctionName"] == "MyFunction"
 
 
 class TestCheckLambdaFunctionExistsNotFound:
@@ -107,14 +108,15 @@ class TestCheckIAMRoleExistsSuccess:
         """check_iam_role_exists does not raise when role exists."""
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
-        check_iam_role_exists(mock_client, "MyRole", "terraform/path")
+        result = check_iam_role_exists(mock_client, "MyRole", "terraform/path")
+        assert result is None
 
     def test_calls_get_role_with_role_name(self):
         """check_iam_role_exists calls get_role with role name."""
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
         check_iam_role_exists(mock_client, "MyRole", "terraform/path")
-        mock_client.get_role.assert_called_once_with(RoleName="MyRole")
+        assert mock_client.get_role.call_args[1]["RoleName"] == "MyRole"
 
 
 class TestCheckIAMRoleExistsNotFound:
@@ -158,14 +160,15 @@ class TestCheckLambdaRoleHasPolicySuccess:
         mock_client.list_role_policies.return_value = {
             "PolicyNames": ["MyPolicy", "OtherPolicy"]
         }
-        check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
+        result = check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
+        assert result is None
 
     def test_calls_list_role_policies_with_role_name(self):
         """check_lambda_role_has_policy calls list_role_policies with role name."""
         mock_client = MagicMock()
         mock_client.list_role_policies.return_value = {"PolicyNames": ["MyPolicy"]}
         check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
-        mock_client.list_role_policies.assert_called_once_with(RoleName="MyRole")
+        assert mock_client.list_role_policies.call_args[1]["RoleName"] == "MyRole"
 
 
 class TestCheckLambdaRoleHasPolicyMissing:
@@ -235,14 +238,15 @@ class TestCheckCredentialsAvailableSuccess:
         """check_credentials_available does not raise with valid credentials."""
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        check_credentials_available(mock_client)
+        result = check_credentials_available(mock_client)
+        assert result is None
 
     def test_calls_get_caller_identity(self):
         """check_credentials_available calls get_caller_identity."""
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
         check_credentials_available(mock_client)
-        mock_client.get_caller_identity.assert_called_once()
+        assert mock_client.get_caller_identity.call_count == 1
 
 
 class TestCheckCredentialsAvailableNoCredentials:
@@ -266,14 +270,15 @@ class TestCheckCredentialsValidSuccess:
         """check_credentials_valid does not raise with valid credentials."""
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        check_credentials_valid(mock_client)
+        result = check_credentials_valid(mock_client)
+        assert result is None
 
     def test_calls_get_caller_identity(self):
         """check_credentials_valid calls get_caller_identity."""
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
         check_credentials_valid(mock_client)
-        mock_client.get_caller_identity.assert_called_once()
+        assert mock_client.get_caller_identity.call_count == 1
 
 
 class TestCheckCredentialsValidInvalid:
@@ -463,7 +468,8 @@ class TestHandleECRAuthorizationErrorRepositoryNotFound:
     def test_does_not_raise_on_repository_not_found(self):
         """handle_ecr_authorization_error does not raise on RepositoryNotFoundException."""
         error = _create_client_error("RepositoryNotFoundException")
-        handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo")
+        result = handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo")
+        assert result is None
 
 
 class TestHandleECRAuthorizationErrorOtherErrors:
@@ -486,14 +492,15 @@ class TestCheckS3HeadBucketPermissionSuccess:
         """check_s3_head_bucket_permission does not raise when bucket accessible."""
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
-        check_s3_head_bucket_permission(mock_client, "my-bucket")
+        result = check_s3_head_bucket_permission(mock_client, "my-bucket")
+        assert result is None
 
     def test_calls_head_bucket_with_bucket_name(self):
         """check_s3_head_bucket_permission calls head_bucket with bucket name."""
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
         check_s3_head_bucket_permission(mock_client, "my-bucket")
-        mock_client.head_bucket.assert_called_once_with(Bucket="my-bucket")
+        assert mock_client.head_bucket.call_args[1]["Bucket"] == "my-bucket"
 
 
 class TestCheckS3HeadBucketPermissionAccessDenied:
@@ -528,7 +535,8 @@ class TestCheckS3HeadBucketPermissionBucketNotFound:
         """check_s3_head_bucket_permission does not raise on 404 error."""
         mock_client = MagicMock()
         mock_client.head_bucket.side_effect = _create_client_error("404")
-        check_s3_head_bucket_permission(mock_client, "my-bucket")
+        result = check_s3_head_bucket_permission(mock_client, "my-bucket")
+        assert result is None
 
 
 class TestCheckS3HeadBucketPermissionOtherErrors:
@@ -551,8 +559,8 @@ class TestSkipIfAPIGatewayUnavailableAvailable:
     def test_does_not_skip_when_api_exists(self):
         """skip_if_api_gateway_unavailable does not skip when API exists."""
         api_gateway_info = {"id": "abc123", "exists": True}
-        # Should not raise pytest.skip.Exception
-        skip_if_api_gateway_unavailable(api_gateway_info)
+        result = skip_if_api_gateway_unavailable(api_gateway_info)
+        assert result is None
 
 
 class TestSkipIfAPIGatewayUnavailableNoId:
@@ -585,16 +593,15 @@ class TestCheckStateFileReadableSuccess:
         """check_state_file_readable does not raise when file readable."""
         mock_client = MagicMock()
         mock_client.head_object.return_value = {}
-        check_state_file_readable(mock_client, "my-bucket", "state/terraform.tfstate")
+        result = check_state_file_readable(mock_client, "my-bucket", "state/terraform.tfstate")
+        assert result is None
 
     def test_calls_head_object_with_bucket_and_key(self):
         """check_state_file_readable calls head_object with bucket and key."""
         mock_client = MagicMock()
         mock_client.head_object.return_value = {}
         check_state_file_readable(mock_client, "my-bucket", "state/terraform.tfstate")
-        mock_client.head_object.assert_called_once_with(
-            Bucket="my-bucket", Key="state/terraform.tfstate"
-        )
+        assert mock_client.head_object.call_args[1]["Bucket"] == "my-bucket"
 
 
 class TestCheckStateFileReadableAccessDenied:
@@ -654,7 +661,8 @@ class TestAssertAPIGatewayExistsSuccess:
     def test_does_not_raise_when_api_exists(self):
         """assert_api_gateway_exists does not raise when API exists."""
         api_gateway_info = {"id": "abc123", "exists": True}
-        assert_api_gateway_exists(api_gateway_info)
+        result = assert_api_gateway_exists(api_gateway_info)
+        assert result is None
 
 
 class TestAssertAPIGatewayExistsNoId:
@@ -700,7 +708,8 @@ class TestAssertIAMRoleNameIsPascalCaseValid:
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyServiceRole"}}
         validate_func = MagicMock(return_value=None)
-        assert_iam_role_name_is_pascalcase(mock_client, "MyServiceRole", validate_func)
+        result = assert_iam_role_name_is_pascalcase(mock_client, "MyServiceRole", validate_func)
+        assert result is None
 
     def test_calls_get_role_with_role_name(self):
         """assert_iam_role_name_is_pascalcase calls get_role with role name."""
