@@ -42,15 +42,13 @@ class TestTerraformInitialized:
 
     def test_passes_when_lock_file_exists(self, tmp_path):
         """test_terraform_initialized passes when .terraform.lock.hcl exists."""
-        # Create the lock file
         lock_file = tmp_path / ".terraform.lock.hcl"
         lock_file.touch()
 
         TestClass = create_orphaned_resource_tests(tmp_path)
         instance = TestClass()
 
-        # Should not raise any exception
-        instance.test_terraform_initialized()
+        assert instance.test_terraform_initialized() is None
 
     def test_fails_when_lock_file_missing(self, tmp_path):
         """test_terraform_initialized fails when .terraform.lock.hcl doesn't exist."""
@@ -80,8 +78,7 @@ class TestNoOrphanedResourcesNoCreates:
         TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
         instance = TestClass()
 
-        # Should not raise any exception
-        instance.test_no_orphaned_resources()
+        assert instance.test_no_orphaned_resources() is None
 
 
 def _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=False):
@@ -110,8 +107,7 @@ class TestNoOrphanedResourcesNoOrphans:
         TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
         instance = TestClass()
 
-        # Should not raise any exception
-        instance.test_no_orphaned_resources()
+        assert instance.test_no_orphaned_resources() is None
 
     @patch("terraform_drift.test_helpers.check_resource_exists")
     @patch("terraform_drift.test_helpers.get_planned_creates")

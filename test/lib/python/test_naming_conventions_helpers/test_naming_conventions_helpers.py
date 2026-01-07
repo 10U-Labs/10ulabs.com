@@ -48,7 +48,8 @@ class TestCreateIamRoleTests:
         roles = [("my_role", "TenULabsMyRole")]
         TestClass = create_iam_role_tests(roles)
         instance = TestClass()
-        instance.test_iam_role_name_is_pascalcase("my_role", "TenULabsMyRole")
+        result = instance.test_iam_role_name_is_pascalcase("my_role", "TenULabsMyRole")
+        assert result is None
 
     def test_test_method_fails_for_invalid_name_with_dash(self):
         """create_iam_role_tests test fails for name with dash."""
@@ -99,7 +100,10 @@ class TestCreateLambdaFunctionTests:
         functions = [("my_func", "TenULabsMyFunction")]
         TestClass = create_lambda_function_tests(functions)
         instance = TestClass()
-        instance.test_lambda_function_name_is_pascalcase("my_func", "TenULabsMyFunction")
+        result = instance.test_lambda_function_name_is_pascalcase(
+            "my_func", "TenULabsMyFunction"
+        )
+        assert result is None
 
     def test_test_method_fails_for_invalid_name(self):
         """create_lambda_function_tests test fails for invalid name."""
@@ -152,14 +156,18 @@ class TestCreateSqsQueueTests:
         queues = [("my_queue", "TenULabsMyQueue")]
         TestClass = create_sqs_queue_tests(queues)
         instance = TestClass()
-        instance.test_sqs_queue_name_is_pascalcase("my_queue", "TenULabsMyQueue")
+        result = instance.test_sqs_queue_name_is_pascalcase("my_queue", "TenULabsMyQueue")
+        assert result is None
 
     def test_test_method_passes_for_fifo_queue(self):
         """create_sqs_queue_tests test passes for FIFO queue with suffix."""
         queues = [("my_queue", "TenULabsMyQueue.fifo")]
         TestClass = create_sqs_queue_tests(queues)
         instance = TestClass()
-        instance.test_sqs_queue_name_is_pascalcase("my_queue", "TenULabsMyQueue.fifo")
+        result = instance.test_sqs_queue_name_is_pascalcase(
+            "my_queue", "TenULabsMyQueue.fifo"
+        )
+        assert result is None
 
     def test_test_method_fails_for_invalid_name(self):
         """create_sqs_queue_tests test fails for invalid name."""

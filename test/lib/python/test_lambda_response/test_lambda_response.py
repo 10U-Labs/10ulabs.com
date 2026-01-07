@@ -61,12 +61,12 @@ class TestAssertResponseStatus:
     def test_passes_for_matching_status(self):
         """assert_response_status passes when status matches."""
         response = {"statusCode": 200}
-        assert_response_status(response, 200)  # Should not raise
+        assert assert_response_status(response, 200) is None
 
     def test_passes_for_404_status(self):
         """assert_response_status passes for 404."""
         response = {"statusCode": 404}
-        assert_response_status(response, 404)  # Should not raise
+        assert assert_response_status(response, 404) is None
 
     def test_fails_for_mismatched_status(self):
         """assert_response_status fails when status doesn't match."""
@@ -90,12 +90,12 @@ class TestAssertJsonContentType:
     def test_passes_for_application_json(self):
         """assert_json_content_type passes for application/json."""
         response = {"headers": {"Content-Type": "application/json"}}
-        assert_json_content_type(response)  # Should not raise
+        assert assert_json_content_type(response) is None
 
     def test_passes_for_json_with_charset(self):
         """assert_json_content_type passes for json with charset."""
         response = {"headers": {"Content-Type": "application/json; charset=utf-8"}}
-        assert_json_content_type(response)  # Should not raise
+        assert assert_json_content_type(response) is None
 
     def test_fails_for_text_html(self):
         """assert_json_content_type fails for text/html."""
@@ -119,12 +119,12 @@ class TestAssertCorsHeaders:
     def test_passes_with_allow_origin(self):
         """assert_cors_headers passes with Access-Control-Allow-Origin."""
         response = {"headers": {"Access-Control-Allow-Origin": "*"}}
-        assert_cors_headers(response)  # Should not raise
+        assert assert_cors_headers(response) is None
 
     def test_passes_with_specific_origin(self):
         """assert_cors_headers passes with specific origin."""
         response = {"headers": {"Access-Control-Allow-Origin": "https://example.com"}}
-        assert_cors_headers(response)  # Should not raise
+        assert assert_cors_headers(response) is None
 
     def test_fails_without_cors_header(self):
         """assert_cors_headers fails without CORS header."""
