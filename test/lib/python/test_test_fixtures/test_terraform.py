@@ -27,12 +27,19 @@ class TestTerraformInit:
         assert result is False
 
     @patch('test_fixtures.terraform.subprocess.run')
-    def test_calls_terraform_init_command(self, mock_run):
-        """Test that terraform_init calls terraform init command."""
+    def test_calls_terraform_command(self, mock_run):
+        """Test that terraform_init calls terraform command."""
         mock_run.return_value = MagicMock(returncode=0)
         terraform_init(Path('/test/dir'))
         call_args = mock_run.call_args
         assert call_args[0][0][0] == 'terraform'
+
+    @patch('test_fixtures.terraform.subprocess.run')
+    def test_calls_init_subcommand(self, mock_run):
+        """Test that terraform_init calls init subcommand."""
+        mock_run.return_value = MagicMock(returncode=0)
+        terraform_init(Path('/test/dir'))
+        call_args = mock_run.call_args
         assert call_args[0][0][1] == 'init'
 
     @patch('test_fixtures.terraform.subprocess.run')
@@ -101,12 +108,19 @@ class TestTerraformOutput:
         assert result == 'value'
 
     @patch('test_fixtures.terraform.subprocess.run')
-    def test_calls_terraform_output_command(self, mock_run):
-        """Test that terraform_output calls terraform output command."""
+    def test_calls_terraform_command(self, mock_run):
+        """Test that terraform_output calls terraform command."""
         mock_run.return_value = MagicMock(returncode=0, stdout='')
         terraform_output(Path('/test/dir'), 'my_output')
         call_args = mock_run.call_args
         assert call_args[0][0][0] == 'terraform'
+
+    @patch('test_fixtures.terraform.subprocess.run')
+    def test_calls_output_subcommand(self, mock_run):
+        """Test that terraform_output calls output subcommand."""
+        mock_run.return_value = MagicMock(returncode=0, stdout='')
+        terraform_output(Path('/test/dir'), 'my_output')
+        call_args = mock_run.call_args
         assert call_args[0][0][1] == 'output'
 
     @patch('test_fixtures.terraform.subprocess.run')
@@ -159,12 +173,19 @@ class TestTerraformOutputJson:
         assert result == '{"key": "value"}'
 
     @patch('test_fixtures.terraform.subprocess.run')
-    def test_calls_terraform_output_command(self, mock_run):
-        """Test that terraform_output_json calls terraform output command."""
+    def test_calls_terraform_command(self, mock_run):
+        """Test that terraform_output_json calls terraform command."""
         mock_run.return_value = MagicMock(returncode=0, stdout='{}')
         terraform_output_json(Path('/test/dir'), 'my_output')
         call_args = mock_run.call_args
         assert call_args[0][0][0] == 'terraform'
+
+    @patch('test_fixtures.terraform.subprocess.run')
+    def test_calls_output_subcommand(self, mock_run):
+        """Test that terraform_output_json calls output subcommand."""
+        mock_run.return_value = MagicMock(returncode=0, stdout='{}')
+        terraform_output_json(Path('/test/dir'), 'my_output')
+        call_args = mock_run.call_args
         assert call_args[0][0][1] == 'output'
 
     @patch('test_fixtures.terraform.subprocess.run')

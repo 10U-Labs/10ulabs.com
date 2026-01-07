@@ -35,15 +35,19 @@ class TestCreateSubprocessResult:
         result = create_subprocess_result(stderr="error text")
         assert result.stderr == "error text"
 
-    def test_all_parameters_together(self):
-        """Test all parameters set together."""
-        result = create_subprocess_result(
-            returncode=2,
-            stdout="out",
-            stderr="err"
-        )
+    def test_custom_returncode_with_other_params(self):
+        """Test custom returncode when other params also set."""
+        result = create_subprocess_result(returncode=2, stdout="out", stderr="err")
         assert result.returncode == 2
+
+    def test_custom_stdout_with_other_params(self):
+        """Test custom stdout when other params also set."""
+        result = create_subprocess_result(returncode=2, stdout="out", stderr="err")
         assert result.stdout == "out"
+
+    def test_custom_stderr_with_other_params(self):
+        """Test custom stderr when other params also set."""
+        result = create_subprocess_result(returncode=2, stdout="out", stderr="err")
         assert result.stderr == "err"
 
     def test_stdout_with_newline(self):
@@ -75,10 +79,14 @@ class TestCreateGhWorkflowListResult:
         result = create_gh_workflow_list_result(["Bootstrap"])
         assert "Bootstrap" in result.stdout
 
-    def test_multiple_workflows_in_output(self):
-        """Test that multiple workflow names appear in output."""
+    def test_first_workflow_in_multiple_output(self):
+        """Test that first workflow name appears in output."""
         result = create_gh_workflow_list_result(["Bootstrap", "WWW Shared"])
         assert "Bootstrap" in result.stdout
+
+    def test_second_workflow_in_multiple_output(self):
+        """Test that second workflow name appears in output."""
+        result = create_gh_workflow_list_result(["Bootstrap", "WWW Shared"])
         assert "WWW Shared" in result.stdout
 
     def test_output_contains_in_progress_status(self):
@@ -101,11 +109,19 @@ class TestCreateGhWorkflowListResult:
         result = create_gh_workflow_list_result(["Test"])
         assert "100000" in result.stdout
 
-    def test_multiple_workflows_have_different_run_ids(self):
-        """Test that multiple workflows have different run IDs."""
+    def test_first_workflow_has_run_id_100000(self):
+        """Test that first workflow has run ID 100000."""
         result = create_gh_workflow_list_result(["First", "Second", "Third"])
         assert "100000" in result.stdout
+
+    def test_second_workflow_has_run_id_100001(self):
+        """Test that second workflow has run ID 100001."""
+        result = create_gh_workflow_list_result(["First", "Second", "Third"])
         assert "100001" in result.stdout
+
+    def test_third_workflow_has_run_id_100002(self):
+        """Test that third workflow has run ID 100002."""
+        result = create_gh_workflow_list_result(["First", "Second", "Third"])
         assert "100002" in result.stdout
 
     def test_output_lines_are_newline_separated(self):

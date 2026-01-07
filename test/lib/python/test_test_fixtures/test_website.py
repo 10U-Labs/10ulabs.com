@@ -17,10 +17,14 @@ class TestCreateWebsiteFixtures:
         result = create_website_fixtures()
         assert len(result) == 2
 
-    def test_fixtures_are_callable(self):
-        """Test that both returned fixtures are callable."""
-        website_url, website_response = create_website_fixtures()
+    def test_website_url_fixture_is_callable(self):
+        """Test that website_url fixture is callable."""
+        website_url, _ = create_website_fixtures()
         assert callable(website_url)
+
+    def test_website_response_fixture_is_callable(self):
+        """Test that website_response fixture is callable."""
+        _, website_response = create_website_fixtures()
         assert callable(website_response)
 
 
@@ -95,8 +99,23 @@ class TestFixtureIntegration:
     """Integration tests for the website fixtures working together."""
 
     @patch('test_fixtures.website.requests.get')
-    def test_fixtures_can_be_used_together(self, mock_get):
-        """Test that both fixtures can be used together."""
+    def test_url_fixture_produces_correct_url(self, mock_get):
+        """Test that url fixture produces correct URL when used with response fixture."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        website_url_fixture, website_response_fixture = create_website_fixtures()
+        mock_config = {'website_fqdn': 'www.example.com'}
+
+        url = website_url_fixture.__wrapped__(mock_config)
+        website_response_fixture.__wrapped__(url)
+
+        assert url == 'https://www.example.com'
+
+    @patch('test_fixtures.website.requests.get')
+    def test_response_fixture_returns_valid_response(self, mock_get):
+        """Test that response fixture returns valid response when used with url fixture."""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_get.return_value = mock_response
@@ -107,5 +126,4 @@ class TestFixtureIntegration:
         url = website_url_fixture.__wrapped__(mock_config)
         response = website_response_fixture.__wrapped__(url)
 
-        assert url == 'https://www.example.com'
         assert response.status_code == 200
