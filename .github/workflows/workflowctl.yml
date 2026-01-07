@@ -36,6 +36,7 @@ jobs:
             "etc/workflow_dependencies.json"
             "lib/python/"
             "src/workflowctl/"
+            "test/lib/python/"
             "test/workflowctl/"
           )
           CHANGED_FILES=$(git diff --name-only "${{ github.event.before }}" \
