@@ -410,6 +410,7 @@ def test_delete_launch_template_error_logged(mock_get_client, fleet_ops_module):
     )
     mock_get_client.return_value = mock_ec2
     fleet_ops_module.delete_launch_template('lt-test')
+    assert mock_ec2.delete_launch_template.called
 
 
 @patch('fleet_ops.get_ec2_client')
@@ -458,27 +459,37 @@ def test_create_fleet_launch_template_error_raises(mock_get_client, fleet_ops_mo
             })
 
 
-def test_build_ec2_template_config_has_runner_name(fleet_ops_module):
-    """Test _build_ec2_template_config creates correct runner name."""
-    cfg = {
-        'run_id': 123, 'job_id': 456, 'registration_token': 'test-token',
+@pytest.fixture
+def template_config_base():
+    """Base configuration for template config tests."""
+    return {
+        'job_id': 456, 'registration_token': 'test-token',
         'job_labels': ['ec2'], 'github_repo': 'test/repo', 'ami_id': 'ami-test',
         'runner_type': 'ec2'
     }
-    ec2_config = {'security_group_id': 'sg-test', 'iam_instance_profile': 'test-profile'}
-    result = fleet_ops_module._build_ec2_template_config(cfg, ec2_config)
+
+
+@pytest.fixture
+def ec2_config_base():
+    """Base EC2 configuration for template config tests."""
+    return {'security_group_id': 'sg-test', 'iam_instance_profile': 'test-profile'}
+
+
+def test_build_ec2_template_config_has_runner_name(
+    fleet_ops_module, template_config_base, ec2_config_base
+):
+    """Test _build_ec2_template_config creates correct runner name."""
+    template_config_base['run_id'] = 123
+    result = fleet_ops_module._build_ec2_template_config(template_config_base, ec2_config_base)
     assert result['runner_name'] == 'ec2-runner-123'
 
 
-def test_build_ec2_template_config_no_run_id(fleet_ops_module):
+def test_build_ec2_template_config_no_run_id(
+    fleet_ops_module, template_config_base, ec2_config_base
+):
     """Test _build_ec2_template_config uses job_id when no run_id."""
-    cfg = {
-        'run_id': None, 'job_id': 456, 'registration_token': 'test-token',
-        'job_labels': ['ec2'], 'github_repo': 'test/repo', 'ami_id': 'ami-test',
-        'runner_type': 'ec2'
-    }
-    ec2_config = {'security_group_id': 'sg-test', 'iam_instance_profile': 'test-profile'}
-    result = fleet_ops_module._build_ec2_template_config(cfg, ec2_config)
+    template_config_base['run_id'] = None
+    result = fleet_ops_module._build_ec2_template_config(template_config_base, ec2_config_base)
     assert result['runner_name'] == 'ec2-runner-456'
 
 

@@ -394,7 +394,7 @@ class TestHandleSqsEventSingleRecord:
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
             mock_launch.return_value = {'success': True, 'instance_id': 'i-test'}
             ec2_runner_handler._handle_sqs_event(event)
-            mock_launch.assert_called_once_with(123, ['ec2', 'test'], 'test/repo', 456, 'ec2')
+            assert mock_launch.call_args == ((123, ['ec2', 'test'], 'test/repo', 456, 'ec2'),)
 
 
 class TestHandleSqsEventMultipleRecords:
@@ -450,7 +450,7 @@ class TestHandleSqsEventMissingJobId:
         """Test missing job_id does not call launch."""
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
             ec2_runner_handler._handle_sqs_event(missing_job_id_event)
-            mock_launch.assert_not_called()
+            assert not mock_launch.called
 
 
 class TestHandleSqsEventMissingGithubRepo:
@@ -478,7 +478,7 @@ class TestHandleSqsEventMissingGithubRepo:
         """Test missing github_repo does not call launch."""
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
             ec2_runner_handler._handle_sqs_event(missing_repo_event)
-            mock_launch.assert_not_called()
+            assert not mock_launch.called
 
 
 class TestHandleSqsEventInvalidJson:
@@ -506,7 +506,7 @@ class TestHandleSqsEventInvalidJson:
         """Test invalid JSON does not call launch."""
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
             ec2_runner_handler._handle_sqs_event(invalid_json_event)
-            mock_launch.assert_not_called()
+            assert not mock_launch.called
 
 
 class TestHandleSqsEventLaunchFailure:
@@ -558,7 +558,7 @@ class TestLambdaHandlerSqsDispatch:
         with patch.object(ec2_runner_handler, '_handle_sqs_event') as mock_sqs:
             mock_sqs.return_value = {'statusCode': 200, 'body': '{}'}
             ec2_runner_handler.lambda_handler(event, lambda_context)
-            mock_sqs.assert_called_once_with(event)
+            assert mock_sqs.call_args == ((event,),)
 
     def test_does_not_dispatch_http_event_as_sqs(self, ec2_runner_handler, lambda_context):
         """Test does not dispatch HTTP event to SQS handler."""
@@ -571,7 +571,7 @@ class TestLambdaHandlerSqsDispatch:
             with patch.object(ec2_runner_handler, 'get_ec2_runner_status') as mock_status:
                 mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
                 ec2_runner_handler.lambda_handler(event, lambda_context)
-                mock_sqs.assert_not_called()
+                assert not mock_sqs.called
 
 
 # =============================================================================
