@@ -520,3 +520,24 @@ class TestLambdaHandler:
         }
         result = handler_module.lambda_handler(event, None)
         assert result['statusCode'] == 404
+
+
+class TestGetEc2Client:
+    """Tests for get_ec2_client function."""
+
+    def test_creates_client_when_not_cached(self, handler_module):
+        """Verify get_ec2_client creates a boto3 client when not cached."""
+        # Clear any existing cached client
+        handler_module._clients.clear()
+        # Mock boto3.client to return a mock client
+        mock_client = MagicMock()
+        with patch.object(handler_module.boto3, 'client', return_value=mock_client):
+            result = handler_module.get_ec2_client()
+        assert result == mock_client
+
+    def test_reuses_cached_client(self, handler_module):
+        """Verify get_ec2_client reuses cached client."""
+        mock_client = MagicMock()
+        handler_module._clients['ec2'] = mock_client
+        result = handler_module.get_ec2_client()
+        assert result == mock_client
