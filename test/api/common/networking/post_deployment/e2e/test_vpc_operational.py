@@ -24,12 +24,20 @@ class TestVPCOperational:
         for subnet in response["Subnets"]:
             assert subnet["State"] == "available"
 
-    def test_internet_gateway_is_attached(self, ec2_client, runners_vpc_id):
-        """Verify internet gateway is attached (not detached)."""
+    def test_internet_gateway_has_one_attachment(self, ec2_client, runners_vpc_id):
+        """Verify internet gateway has exactly one attachment."""
         response = ec2_client.describe_internet_gateways(
             Filters=[{"Name": "attachment.vpc-id", "Values": [runners_vpc_id]}]
         )
         igw = response["InternetGateways"][0]
         attachments = igw.get("Attachments", [])
         assert len(attachments) == 1
+
+    def test_internet_gateway_attachment_is_available(self, ec2_client, runners_vpc_id):
+        """Verify internet gateway attachment state is available."""
+        response = ec2_client.describe_internet_gateways(
+            Filters=[{"Name": "attachment.vpc-id", "Values": [runners_vpc_id]}]
+        )
+        igw = response["InternetGateways"][0]
+        attachments = igw.get("Attachments", [])
         assert attachments[0]["State"] == "available"
