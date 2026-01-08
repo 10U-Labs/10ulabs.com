@@ -25,6 +25,17 @@ def _create_client_error(code: str, message: str = "Test error") -> ClientError:
     )
 
 
+def _create_nonexistent_queue_mocks():
+    """Create mocks for a non-existent SQS queue scenario."""
+    mock_client = MagicMock()
+    mock_client.get_queue_url.side_effect = _create_client_error(
+        "AWS.SimpleQueueService.NonExistentQueue"
+    )
+    mock_request = MagicMock()
+    mock_request.getfixturevalue.return_value = "my-queue.fifo"
+    return mock_client, mock_request
+
+
 # === create_ecs_runner_outputs_tests ===
 
 
@@ -610,14 +621,8 @@ class TestSqsFifoQueueTestsExecution:
 
     def test_queue_is_fifo_skips_on_non_existent(self):
         """test_queue_is_fifo skips when queue doesn't exist."""
-        test_class = create_sqs_fifo_queue_tests("queue_name")
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_queue_url.side_effect = _create_client_error(
-            "AWS.SimpleQueueService.NonExistentQueue"
-        )
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        instance = create_sqs_fifo_queue_tests("queue_name")()
+        mock_client, mock_request = _create_nonexistent_queue_mocks()
         with pytest.raises(pytest.skip.Exception):
             instance.test_queue_is_fifo(mock_client, mock_request)
 
@@ -651,14 +656,8 @@ class TestSqsFifoQueueTestsExecution:
 
     def test_queue_has_deduplication_skips_on_non_existent(self):
         """test_queue_has_deduplication skips when queue doesn't exist."""
-        test_class = create_sqs_fifo_queue_tests("queue_name")
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_queue_url.side_effect = _create_client_error(
-            "AWS.SimpleQueueService.NonExistentQueue"
-        )
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        instance = create_sqs_fifo_queue_tests("queue_name")()
+        mock_client, mock_request = _create_nonexistent_queue_mocks()
         with pytest.raises(pytest.skip.Exception):
             instance.test_queue_has_deduplication(mock_client, mock_request)
 

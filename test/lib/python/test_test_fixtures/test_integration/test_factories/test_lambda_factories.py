@@ -84,7 +84,7 @@ class TestCreateLambdaApiGatewayWiringTestsExecution:
         }
         config = {}
         instance.test_handler_has_api_gateway_permission(mock_client, config)
-        mock_client.get_policy.assert_called_with(FunctionName="DefaultFunc")
+        assert mock_client.get_policy.call_args[1]["FunctionName"] == "DefaultFunc"
 
     def test_handler_has_api_gateway_permission_fails_when_no_permission(self):
         """test_handler_has_api_gateway_permission fails when no API Gateway permission."""
