@@ -15,6 +15,62 @@ from .conftest import (
 )
 
 
+# =============================================================================
+# Fixtures for SQS event construction (reduces duplication)
+# =============================================================================
+
+
+@pytest.fixture
+def sqs_record_factory():
+    """Factory for creating SQS record dicts."""
+    def _create(message_id='msg-123', job_id=123, job_labels=None,
+                github_repo='test/repo', run_id=None, runner_type=None,
+                raw_body=None):
+        if raw_body is not None:
+            return {'messageId': message_id, 'body': raw_body}
+        body = {}
+        if job_id is not None:
+            body['job_id'] = job_id
+        if job_labels is not None:
+            body['job_labels'] = job_labels
+        else:
+            body['job_labels'] = ['ec2', 'test']
+        if github_repo is not None:
+            body['github_repo'] = github_repo
+        if run_id is not None:
+            body['run_id'] = run_id
+        if runner_type is not None:
+            body['runner_type'] = runner_type
+        return {'messageId': message_id, 'body': json.dumps(body)}
+    return _create
+
+
+@pytest.fixture
+def sqs_event_factory(sqs_record_factory):
+    """Factory for creating SQS events with records."""
+    def _create(records=None, **kwargs):
+        if records is not None:
+            return {'Records': records}
+        return {'Records': [sqs_record_factory(**kwargs)]}
+    return _create
+
+
+@pytest.fixture
+def post_error_event():
+    """Event for testing POST error handling."""
+    return {
+        'path': '/v1/runners/ec2',
+        'httpMethod': 'POST',
+        'headers': {},
+        'body': json.dumps({'job_id': 123, 'github_repo': 'test/repo'})
+    }
+
+
+# =============================================================================
+# POST Request Tests
+# =============================================================================
+
+
 def test_lambda_handler_ec2_runner_post_with_missing_job_id_returns_400(
     ec2_runner_handler, ec2_runner_post_event_factory, lambda_context
 ):
@@ -47,6 +103,11 @@ def test_lambda_handler_ec2_runner_post_returns_json_content_type(
     event = ec2_runner_post_event_factory(job_id=12345, github_repo='test-org/test-repo')
     response = ec2_runner_handler.lambda_handler(event, lambda_context)
     assert response['headers']['Content-Type'].startswith('application/json')
+
+
+# =============================================================================
+# GET Status Tests
+# =============================================================================
 
 
 def test_get_ec2_runner_status_returns_success_with_no_instances(ec2_runner_handler):
@@ -130,6 +191,11 @@ def test_handle_ec2_runner_get_returns_json_content_type(
         assert response['headers']['Content-Type'].startswith('application/json')
 
 
+# =============================================================================
+# Launch EC2 Runner Tests
+# =============================================================================
+
+
 @patch('boto3.client')
 def test_launch_ec2_runner_no_ami(mock_boto_client, ec2_runner_handler):
     """Test that launch fails gracefully when no AMI is available."""
@@ -209,6 +275,11 @@ def test_launch_ec2_runner_failed_registration(mock_boto_client, ec2_runner_hand
                 assert is_failure
 
 
+# =============================================================================
+# HTTP Method Tests
+# =============================================================================
+
+
 def test_lambda_handler_options_returns_200(ec2_runner_handler, lambda_context):
     """Test that OPTIONS request returns 200."""
     event = {'path': '/v1/runners/ec2', 'httpMethod': 'OPTIONS', 'headers': {}}
@@ -221,6 +292,11 @@ def test_lambda_handler_unknown_path_returns_404(ec2_runner_handler, lambda_cont
     event = {'path': '/v1/unknown', 'httpMethod': 'GET', 'headers': {}}
     response = ec2_runner_handler.lambda_handler(event, lambda_context)
     assert response['statusCode'] == 404
+
+
+# =============================================================================
+# Test Mode Tests
+# =============================================================================
 
 
 def test_test_mode_header_sets_test_mode(ec2_runner_handler, lambda_context):
@@ -247,6 +323,11 @@ def test_test_mode_post_returns_mock_response(
     body = parse_response_body(response)
     is_test_mode = body.get('test_mode')
     assert is_test_mode
+
+
+# =============================================================================
+# get_header_case_insensitive Tests
+# =============================================================================
 
 
 class TestGetHeaderCaseInsensitive:
@@ -291,164 +372,189 @@ class TestGetHeaderCaseInsensitive:
         assert result == ''
 
 
-class TestHandleSqsEvent:
-    """Tests for _handle_sqs_event function."""
+# =============================================================================
+# SQS Event Handling Tests
+# =============================================================================
 
-    def test_handles_single_valid_record(self, ec2_runner_handler):
-        """Test processes single valid SQS record."""
-        event = {
-            'Records': [{
-                'messageId': 'msg-123',
-                'body': json.dumps({
-                    'job_id': 123,
-                    'job_labels': ['ec2', 'test'],
-                    'github_repo': 'test/repo',
-                    'run_id': 456,
-                    'runner_type': 'ec2'
-                })
-            }]
-        }
+
+class TestHandleSqsEventSingleRecord:
+    """Tests for _handle_sqs_event with single valid record."""
+
+    def test_returns_200_status(self, ec2_runner_handler, sqs_event_factory):
+        """Test single valid record returns 200."""
+        event = sqs_event_factory(run_id=456, runner_type='ec2')
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
             mock_launch.return_value = {'success': True, 'instance_id': 'i-test'}
             result = ec2_runner_handler._handle_sqs_event(event)
             assert result['statusCode'] == 200
+
+    def test_calls_launch_with_correct_args(self, ec2_runner_handler, sqs_event_factory):
+        """Test single valid record calls launch with correct arguments."""
+        event = sqs_event_factory(run_id=456, runner_type='ec2')
+        with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
+            mock_launch.return_value = {'success': True, 'instance_id': 'i-test'}
+            ec2_runner_handler._handle_sqs_event(event)
             mock_launch.assert_called_once_with(123, ['ec2', 'test'], 'test/repo', 456, 'ec2')
 
-    def test_handles_multiple_valid_records(self, ec2_runner_handler):
-        """Test processes multiple SQS records."""
-        event = {
+
+class TestHandleSqsEventMultipleRecords:
+    """Tests for _handle_sqs_event with multiple records."""
+
+    @pytest.fixture
+    def multi_record_event(self, sqs_record_factory):
+        """Event with multiple SQS records."""
+        return {
             'Records': [
-                {
-                    'messageId': 'msg-1',
-                    'body': json.dumps({
-                        'job_id': 1,
-                        'job_labels': ['ec2'],
-                        'github_repo': 'test/repo1'
-                    })
-                },
-                {
-                    'messageId': 'msg-2',
-                    'body': json.dumps({
-                        'job_id': 2,
-                        'job_labels': ['ec2'],
-                        'github_repo': 'test/repo2'
-                    })
-                }
+                sqs_record_factory(message_id='msg-1', job_id=1, github_repo='test/repo1'),
+                sqs_record_factory(message_id='msg-2', job_id=2, github_repo='test/repo2'),
             ]
         }
+
+    def test_returns_200_status(self, ec2_runner_handler, multi_record_event):
+        """Test multiple records returns 200."""
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
             mock_launch.return_value = {'success': True, 'instance_id': 'i-test'}
-            result = ec2_runner_handler._handle_sqs_event(event)
+            result = ec2_runner_handler._handle_sqs_event(multi_record_event)
             assert result['statusCode'] == 200
+
+    def test_processes_all_records(self, ec2_runner_handler, multi_record_event):
+        """Test all records are processed."""
+        with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
+            mock_launch.return_value = {'success': True, 'instance_id': 'i-test'}
+            ec2_runner_handler._handle_sqs_event(multi_record_event)
             assert mock_launch.call_count == 2
 
-    def test_handles_missing_job_id(self, ec2_runner_handler):
-        """Test handles record with missing job_id."""
-        event = {
-            'Records': [{
-                'messageId': 'msg-123',
-                'body': json.dumps({
-                    'job_labels': ['ec2'],
-                    'github_repo': 'test/repo'
-                })
-            }]
-        }
+
+class TestHandleSqsEventMissingJobId:
+    """Tests for _handle_sqs_event with missing job_id."""
+
+    @pytest.fixture
+    def missing_job_id_event(self, sqs_event_factory):
+        """Event with missing job_id."""
+        return sqs_event_factory(job_id=None)
+
+    def test_returns_200_status(self, ec2_runner_handler, missing_job_id_event):
+        """Test missing job_id still returns 200 (message processed)."""
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
-            result = ec2_runner_handler._handle_sqs_event(event)
+            result = ec2_runner_handler._handle_sqs_event(missing_job_id_event)
             assert result['statusCode'] == 200
+
+    def test_returns_error_in_results(self, ec2_runner_handler, missing_job_id_event):
+        """Test missing job_id returns error in results."""
+        with patch.object(ec2_runner_handler, 'launch_ec2_runner'):
+            result = ec2_runner_handler._handle_sqs_event(missing_job_id_event)
             body = json.loads(result['body'])
             assert body['results'][0]['error'] == 'Missing required fields'
+
+    def test_does_not_call_launch(self, ec2_runner_handler, missing_job_id_event):
+        """Test missing job_id does not call launch."""
+        with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
+            ec2_runner_handler._handle_sqs_event(missing_job_id_event)
             mock_launch.assert_not_called()
 
-    def test_handles_missing_github_repo(self, ec2_runner_handler):
-        """Test handles record with missing github_repo."""
-        event = {
-            'Records': [{
-                'messageId': 'msg-123',
-                'body': json.dumps({
-                    'job_id': 123,
-                    'job_labels': ['ec2']
-                })
-            }]
-        }
+
+class TestHandleSqsEventMissingGithubRepo:
+    """Tests for _handle_sqs_event with missing github_repo."""
+
+    @pytest.fixture
+    def missing_repo_event(self, sqs_event_factory):
+        """Event with missing github_repo."""
+        return sqs_event_factory(github_repo=None)
+
+    def test_returns_200_status(self, ec2_runner_handler, missing_repo_event):
+        """Test missing github_repo still returns 200."""
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
-            result = ec2_runner_handler._handle_sqs_event(event)
+            result = ec2_runner_handler._handle_sqs_event(missing_repo_event)
             assert result['statusCode'] == 200
+
+    def test_returns_error_in_results(self, ec2_runner_handler, missing_repo_event):
+        """Test missing github_repo returns error in results."""
+        with patch.object(ec2_runner_handler, 'launch_ec2_runner'):
+            result = ec2_runner_handler._handle_sqs_event(missing_repo_event)
             body = json.loads(result['body'])
             assert body['results'][0]['error'] == 'Missing required fields'
+
+    def test_does_not_call_launch(self, ec2_runner_handler, missing_repo_event):
+        """Test missing github_repo does not call launch."""
+        with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
+            ec2_runner_handler._handle_sqs_event(missing_repo_event)
             mock_launch.assert_not_called()
 
-    def test_handles_invalid_json_body(self, ec2_runner_handler):
-        """Test handles record with invalid JSON body."""
-        event = {
-            'Records': [{
-                'messageId': 'msg-123',
-                'body': 'not-valid-json'
-            }]
-        }
+
+class TestHandleSqsEventInvalidJson:
+    """Tests for _handle_sqs_event with invalid JSON body."""
+
+    @pytest.fixture
+    def invalid_json_event(self, sqs_event_factory):
+        """Event with invalid JSON body."""
+        return sqs_event_factory(raw_body='not-valid-json')
+
+    def test_returns_200_status(self, ec2_runner_handler, invalid_json_event):
+        """Test invalid JSON still returns 200."""
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
-            result = ec2_runner_handler._handle_sqs_event(event)
+            result = ec2_runner_handler._handle_sqs_event(invalid_json_event)
             assert result['statusCode'] == 200
+
+    def test_returns_error_in_results(self, ec2_runner_handler, invalid_json_event):
+        """Test invalid JSON returns error in results."""
+        with patch.object(ec2_runner_handler, 'launch_ec2_runner'):
+            result = ec2_runner_handler._handle_sqs_event(invalid_json_event)
             body = json.loads(result['body'])
             assert 'error' in body['results'][0]
+
+    def test_does_not_call_launch(self, ec2_runner_handler, invalid_json_event):
+        """Test invalid JSON does not call launch."""
+        with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
+            ec2_runner_handler._handle_sqs_event(invalid_json_event)
             mock_launch.assert_not_called()
 
-    def test_handles_launch_failure(self, ec2_runner_handler):
-        """Test handles EC2 launch failure gracefully."""
-        event = {
-            'Records': [{
-                'messageId': 'msg-123',
-                'body': json.dumps({
-                    'job_id': 123,
-                    'job_labels': ['ec2'],
-                    'github_repo': 'test/repo'
-                })
-            }]
-        }
+
+class TestHandleSqsEventLaunchFailure:
+    """Tests for _handle_sqs_event when launch fails."""
+
+    @pytest.fixture
+    def launch_failure_result(self, ec2_runner_handler, sqs_event_factory):
+        """Execute SQS handler with launch failure and return result."""
+        event = sqs_event_factory()
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
             mock_launch.return_value = {'success': False, 'error': 'No capacity'}
-            result = ec2_runner_handler._handle_sqs_event(event)
-            # Should still return 200 - SQS message processed
-            assert result['statusCode'] == 200
-            body = json.loads(result['body'])
-            assert body['results'][0]['result']['success'] is False
+            return ec2_runner_handler._handle_sqs_event(event)
 
-    def test_uses_default_runner_type(self, ec2_runner_handler):
+    def test_returns_200_status(self, launch_failure_result):
+        """Test launch failure still returns 200 (message processed)."""
+        assert launch_failure_result['statusCode'] == 200
+
+    def test_returns_failure_in_results(self, launch_failure_result):
+        """Test launch failure returns success=False in results."""
+        body = json.loads(launch_failure_result['body'])
+        assert body['results'][0]['result']['success'] is False
+
+
+class TestHandleSqsEventDefaultRunnerType:
+    """Tests for _handle_sqs_event default runner_type."""
+
+    def test_uses_default_runner_type(self, ec2_runner_handler, sqs_event_factory):
         """Test uses default runner_type when not specified."""
-        event = {
-            'Records': [{
-                'messageId': 'msg-123',
-                'body': json.dumps({
-                    'job_id': 123,
-                    'job_labels': ['ec2'],
-                    'github_repo': 'test/repo'
-                })
-            }]
-        }
+        event = sqs_event_factory()
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
             mock_launch.return_value = {'success': True}
             ec2_runner_handler._handle_sqs_event(event)
-            # Default runner_type should be 'ec2'
             call_args = mock_launch.call_args
-            assert call_args[0][4] == 'ec2'  # runner_type argument
+            assert call_args[0][4] == 'ec2'
+
+
+# =============================================================================
+# SQS Event Dispatch Tests
+# =============================================================================
 
 
 class TestLambdaHandlerSqsDispatch:
     """Tests for SQS event dispatch in lambda_handler."""
 
-    def test_dispatches_sqs_event(self, ec2_runner_handler, lambda_context):
+    def test_dispatches_sqs_event(self, ec2_runner_handler, lambda_context, sqs_event_factory):
         """Test dispatches to SQS handler when event has SQS records."""
-        event = {
-            'Records': [{
-                'eventSource': 'aws:sqs',
-                'messageId': 'msg-123',
-                'body': json.dumps({
-                    'job_id': 123,
-                    'job_labels': ['ec2'],
-                    'github_repo': 'test/repo'
-                })
-            }]
-        }
+        event = sqs_event_factory()
+        event['Records'][0]['eventSource'] = 'aws:sqs'
         with patch.object(ec2_runner_handler, '_handle_sqs_event') as mock_sqs:
             mock_sqs.return_value = {'statusCode': 200, 'body': '{}'}
             ec2_runner_handler.lambda_handler(event, lambda_context)
@@ -468,36 +574,51 @@ class TestLambdaHandlerSqsDispatch:
                 mock_sqs.assert_not_called()
 
 
-class TestHandlerPostException:
-    """Tests for exception handling in POST handler."""
+# =============================================================================
+# POST Exception Handling Tests
+# =============================================================================
 
-    def test_post_handler_catches_value_error(self, ec2_runner_handler, lambda_context):
-        """Test POST handler catches ValueError and returns 500."""
-        event = {
-            'path': '/v1/runners/ec2',
-            'httpMethod': 'POST',
-            'headers': {},
-            'body': json.dumps({'job_id': 123, 'github_repo': 'test/repo'})
-        }
+
+class TestHandlerPostValueError:
+    """Tests for ValueError handling in POST handler."""
+
+    @pytest.fixture
+    def value_error_response(self, ec2_runner_handler, lambda_context, post_error_event):
+        """Execute POST handler with ValueError and return response."""
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
             mock_launch.side_effect = ValueError('Test error')
-            response = ec2_runner_handler.lambda_handler(event, lambda_context)
-            assert response['statusCode'] == 500
-            body = json.loads(response['body'])
-            assert body['success'] is False
-            assert 'error' in body
+            return ec2_runner_handler.lambda_handler(post_error_event, lambda_context)
 
-    def test_post_handler_catches_key_error(self, ec2_runner_handler, lambda_context):
-        """Test POST handler catches KeyError and returns 500."""
-        event = {
-            'path': '/v1/runners/ec2',
-            'httpMethod': 'POST',
-            'headers': {},
-            'body': json.dumps({'job_id': 123, 'github_repo': 'test/repo'})
-        }
+    def test_returns_500_status(self, value_error_response):
+        """Test ValueError returns 500 status."""
+        assert value_error_response['statusCode'] == 500
+
+    def test_returns_success_false(self, value_error_response):
+        """Test ValueError returns success=False."""
+        body = json.loads(value_error_response['body'])
+        assert body['success'] is False
+
+    def test_returns_error_message(self, value_error_response):
+        """Test ValueError returns error in body."""
+        body = json.loads(value_error_response['body'])
+        assert 'error' in body
+
+
+class TestHandlerPostKeyError:
+    """Tests for KeyError handling in POST handler."""
+
+    @pytest.fixture
+    def key_error_response(self, ec2_runner_handler, lambda_context, post_error_event):
+        """Execute POST handler with KeyError and return response."""
         with patch.object(ec2_runner_handler, 'launch_ec2_runner') as mock_launch:
             mock_launch.side_effect = KeyError('missing_key')
-            response = ec2_runner_handler.lambda_handler(event, lambda_context)
-            assert response['statusCode'] == 500
-            body = json.loads(response['body'])
-            assert body['success'] is False
+            return ec2_runner_handler.lambda_handler(post_error_event, lambda_context)
+
+    def test_returns_500_status(self, key_error_response):
+        """Test KeyError returns 500 status."""
+        assert key_error_response['statusCode'] == 500
+
+    def test_returns_success_false(self, key_error_response):
+        """Test KeyError returns success=False."""
+        body = json.loads(key_error_response['body'])
+        assert body['success'] is False

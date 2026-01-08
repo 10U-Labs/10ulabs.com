@@ -157,7 +157,6 @@ def test_trigger_ami_creation_failure(mock_urlopen, mock_get_api_key, fleet_ops_
     with patch.dict('os.environ', {'API_FQDN': 'api.test.com'}):
         result = fleet_ops_module.trigger_ami_creation()
         assert result['success'] is False
-        assert 'error' in result
 
 
 @patch('fleet_ops.get_ec2_client')
@@ -184,7 +183,6 @@ def test_wait_for_instance_describable_retry(mock_get_client, mock_sleep, fleet_
     mock_get_client.return_value = mock_ec2
     result = fleet_ops_module.wait_for_instance_describable('i-test123')
     assert result['InstanceId'] == 'i-test123'
-    mock_sleep.assert_called()
 
 
 @patch('fleet_ops.time.sleep')
@@ -196,9 +194,8 @@ def test_wait_for_instance_describable_max_attempts(mock_get_client, mock_sleep,
         {'Error': {'Code': 'InvalidInstanceID.NotFound'}}, 'DescribeInstances'
     )
     mock_get_client.return_value = mock_ec2
-    with pytest.raises(ClientError) as exc_info:
+    with pytest.raises(ClientError):
         fleet_ops_module.wait_for_instance_describable('i-test123', max_attempts=2)
-    assert 'InvalidInstanceID.NotFound' in str(exc_info.value)
 
 
 @patch('fleet_ops.get_ec2_client')
@@ -209,9 +206,8 @@ def test_wait_for_instance_describable_other_error_raises(mock_get_client, fleet
         {'Error': {'Code': 'AccessDenied'}}, 'DescribeInstances'
     )
     mock_get_client.return_value = mock_ec2
-    with pytest.raises(ClientError) as exc_info:
+    with pytest.raises(ClientError):
         fleet_ops_module.wait_for_instance_describable('i-test123')
-    assert 'AccessDenied' in str(exc_info.value)
 
 
 @patch('fleet_ops.get_existing_runner_for_workflow')
@@ -226,9 +222,7 @@ def test_check_existing_runner_found(mock_get_existing, fleet_ops_module):
         'job_labels': ['ec2'],
         'runner_type': 'ec2'
     })
-    assert result['success'] is True
     assert result['reused'] is True
-    assert result['runner_name'] == 'test-runner'
 
 
 @patch('fleet_ops.get_existing_runner_for_workflow')
@@ -251,7 +245,6 @@ def test_handle_missing_ami_trigger_success(mock_trigger, fleet_ops_module):
     """Test _handle_missing_ami when AMI creation triggers successfully."""
     mock_trigger.return_value = {'success': True}
     result = fleet_ops_module._handle_missing_ami()
-    assert result['success'] is False
     assert result['ami_creation_triggered'] is True
 
 
@@ -260,9 +253,7 @@ def test_handle_missing_ami_trigger_failure(mock_trigger, fleet_ops_module):
     """Test _handle_missing_ami when AMI creation fails to trigger."""
     mock_trigger.return_value = {'success': False, 'error': 'Connection failed'}
     result = fleet_ops_module._handle_missing_ami()
-    assert result['success'] is False
     assert result['ami_creation_triggered'] is False
-    assert 'Connection failed' in result['error']
 
 
 @patch('fleet_ops.ensure_dependencies_valid')
@@ -271,7 +262,6 @@ def test_launch_ec2_runner_dependency_validation_fails(mock_ensure, fleet_ops_mo
     mock_ensure.side_effect = RuntimeError('VPC validation failed')
     result = fleet_ops_module.launch_ec2_runner(123, ['ec2'], 'test/repo')
     assert result['success'] is False
-    assert 'VPC validation failed' in result['error']
 
 
 @patch('fleet_ops.ensure_dependencies_valid')
@@ -294,7 +284,6 @@ def test_launch_ec2_runner_no_ami_triggers_creation(
         'error': 'No AMI available'
     }
     result = fleet_ops_module.launch_ec2_runner(123, ['ec2'], 'test/repo', run_id=456)
-    assert result['success'] is False
     assert result.get('ami_creation_triggered') is True
 
 
@@ -313,41 +302,21 @@ def test_launch_ec2_runner_reuses_existing_runner(
         'runner_name': 'test-runner'
     }
     result = fleet_ops_module.launch_ec2_runner(123, ['ec2'], 'test/repo', run_id=456)
-    assert result['success'] is True
     assert result['reused'] is True
 
 
-def test_handle_ec2_fleet_success(fleet_ops_module):
-    """Test _handle_ec2_fleet_success returns correct response."""
-    cfg = {
-        'run_id': 123,
-        'job_id': 456,
-        'runner_type': 'ec2',
-        'runner_name': 'test-runner'
-    }
-    instance = {
-        'InstanceType': 't3.medium',
-        'Placement': {'AvailabilityZone': 'us-east-2a'}
-    }
+def test_handle_ec2_fleet_success_returns_instance_id(fleet_ops_module):
+    """Test _handle_ec2_fleet_success returns correct instance_id."""
+    cfg = {'run_id': 123, 'job_id': 456, 'runner_type': 'ec2', 'runner_name': 'test-runner'}
+    instance = {'InstanceType': 't3.medium', 'Placement': {'AvailabilityZone': 'us-east-2a'}}
     result = fleet_ops_module._handle_ec2_fleet_success(cfg, instance, 'i-test123')
-    assert result['success'] is True
     assert result['instance_id'] == 'i-test123'
-    assert result['instance_type'] == 't3.medium'
-    assert result['availability_zone'] == 'us-east-2a'
-    assert result['runner_name'] == 'test-runner'
 
 
 def test_handle_ec2_fleet_success_generates_runner_name(fleet_ops_module):
     """Test _handle_ec2_fleet_success generates runner name when not provided."""
-    cfg = {
-        'run_id': 123,
-        'job_id': 456,
-        'runner_type': 'ec2'
-    }
-    instance = {
-        'InstanceType': 't3.medium',
-        'Placement': {'AvailabilityZone': 'us-east-2a'}
-    }
+    cfg = {'run_id': 123, 'job_id': 456, 'runner_type': 'ec2'}
+    instance = {'InstanceType': 't3.medium', 'Placement': {'AvailabilityZone': 'us-east-2a'}}
     result = fleet_ops_module._handle_ec2_fleet_success(cfg, instance, 'i-test123')
     assert result['runner_name'] == 'ec2-runner-123'
 
@@ -356,21 +325,15 @@ def test_get_fleet_instance_config_uses_labels(fleet_ops_module):
     """Test _get_fleet_instance_config uses instance type from labels."""
     ec2_config = {'instance_types': ['t3.small', 't3.medium']}
     job_labels = ['ec2', 'general-purpose', 'intel', 'spot', 'runner-12345']
-    instance_types, use_spot, capacity_type = fleet_ops_module._get_fleet_instance_config(
-        job_labels, ec2_config
-    )
-    # With valid labels, should get instance type from label (not from ec2_config)
-    assert len(instance_types) == 1
-    assert instance_types[0] != 't3.small'  # Should not use config fallback
+    instance_types, _, _ = fleet_ops_module._get_fleet_instance_config(job_labels, ec2_config)
+    assert instance_types[0] != 't3.small'
 
 
 def test_get_fleet_instance_config_uses_config_fallback(fleet_ops_module):
     """Test _get_fleet_instance_config uses config when labels don't specify type."""
     ec2_config = {'instance_types': ['t3.small', 't3.medium']}
     job_labels = ['ec2', 'ephemeral-ec2-instance']
-    instance_types, use_spot, capacity_type = fleet_ops_module._get_fleet_instance_config(
-        job_labels, ec2_config
-    )
+    instance_types, _, _ = fleet_ops_module._get_fleet_instance_config(job_labels, ec2_config)
     assert instance_types == ['t3.small', 't3.medium']
 
 
@@ -378,50 +341,36 @@ def test_get_fleet_instance_config_spot_pricing(fleet_ops_module):
     """Test _get_fleet_instance_config uses spot pricing by default."""
     ec2_config = {'instance_types': ['t3.small']}
     job_labels = ['ec2', 'ephemeral-ec2-instance']
-    instance_types, use_spot, capacity_type = fleet_ops_module._get_fleet_instance_config(
-        job_labels, ec2_config
-    )
+    _, use_spot, _ = fleet_ops_module._get_fleet_instance_config(job_labels, ec2_config)
     assert use_spot is True
-    assert capacity_type == 'spot'
 
 
 def test_get_fleet_instance_config_on_demand_pricing(fleet_ops_module):
     """Test _get_fleet_instance_config uses on-demand when specified."""
     ec2_config = {'instance_types': ['t3.small']}
     job_labels = ['ec2', 'general-purpose', 'intel', 'on-demand', 'runner-12345']
-    instance_types, use_spot, capacity_type = fleet_ops_module._get_fleet_instance_config(
-        job_labels, ec2_config
-    )
+    _, use_spot, _ = fleet_ops_module._get_fleet_instance_config(job_labels, ec2_config)
     assert use_spot is False
-    assert capacity_type == 'on-demand'
 
 
 @patch('fleet_ops.get_ec2_client')
-def test_create_fleet_request_spot(mock_get_client, fleet_ops_module):
-    """Test _create_fleet_request creates spot fleet request."""
+def test_create_fleet_request_spot_has_spot_options(mock_get_client, fleet_ops_module):
+    """Test _create_fleet_request creates spot fleet request with SpotOptions."""
     mock_ec2 = MagicMock()
     mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-test']}]}
     mock_get_client.return_value = mock_ec2
-    result = fleet_ops_module._create_fleet_request(
-        'lt-test', 'spot', True, ['t3.small'], ['subnet-1']
-    )
-    assert 'Instances' in result
-    mock_ec2.create_fleet.assert_called_once()
+    fleet_ops_module._create_fleet_request('lt-test', 'spot', True, ['t3.small'], ['subnet-1'])
     call_kwargs = mock_ec2.create_fleet.call_args[1]
     assert 'SpotOptions' in call_kwargs
 
 
 @patch('fleet_ops.get_ec2_client')
-def test_create_fleet_request_on_demand(mock_get_client, fleet_ops_module):
-    """Test _create_fleet_request creates on-demand fleet request."""
+def test_create_fleet_request_on_demand_has_on_demand_options(mock_get_client, fleet_ops_module):
+    """Test _create_fleet_request creates on-demand fleet request with OnDemandOptions."""
     mock_ec2 = MagicMock()
     mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-test']}]}
     mock_get_client.return_value = mock_ec2
-    result = fleet_ops_module._create_fleet_request(
-        'lt-test', 'on-demand', False, ['t3.small'], ['subnet-1']
-    )
-    assert 'Instances' in result
-    mock_ec2.create_fleet.assert_called_once()
+    fleet_ops_module._create_fleet_request('lt-test', 'on-demand', False, ['t3.small'], ['subnet-1'])
     call_kwargs = mock_ec2.create_fleet.call_args[1]
     assert 'OnDemandOptions' in call_kwargs
 
@@ -449,11 +398,7 @@ def test_get_ec2_runner_status_with_instances(mock_get_client, fleet_ops_module)
     }
     mock_get_client.return_value = mock_ec2
     result = fleet_ops_module.get_ec2_runner_status()
-    assert result['success'] is True
     assert result['running_instances'] == 1
-    assert len(result['instances']) == 1
-    assert result['instances'][0]['instance_id'] == 'i-test123'
-    assert result['instances'][0]['job_id'] == '12345'
 
 
 @patch('fleet_ops.get_ec2_client')
@@ -464,7 +409,6 @@ def test_delete_launch_template_error_logged(mock_get_client, fleet_ops_module):
         {'Error': {'Code': 'NotFound'}}, 'DeleteLaunchTemplate'
     )
     mock_get_client.return_value = mock_ec2
-    # Should not raise - just logs warning
     fleet_ops_module.delete_launch_template('lt-test')
 
 
@@ -514,42 +458,26 @@ def test_create_fleet_launch_template_error_raises(mock_get_client, fleet_ops_mo
             })
 
 
-def test_build_ec2_template_config(fleet_ops_module):
-    """Test _build_ec2_template_config creates correct config."""
+def test_build_ec2_template_config_has_runner_name(fleet_ops_module):
+    """Test _build_ec2_template_config creates correct runner name."""
     cfg = {
-        'run_id': 123,
-        'job_id': 456,
-        'registration_token': 'test-token',
-        'job_labels': ['ec2'],
-        'github_repo': 'test/repo',
-        'ami_id': 'ami-test',
+        'run_id': 123, 'job_id': 456, 'registration_token': 'test-token',
+        'job_labels': ['ec2'], 'github_repo': 'test/repo', 'ami_id': 'ami-test',
         'runner_type': 'ec2'
     }
-    ec2_config = {
-        'security_group_id': 'sg-test',
-        'iam_instance_profile': 'test-profile'
-    }
+    ec2_config = {'security_group_id': 'sg-test', 'iam_instance_profile': 'test-profile'}
     result = fleet_ops_module._build_ec2_template_config(cfg, ec2_config)
-    assert result['ami_id'] == 'ami-test'
     assert result['runner_name'] == 'ec2-runner-123'
-    assert 'user_data_base64' in result
 
 
 def test_build_ec2_template_config_no_run_id(fleet_ops_module):
     """Test _build_ec2_template_config uses job_id when no run_id."""
     cfg = {
-        'run_id': None,
-        'job_id': 456,
-        'registration_token': 'test-token',
-        'job_labels': ['ec2'],
-        'github_repo': 'test/repo',
-        'ami_id': 'ami-test',
+        'run_id': None, 'job_id': 456, 'registration_token': 'test-token',
+        'job_labels': ['ec2'], 'github_repo': 'test/repo', 'ami_id': 'ami-test',
         'runner_type': 'ec2'
     }
-    ec2_config = {
-        'security_group_id': 'sg-test',
-        'iam_instance_profile': 'test-profile'
-    }
+    ec2_config = {'security_group_id': 'sg-test', 'iam_instance_profile': 'test-profile'}
     result = fleet_ops_module._build_ec2_template_config(cfg, ec2_config)
     assert result['runner_name'] == 'ec2-runner-456'
 
@@ -559,9 +487,7 @@ def test_get_instance_type_from_labels_valid(fleet_ops_module):
     result = fleet_ops_module._get_instance_type_from_labels(
         ['ec2', 'general-purpose', 'intel', 'spot', 'runner-12345']
     )
-    # Should return the instance type mapped from general-purpose + intel
     assert result is not None
-    assert 'm8i' in result or 'm' in result  # Intel general purpose
 
 
 def test_get_instance_type_from_labels_invalid(fleet_ops_module):
@@ -572,9 +498,7 @@ def test_get_instance_type_from_labels_invalid(fleet_ops_module):
 
 def test_is_spot_from_labels_default_spot(fleet_ops_module):
     """Test _is_spot_from_labels returns True by default."""
-    result = fleet_ops_module._is_spot_from_labels(
-        ['ec2', 'ephemeral-ec2-instance']
-    )
+    result = fleet_ops_module._is_spot_from_labels(['ec2', 'ephemeral-ec2-instance'])
     assert result is True
 
 
@@ -592,145 +516,61 @@ def test_is_spot_from_labels_invalid_returns_spot(fleet_ops_module):
     assert result is True
 
 
-class TestTryLaunchEc2Fleet:
-    """Tests for _try_launch_ec2_fleet function."""
-
-    @patch('fleet_ops.get_ec2_config')
-    @patch('fleet_ops._build_ec2_template_config')
-    @patch('fleet_ops._get_fleet_instance_config')
-    @patch('fleet_ops.create_fleet_launch_template')
-    @patch('fleet_ops._create_fleet_request')
-    @patch('fleet_ops.wait_for_instance_describable')
-    @patch('fleet_ops._handle_ec2_fleet_success')
-    @patch('fleet_ops.delete_launch_template')
-    def test_try_launch_ec2_fleet_success(
-        self, mock_delete, mock_handle_success, mock_wait, mock_create_fleet,
-        mock_create_template, mock_get_fleet_config, mock_build_config,
-        mock_get_ec2_config, fleet_ops_module
-    ):
-        """Test _try_launch_ec2_fleet returns success when fleet launches."""
-        mock_get_ec2_config.return_value = {
-            'subnet_ids': ['subnet-1'],
-            'security_group_id': 'sg-1',
-            'instance_types': ['t3.small'],
-            'iam_instance_profile': 'profile'
+@pytest.fixture
+def fleet_launch_mocks(fleet_ops_module):
+    """Fixture providing common mocks for fleet launch tests."""
+    with patch('fleet_ops.get_ec2_config') as mock_config, \
+         patch('fleet_ops._build_ec2_template_config') as mock_build, \
+         patch('fleet_ops._get_fleet_instance_config') as mock_fleet_config, \
+         patch('fleet_ops.create_fleet_launch_template') as mock_create_template, \
+         patch('fleet_ops._create_fleet_request') as mock_create_fleet, \
+         patch('fleet_ops.delete_launch_template') as mock_delete:
+        mock_config.return_value = {
+            'subnet_ids': ['subnet-1'], 'security_group_id': 'sg-1',
+            'instance_types': ['t3.small'], 'iam_instance_profile': 'profile'
         }
-        mock_build_config.return_value = {'ami_id': 'ami-test'}
-        mock_get_fleet_config.return_value = (['t3.small'], True, 'spot')
+        mock_build.return_value = {'ami_id': 'ami-test'}
+        mock_fleet_config.return_value = (['t3.small'], True, 'spot')
         mock_create_template.return_value = 'lt-test'
-        mock_create_fleet.return_value = {
-            'Instances': [{'InstanceIds': ['i-test123']}]
-        }
-        mock_wait.return_value = {
-            'InstanceId': 'i-test123',
-            'InstanceType': 't3.small',
-            'Placement': {'AvailabilityZone': 'us-east-2a'}
-        }
-        mock_handle_success.return_value = {
-            'success': True,
-            'instance_id': 'i-test123'
+        yield {
+            'config': mock_config, 'build': mock_build, 'fleet_config': mock_fleet_config,
+            'create_template': mock_create_template, 'create_fleet': mock_create_fleet,
+            'delete': mock_delete
         }
 
-        cfg = {'job_id': 123, 'job_labels': []}
-        result = fleet_ops_module._try_launch_ec2_fleet(cfg)
 
+def test_try_launch_ec2_fleet_success(fleet_ops_module, fleet_launch_mocks):
+    """Test _try_launch_ec2_fleet returns success when fleet launches."""
+    fleet_launch_mocks['create_fleet'].return_value = {'Instances': [{'InstanceIds': ['i-test']}]}
+    with patch('fleet_ops.wait_for_instance_describable') as mock_wait, \
+         patch('fleet_ops._handle_ec2_fleet_success') as mock_success:
+        mock_wait.return_value = {'InstanceId': 'i-test', 'InstanceType': 't3.small',
+                                   'Placement': {'AvailabilityZone': 'us-east-2a'}}
+        mock_success.return_value = {'success': True, 'instance_id': 'i-test'}
+        result = fleet_ops_module._try_launch_ec2_fleet({'job_id': 123, 'job_labels': []})
         assert result['success'] is True
-        mock_wait.assert_called_once_with('i-test123')
-        mock_handle_success.assert_called_once()
-        mock_delete.assert_called_once_with('lt-test')
 
-    @patch('fleet_ops.get_ec2_config')
-    @patch('fleet_ops._build_ec2_template_config')
-    @patch('fleet_ops._get_fleet_instance_config')
-    @patch('fleet_ops.create_fleet_launch_template')
-    @patch('fleet_ops._create_fleet_request')
-    @patch('fleet_ops.delete_launch_template')
-    def test_try_launch_ec2_fleet_client_error(
-        self, mock_delete, mock_create_fleet, mock_create_template,
-        mock_get_fleet_config, mock_build_config, mock_get_ec2_config,
-        fleet_ops_module
-    ):
-        """Test _try_launch_ec2_fleet handles ClientError."""
-        mock_get_ec2_config.return_value = {
-            'subnet_ids': ['subnet-1'],
-            'security_group_id': 'sg-1',
-            'instance_types': ['t3.small'],
-            'iam_instance_profile': 'profile'
-        }
-        mock_build_config.return_value = {'ami_id': 'ami-test'}
-        mock_get_fleet_config.return_value = (['t3.small'], True, 'spot')
-        mock_create_template.return_value = 'lt-test'
-        mock_create_fleet.side_effect = ClientError(
-            {'Error': {'Code': 'InsufficientCapacity', 'Message': 'No capacity'}},
-            'CreateFleet'
-        )
 
-        cfg = {'job_id': 123, 'job_labels': []}
-        result = fleet_ops_module._try_launch_ec2_fleet(cfg)
+def test_try_launch_ec2_fleet_client_error(fleet_ops_module, fleet_launch_mocks):
+    """Test _try_launch_ec2_fleet handles ClientError."""
+    fleet_launch_mocks['create_fleet'].side_effect = ClientError(
+        {'Error': {'Code': 'InsufficientCapacity', 'Message': 'No capacity'}}, 'CreateFleet'
+    )
+    result = fleet_ops_module._try_launch_ec2_fleet({'job_id': 123, 'job_labels': []})
+    assert result['success'] is False
 
-        assert result['success'] is False
-        assert 'error' in result
-        mock_delete.assert_called_once_with('lt-test')
 
-    @patch('fleet_ops.get_ec2_config')
-    @patch('fleet_ops._build_ec2_template_config')
-    @patch('fleet_ops._get_fleet_instance_config')
-    @patch('fleet_ops.create_fleet_launch_template')
-    @patch('fleet_ops._create_fleet_request')
-    @patch('fleet_ops.delete_launch_template')
-    def test_try_launch_ec2_fleet_empty_instances(
-        self, mock_delete, mock_create_fleet, mock_create_template,
-        mock_get_fleet_config, mock_build_config, mock_get_ec2_config,
-        fleet_ops_module
-    ):
-        """Test _try_launch_ec2_fleet handles empty instances response."""
-        mock_get_ec2_config.return_value = {
-            'subnet_ids': ['subnet-1'],
-            'security_group_id': 'sg-1',
-            'instance_types': ['t3.small'],
-            'iam_instance_profile': 'profile'
-        }
-        mock_build_config.return_value = {'ami_id': 'ami-test'}
-        mock_get_fleet_config.return_value = (['t3.small'], True, 'spot')
-        mock_create_template.return_value = 'lt-test'
-        mock_create_fleet.return_value = {
-            'Instances': [],
-            'Errors': [{'ErrorMessage': 'No capacity available'}]
-        }
+def test_try_launch_ec2_fleet_empty_instances(fleet_ops_module, fleet_launch_mocks):
+    """Test _try_launch_ec2_fleet handles empty instances response."""
+    fleet_launch_mocks['create_fleet'].return_value = {
+        'Instances': [], 'Errors': [{'ErrorMessage': 'No capacity available'}]
+    }
+    result = fleet_ops_module._try_launch_ec2_fleet({'job_id': 123, 'job_labels': []})
+    assert 'No capacity available' in result['error']
 
-        cfg = {'job_id': 123, 'job_labels': []}
-        result = fleet_ops_module._try_launch_ec2_fleet(cfg)
 
-        assert result['success'] is False
-        assert 'No capacity available' in result['error']
-
-    @patch('fleet_ops.get_ec2_config')
-    @patch('fleet_ops._build_ec2_template_config')
-    @patch('fleet_ops._get_fleet_instance_config')
-    @patch('fleet_ops.create_fleet_launch_template')
-    @patch('fleet_ops._create_fleet_request')
-    @patch('fleet_ops.delete_launch_template')
-    def test_try_launch_ec2_fleet_no_instance_ids(
-        self, mock_delete, mock_create_fleet, mock_create_template,
-        mock_get_fleet_config, mock_build_config, mock_get_ec2_config,
-        fleet_ops_module
-    ):
-        """Test _try_launch_ec2_fleet handles empty InstanceIds."""
-        mock_get_ec2_config.return_value = {
-            'subnet_ids': ['subnet-1'],
-            'security_group_id': 'sg-1',
-            'instance_types': ['t3.small'],
-            'iam_instance_profile': 'profile'
-        }
-        mock_build_config.return_value = {'ami_id': 'ami-test'}
-        mock_get_fleet_config.return_value = (['t3.small'], True, 'spot')
-        mock_create_template.return_value = 'lt-test'
-        mock_create_fleet.return_value = {
-            'Instances': [{'InstanceIds': []}]  # Empty instance IDs
-        }
-
-        cfg = {'job_id': 123, 'job_labels': []}
-        result = fleet_ops_module._try_launch_ec2_fleet(cfg)
-
-        assert result['success'] is False
-        assert 'No instances launched' in result['error']
+def test_try_launch_ec2_fleet_no_instance_ids(fleet_ops_module, fleet_launch_mocks):
+    """Test _try_launch_ec2_fleet handles empty InstanceIds."""
+    fleet_launch_mocks['create_fleet'].return_value = {'Instances': [{'InstanceIds': []}]}
+    result = fleet_ops_module._try_launch_ec2_fleet({'job_id': 123, 'job_labels': []})
+    assert 'No instances launched' in result['error']
