@@ -52,3 +52,16 @@ class TestVPCResourcesExist:
             "Runner security group not found. "
             "Run terraform apply in src/api/common/networking/"
         )
+
+    def test_runners_route_table_exists(self, ec2_client, runners_vpc_id):
+        """Verify the runners route table exists."""
+        response = ec2_client.describe_route_tables(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "tag:ManagedBy", "Values": ["terraform"]},
+            ]
+        )
+        assert len(response["RouteTables"]) >= 1, (
+            "Runners route table not found. "
+            "Run terraform apply in src/api/common/networking/"
+        )

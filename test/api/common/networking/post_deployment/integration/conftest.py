@@ -11,8 +11,6 @@ Layer marker system inherited from parent conftest (test/api/common/networking/c
 import boto3
 import pytest
 
-pytest_plugins = ['test_fixtures.aws']
-
 
 @pytest.fixture(name="ec2_client", scope="module")
 def ec2_client_fixture(aws_region):

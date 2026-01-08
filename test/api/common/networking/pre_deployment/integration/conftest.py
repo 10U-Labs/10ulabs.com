@@ -1,18 +1,17 @@
 """Pytest fixtures for api/common/networking pre-deployment integration tests.
 
-These tests follow the 6-layer testing model from PRE_DEPLOYMENT_INTEGRATION_TESTS.md:
-- Layer 1: Authentication - Are AWS credentials configured and valid?
-- Layer 2: Authorization - Do we have permission to call required APIs?
-- Layer 3: State - Terraform state matches AWS reality
-- Layer 4: Existence - Do the required resources exist?
-- Layer 5: Configuration - Are resources configured correctly?
-- Layer 6: Capability - Can we perform required operations?
+These tests follow the 7-layer testing model from PRE_DEPLOYMENT_INTEGRATION_TESTS.md:
+- Layer 1: Contracts - Local files are compatible
+- Layer 2: Authentication - Are AWS credentials configured and valid?
+- Layer 3: Authorization - Do we have permission to call required APIs?
+- Layer 4: State - Terraform state matches AWS reality
+- Layer 5: Existence - Do the required resources exist?
+- Layer 6: Configuration - Are resources configured correctly?
+- Layer 7: Capability - Can we perform required operations?
 """
 
 import pytest
 from repo_utils import REPO_ROOT
-
-pytest_plugins = ['test_fixtures.aws']
 
 
 API_COMMON_NETWORKING_SRC = REPO_ROOT / "src" / "api" / "common" / "networking"

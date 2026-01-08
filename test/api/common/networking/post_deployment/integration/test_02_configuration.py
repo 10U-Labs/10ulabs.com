@@ -56,3 +56,73 @@ class TestDeployedResourcesConfiguration:
         assert has_all_egress, (
             f"Security group {sg_id} does not allow all egress traffic"
         )
+
+
+class TestSubnetConfiguration:
+    """Layer 2: Verify subnet configuration."""
+
+    def test_subnets_have_public_ip_mapping(self, ec2_client):
+        """Verify subnets assign public IPs to instances."""
+        response = ec2_client.describe_subnets(
+            Filters=[
+                {"Name": "tag:Purpose", "Values": ["runners"]},
+                {"Name": "tag:ManagedBy", "Values": ["terraform"]},
+            ]
+        )
+        for subnet in response["Subnets"]:
+            assert subnet.get("MapPublicIpOnLaunch") is True, (
+                f"Subnet {subnet['SubnetId']} does not assign public IPs"
+            )
+
+    def test_subnets_are_in_different_azs(self, ec2_client):
+        """Verify subnets are distributed across availability zones."""
+        response = ec2_client.describe_subnets(
+            Filters=[
+                {"Name": "tag:Purpose", "Values": ["runners"]},
+                {"Name": "tag:ManagedBy", "Values": ["terraform"]},
+            ]
+        )
+        azs = [subnet["AvailabilityZone"] for subnet in response["Subnets"]]
+        # If there are multiple subnets, they should be in different AZs
+        if len(azs) > 1:
+            assert len(set(azs)) == len(azs), (
+                f"Subnets are not in different AZs: {azs}"
+            )
+
+
+class TestRouteTableConfiguration:
+    """Layer 2: Verify route table configuration."""
+
+    def test_route_table_has_default_route(self, ec2_client, runners_vpc_id):
+        """Verify route table has default route (0.0.0.0/0)."""
+        response = ec2_client.describe_route_tables(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "tag:ManagedBy", "Values": ["terraform"]},
+            ]
+        )
+        for rt in response["RouteTables"]:
+            has_default_route = any(
+                route.get("DestinationCidrBlock") == "0.0.0.0/0"
+                for route in rt.get("Routes", [])
+            )
+            assert has_default_route, (
+                f"Route table {rt['RouteTableId']} has no default route"
+            )
+
+    def test_route_table_default_route_targets_igw(self, ec2_client, runners_vpc_id):
+        """Verify default route targets an internet gateway."""
+        response = ec2_client.describe_route_tables(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "tag:ManagedBy", "Values": ["terraform"]},
+            ]
+        )
+        for rt in response["RouteTables"]:
+            for route in rt.get("Routes", []):
+                if route.get("DestinationCidrBlock") == "0.0.0.0/0":
+                    gateway_id = route.get("GatewayId", "")
+                    assert gateway_id.startswith("igw-"), (
+                        f"Route table {rt['RouteTableId']} default route does not "
+                        f"target an IGW, got: {gateway_id}"
+                    )
