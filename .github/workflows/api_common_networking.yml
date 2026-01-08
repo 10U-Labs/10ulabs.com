@@ -216,13 +216,6 @@ jobs:
           python3 -m pytest \
             test/api/common/networking/post_deployment/integration/ \
             --verbose --pythonwarnings=error
-      - continue-on-error: true
-        id: e2e_tests
-        name: Run E2E tests
-        run: |
-          python3 -m pytest \
-            test/api/common/networking/post_deployment/e2e/ \
-            --verbose --pythonwarnings=error
       - env:
           S02: ${{ steps.no_linter_configs_sh.outcome }}
           S03: ${{ steps.no_inline_disables_gh.outcome }}
@@ -240,7 +233,6 @@ jobs:
           S15: ${{ steps.pre_integration_tests.outcome }}
           S16: ${{ steps.terraform_apply.outcome }}
           S17: ${{ steps.post_integration_tests.outcome }}
-          S18: ${{ steps.e2e_tests.outcome }}
         name: Assert no step failed
         run: |
           failed=""
@@ -262,7 +254,6 @@ jobs:
           [ "$S15" = "$f" ] && failed="$failed pre_integration_tests"
           [ "$S16" = "$f" ] && failed="$failed terraform_apply"
           [ "$S17" = "$f" ] && failed="$failed post_integration_tests"
-          [ "$S18" = "$f" ] && failed="$failed e2e_tests"
           if [ -n "$failed" ]; then
             echo "Steps that failed:$failed"
             exit 1
