@@ -207,6 +207,7 @@ jobs:
         run: |
           TEST_DIR=test/api/endpoints/runners/ec2/images/endpoint
           python3 -m pytest \
+            test/lib/python/test_lambda_http/ \
             $TEST_DIR/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - continue-on-error: true
