@@ -12,6 +12,7 @@ from test_fixtures.integration.factories.infrastructure import (
     create_log_group_configuration_tests,
     create_security_group_existence_test,
     create_sqs_fifo_queue_tests,
+    create_www_common_fixtures,
     create_www_common_s3_existence_tests,
     handle_ecr_error,
 )
@@ -146,6 +147,160 @@ class TestCreateEcsRunnerLambdaExistenceTestsHasMethods:
         """create_ecs_runner_lambda_existence_tests has test_lambda_function_is_active."""
         test_class = create_ecs_runner_lambda_existence_tests()
         assert hasattr(test_class, "test_lambda_function_is_active")
+
+
+# === create_www_common_fixtures ===
+
+
+class TestCreateWwwCommonFixturesReturnsFixtures:
+    """Tests for create_www_common_fixtures return type."""
+
+    def test_returns_tuple(self):
+        """create_www_common_fixtures returns a tuple."""
+        result = create_www_common_fixtures()
+        assert isinstance(result, tuple)
+
+    def test_returns_two_fixtures(self):
+        """create_www_common_fixtures returns two fixtures."""
+        result = create_www_common_fixtures()
+        assert len(result) == 2
+
+    def test_first_fixture_is_callable(self):
+        """create_www_common_fixtures first fixture is callable."""
+        result = create_www_common_fixtures()
+        assert callable(result[0])
+
+    def test_second_fixture_is_callable(self):
+        """create_www_common_fixtures second fixture is callable."""
+        result = create_www_common_fixtures()
+        assert callable(result[1])
+
+    def test_first_fixture_has_correct_name(self):
+        """create_www_common_fixtures first fixture is www_common_terraform_initialized."""
+        result = create_www_common_fixtures()
+        assert result[0].__name__ == "www_common_terraform_initialized"
+
+    def test_second_fixture_has_correct_name(self):
+        """create_www_common_fixtures second fixture is www_common_outputs."""
+        result = create_www_common_fixtures()
+        assert result[1].__name__ == "www_common_outputs"
+
+
+class TestCreateWwwCommonFixturesOptions:
+    """Tests for create_www_common_fixtures option handling."""
+
+    def test_accepts_include_cloudfront(self):
+        """create_www_common_fixtures accepts include_cloudfront parameter."""
+        result = create_www_common_fixtures(include_cloudfront=True)
+        assert len(result) == 2
+
+    def test_accepts_include_website_domain(self):
+        """create_www_common_fixtures accepts include_website_domain parameter."""
+        result = create_www_common_fixtures(include_website_domain=True)
+        assert len(result) == 2
+
+    def test_accepts_both_options(self):
+        """create_www_common_fixtures accepts both options."""
+        result = create_www_common_fixtures(
+            include_cloudfront=True, include_website_domain=True
+        )
+        assert len(result) == 2
+
+
+class TestWwwCommonFixturesExecution:
+    """Tests that execute www_common fixtures via __wrapped__."""
+
+    def test_terraform_initialized_calls_terraform_init(self, monkeypatch):
+        """www_common_terraform_initialized fixture calls terraform_init."""
+        mock_init = MagicMock(return_value=True)
+        monkeypatch.setattr(
+            "test_fixtures.integration.factories.infrastructure.terraform_init",
+            mock_init
+        )
+        tf_init, _ = create_www_common_fixtures()
+        result = tf_init.__wrapped__()
+        assert result is True
+        mock_init.assert_called_once()
+
+    def test_outputs_skips_when_init_fails(self, monkeypatch):
+        """www_common_outputs fixture skips when terraform init fails."""
+        mock_init = MagicMock(return_value=False)
+        mock_output = MagicMock(return_value="value")
+        monkeypatch.setattr(
+            "test_fixtures.integration.factories.infrastructure.terraform_init",
+            mock_init
+        )
+        monkeypatch.setattr(
+            "test_fixtures.integration.factories.infrastructure.terraform_output",
+            mock_output
+        )
+        _, outputs_fixture = create_www_common_fixtures()
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = False
+        with pytest.raises(pytest.skip.Exception):
+            outputs_fixture.__wrapped__(mock_request)
+
+    def test_outputs_returns_bucket_info(self, monkeypatch):
+        """www_common_outputs fixture returns bucket info."""
+        mock_output = MagicMock(side_effect=["my-bucket", "arn:aws:s3:::my-bucket"])
+        monkeypatch.setattr(
+            "test_fixtures.integration.factories.infrastructure.terraform_output",
+            mock_output
+        )
+        _, outputs_fixture = create_www_common_fixtures()
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = True
+        result = outputs_fixture.__wrapped__(mock_request)
+        assert "bucket_name" in result
+        assert "bucket_arn" in result
+
+    def test_outputs_includes_website_domain_when_requested(self, monkeypatch):
+        """www_common_outputs includes website_domain_name when requested."""
+        mock_output = MagicMock(side_effect=[
+            "my-bucket", "arn:aws:s3:::my-bucket", "example.com"
+        ])
+        monkeypatch.setattr(
+            "test_fixtures.integration.factories.infrastructure.terraform_output",
+            mock_output
+        )
+        _, outputs_fixture = create_www_common_fixtures(include_website_domain=True)
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = True
+        result = outputs_fixture.__wrapped__(mock_request)
+        assert "website_domain_name" in result
+
+    def test_outputs_includes_cloudfront_when_requested(self, monkeypatch):
+        """www_common_outputs includes cloudfront_distribution_id when requested."""
+        mock_output = MagicMock(side_effect=[
+            "my-bucket", "arn:aws:s3:::my-bucket", "E123456789"
+        ])
+        monkeypatch.setattr(
+            "test_fixtures.integration.factories.infrastructure.terraform_output",
+            mock_output
+        )
+        _, outputs_fixture = create_www_common_fixtures(include_cloudfront=True)
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = True
+        result = outputs_fixture.__wrapped__(mock_request)
+        assert "cloudfront_distribution_id" in result
+
+    def test_outputs_includes_both_when_requested(self, monkeypatch):
+        """www_common_outputs includes both optional fields when requested."""
+        mock_output = MagicMock(side_effect=[
+            "my-bucket", "arn:aws:s3:::my-bucket", "example.com", "E123456789"
+        ])
+        monkeypatch.setattr(
+            "test_fixtures.integration.factories.infrastructure.terraform_output",
+            mock_output
+        )
+        _, outputs_fixture = create_www_common_fixtures(
+            include_website_domain=True, include_cloudfront=True
+        )
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = True
+        result = outputs_fixture.__wrapped__(mock_request)
+        assert "website_domain_name" in result
+        assert "cloudfront_distribution_id" in result
 
 
 # === create_www_common_s3_existence_tests ===
@@ -745,3 +900,84 @@ class TestLogGroupConfigurationExecution:
         mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 30}
         with pytest.raises(AssertionError):
             instance.test_handler_log_group_retention_is_expected(mock_request)
+
+
+class TestSqsFifoQueueTestsErrorReRaise:
+    """Tests that verify error re-raise behavior in SQS FIFO queue tests."""
+
+    def test_queue_is_fifo_reraises_other_errors(self):
+        """test_queue_is_fifo reraises non-queue errors."""
+        test_class = create_sqs_fifo_queue_tests("queue_name")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
+        mock_client.get_queue_attributes.side_effect = _create_client_error("ServiceException")
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        with pytest.raises(ClientError):
+            instance.test_queue_is_fifo(mock_client, mock_request)
+
+    def test_queue_has_deduplication_reraises_other_errors(self):
+        """test_queue_has_deduplication reraises non-queue errors."""
+        test_class = create_sqs_fifo_queue_tests("queue_name")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
+        mock_client.get_queue_attributes.side_effect = _create_client_error("ServiceException")
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        with pytest.raises(ClientError):
+            instance.test_queue_has_deduplication(mock_client, mock_request)
+
+
+class TestLambdaRoleExistenceExecution:
+    """Tests that execute Lambda role existence test."""
+
+    def test_lambda_execution_role_exists_calls_helper(self):
+        """test_lambda_execution_role_exists calls check_iam_role_exists."""
+        test_func = create_lambda_role_existence_test("role_name_fixture", "terraform/path")
+        mock_client = MagicMock()
+        mock_client.get_role.return_value = {"Role": {"RoleName": "my-role"}}
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-role"
+        result = test_func(None, mock_client, mock_request)
+        assert result is None
+        mock_client.get_role.assert_called_once_with(RoleName="my-role")
+
+    def test_lambda_execution_role_exists_fails_when_role_missing(self):
+        """test_lambda_execution_role_exists fails when role doesn't exist."""
+        test_func = create_lambda_role_existence_test("role_name_fixture", "terraform/path")
+        mock_client = MagicMock()
+        mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-role"
+        with pytest.raises(pytest.fail.Exception):
+            test_func(None, mock_client, mock_request)
+
+
+class TestKmsPolicyExecution:
+    """Tests that execute KMS policy test."""
+
+    def test_lambda_role_has_kms_policy_calls_helper(self):
+        """test_lambda_role_has_kms_policy calls check_lambda_role_has_policy."""
+        test_func = create_kms_policy_test("role_name_fixture")
+        mock_client = MagicMock()
+        mock_client.list_role_policies.return_value = {
+            "PolicyNames": ["KMSDecrypt"]
+        }
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-role"
+        result = test_func(None, mock_client, mock_request)
+        assert result is None
+
+    def test_lambda_role_has_kms_policy_fails_when_policy_missing(self):
+        """test_lambda_role_has_kms_policy fails when policy not attached."""
+        test_func = create_kms_policy_test("role_name_fixture")
+        mock_client = MagicMock()
+        mock_client.list_role_policies.return_value = {
+            "PolicyNames": ["OtherPolicy"]
+        }
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = "my-role"
+        with pytest.raises(AssertionError):
+            test_func(None, mock_client, mock_request)

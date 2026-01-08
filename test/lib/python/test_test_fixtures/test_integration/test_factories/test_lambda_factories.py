@@ -403,6 +403,96 @@ class TestCreateLambdaExecutionRoleWiringTestsExecution:
         with pytest.raises(AssertionError):
             instance.test_lambda_role_contains_role_path(mock_request)
 
+    def test_lambda_role_exists_success(self):
+        """test_lambda_role_exists passes when role exists in IAM."""
+        test_class = create_lambda_execution_role_wiring_tests("lambda_config")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
+        result = instance.test_lambda_role_exists(mock_client, mock_request)
+        assert result is None
+
+    def test_lambda_role_exists_fails_when_no_role_name_extracted(self):
+        """test_lambda_role_exists fails when role name can't be extracted."""
+        test_class = create_lambda_execution_role_wiring_tests("lambda_config")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"Role": "invalid-no-slash"}
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_lambda_role_exists(mock_client, mock_request)
+
+    def test_lambda_role_can_be_assumed_by_lambda_success(self):
+        """test_lambda_role_can_be_assumed_by_lambda passes when trust policy allows Lambda."""
+        test_class = create_lambda_execution_role_wiring_tests("lambda_config")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_role.return_value = {
+            "Role": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": {"Service": "lambda.amazonaws.com"}
+                    }]
+                }
+            }
+        }
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
+        result = instance.test_lambda_role_can_be_assumed_by_lambda(mock_client, mock_request)
+        assert result is None
+
+    def test_lambda_role_can_be_assumed_by_lambda_skips_when_no_role_name(self):
+        """test_lambda_role_can_be_assumed_by_lambda skips when role name can't be extracted."""
+        test_class = create_lambda_execution_role_wiring_tests("lambda_config")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"Role": "invalid-no-slash"}
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_lambda_role_can_be_assumed_by_lambda(mock_client, mock_request)
+
+    def test_lambda_role_can_be_assumed_by_lambda_fails_when_no_trust(self):
+        """test_lambda_role_can_be_assumed_by_lambda fails when Lambda not in trust policy."""
+        test_class = create_lambda_execution_role_wiring_tests("lambda_config")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_role.return_value = {
+            "Role": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [{"Principal": {"Service": "ec2.amazonaws.com"}}]
+                }
+            }
+        }
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
+        with pytest.raises(AssertionError):
+            instance.test_lambda_role_can_be_assumed_by_lambda(mock_client, mock_request)
+
+    def test_lambda_role_can_be_assumed_by_lambda_skips_on_no_such_entity(self):
+        """test_lambda_role_can_be_assumed_by_lambda skips when role doesn't exist."""
+        test_class = create_lambda_execution_role_wiring_tests("lambda_config")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
+        with pytest.raises(pytest.skip.Exception):
+            instance.test_lambda_role_can_be_assumed_by_lambda(mock_client, mock_request)
+
+    def test_lambda_role_can_be_assumed_by_lambda_reraises_other_errors(self):
+        """test_lambda_role_can_be_assumed_by_lambda reraises other errors."""
+        test_class = create_lambda_execution_role_wiring_tests("lambda_config")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_role.side_effect = _create_client_error("ServiceException")
+        mock_request = MagicMock()
+        mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
+        with pytest.raises(ClientError):
+            instance.test_lambda_role_can_be_assumed_by_lambda(mock_client, mock_request)
+
 
 # === create_lambda_existence_tests ===
 
@@ -480,6 +570,29 @@ class TestCreateLambdaExistenceTestsExecution:
         }
         with pytest.raises(AssertionError):
             instance.test_handler_log_group_exists(mock_request)
+
+    def test_handler_lambda_exists_success(self):
+        """test_handler_lambda_exists passes when Lambda exists."""
+        test_class = create_lambda_existence_tests("func_key", "DefaultFunc", "tf/path")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_function.return_value = {"Configuration": {"FunctionName": "MyFunction"}}
+        config = {"func_key": "MyFunction"}
+        result = instance.test_handler_lambda_exists(mock_client, config)
+        assert result is None
+
+    def test_handler_iam_role_exists_fails_when_no_such_entity(self):
+        """test_handler_iam_role_exists fails when role doesn't exist."""
+        test_class = create_lambda_existence_tests("func_key", "DefaultFunc", "tf/path")
+        instance = test_class()
+        mock_client = MagicMock()
+        # Create the exception class first
+        NoSuchEntityException = type("NoSuchEntityException", (Exception,), {})
+        mock_client.exceptions.NoSuchEntityException = NoSuchEntityException
+        mock_client.get_role.side_effect = NoSuchEntityException("Role not found")
+        config = {"func_key": "MyFunction"}
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_handler_iam_role_exists(mock_client, config)
 
 
 # === create_lambda_configuration_tests ===
@@ -637,6 +750,58 @@ class TestCreateNamingConventionTestsHasMethods:
         assert hasattr(test_class, "test_handler_role_name_is_pascalcase")
 
 
+class TestCreateNamingConventionTestsExecution:
+    """Tests that execute create_naming_convention_tests methods."""
+
+    def test_handler_lambda_name_is_pascalcase_success(self):
+        """test_handler_lambda_name_is_pascalcase passes when name is PascalCase."""
+        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_function.return_value = {
+            "Configuration": {"FunctionName": "MyPascalCaseFunction"}
+        }
+        config = {"func_key": "MyPascalCaseFunction"}
+        result = instance.test_handler_lambda_name_is_pascalcase(mock_client, config)
+        assert result is None
+
+    def test_handler_lambda_name_is_pascalcase_fails_when_invalid(self):
+        """test_handler_lambda_name_is_pascalcase fails when name is invalid."""
+        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_function.return_value = {
+            "Configuration": {"FunctionName": "my_snake_case_function"}
+        }
+        config = {"func_key": "my_snake_case_function"}
+        with pytest.raises(AssertionError):
+            instance.test_handler_lambda_name_is_pascalcase(mock_client, config)
+
+    def test_handler_role_name_is_pascalcase_success(self):
+        """test_handler_role_name_is_pascalcase passes when name is PascalCase."""
+        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_role.return_value = {
+            "Role": {"RoleName": "MyFunctionServiceRole"}
+        }
+        config = {"func_key": "MyFunction"}
+        result = instance.test_handler_role_name_is_pascalcase(mock_client, config)
+        assert result is None
+
+    def test_handler_role_name_is_pascalcase_fails_when_invalid(self):
+        """test_handler_role_name_is_pascalcase fails when name is invalid."""
+        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
+        instance = test_class()
+        mock_client = MagicMock()
+        mock_client.get_role.return_value = {
+            "Role": {"RoleName": "my_function_service_role"}
+        }
+        config = {"func_key": "my_function"}
+        with pytest.raises(AssertionError):
+            instance.test_handler_role_name_is_pascalcase(mock_client, config)
+
+
 # === create_deployed_naming_convention_tests ===
 
 
@@ -702,3 +867,107 @@ class TestCreateDeployedNamingConventionTestsHasMethods:
             "func_key", "DefaultFunc", "TestHandler"
         )
         assert hasattr(lambda_class, "test_handler_function_name_is_pascalcase")
+
+
+class TestCreateDeployedNamingConventionTestsExecution:
+    """Tests that execute create_deployed_naming_convention_tests methods."""
+
+    def test_iam_role_exists_success(self):
+        """test_handler_role_exists passes when role exists."""
+        iam_class, _ = create_deployed_naming_convention_tests(
+            "func_key", "DefaultFunc", "TestHandler"
+        )
+        instance = iam_class()
+        mock_client = MagicMock()
+        mock_client.get_role.return_value = {"Role": {"RoleName": "MyFunctionServiceRole"}}
+        config = {"func_key": "MyFunction"}
+        result = instance.test_handler_role_exists(mock_client, config)
+        assert result is None
+
+    def test_iam_role_exists_fails_when_not_found(self):
+        """test_handler_role_exists fails when role doesn't exist."""
+        iam_class, _ = create_deployed_naming_convention_tests(
+            "func_key", "DefaultFunc", "TestHandler"
+        )
+        instance = iam_class()
+        mock_client = MagicMock()
+        mock_client.exceptions.NoSuchEntityException = type(
+            "NoSuchEntityException", (Exception,), {}
+        )
+        mock_client.get_role.side_effect = mock_client.exceptions.NoSuchEntityException(
+            "Role not found"
+        )
+        config = {"func_key": "MyFunction"}
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_handler_role_exists(mock_client, config)
+
+    def test_iam_role_name_is_pascalcase_success(self):
+        """test_handler_role_name_is_pascalcase passes when name is PascalCase."""
+        iam_class, _ = create_deployed_naming_convention_tests(
+            "func_key", "DefaultFunc", "TestHandler"
+        )
+        instance = iam_class()
+        mock_client = MagicMock()
+        mock_client.get_role.return_value = {
+            "Role": {"RoleName": "MyFunctionServiceRole"}
+        }
+        config = {"func_key": "MyFunction"}
+        result = instance.test_handler_role_name_is_pascalcase(mock_client, config)
+        assert result is None
+
+    def test_lambda_function_exists_success(self):
+        """test_handler_function_exists passes when function exists."""
+        _, lambda_class = create_deployed_naming_convention_tests(
+            "func_key", "DefaultFunc", "TestHandler"
+        )
+        instance = lambda_class()
+        mock_client = MagicMock()
+        mock_client.get_function.return_value = {"Configuration": {"FunctionName": "MyFunction"}}
+        config = {"func_key": "MyFunction"}
+        result = instance.test_handler_function_exists(mock_client, config)
+        assert result is None
+
+    def test_lambda_function_exists_fails_when_not_found(self):
+        """test_handler_function_exists fails when function doesn't exist."""
+        _, lambda_class = create_deployed_naming_convention_tests(
+            "func_key", "DefaultFunc", "TestHandler"
+        )
+        instance = lambda_class()
+        mock_client = MagicMock()
+        mock_client.exceptions.ResourceNotFoundException = type(
+            "ResourceNotFoundException", (Exception,), {}
+        )
+        mock_client.get_function.side_effect = mock_client.exceptions.ResourceNotFoundException(
+            "Function not found"
+        )
+        config = {"func_key": "MyFunction"}
+        with pytest.raises(pytest.fail.Exception):
+            instance.test_handler_function_exists(mock_client, config)
+
+    def test_lambda_function_name_is_pascalcase_success(self):
+        """test_handler_function_name_is_pascalcase passes when name is PascalCase."""
+        _, lambda_class = create_deployed_naming_convention_tests(
+            "func_key", "DefaultFunc", "TestHandler"
+        )
+        instance = lambda_class()
+        mock_client = MagicMock()
+        mock_client.get_function.return_value = {
+            "Configuration": {"FunctionName": "MyPascalCaseFunction"}
+        }
+        config = {"func_key": "MyPascalCaseFunction"}
+        result = instance.test_handler_function_name_is_pascalcase(mock_client, config)
+        assert result is None
+
+    def test_lambda_function_name_is_pascalcase_fails_when_invalid(self):
+        """test_handler_function_name_is_pascalcase fails when name is invalid."""
+        _, lambda_class = create_deployed_naming_convention_tests(
+            "func_key", "DefaultFunc", "TestHandler"
+        )
+        instance = lambda_class()
+        mock_client = MagicMock()
+        mock_client.get_function.return_value = {
+            "Configuration": {"FunctionName": "my_snake_case_function"}
+        }
+        config = {"func_key": "my_snake_case_function"}
+        with pytest.raises(AssertionError):
+            instance.test_handler_function_name_is_pascalcase(mock_client, config)
