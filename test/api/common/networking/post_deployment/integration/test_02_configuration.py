@@ -90,6 +90,21 @@ class TestSubnetConfiguration:
             )
 
 
+class TestInternetGatewayConfiguration:
+    """Layer 2: Verify internet gateway configuration."""
+
+    def test_internet_gateway_attachment_state_is_available(
+        self, ec2_client, runners_vpc_id
+    ):
+        """Verify internet gateway attachment state is available."""
+        response = ec2_client.describe_internet_gateways(
+            Filters=[{"Name": "attachment.vpc-id", "Values": [runners_vpc_id]}]
+        )
+        igw = response["InternetGateways"][0]
+        attachment = igw["Attachments"][0]
+        assert attachment["State"] == "available"
+
+
 class TestRouteTableConfiguration:
     """Layer 2: Verify route table configuration."""
 
