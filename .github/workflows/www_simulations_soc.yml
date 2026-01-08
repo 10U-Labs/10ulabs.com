@@ -232,7 +232,7 @@ jobs:
             --workflow www_simulations_soc \
             --repo ${{ github.repository }} \
             $FLAGS
-name: Ensuring www SoC simulations frontend exists and is properly configured
+name: Ensuring www simulations/soc frontend exists and is properly configured
 on:
   workflow_dispatch:
     inputs:

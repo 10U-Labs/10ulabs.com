@@ -217,7 +217,7 @@ jobs:
             --workflow www_rack_designer \
             --repo ${{ github.repository }} \
             $FLAGS
-name: Ensuring www rack designer frontend exists and is properly configured
+name: Ensuring www rack-designer frontend exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
