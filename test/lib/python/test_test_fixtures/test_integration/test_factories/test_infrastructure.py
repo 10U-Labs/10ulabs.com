@@ -261,8 +261,7 @@ class TestWwwCommonFixturesExecution:
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = True
         result = outputs_fixture.__wrapped__(mock_request)
-        assert "bucket_name" in result
-        assert "bucket_arn" in result
+        assert "bucket_name" in result and "bucket_arn" in result
 
     def test_outputs_includes_website_domain_when_requested(self, monkeypatch):
         """www_common_outputs includes website_domain_name when requested."""
@@ -309,8 +308,7 @@ class TestWwwCommonFixturesExecution:
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = True
         result = outputs_fixture.__wrapped__(mock_request)
-        assert "website_domain_name" in result
-        assert "cloudfront_distribution_id" in result
+        assert "website_domain_name" in result and "cloudfront_distribution_id" in result
 
 
 # === create_www_common_s3_existence_tests ===
