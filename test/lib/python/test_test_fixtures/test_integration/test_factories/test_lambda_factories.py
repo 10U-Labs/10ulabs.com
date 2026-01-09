@@ -207,6 +207,20 @@ class TestCreateLambdaIamWiringTestsHasMethods:
         )
         assert hasattr(test_class, "test_handler_role_can_assume_lambda_service")
 
+    def test_no_basic_execution_test_when_disabled(self):
+        """create_lambda_iam_wiring_tests omits basic execution test when disabled."""
+        test_class = create_lambda_iam_wiring_tests(
+            "func_key", "DefaultFunc", check_basic_execution=False
+        )
+        assert not hasattr(test_class, "test_handler_role_has_basic_execution_policy")
+
+    def test_no_lambda_trust_test_when_disabled(self):
+        """create_lambda_iam_wiring_tests omits lambda trust test when disabled."""
+        test_class = create_lambda_iam_wiring_tests(
+            "func_key", "DefaultFunc", check_lambda_trust=False
+        )
+        assert not hasattr(test_class, "test_handler_role_can_assume_lambda_service")
+
 
 class TestCreateLambdaIamWiringTestsExecution:
     """Tests that execute create_lambda_iam_wiring_tests methods."""

@@ -196,6 +196,18 @@ class TestLambdaHandlerRouting:
 
         assert result['statusCode'] == 404
 
+    def test_returns_404_for_patch_on_image_digest_path(self, make_api_event):
+        """Test that 404 is returned for PATCH on image digest path."""
+        event = make_api_event(
+            method='PATCH',
+            path='/v1/runners/ecs/images/sha256:abc123',
+            path_params={'digest': 'sha256:abc123'}
+        )
+
+        result = handler.lambda_handler(event, None)
+
+        assert result['statusCode'] == 404
+
 
 class TestLambdaHandlerEdgeCases:
     """Tests for edge cases in lambda handler."""

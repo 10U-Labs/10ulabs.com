@@ -80,6 +80,16 @@ class TestGetEcrClient:
         second = handler.get_ecr_client()
         assert first is second
 
+    def test_creates_boto3_client_when_not_injected(self):
+        """Test that boto3 ECR client is created when not injected."""
+        from unittest.mock import patch
+        mock_boto_client = MagicMock()
+        handler._clients.clear()
+        with patch.object(handler.boto3, 'client', return_value=mock_boto_client) as mock:
+            result = handler.get_ecr_client()
+        mock.assert_called_once_with('ecr')
+        assert result == mock_boto_client
+
 
 class TestSetClient:
     """Tests for set_client function."""

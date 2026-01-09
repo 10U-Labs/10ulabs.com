@@ -35,6 +35,22 @@ class TestGetGithubToken:
 
         assert 'token' in result.lower() or result == 'my-secret-token'
 
+    def test_returns_empty_string_on_ssm_client_error(self, mock_ssm_client):
+        """Test that empty string is returned when SSM raises ClientError."""
+        from botocore.exceptions import ClientError
+        mock_ssm_client.get_parameter.side_effect = ClientError(
+            {'Error': {'Code': 'ParameterNotFound', 'Message': 'Parameter not found'}},
+            'GetParameter'
+        )
+        handler._github_token_cache['value'] = ''
+
+        with patch('handler.boto3') as mock_boto3:
+            mock_boto3.client.return_value = mock_ssm_client
+            with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/github/token'}):
+                result = handler.get_github_token()
+
+        assert result == ''
+
 
 class TestTriggerGithubWorkflow:
     """Tests for trigger_github_workflow function."""
