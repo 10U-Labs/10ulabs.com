@@ -95,6 +95,38 @@ class TestCORSWorkflow:
         assert "access-control-allow-origin" in headers_lower
 
 
+class TestDeleteImageByInvalidDigest:
+    """E2E tests for DELETE with invalid digest.
+
+    User Journey: Attempting to delete a non-existent image
+
+    When: A DELETE request is made for an image that doesn't exist
+    Then: The API returns a 200 with success information
+
+    Note: This is production-safe as it doesn't actually delete anything.
+    """
+
+    @pytest.fixture
+    def delete_response(self, api_request):
+        """Make DELETE request for non-existent image."""
+        return api_request(
+            "/v1/runners/ecs/images/sha256:nonexistentdigestfortesting123",
+            method="DELETE"
+        )
+
+    def test_01_delete_invalid_returns_200(self, delete_response):
+        """Verify DELETE for invalid digest returns 200."""
+        assert delete_response["status_code"] == 200
+
+    def test_02_delete_invalid_has_success_field(self, delete_response):
+        """Verify DELETE response has success field."""
+        assert "success" in delete_response["body"]
+
+    def test_03_delete_invalid_has_digest_field(self, delete_response):
+        """Verify DELETE response has digest field."""
+        assert "digest" in delete_response["body"]
+
+
 class TestTestModeWorkflow:
     """E2E tests for test mode functionality."""
 
