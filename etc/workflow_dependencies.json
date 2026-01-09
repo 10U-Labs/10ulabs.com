@@ -272,7 +272,7 @@
       "api_endpoint_v1_sessions",
       "www_common"
     ],
-    "name": "Ensuring www rack designer frontend exists and is properly configured",
+    "name": "Ensuring www rack-designer frontend exists and is properly configured",
     "paths": [
       ".github/workflows/www_rack_designer.yml",
       "src/www/paths/rack_designer/**"
@@ -283,7 +283,7 @@
       "api_endpoint_v1_soc_simulations",
       "www_common"
     ],
-    "name": "Ensuring www SoC simulations frontend exists and is properly configured",
+    "name": "Ensuring www simulations/soc frontend exists and is properly configured",
     "paths": [
       ".github/workflows/www_simulations_soc.yml",
       "src/www/paths/simulations/soc/**"

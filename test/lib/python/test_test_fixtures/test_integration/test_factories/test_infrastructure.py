@@ -37,6 +37,16 @@ def _create_nonexistent_queue_mocks():
     return mock_client, mock_request
 
 
+def _create_sqs_service_error_mocks():
+    """Create mocks for SQS queue service error re-raise scenario."""
+    mock_client = MagicMock()
+    mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
+    mock_client.get_queue_attributes.side_effect = _create_client_error("ServiceException")
+    mock_request = MagicMock()
+    mock_request.getfixturevalue.return_value = "my-queue.fifo"
+    return mock_client, mock_request
+
+
 # === create_ecs_runner_outputs_tests ===
 
 
@@ -909,11 +919,7 @@ class TestSqsFifoQueueTestsErrorReRaise:
         """test_queue_is_fifo reraises non-queue errors."""
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
-        mock_client.get_queue_attributes.side_effect = _create_client_error("ServiceException")
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        mock_client, mock_request = _create_sqs_service_error_mocks()
         with pytest.raises(ClientError):
             instance.test_queue_is_fifo(mock_client, mock_request)
 
@@ -921,11 +927,7 @@ class TestSqsFifoQueueTestsErrorReRaise:
         """test_queue_has_deduplication reraises non-queue errors."""
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
-        mock_client.get_queue_attributes.side_effect = _create_client_error("ServiceException")
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "my-queue.fifo"
+        mock_client, mock_request = _create_sqs_service_error_mocks()
         with pytest.raises(ClientError):
             instance.test_queue_has_deduplication(mock_client, mock_request)
 
