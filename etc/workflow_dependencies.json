@@ -182,17 +182,17 @@
       "test/lib/python/**"
     ]
   },
-  "webhooks_github_workflow_jobs": {
+  "github_workflows_webhooks": {
     "depends_on": [
       "api_endpoint_v1_runners"
     ],
-    "name": "Ensuring the /v1/webhooks/github/workflow-jobs API endpoint exists and is properly configured",
+    "name": "Ensuring the /v1/github-workflows/webhooks API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/webhooks_github_workflow_jobs.yml",
+      ".github/workflows/github_workflows_webhooks.yml",
       "lib/python/**",
-      "src/api/endpoints/webhooks/github/workflow_jobs/**",
+      "src/api/endpoints/github_workflows/webhooks/**",
       "test/api/conftest.py",
-      "test/api/endpoints/webhooks/github/workflow_jobs/**",
+      "test/api/endpoints/github_workflows/webhooks/**",
       "test/lib/python/**"
     ]
   },

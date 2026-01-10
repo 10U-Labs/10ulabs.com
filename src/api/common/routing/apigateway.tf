@@ -36,8 +36,8 @@ locals {
   sessions_arn              = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.sessions}/invocations"
   simulation_soc_arn        = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
 
-  # SQS integration for /v1/webhooks/github/workflow-jobs (API Gateway → SQS direct, no Lambda in hot path)
-  # Construct queue name from shared module (avoid dependency on workflow_jobs remote state)
+  # SQS integration for /v1/github-workflows/webhooks (API Gateway → SQS direct, no Lambda in hot path)
+  # Construct queue name from shared module (avoid dependency on github_workflows remote state)
   webhook_ingress_queue_name = "${local.lambda_function_names.webhook}Ingress"
   webhook_ingress_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.webhook_ingress_queue_name}"
 
@@ -58,7 +58,7 @@ locals {
     RackConfigurationsHandlerArn = local.rack_configurations_arn
     SessionsHandlerArn           = local.sessions_arn
     SimulationSocHandlerArn      = local.simulation_soc_arn
-    # SQS direct integration for /v1/webhooks/github/workflow-jobs webhook ingress
+    # SQS direct integration for /v1/github-workflows/webhooks webhook ingress
     WebhookIngressSqsUri = local.webhook_ingress_sqs_uri
     ApiGatewaySqsRoleArn = aws_iam_role.api_gateway_sqs.arn
     # SQS direct integration for /v1/runners

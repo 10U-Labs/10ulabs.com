@@ -250,13 +250,13 @@
         }
       }
     },
-    "/v1/webhooks/github/workflow-jobs": {
+    "/v1/github-workflows/webhooks": {
       "post": {
         "summary": "GitHub Workflow Job Webhook",
         "description": "Receives GitHub workflow_job webhook events and queues them for processing (API Gateway → SQS direct integration, no Lambda in hot path)",
         "operationId": "receiveWorkflowJob",
         "tags": [
-          "/v1/webhooks"
+          "/v1/github-workflows"
         ],
         "x-amazon-apigateway-request-validator": "validate-headers",
         "parameters": [
@@ -331,11 +331,11 @@
         }
       },
       "options": {
-        "summary": "CORS preflight for workflow jobs webhook",
+        "summary": "CORS preflight for github workflows webhook",
         "description": "Handles CORS preflight requests",
-        "operationId": "workflowJobsOptions",
+        "operationId": "githubWorkflowsWebhooksOptions",
         "tags": [
-          "/v1/webhooks"
+          "/v1/github-workflows"
         ],
         "responses": {
           "200": {
@@ -377,13 +377,13 @@
         }
       }
     },
-    "/v1/webhooks/github/workflow-jobs/circuit-breaker": {
+    "/v1/github-workflows/webhooks/circuit-breaker": {
       "get": {
         "summary": "Get Circuit Breaker Status",
-        "description": "Returns the current status of the workflow jobs webhook circuit breaker including DynamoDB state, SQS event source state, and Lambda concurrency",
-        "operationId": "getWorkflowJobsCircuitBreakerStatus",
+        "description": "Returns the current status of the github workflows webhook circuit breaker including DynamoDB state, SQS event source state, and Lambda concurrency",
+        "operationId": "getGithubWorkflowsCircuitBreakerStatus",
         "tags": [
-          "/v1/webhooks"
+          "/v1/github-workflows"
         ],
         "security": [
           {
@@ -482,9 +482,9 @@
       "post": {
         "summary": "Reset Circuit Breaker",
         "description": "Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
-        "operationId": "resetWorkflowJobsCircuitBreaker",
+        "operationId": "resetGithubWorkflowsCircuitBreaker",
         "tags": [
-          "/v1/webhooks"
+          "/v1/github-workflows"
         ],
         "security": [
           {
@@ -596,9 +596,9 @@
       "options": {
         "summary": "CORS preflight for circuit breaker endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "workflowJobsCircuitBreakerOptions",
+        "operationId": "githubWorkflowsCircuitBreakerOptions",
         "tags": [
-          "/v1/webhooks"
+          "/v1/github-workflows"
         ],
         "responses": {
           "200": {
@@ -640,14 +640,14 @@
         }
       }
     },
-    "/v1/webhooks/github/workflow-jobs/circuit-breaker/reset": {
+    "/v1/github-workflows/webhooks/circuit-breaker/reset": {
       "post": {
         "summary": "Reset Circuit Breaker (Deprecated)",
-        "description": "DEPRECATED: Use POST /v1/webhooks/github/workflow-jobs/circuit-breaker instead. Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
-        "operationId": "resetWorkflowJobsCircuitBreakerLegacy",
+        "description": "DEPRECATED: Use POST /v1/github-workflows/webhooks/circuit-breaker instead. Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
+        "operationId": "resetGithubWorkflowsCircuitBreakerLegacy",
         "deprecated": true,
         "tags": [
-          "/v1/webhooks"
+          "/v1/github-workflows"
         ],
         "security": [
           {
@@ -671,9 +671,9 @@
       "options": {
         "summary": "CORS preflight for circuit breaker reset endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "workflowJobsCircuitBreakerResetOptions",
+        "operationId": "githubWorkflowsCircuitBreakerResetOptions",
         "tags": [
-          "/v1/webhooks"
+          "/v1/github-workflows"
         ],
         "responses": {
           "200": {
@@ -2663,8 +2663,8 @@
       "description": "Session analytics endpoints"
     },
     {
-      "name": "/v1/webhooks",
-      "description": "Webhook receiver endpoints"
+      "name": "/v1/github-workflows",
+      "description": "GitHub workflows endpoints"
     },
     {
       "name": "/v1/soc-simulations",
@@ -2691,7 +2691,7 @@
         "/v1/rack-configurations",
         "/v1/sessions",
         "/v1/soc-simulations",
-        "/v1/webhooks"
+        "/v1/github-workflows"
       ]
     }
   ],
