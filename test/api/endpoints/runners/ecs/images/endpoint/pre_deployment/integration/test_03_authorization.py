@@ -1,4 +1,4 @@
-"""Layer 2: Authorization tests.
+"""Layer 3: Authorization tests.
 
 Verify we have permission to inspect prerequisite resources.
 """

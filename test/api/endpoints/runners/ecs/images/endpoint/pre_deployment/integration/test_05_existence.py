@@ -1,4 +1,4 @@
-"""Layer 4: Existence tests.
+"""Layer 5: Existence tests.
 
 Verify prerequisite resources exist.
 """

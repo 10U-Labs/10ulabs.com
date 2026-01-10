@@ -1,4 +1,4 @@
-"""Layer 3: Terraform state tests.
+"""Layer 4: Terraform state tests.
 
 Verify that resources Terraform plans to create don't already
 exist in AWS. If they do, it indicates the resource was created outside

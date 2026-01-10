@@ -10,6 +10,12 @@ def ecr_repository_name():
     return get_ecr_repository()
 
 
+@pytest.fixture(scope="session")
+def github_token_parameter_name(shared_config):
+    """Provide the SSM parameter name for GitHub token."""
+    return shared_config.get("ssm_github_pat_name", "/github/pat")
+
+
 @pytest.fixture(name="ecr_repo", scope="module")
 def ecr_repo_fixture(ecr_client, request):
     """Get ECR repository details."""

@@ -1,4 +1,4 @@
-"""Layer 1: Authentication tests.
+"""Layer 2: Authentication tests.
 
 Verify AWS credentials are available and valid.
 """

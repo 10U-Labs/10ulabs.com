@@ -1,4 +1,4 @@
-"""Layer 5: Configuration tests.
+"""Layer 6: Configuration tests.
 
 Verify prerequisite resources are configured correctly.
 """

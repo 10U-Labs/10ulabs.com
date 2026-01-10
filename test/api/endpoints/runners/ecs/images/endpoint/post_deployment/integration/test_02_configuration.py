@@ -20,6 +20,25 @@ class TestLambdaRuntime:
         """Verify the Lambda function has correct handler."""
         assert lambda_function["Handler"] == "handler.lambda_handler"
 
+    def test_lambda_timeout_is_10_seconds(self, lambda_config):
+        """Verify the Lambda function timeout is 10 seconds."""
+        assert lambda_config["Timeout"] == 10, (
+            f"Lambda timeout is {lambda_config['Timeout']}s, expected 10s"
+        )
+
+    def test_lambda_memory_is_128mb(self, lambda_config):
+        """Verify the Lambda function memory is 128 MB."""
+        assert lambda_config["MemorySize"] == 128, (
+            f"Lambda memory is {lambda_config['MemorySize']}MB, expected 128MB"
+        )
+
+    def test_lambda_architecture_is_arm64(self, lambda_config):
+        """Verify the Lambda function uses arm64 architecture."""
+        architectures = lambda_config.get("Architectures", [])
+        assert "arm64" in architectures, (
+            f"Lambda architecture is {architectures}, expected ['arm64']"
+        )
+
 
 class TestLambdaEnvironmentVariables:
     """Verify Lambda function environment variables."""

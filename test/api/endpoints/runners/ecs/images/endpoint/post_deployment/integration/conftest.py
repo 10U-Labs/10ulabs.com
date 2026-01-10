@@ -59,3 +59,28 @@ def handler_log_group_fixture(logs_client, lambda_function):
     function_name = lambda_function["FunctionName"]
     log_group_name = f"/aws/lambda/{function_name}"
     return get_log_group_info(logs_client, log_group_name)
+
+
+@pytest.fixture(name="lambda_role_name", scope="module")
+def lambda_role_name_fixture(lambda_function):
+    """Extract the IAM role name from the Lambda function's Role ARN."""
+    role_arn = lambda_function["Role"]
+    return role_arn.split("/")[-1]
+
+
+@pytest.fixture(name="lambda_role", scope="module")
+def lambda_role_fixture(iam_client, lambda_role_name):
+    """Get the Lambda IAM role details."""
+    response = iam_client.get_role(RoleName=lambda_role_name)
+    return response["Role"]
+
+
+@pytest.fixture(name="lambda_role_policies", scope="module")
+def lambda_role_policies_fixture(iam_client, lambda_role_name):
+    """Get all policies attached to the Lambda role."""
+    attached = iam_client.list_attached_role_policies(RoleName=lambda_role_name)
+    inline = iam_client.list_role_policies(RoleName=lambda_role_name)
+    return {
+        "attached": attached.get("AttachedPolicies", []),
+        "inline": inline.get("PolicyNames", [])
+    }
