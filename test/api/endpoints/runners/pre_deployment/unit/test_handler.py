@@ -1,4 +1,5 @@
 """Unit tests for /v1/runners Lambda handler."""
+import importlib.util
 import json
 import sys
 import urllib.error
@@ -8,13 +9,16 @@ import pytest
 
 from repo_utils import REPO_ROOT
 
-# Add the lambda directory to the path for imports
+# Paths for imports
 LAMBDA_DIR = REPO_ROOT / 'src' / 'api' / 'endpoints' / 'runners' / 'lambda'
-sys.path.insert(0, str(LAMBDA_DIR))
-
-# Add lib/python for runner_labels
 LIB_PYTHON = REPO_ROOT / 'lib' / 'python'
-sys.path.insert(0, str(LIB_PYTHON))
+
+# Add lib/python for runner_labels (needed by handler)
+if str(LIB_PYTHON) not in sys.path:
+    sys.path.insert(0, str(LIB_PYTHON))
+
+# Use a unique module name to avoid conflicts with other handler modules
+HANDLER_MODULE_NAME = 'runners_handler'
 
 
 @pytest.fixture
@@ -102,11 +106,19 @@ def handler_module(request):
     """Import handler module with mocked environment."""
     # Ensure env vars are mocked before importing
     request.getfixturevalue("mock_env_vars")
-    # Clear any cached import
-    if 'handler' in sys.modules:
-        del sys.modules['handler']
-    # Import inside fixture is intentional - needs fresh import with mocked env
-    import handler
+
+    # Clear any cached import with our unique name
+    if HANDLER_MODULE_NAME in sys.modules:
+        del sys.modules[HANDLER_MODULE_NAME]
+
+    # Use importlib to load the specific handler.py file with a unique name
+    # This avoids conflicts with other 'handler' modules in the codebase
+    handler_path = LAMBDA_DIR / 'handler.py'
+    spec = importlib.util.spec_from_file_location(HANDLER_MODULE_NAME, handler_path)
+    handler = importlib.util.module_from_spec(spec)
+    sys.modules[HANDLER_MODULE_NAME] = handler
+    spec.loader.exec_module(handler)
+
     # Reset the API key cache
     handler._api_key_cache.clear()
     return handler
@@ -406,3 +418,28 @@ class TestLambdaHandler:
         """Test lambda_handler returns 400 for empty Records."""
         result = handler_module.lambda_handler({'Records': []}, None)
         assert result['statusCode'] == 400
+
+    def test_lambda_handler_non_sqs_event_source_returns_400(self, handler_module):
+        """Test lambda_handler returns 400 for non-SQS event source."""
+        event = {
+            'Records': [{
+                'eventSource': 'aws:s3',
+                'messageId': 'test-123',
+                'body': '{}'
+            }]
+        }
+        result = handler_module.lambda_handler(event, None)
+        assert result['statusCode'] == 400
+
+    def test_lambda_handler_non_sqs_event_source_returns_error_message(self, handler_module):
+        """Test lambda_handler returns error for non-SQS event source."""
+        event = {
+            'Records': [{
+                'eventSource': 'aws:dynamodb',
+                'messageId': 'test-123',
+                'body': '{}'
+            }]
+        }
+        result = handler_module.lambda_handler(event, None)
+        body = json.loads(result['body'])
+        assert body['error'] == 'Expected SQS event'
