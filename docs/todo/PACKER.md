@@ -2,6 +2,21 @@
 
 Proposed PRs for [hashicorp/packer-plugin-amazon](https://github.com/hashicorp/packer-plugin-amazon) to add on-demand instance failover capabilities.
 
+## Table of Contents
+
+- [Background](#background)
+- [Proposed PRs](#proposed-prs)
+  - [PR 1: Add `on_demand_instance_types` parameter](#pr-1-add-on_demand_instance_types-parameter)
+  - [PR 2: Add `subnet_ids` parameter for multi-subnet failover](#pr-2-add-subnet_ids-parameter-for-multi-subnet-failover)
+  - [PR 3: Add `subnet_filter` support for multiple subnets](#pr-3-add-subnet_filter-support-for-multiple-subnets)
+  - [PR 4: Add `fleet_allocation_strategy` for on-demand](#pr-4-add-fleet_allocation_strategy-for-on-demand)
+  - [PR 5: Wait and poll EC2 instance status](#pr-5-wait-and-poll-ec2-instance-status)
+- [Implementation Notes](#implementation-notes)
+  - [EC2 Fleet API usage](#ec2-fleet-api-usage)
+  - [Files to modify](#files-to-modify)
+  - [Testing considerations](#testing-considerations)
+- [References](#references)
+
 ## Background
 
 Packer's amazon-ebs builder supports multiple instance types for spot instances via `spot_instance_types`, which uses EC2 Fleet under the hood. However, on-demand instances only support a single `instance_type` with no failover mechanism for capacity errors.
