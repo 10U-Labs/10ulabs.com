@@ -148,8 +148,8 @@ jobs:
         id: mypy_tests
         name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python:src/api/endpoints/runners/ecs/lambda python3 -m mypy \
-            lib/python/ test/
+          PYPATH=lib/python:src/api/endpoints/runners/ecs/lambda
+          MYPYPATH=$PYPATH python3 -m mypy lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
