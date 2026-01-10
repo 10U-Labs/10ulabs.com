@@ -2,7 +2,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
+from botocore.exceptions import ClientError
 
 
 class TestGetEc2InstanceTags:
@@ -40,7 +40,6 @@ class TestGetEc2InstanceTags:
 
     def test_get_ec2_instance_tags_client_error_returns_empty(self, handler_module):
         """Returns empty dict on ClientError."""
-        from botocore.exceptions import ClientError
         mock_ec2 = MagicMock()
         mock_ec2.describe_instances.side_effect = ClientError(
             {"Error": {"Code": "InvalidInstanceID.NotFound"}},
@@ -87,7 +86,6 @@ class TestSendRetryRequest:
 
     def test_send_retry_request_client_error_returns_false(self, handler_module):
         """Returns False on ClientError."""
-        from botocore.exceptions import ClientError
         mock_sqs = MagicMock()
         mock_sqs.send_message.side_effect = ClientError(
             {"Error": {"Code": "InvalidQueueUrl"}},

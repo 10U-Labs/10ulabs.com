@@ -2,7 +2,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
+from botocore.exceptions import ClientError
 
 
 class TestIsSpotInterruption:
@@ -66,7 +66,6 @@ class TestGetEcsTaskTags:
 
     def test_get_ecs_task_tags_client_error_returns_empty(self, handler_module):
         """Returns empty dict on ClientError."""
-        from botocore.exceptions import ClientError
         mock_ecs = MagicMock()
         mock_ecs.describe_tasks.side_effect = ClientError(
             {"Error": {"Code": "TaskNotFoundException"}},

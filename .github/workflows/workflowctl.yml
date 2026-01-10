@@ -226,7 +226,8 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
+          MYPYPATH=lib/python:src/api/endpoints/runners/lambda:\
+          src/api/endpoints/runners/ecs/lambda python3 -m mypy \
             lib/python/ test/
       - continue-on-error: true
         id: jscpd_source
@@ -401,9 +402,9 @@ name: Workflow Controller
 on:
   # Workflowctl runs on every push to main - it determines which workflows to
   # dispatch based on changed files and the dependency graph.
-  # push:
-  #   branches:
-  #     - main
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       force_testing:

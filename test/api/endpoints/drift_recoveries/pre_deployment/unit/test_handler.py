@@ -150,7 +150,7 @@ class TestSendNotification:
         ) as mock_get_sns:
             mock_client = mock_get_sns.return_value
             handler_module._send_notification('Test Subject', 'Test Message')
-            mock_client.publish.assert_called_once()
+            assert mock_client.publish.call_count == 1
 
     def test_skips_when_no_topic_arn(self, handler_module):
         """Skips notification when SNS_TOPIC_ARN not configured."""
@@ -160,7 +160,7 @@ class TestSendNotification:
             ) as mock_get_sns:
                 mock_client = mock_get_sns.return_value
                 handler_module._send_notification('Test Subject', 'Test Message')
-                mock_client.publish.assert_not_called()
+                assert mock_client.publish.call_count == 0
 
 
 class TestLambdaHandler:
