@@ -22,5 +22,5 @@ api_common_routing                                                              
     └── api_common_docker_repository ────────────────┴─→ api_endpoint_v1_runners_ecs_images                   │
                                                                 └── api_endpoint_v1_runners_ecs ─┐            │
                                                                                                  └────────────┴─→ api_endpoint_v1_runners
-                                                                                                                       └── webhooks_github_jit_runner_requests
+                                                                                                                       └── webhooks_github_workflow_jobs
 ```

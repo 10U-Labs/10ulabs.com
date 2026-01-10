@@ -73,14 +73,14 @@ def test_openapi_spec_diagnostics_echo_has_post_method(openapi_spec):
     assert 'post' in openapi_spec['paths']['/diagnostics/echo']
 
 
-def test_openapi_spec_has_jit_runner_requests_post_endpoint(openapi_spec):
-    """Verify spec has /v1/webhooks/github/jit-runner-requests endpoint."""
-    assert '/v1/webhooks/github/jit-runner-requests' in openapi_spec['paths']
+def test_openapi_spec_has_workflow_jobs_post_endpoint(openapi_spec):
+    """Verify spec has /v1/webhooks/github/workflow-jobs endpoint."""
+    assert '/v1/webhooks/github/workflow-jobs' in openapi_spec['paths']
 
 
-def test_openapi_spec_jit_runner_requests_has_post_method(openapi_spec):
-    """Verify /v1/webhooks/github/jit-runner-requests has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']
+def test_openapi_spec_workflow_jobs_has_post_method(openapi_spec):
+    """Verify /v1/webhooks/github/workflow-jobs has POST method."""
+    assert 'post' in openapi_spec['paths']['/v1/webhooks/github/workflow-jobs']
 
 
 def test_openapi_spec_has_ec2_ami_base_endpoint(openapi_spec):
@@ -345,9 +345,9 @@ def test_openapi_spec_diagnostics_echo_has_options_method(openapi_spec):
     assert 'options' in openapi_spec['paths']['/diagnostics/echo']
 
 
-def test_openapi_spec_jit_runner_requests_has_options_method(openapi_spec):
-    """Verify /v1/webhooks/github/jit-runner-requests has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']
+def test_openapi_spec_workflow_jobs_has_options_method(openapi_spec):
+    """Verify /v1/webhooks/github/workflow-jobs has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/webhooks/github/workflow-jobs']
 
 
 def test_openapi_spec_ec2_ami_base_has_options_method(openapi_spec):
@@ -387,35 +387,35 @@ def test_openapi_spec_validate_headers_validates_parameters(openapi_spec):
     assert validators['validate-headers']['validateRequestParameters'] is True
 
 
-def test_openapi_spec_jit_runner_requests_post_has_request_validator(openapi_spec):
-    """Verify /v1/webhooks/github/jit-runner-requests POST has request validator reference."""
-    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
+def test_openapi_spec_workflow_jobs_post_has_request_validator(openapi_spec):
+    """Verify /v1/webhooks/github/workflow-jobs POST has request validator reference."""
+    post = openapi_spec['paths']['/v1/webhooks/github/workflow-jobs']['post']
     assert 'x-amazon-apigateway-request-validator' in post
 
 
-def test_openapi_spec_jit_runner_requests_post_uses_validate_headers(openapi_spec):
-    """Verify /v1/webhooks/github/jit-runner-requests POST uses validate-headers validator."""
-    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
+def test_openapi_spec_workflow_jobs_post_uses_validate_headers(openapi_spec):
+    """Verify /v1/webhooks/github/workflow-jobs POST uses validate-headers validator."""
+    post = openapi_spec['paths']['/v1/webhooks/github/workflow-jobs']['post']
     assert post['x-amazon-apigateway-request-validator'] == 'validate-headers'
 
 
-def test_openapi_spec_jit_runner_requests_post_has_parameters(openapi_spec):
-    """Verify /v1/webhooks/github/jit-runner-requests POST has parameters defined."""
-    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
+def test_openapi_spec_workflow_jobs_post_has_parameters(openapi_spec):
+    """Verify /v1/webhooks/github/workflow-jobs POST has parameters defined."""
+    post = openapi_spec['paths']['/v1/webhooks/github/workflow-jobs']['post']
     assert 'parameters' in post
 
 
-def test_openapi_spec_jit_runner_requests_post_has_github_event_parameter(openapi_spec):
-    """Verify /v1/webhooks/github/jit-runner-requests POST has x-github-event parameter."""
-    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
+def test_openapi_spec_workflow_jobs_post_has_github_event_parameter(openapi_spec):
+    """Verify /v1/webhooks/github/workflow-jobs POST has x-github-event parameter."""
+    post = openapi_spec['paths']['/v1/webhooks/github/workflow-jobs']['post']
     parameters = post['parameters']
     param_names = [p.get('name') for p in parameters]
     assert 'x-github-event' in param_names
 
 
-def test_openapi_spec_jit_runner_requests_post_github_event_is_header(openapi_spec):
+def test_openapi_spec_workflow_jobs_post_github_event_is_header(openapi_spec):
     """Verify x-github-event parameter is a header parameter."""
-    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
+    post = openapi_spec['paths']['/v1/webhooks/github/workflow-jobs']['post']
     parameters = post['parameters']
     github_event_param = next(
         (p for p in parameters if p.get('name') == 'x-github-event'),
@@ -424,9 +424,9 @@ def test_openapi_spec_jit_runner_requests_post_github_event_is_header(openapi_sp
     assert github_event_param['in'] == 'header'
 
 
-def test_openapi_spec_jit_runner_requests_post_github_event_is_required(openapi_spec):
+def test_openapi_spec_workflow_jobs_post_github_event_is_required(openapi_spec):
     """Verify x-github-event header is required."""
-    post = openapi_spec['paths']['/v1/webhooks/github/jit-runner-requests']['post']
+    post = openapi_spec['paths']['/v1/webhooks/github/workflow-jobs']['post']
     parameters = post['parameters']
     github_event_param = next(
         (p for p in parameters if p.get('name') == 'x-github-event'),

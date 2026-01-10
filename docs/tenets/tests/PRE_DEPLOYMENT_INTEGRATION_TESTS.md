@@ -279,11 +279,11 @@ def test_state_bucket_versioning_disabled(s3_client, config):
     status = response.get("Status")
     assert status in ("Suspended", None)
 
-def test_api_gateway_has_jit_runner_requests_resource(apigateway_client, config):
-    """Verify API Gateway has /v1/webhooks/github/jit-runner-requests resource."""
+def test_api_gateway_has_workflow_jobs_resource(apigateway_client, config):
+    """Verify API Gateway has /v1/webhooks/github/workflow-jobs resource."""
     response = apigateway_client.get_resources(restApiId=config["api_gateway_id"])
     paths = [r["path"] for r in response["items"]]
-    assert "/v1/webhooks/github/jit-runner-requests" in paths
+    assert "/v1/webhooks/github/workflow-jobs" in paths
 ```
 
 ```python
@@ -469,7 +469,7 @@ Pre-deployment integration tests require a specific position in the workflow:
 
 | Workflow | Prerequisites to Test | NOT Test (created by this workflow) |
 |----------|----------------------|-------------------------------------|
-| `webhooks_github_jit_runner_requests` | IAM role from bootstrap, API Gateway from api_common_routing | SQS queues, DynamoDB tables, Lambda functions |
+| `webhooks_github_workflow_jobs` | IAM role from bootstrap, API Gateway from api_common_routing | SQS queues, DynamoDB tables, Lambda functions |
 | `api_common_routing` | S3 buckets from bootstrap, Route53 zone | API Gateway, Lambda functions |
 | `api_operational_health` | API Gateway from api_common_routing | Lambda function |
 | `image_for_ecs_runners` | ECR repository from bootstrap | Docker image |

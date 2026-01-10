@@ -572,5 +572,5 @@ def test_waf_subscription_filter_routes_to_waf_firehose():
 
 
 # Note: WebhookRouter metrics (CircuitBreakerState) and circuit_breaker_state_table
-# DynamoDB metrics are tested in jit_runner_requests post-deployment tests because
+# DynamoDB metrics are tested in workflow_jobs post-deployment tests because
 # those resources are created by that module.

@@ -182,17 +182,17 @@
       "test/lib/python/**"
     ]
   },
-  "webhooks_github_jit_runner_requests": {
+  "webhooks_github_workflow_jobs": {
     "depends_on": [
       "api_endpoint_v1_runners"
     ],
-    "name": "Ensuring the /v1/webhooks/github/jit-runner-requests API endpoint exists and is properly configured",
+    "name": "Ensuring the /v1/webhooks/github/workflow-jobs API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/webhooks_github_jit_runner_requests.yml",
+      ".github/workflows/webhooks_github_workflow_jobs.yml",
       "lib/python/**",
-      "src/api/endpoints/webhooks/github/jit_runner_requests/**",
+      "src/api/endpoints/webhooks/github/workflow_jobs/**",
       "test/api/conftest.py",
-      "test/api/endpoints/webhooks/github/jit_runner_requests/**",
+      "test/api/endpoints/webhooks/github/workflow_jobs/**",
       "test/lib/python/**"
     ]
   },

@@ -250,11 +250,11 @@
         }
       }
     },
-    "/v1/webhooks/github/jit-runner-requests": {
+    "/v1/webhooks/github/workflow-jobs": {
       "post": {
-        "summary": "GitHub Webhook for JIT Runner Requests",
+        "summary": "GitHub Workflow Job Webhook",
         "description": "Receives GitHub workflow_job webhook events and queues them for processing (API Gateway → SQS direct integration, no Lambda in hot path)",
-        "operationId": "receiveJitRunnerRequest",
+        "operationId": "receiveWorkflowJob",
         "tags": [
           "/v1/webhooks"
         ],
@@ -331,9 +331,9 @@
         }
       },
       "options": {
-        "summary": "CORS preflight for JIT runner requests webhook",
+        "summary": "CORS preflight for workflow jobs webhook",
         "description": "Handles CORS preflight requests",
-        "operationId": "jitRunnerRequestsOptions",
+        "operationId": "workflowJobsOptions",
         "tags": [
           "/v1/webhooks"
         ],
@@ -377,11 +377,11 @@
         }
       }
     },
-    "/v1/webhooks/github/jit-runner-requests/circuit-breaker": {
+    "/v1/webhooks/github/workflow-jobs/circuit-breaker": {
       "get": {
         "summary": "Get Circuit Breaker Status",
-        "description": "Returns the current status of the JIT runner requests webhook circuit breaker including DynamoDB state, SQS event source state, and Lambda concurrency",
-        "operationId": "getJitRunnerRequestsCircuitBreakerStatus",
+        "description": "Returns the current status of the workflow jobs webhook circuit breaker including DynamoDB state, SQS event source state, and Lambda concurrency",
+        "operationId": "getWorkflowJobsCircuitBreakerStatus",
         "tags": [
           "/v1/webhooks"
         ],
@@ -482,7 +482,7 @@
       "post": {
         "summary": "Reset Circuit Breaker",
         "description": "Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
-        "operationId": "resetJitRunnerRequestsCircuitBreaker",
+        "operationId": "resetWorkflowJobsCircuitBreaker",
         "tags": [
           "/v1/webhooks"
         ],
@@ -596,7 +596,7 @@
       "options": {
         "summary": "CORS preflight for circuit breaker endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "jitRunnerRequestsCircuitBreakerOptions",
+        "operationId": "workflowJobsCircuitBreakerOptions",
         "tags": [
           "/v1/webhooks"
         ],
@@ -640,11 +640,11 @@
         }
       }
     },
-    "/v1/webhooks/github/jit-runner-requests/circuit-breaker/reset": {
+    "/v1/webhooks/github/workflow-jobs/circuit-breaker/reset": {
       "post": {
         "summary": "Reset Circuit Breaker (Deprecated)",
-        "description": "DEPRECATED: Use POST /v1/webhooks/github/jit-runner-requests/circuit-breaker instead. Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
-        "operationId": "resetJitRunnerRequestsCircuitBreakerLegacy",
+        "description": "DEPRECATED: Use POST /v1/webhooks/github/workflow-jobs/circuit-breaker instead. Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
+        "operationId": "resetWorkflowJobsCircuitBreakerLegacy",
         "deprecated": true,
         "tags": [
           "/v1/webhooks"
@@ -671,7 +671,7 @@
       "options": {
         "summary": "CORS preflight for circuit breaker reset endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "jitRunnerRequestsCircuitBreakerResetOptions",
+        "operationId": "workflowJobsCircuitBreakerResetOptions",
         "tags": [
           "/v1/webhooks"
         ],
