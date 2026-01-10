@@ -81,4 +81,4 @@ class TestPublishMetric:
         with patch.object(cloudwatch_module, '_get_cloudwatch_client', return_value=mock_client):
             # Should not raise, just log warning
             cloudwatch_module.publish_metric("TestNamespace", "TestMetric", 1.0)
-            mock_client.put_metric_data.assert_called_once()
+            assert mock_client.put_metric_data.call_count == 1
