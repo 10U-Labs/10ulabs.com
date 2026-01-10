@@ -3,16 +3,30 @@
 import json
 import logging
 import os
-import urllib.request
 import urllib.error
+import urllib.request
 from typing import Any
 
+import boto3
 from botocore.exceptions import ClientError
-
-from common.aws_clients import get_ec2_client, get_sns_client, get_ssm_client
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def get_ec2_client():
+    """Get EC2 client."""
+    return boto3.client("ec2")
+
+
+def get_ssm_client():
+    """Get SSM client."""
+    return boto3.client("ssm")
+
+
+def get_sns_client():
+    """Get SNS client."""
+    return boto3.client("sns")
 
 
 def _is_resource_in_managed_vpc(resource_id: str, resource_type: str) -> bool:
@@ -221,7 +235,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     result = _trigger_api_workflow(github_token)
 
     if result.get("success"):
-        logger.info("Successfully triggered api_common_routing.yml workflow for drift recovery")
+        logger.info("Successfully triggered api_common_routing.yml workflow")
         _send_notification(
             f"Drift Recovery Triggered: {drift['rule_name']}",
             f"Infrastructure drift was detected.\n\n"

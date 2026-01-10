@@ -83,86 +83,9 @@ resource "aws_lambda_permission" "circuit_breaker_recovery_eventbridge" {
   source_arn    = aws_cloudwatch_event_rule.circuit_breaker_recovery.arn
 }
 
-resource "aws_cloudwatch_event_rule" "ecs_task_stopped" {
-  name        = "${local.resource_prefix}-ECSTaskStopped"
-  description = "Triggers on ECS task stopped events for spot interruption handling"
+# Note: ECS task stopped and EC2 spot interruption EventBridge rules removed
+# - Migrated to /v1/ec2-spot-interruptions endpoint
+# - Migrated to /v1/ecs-task-stops endpoint
 
-  event_pattern = jsonencode({
-    source      = ["aws.ecs"]
-    detail-type = ["ECS Task State Change"]
-    detail = {
-      clusterArn = [data.terraform_remote_state.ecs_runner.outputs.cluster_arn]
-      lastStatus = ["STOPPED"]
-    }
-  })
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-ECSTaskStopped"
-  })
-}
-
-resource "aws_cloudwatch_event_target" "ecs_task_stopped" {
-  rule      = aws_cloudwatch_event_rule.ecs_task_stopped.name
-  target_id = "SpotInterruptionHandler"
-  arn       = aws_lambda_function.spot_interruption_handler.arn
-}
-
-resource "aws_lambda_permission" "ecs_task_stopped" {
-  statement_id  = "AllowECSTaskStoppedEvent"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.spot_interruption_handler.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.ecs_task_stopped.arn
-}
-
-resource "aws_cloudwatch_event_rule" "ec2_spot_interruption" {
-  name        = "${local.resource_prefix}-EC2SpotInterruption"
-  description = "Triggers on EC2 spot interruption warnings"
-
-  event_pattern = jsonencode({
-    source      = ["aws.ec2"]
-    detail-type = ["EC2 Spot Instance Interruption Warning"]
-  })
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-EC2SpotInterruption"
-  })
-}
-
-resource "aws_cloudwatch_event_target" "ec2_spot_interruption" {
-  rule      = aws_cloudwatch_event_rule.ec2_spot_interruption.name
-  target_id = "SpotInterruptionHandler"
-  arn       = aws_lambda_function.spot_interruption_handler.arn
-}
-
-resource "aws_lambda_permission" "ec2_spot_interruption" {
-  statement_id  = "AllowEC2SpotInterruptionEvent"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.spot_interruption_handler.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.ec2_spot_interruption.arn
-}
-
-resource "aws_cloudwatch_event_rule" "stale_runner_cleanup_schedule" {
-  name                = "${local.resource_prefix}-StaleRunnerCleanupSchedule"
-  description         = "Triggers runner cleanup every 5 minutes"
-  schedule_expression = "rate(5 minutes)"
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-StaleRunnerCleanupSchedule"
-  })
-}
-
-resource "aws_cloudwatch_event_target" "stale_runner_cleanup" {
-  rule      = aws_cloudwatch_event_rule.stale_runner_cleanup_schedule.name
-  target_id = "StaleRunnerCleanup"
-  arn       = aws_lambda_function.stale_runner_cleanup.arn
-}
-
-resource "aws_lambda_permission" "stale_runner_cleanup" {
-  statement_id  = "AllowScheduledEvent"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.stale_runner_cleanup.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.stale_runner_cleanup_schedule.arn
-}
+# Note: Stale runner cleanup schedule removed
+# - Migrated to /v1/runners/cleanups endpoint

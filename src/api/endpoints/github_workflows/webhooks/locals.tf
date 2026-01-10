@@ -35,9 +35,9 @@ locals {
   circuit_breaker_remediation_function_name = "${module.common.resource_prefix}CircuitBreakerRemediation"
   dlq_reprocessor_function_name             = "${module.common.resource_prefix}DLQReprocessor"
   circuit_breaker_recovery_function_name    = "${module.common.resource_prefix}CircuitBreakerRecovery"
-  drift_recovery_function_name              = "${module.common.resource_prefix}DriftRecovery"
-  spot_interruption_handler_function_name   = "${module.common.resource_prefix}SpotInterruptionHandler"
-  stale_runner_cleanup_function_name        = "${module.common.resource_prefix}StaleRunnerCleanup"
+  # Note: drift_recovery removed - migrated to /v1/drift-recoveries endpoint
+  # Note: spot_interruption_handler removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
+  # Note: stale_runner_cleanup removed - migrated to /v1/runners/cleanups endpoint
   # Note: runner_starter removed - routing logic moved to /v1/runners endpoint
   # Note: runner_terminator removed - runners are ephemeral and self-terminate
   ignored_events_archiver_function_name = "${module.common.resource_prefix}IgnoredEventsArchiver"
@@ -48,13 +48,13 @@ locals {
   circuit_breaker_remediation_role_name = "${module.common.resource_prefix}CircuitBreakerRemediationRole"
   dlq_reprocessor_role_name             = "${module.common.resource_prefix}DLQReprocessorRole"
   circuit_breaker_recovery_role_name    = "${module.common.resource_prefix}CircuitBreakerRecoveryRole"
-  drift_recovery_role_name              = "${module.common.resource_prefix}DriftRecoveryRole"
-  spot_interruption_handler_role_name   = "${module.common.resource_prefix}SpotInterruptionHandlerRole"
-  stale_runner_cleanup_role_name        = "${module.common.resource_prefix}StaleRunnerCleanupRole"
+  # Note: drift_recovery_role removed - migrated to /v1/drift-recoveries endpoint
+  # Note: spot_interruption_handler_role removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
+  # Note: stale_runner_cleanup_role removed - migrated to /v1/runners/cleanups endpoint
   # Note: runner_starter_role removed - routing logic moved to /v1/runners endpoint
   # Note: runner_terminator_role removed - runners are ephemeral and self-terminate
   ignored_events_archiver_role_name = "${module.common.resource_prefix}IgnoredEventsArchiverRole"
-  config_recorder_role_name         = "${module.common.resource_prefix}ConfigRecorderRole"
+  # Note: config_recorder_role removed - migrated to /v1/drift-recoveries endpoint
 
   common_tags = {
     ManagedBy = "terraform"
