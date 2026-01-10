@@ -580,3 +580,533 @@ def test_launch_fargate_runner_does_not_pass_empty_github_token(
         with patch('fargate_ops.get_runner_registration_token', return_value='test-reg-token'):
             result = ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
             assert result['success'] is False
+
+
+def test_get_latest_ecr_image_client_error(ecs_runner_handler):
+    """Test get latest ecr image returns error on ClientError."""
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.side_effect = ClientError(
+        {'Error': {'Code': 'RepositoryNotFoundException', 'Message': 'Not found'}},
+        'describe_images'
+    )
+    with patch('fargate_ops.get_ecr_client', return_value=mock_ecr):
+        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+            result = ecs_runner_handler.get_latest_ecr_image()
+            assert result['success'] is False
+
+
+def test_get_latest_ecr_image_client_error_returns_error_message(ecs_runner_handler):
+    """Test get latest ecr image returns error message on ClientError."""
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.side_effect = ClientError(
+        {'Error': {'Code': 'AccessDenied', 'Message': 'Access denied'}},
+        'describe_images'
+    )
+    with patch('fargate_ops.get_ecr_client', return_value=mock_ecr):
+        with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+            result = ecs_runner_handler.get_latest_ecr_image()
+            assert 'error' in result
+
+
+def test_get_fargate_task_status_returns_unknown_on_client_error(ecs_runner_handler):
+    """Test get fargate task status returns unknown on ClientError."""
+    mock_ecs = MagicMock()
+    mock_ecs.describe_tasks.side_effect = ClientError(
+        {'Error': {'Code': 'ClusterNotFoundException', 'Message': 'Cluster not found'}},
+        'describe_tasks'
+    )
+    with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
+        task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
+        result = ecs_runner_handler.get_fargate_task_status('test-cluster', task_arn)
+        assert result['status'] == 'UNKNOWN'
+
+
+@patch('fargate_ops.time.sleep')
+def test_wait_for_fargate_task_provisioned_waits_on_pending(mock_sleep, ecs_runner_handler):
+    """Test wait for fargate task provisioned waits on PENDING status."""
+    status_sequence = [
+        {'status': 'PENDING', 'stopped_reason': '', 'started_at': None},
+        {'status': 'RUNNING', 'stopped_reason': '', 'started_at': '2024-01-01'}
+    ]
+    with patch('fargate_ops.get_fargate_task_status', side_effect=status_sequence):
+        task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
+        result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
+        assert result['success'] is True
+
+
+@patch('fargate_ops.time.sleep')
+def test_wait_for_fargate_task_provisioned_timeout_returns_success(mock_sleep, ecs_runner_handler):
+    """Test wait for fargate task provisioned returns success after max poll attempts."""
+    pending_status = {'status': 'PENDING', 'stopped_reason': '', 'started_at': None}
+    with patch('fargate_ops.get_fargate_task_status', return_value=pending_status):
+        task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
+        result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
+        assert result['success'] is True
+
+
+def test_wait_for_fargate_task_provisioned_returns_on_unknown_status(ecs_runner_handler):
+    """Test wait for fargate task provisioned returns early on UNKNOWN status."""
+    unknown_status = {'status': 'DEPROVISIONING', 'stopped_reason': '', 'started_at': None}
+    with patch('fargate_ops.get_fargate_task_status', return_value=unknown_status):
+        task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
+        result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
+        assert result['success'] is False
+
+
+def test_get_capacity_provider_uses_spot_from_labels(ecs_runner_handler):
+    """Test _get_capacity_provider returns FARGATE_SPOT when labels specify spot."""
+    import fargate_ops
+    # Valid label set: platform=ecs, compute=fargate, arch=x86, pricing=spot, runner-id
+    result = fargate_ops._get_capacity_provider(['ecs', 'fargate', 'x86', 'spot', 'runner-12345'])
+    assert result == 'FARGATE_SPOT'
+
+
+def test_get_capacity_provider_uses_on_demand_from_labels(ecs_runner_handler):
+    """Test _get_capacity_provider returns FARGATE when labels don't specify spot."""
+    import fargate_ops
+    # Valid label set: platform=ecs, compute=fargate, arch=x86, pricing=on-demand, runner-id
+    result = fargate_ops._get_capacity_provider(
+        ['ecs', 'fargate', 'x86', 'on-demand', 'runner-12345']
+    )
+    assert result == 'FARGATE'
+
+
+def test_get_ecs_runner_status_with_running_tasks(ecs_runner_handler):
+    """Test get ecs runner status returns task details when tasks are running."""
+    mock_ecs = MagicMock()
+    mock_ecs.list_tasks.return_value = {
+        'taskArns': ['arn:aws:ecs:us-east-1:123:task/cluster/task-id-1']
+    }
+    mock_ecs.describe_tasks.return_value = {
+        'tasks': [{
+            'taskArn': 'arn:aws:ecs:us-east-1:123:task/cluster/task-id-1',
+            'lastStatus': 'RUNNING',
+            'desiredStatus': 'RUNNING',
+            'startedAt': datetime(2024, 1, 1),
+            'cpu': '256',
+            'memory': '512',
+            'tags': [
+                {'key': 'GitHubJobId', 'value': '12345'},
+                {'key': 'JobLabels', 'value': 'test-label'},
+                {'key': 'GitHubRepo', 'value': 'test/repo'}
+            ]
+        }]
+    }
+    with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
+        with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+            result = ecs_runner_handler.get_ecs_runner_status()
+            assert result['running_tasks'] == 1
+
+
+def test_get_ecs_runner_status_includes_task_details(ecs_runner_handler):
+    """Test get ecs runner status includes task metadata."""
+    mock_ecs = MagicMock()
+    mock_ecs.list_tasks.return_value = {
+        'taskArns': ['arn:aws:ecs:us-east-1:123:task/cluster/task-id-1']
+    }
+    mock_ecs.describe_tasks.return_value = {
+        'tasks': [{
+            'taskArn': 'arn:aws:ecs:us-east-1:123:task/cluster/task-id-1',
+            'lastStatus': 'RUNNING',
+            'desiredStatus': 'RUNNING',
+            'startedAt': datetime(2024, 1, 1),
+            'cpu': '256',
+            'memory': '512',
+            'tags': [
+                {'key': 'GitHubJobId', 'value': '12345'},
+                {'key': 'JobLabels', 'value': 'test-label'},
+                {'key': 'GitHubRepo', 'value': 'test/repo'}
+            ]
+        }]
+    }
+    with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
+        with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+            result = ecs_runner_handler.get_ecs_runner_status()
+            assert result['tasks'][0]['job_id'] == '12345'
+
+
+def test_get_ecs_runner_status_extracts_task_id_from_arn(ecs_runner_handler):
+    """Test get ecs runner status extracts task ID from ARN."""
+    mock_ecs = MagicMock()
+    mock_ecs.list_tasks.return_value = {
+        'taskArns': ['arn:aws:ecs:us-east-1:123:task/cluster/task-id-123']
+    }
+    mock_ecs.describe_tasks.return_value = {
+        'tasks': [{
+            'taskArn': 'arn:aws:ecs:us-east-1:123:task/cluster/task-id-123',
+            'lastStatus': 'RUNNING',
+            'desiredStatus': 'RUNNING',
+            'tags': []
+        }]
+    }
+    with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
+        with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+            result = ecs_runner_handler.get_ecs_runner_status()
+            assert result['tasks'][0]['task_id'] == 'task-id-123'
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_dependency_validation_error(mock_boto_client, ecs_runner_handler):
+    """Test launch fargate runner returns error on dependency validation failure."""
+    env = create_fargate_runner_env()
+    with patch.dict('os.environ', env):
+        with patch('fargate_ops.ensure_dependencies_valid', side_effect=RuntimeError('Failed')):
+            result = ecs_runner_handler.launch_fargate_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_dependency_validation_error_message(
+    mock_boto_client, ecs_runner_handler
+):
+    """Test launch fargate runner includes dependency error message."""
+    env = create_fargate_runner_env()
+    with patch.dict('os.environ', env):
+        with patch('fargate_ops.ensure_dependencies_valid', side_effect=RuntimeError('dep fail')):
+            result = ecs_runner_handler.launch_fargate_runner(123, ['test'], 'test/repo')
+            assert 'dep fail' in result.get('error', '')
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_reuses_existing_runner(mock_boto_client, ecs_runner_handler):
+    """Test launch fargate runner reuses existing runner for workflow."""
+    env = create_fargate_runner_env()
+    mock_ssm = create_mock_ssm_with_token('test-token')
+    mock_boto_client.side_effect = create_mock_client_factory(ssm_mock=mock_ssm)
+    existing_runner = {'name': 'existing-runner', 'id': 123}
+    with patch.dict('os.environ', env):
+        with patch('fargate_ops.get_existing_runner_for_workflow', return_value=existing_runner):
+            result = ecs_runner_handler.launch_fargate_runner(
+                123, ['test'], 'test/repo', run_id=456
+            )
+            assert result['success'] is True
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_reused_flag_set(mock_boto_client, ecs_runner_handler):
+    """Test launch fargate runner sets reused flag when runner exists."""
+    env = create_fargate_runner_env()
+    mock_ssm = create_mock_ssm_with_token('test-token')
+    mock_boto_client.side_effect = create_mock_client_factory(ssm_mock=mock_ssm)
+    existing_runner = {'name': 'existing-runner', 'id': 123}
+    with patch.dict('os.environ', env):
+        with patch('fargate_ops.get_existing_runner_for_workflow', return_value=existing_runner):
+            result = ecs_runner_handler.launch_fargate_runner(
+                123, ['test'], 'test/repo', run_id=456
+            )
+            assert result.get('reused') is True
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_returns_runner_name_on_reuse(mock_boto_client, ecs_runner_handler):
+    """Test launch fargate runner returns runner name when reusing."""
+    env = create_fargate_runner_env()
+    mock_ssm = create_mock_ssm_with_token('test-token')
+    mock_boto_client.side_effect = create_mock_client_factory(ssm_mock=mock_ssm)
+    existing_runner = {'name': 'existing-runner-name', 'id': 123}
+    with patch.dict('os.environ', env):
+        with patch('fargate_ops.get_existing_runner_for_workflow', return_value=existing_runner):
+            result = ecs_runner_handler.launch_fargate_runner(
+                123, ['test'], 'test/repo', run_id=456
+            )
+            assert result.get('runner_name') == 'existing-runner-name'
+
+
+def test_try_launch_in_subnet_handles_capacity_failure(ecs_runner_handler):
+    """Test _try_launch_in_subnet handles capacity failure."""
+    import fargate_ops
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {
+        'tasks': [],
+        'failures': [{'reason': 'Capacity not available'}]
+    }
+    env = create_fargate_runner_env()
+    with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
+        with patch.dict('os.environ', env):
+            cfg = {
+                'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
+                'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate',
+                'github_token': 'gh-token'
+            }
+            result = fargate_ops._try_launch_in_subnet(cfg, 'subnet-1', 'test-cluster')
+            assert result['retry'] is True
+
+
+def test_try_launch_in_subnet_handles_non_capacity_failure(ecs_runner_handler):
+    """Test _try_launch_in_subnet handles non-capacity failures."""
+    import fargate_ops
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {
+        'tasks': [],
+        'failures': [{'reason': 'Some other error'}]
+    }
+    env = create_fargate_runner_env()
+    with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
+        with patch.dict('os.environ', env):
+            cfg = {
+                'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
+                'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate',
+                'github_token': 'gh-token'
+            }
+            result = fargate_ops._try_launch_in_subnet(cfg, 'subnet-1', 'test-cluster')
+            assert result['success'] is False
+
+
+def test_try_launch_in_subnet_handles_spot_interruption(ecs_runner_handler):
+    """Test _try_launch_in_subnet handles spot interruption."""
+    import fargate_ops
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {
+        'tasks': [{'taskArn': 'arn:aws:ecs:us-east-1:123:task/test'}]
+    }
+    env = create_fargate_runner_env()
+    interrupted_result = {'success': False, 'spot_interrupted': True, 'status': 'STOPPED'}
+    with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
+        with patch.dict('os.environ', env):
+            with patch('fargate_ops.wait_for_fargate_task_provisioned', return_value=interrupted_result):
+                cfg = {
+                    'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
+                    'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate',
+                    'github_token': 'gh-token'
+                }
+                result = fargate_ops._try_launch_in_subnet(cfg, 'subnet-1', 'test-cluster')
+                assert result['spot_interrupted'] is True
+
+
+def test_try_launch_in_subnet_handles_client_error(ecs_runner_handler):
+    """Test _try_launch_in_subnet handles ClientError."""
+    import fargate_ops
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.side_effect = ClientError(
+        {'Error': {'Code': 'TestError', 'Message': 'Test'}}, 'run_task'
+    )
+    env = create_fargate_runner_env()
+    with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
+        with patch.dict('os.environ', env):
+            cfg = {
+                'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
+                'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate',
+                'github_token': 'gh-token'
+            }
+            result = fargate_ops._try_launch_in_subnet(cfg, 'subnet-1', 'test-cluster')
+            assert result['success'] is False
+
+
+def test_try_launch_fargate_task_no_subnets_remaining(ecs_runner_handler):
+    """Test _try_launch_fargate_task when no subnets remaining."""
+    import fargate_ops
+    env = create_fargate_runner_env()
+    env['SUBNETS'] = 'subnet-1'
+    interrupted_result = {'success': False, 'spot_interrupted': True, 'retry': True}
+    with patch('fargate_ops._try_launch_in_subnet', return_value=interrupted_result):
+        with patch.dict('os.environ', env):
+            cfg = {
+                'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
+                'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate'
+            }
+            result = fargate_ops._try_launch_fargate_task(cfg)
+            assert result['success'] is False
+
+
+def test_try_launch_fargate_task_retries_on_spot_interruption(ecs_runner_handler):
+    """Test _try_launch_fargate_task retries after spot interruption."""
+    import fargate_ops
+    env = create_fargate_runner_env()
+    env['SUBNETS'] = 'subnet-1,subnet-2'
+    call_count = [0]
+    def mock_launch(cfg, subnet, cluster):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            return {'success': False, 'spot_interrupted': True, 'retry': True}
+        return {'success': True, 'task_arn': 'arn:test'}
+    with patch('fargate_ops._try_launch_in_subnet', side_effect=mock_launch):
+        with patch.dict('os.environ', env):
+            cfg = {
+                'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
+                'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate'
+            }
+            result = fargate_ops._try_launch_fargate_task(cfg)
+            assert result['success'] is True
+
+
+def test_try_launch_fargate_task_exhausts_retries(ecs_runner_handler):
+    """Test _try_launch_fargate_task exhausts retries on repeated failures."""
+    import fargate_ops
+    env = create_fargate_runner_env()
+    env['SUBNETS'] = 'subnet-1,subnet-2,subnet-3'
+    retry_result = {'success': False, 'retry': True, 'error': 'Capacity unavailable'}
+    with patch('fargate_ops._try_launch_in_subnet', return_value=retry_result):
+        with patch.dict('os.environ', env):
+            cfg = {
+                'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
+                'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate'
+            }
+            result = fargate_ops._try_launch_fargate_task(cfg)
+            assert result['success'] is False
+
+
+def test_handle_sqs_event_processes_records(ecs_runner_handler, lambda_context):
+    """Test _handle_sqs_event processes SQS records."""
+    event = {
+        'Records': [{
+            'eventSource': 'aws:sqs',
+            'messageId': 'msg-1',
+            'body': json.dumps({
+                'job_id': 123,
+                'job_labels': ['test'],
+                'github_repo': 'test/repo'
+            })
+        }]
+    }
+    with patch.object(ecs_runner_handler, 'get_latest_ecr_image') as mock_ecr:
+        mock_ecr.return_value = {'success': True}
+        with patch.object(ecs_runner_handler, 'launch_fargate_runner') as mock_launch:
+            mock_launch.return_value = {'success': True, 'task_arn': 'arn:test'}
+            response = ecs_runner_handler.lambda_handler(event, lambda_context)
+            assert response['statusCode'] == 200
+
+
+def test_handle_sqs_event_missing_fields(ecs_runner_handler, lambda_context):
+    """Test _handle_sqs_event handles missing required fields."""
+    event = {
+        'Records': [{
+            'eventSource': 'aws:sqs',
+            'messageId': 'msg-1',
+            'body': json.dumps({'job_id': 123})  # Missing github_repo
+        }]
+    }
+    response = ecs_runner_handler.lambda_handler(event, lambda_context)
+    body = json.loads(response['body'])
+    assert body['results'][0]['error'] == 'Missing required fields'
+
+
+def test_handle_sqs_event_no_stable_image(ecs_runner_handler, lambda_context):
+    """Test _handle_sqs_event handles no stable image."""
+    event = {
+        'Records': [{
+            'eventSource': 'aws:sqs',
+            'messageId': 'msg-1',
+            'body': json.dumps({
+                'job_id': 123,
+                'job_labels': ['test'],
+                'github_repo': 'test/repo'
+            })
+        }]
+    }
+    with patch.object(ecs_runner_handler, 'get_latest_ecr_image') as mock_ecr:
+        mock_ecr.return_value = {'success': False}
+        with patch.object(ecs_runner_handler, 'trigger_image_creation') as mock_trigger:
+            mock_trigger.return_value = {'success': True}
+            response = ecs_runner_handler.lambda_handler(event, lambda_context)
+            body = json.loads(response['body'])
+            assert body['results'][0]['error'] == 'No stable image available'
+
+
+def test_handle_sqs_event_json_decode_error(ecs_runner_handler, lambda_context):
+    """Test _handle_sqs_event handles JSON decode error."""
+    event = {
+        'Records': [{
+            'eventSource': 'aws:sqs',
+            'messageId': 'msg-1',
+            'body': 'invalid json'
+        }]
+    }
+    response = ecs_runner_handler.lambda_handler(event, lambda_context)
+    body = json.loads(response['body'])
+    assert 'error' in body['results'][0]
+
+
+@patch('boto3.client')
+def test_handle_ecs_runner_post_no_stable_image_triggers_build(
+    mock_boto_client, ecs_runner_handler, ecs_runner_post_event_factory, lambda_context
+):
+    """Test handle_ecs_runner_post triggers image build when no stable image."""
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {'imageDetails': []}  # No stable image
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo', 'API_FQDN': 'api.test.com'}):
+        with patch('fargate_ops.trigger_image_creation') as mock_trigger:
+            mock_trigger.return_value = {'success': True}
+            event = ecs_runner_post_event_factory(job_id=123, github_repo='test/repo')
+            response = ecs_runner_handler.lambda_handler(event, lambda_context)
+            assert response['statusCode'] == 202
+
+
+@patch('boto3.client')
+def test_handle_ecs_runner_post_returns_500_on_launch_failure(
+    mock_boto_client, ecs_runner_handler, ecs_runner_post_event_factory, lambda_context
+):
+    """Test handle_ecs_runner_post returns 500 on launch failure."""
+    mock_ecr = _create_ecr_mock_with_stable_image()
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        with patch.object(ecs_runner_handler, 'launch_fargate_runner') as mock_launch:
+            mock_launch.return_value = {'success': False, 'error': 'Failed'}
+            event = ecs_runner_post_event_factory(job_id=123, github_repo='test/repo')
+            response = ecs_runner_handler.lambda_handler(event, lambda_context)
+            assert response['statusCode'] == 500
+
+
+def test_handle_ecs_runner_post_value_error(ecs_runner_handler, lambda_context):
+    """Test handle_ecs_runner_post handles ValueError."""
+    event = {
+        'path': '/v1/runners/ecs',
+        'httpMethod': 'POST',
+        'body': '{"job_id": "not_an_int"}'  # Will cause issues downstream
+    }
+    with patch.object(ecs_runner_handler, 'parse_body', side_effect=ValueError('bad value')):
+        response = ecs_runner_handler.lambda_handler(event, lambda_context)
+        assert response['statusCode'] == 500
+
+
+def test_get_header_case_insensitive_returns_empty_for_none_value(ecs_runner_handler):
+    """Test get header case insensitive returns empty for None header value."""
+    headers = {'X-Test-Mode': None}
+    result = ecs_runner_handler.get_header_case_insensitive(headers, 'X-Test-Mode')
+    assert result == ''
+
+
+def test_get_header_case_insensitive_returns_empty_for_missing_header(ecs_runner_handler):
+    """Test get header case insensitive returns empty when header not found."""
+    headers = {'X-Other-Header': 'value'}
+    result = ecs_runner_handler.get_header_case_insensitive(headers, 'X-Test-Mode')
+    assert result == ''
+
+
+def test_try_launch_fargate_task_logs_retry_on_spot_interruption(ecs_runner_handler):
+    """Test _try_launch_fargate_task logs retry info after spot interruption."""
+    import fargate_ops
+    env = create_fargate_runner_env()
+    env['SUBNETS'] = 'subnet-1,subnet-2'
+    call_count = [0]
+    def mock_launch(cfg, subnet, cluster):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            # First call - spot interruption
+            return {'success': False, 'spot_interrupted': True, 'retry': True}
+        # Second call - also fails to test the break in retry loop
+        return {'success': False, 'retry': False, 'error': 'Some error'}
+    with patch('fargate_ops._try_launch_in_subnet', side_effect=mock_launch):
+        with patch.dict('os.environ', env):
+            cfg = {
+                'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
+                'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate'
+            }
+            result = fargate_ops._try_launch_fargate_task(cfg)
+            assert result['success'] is False
+
+
+def test_try_launch_fargate_task_returns_error_on_non_retryable_failure(ecs_runner_handler):
+    """Test _try_launch_fargate_task returns error immediately on non-retryable failure."""
+    import fargate_ops
+    env = create_fargate_runner_env()
+    env['SUBNETS'] = 'subnet-1,subnet-2'
+    failure_result = {'success': False, 'retry': False, 'error': 'Permission denied'}
+    with patch('fargate_ops._try_launch_in_subnet', return_value=failure_result):
+        with patch.dict('os.environ', env):
+            cfg = {
+                'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
+                'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate'
+            }
+            result = fargate_ops._try_launch_fargate_task(cfg)
+            assert result['error'] == 'Permission denied'

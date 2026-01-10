@@ -134,3 +134,9 @@ def create_mock_ecs_for_status(task_arns=None):
     mock_ecs = MagicMock()
     mock_ecs.list_tasks.return_value = {'taskArns': task_arns or []}
     return mock_ecs
+
+
+@pytest.fixture
+def ecs_runner_src_dir():
+    """Provide the ECS runner source directory path."""
+    return ECS_RUNNER_SRC
