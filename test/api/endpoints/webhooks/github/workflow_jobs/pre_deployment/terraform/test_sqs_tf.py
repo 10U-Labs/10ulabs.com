@@ -11,8 +11,7 @@ import pytest
 SQS_QUEUES = [
     "webhook_ingress",
     "webhook_ingress_dlq",
-    "cancellation",
-    "cancellation_dlq",
+    # Note: cancellation and cancellation_dlq removed - runners are ephemeral
     "ignored_events",
     "ignored_events_dlq",
     "webhook_dlq",
@@ -22,7 +21,7 @@ SQS_QUEUES = [
 # Queues that should have visibility timeout (non-DLQ queues)
 QUEUES_WITH_VISIBILITY_TIMEOUT = [
     "webhook_ingress",
-    "cancellation",
+    # Note: cancellation removed - runners are ephemeral and self-terminate
     "ignored_events",
     "webhook_dlq",
     "drift_recovery",

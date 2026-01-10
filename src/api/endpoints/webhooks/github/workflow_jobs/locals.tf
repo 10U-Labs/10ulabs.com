@@ -19,11 +19,10 @@ locals {
   webhook_ingress_queue_name = "${module.common.lambda_handler_names.webhook}Ingress"
   webhook_ingress_dlq_name   = "${module.common.lambda_handler_names.webhook}IngressDlq"
   # Note: job_queue removed - routing logic moved to /v1/runners endpoint
-  ignored_events_queue_name   = "${module.common.lambda_handler_names.webhook}IgnoredEvents"
-  ignored_events_dlq_name     = "${module.common.lambda_handler_names.webhook}IgnoredEventsDlq"
-  cancellation_queue_name     = "${module.common.lambda_handler_names.webhook}Cancellations"
-  cancellation_queue_dlq_name = "${module.common.lambda_handler_names.webhook}CancellationsDlq"
-  webhook_dlq_name            = "${module.common.lambda_handler_names.webhook}Dlq"
+  ignored_events_queue_name = "${module.common.lambda_handler_names.webhook}IgnoredEvents"
+  ignored_events_dlq_name   = "${module.common.lambda_handler_names.webhook}IgnoredEventsDlq"
+  # Note: cancellation_queue removed - runners are ephemeral and self-terminate
+  webhook_dlq_name = "${module.common.lambda_handler_names.webhook}Dlq"
 
   # SSM parameter names
   ssm_parameter_name_for_webhook_secret = "/api/webhook-secret"
@@ -40,7 +39,7 @@ locals {
   spot_interruption_handler_function_name   = "${module.common.resource_prefix}SpotInterruptionHandler"
   stale_runner_cleanup_function_name        = "${module.common.resource_prefix}StaleRunnerCleanup"
   # Note: runner_starter removed - routing logic moved to /v1/runners endpoint
-  runner_terminator_function_name       = "${module.common.resource_prefix}RunnerTerminator"
+  # Note: runner_terminator removed - runners are ephemeral and self-terminate
   ignored_events_archiver_function_name = "${module.common.resource_prefix}IgnoredEventsArchiver"
 
   # IAM role names (single source of truth)
@@ -53,7 +52,7 @@ locals {
   spot_interruption_handler_role_name   = "${module.common.resource_prefix}SpotInterruptionHandlerRole"
   stale_runner_cleanup_role_name        = "${module.common.resource_prefix}StaleRunnerCleanupRole"
   # Note: runner_starter_role removed - routing logic moved to /v1/runners endpoint
-  runner_terminator_role_name       = "${module.common.resource_prefix}RunnerTerminatorRole"
+  # Note: runner_terminator_role removed - runners are ephemeral and self-terminate
   ignored_events_archiver_role_name = "${module.common.resource_prefix}IgnoredEventsArchiverRole"
   config_recorder_role_name         = "${module.common.resource_prefix}ConfigRecorderRole"
 

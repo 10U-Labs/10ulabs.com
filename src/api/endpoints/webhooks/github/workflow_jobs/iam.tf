@@ -73,7 +73,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_sqs" {
         ]
         Resource = [
           # Note: job_queue removed - routing logic moved to /v1/runners
-          aws_sqs_queue.cancellation.arn,
+          # Note: cancellation queue removed - runners are ephemeral and self-terminate
           aws_sqs_queue.webhook_dlq.arn,
           aws_sqs_queue.ignored_events.arn,
         ]
@@ -151,120 +151,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_kms" {
 }
 
 # Note: runner_starter IAM removed - routing logic moved to /v1/runners endpoint
-
-# Runner Terminator IAM
-resource "aws_iam_role" "runner_terminator" {
-  name = local.runner_terminator_role_name
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Service = "lambda.amazonaws.com"
-      }
-      Action = "sts:AssumeRole"
-    }]
-  })
-
-  tags = merge(local.common_tags, {
-    Name = local.runner_terminator_role_name
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "runner_terminator_basic" {
-  role       = aws_iam_role.runner_terminator.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-resource "aws_iam_role_policy_attachment" "runner_terminator_xray" {
-  role       = aws_iam_role.runner_terminator.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-}
-
-resource "aws_iam_role_policy" "runner_terminator_cloudwatch" {
-  name = "CloudWatchMetrics"
-  role = aws_iam_role.runner_terminator.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["cloudwatch:PutMetricData"]
-      Resource = ["*"]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "runner_terminator_sqs" {
-  name = "SQSAccess"
-  role = aws_iam_role.runner_terminator.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "sqs:ReceiveMessage",
-        "sqs:DeleteMessage",
-        "sqs:GetQueueAttributes"
-      ]
-      Resource = [aws_sqs_queue.cancellation.arn]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "runner_terminator_ecs" {
-  name = "ECSAccess"
-  role = aws_iam_role.runner_terminator.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "ecs:StopTask",
-        "ecs:ListTasks",
-        "ecs:DescribeTasks"
-      ]
-      Resource = ["*"]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "runner_terminator_ec2" {
-  name = "EC2Access"
-  role = aws_iam_role.runner_terminator.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "ec2:TerminateInstances",
-        "ec2:DescribeInstances"
-      ]
-      Resource = ["*"]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "runner_terminator_kms" {
-  name = "KMSDecrypt"
-  role = aws_iam_role.runner_terminator.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "kms:Decrypt",
-        "kms:DescribeKey"
-      ]
-      Resource = ["*"]
-    }]
-  })
-}
+# Note: runner_terminator IAM removed - runners are ephemeral and self-terminate
 
 # Ignored Events Archiver IAM
 resource "aws_iam_role" "ignored_events_archiver" {

@@ -95,11 +95,7 @@ class TestQueueNameLocals:
             "ignored_events_queue_name local not found"
         )
 
-    def test_cancellation_queue_name_defined(self, locals_tf_content):
-        """Verify cancellation_queue_name is defined."""
-        assert 'cancellation_queue_name' in locals_tf_content, (
-            "cancellation_queue_name local not found"
-        )
+    # Note: test_cancellation_queue_name_defined removed - runners are ephemeral
 
     def test_webhook_dlq_name_defined(self, locals_tf_content):
         """Verify webhook_dlq_name is defined."""
@@ -163,11 +159,7 @@ class TestFunctionNameLocals:
             "stale_runner_cleanup_function_name local not found"
         )
 
-    def test_runner_terminator_function_name_defined(self, locals_tf_content):
-        """Verify runner_terminator_function_name is defined."""
-        assert 'runner_terminator_function_name' in locals_tf_content, (
-            "runner_terminator_function_name local not found"
-        )
+    # Note: test_runner_terminator_function_name_defined removed - runners are ephemeral
 
     def test_ignored_events_archiver_function_name_defined(self, locals_tf_content):
         """Verify ignored_events_archiver_function_name is defined."""

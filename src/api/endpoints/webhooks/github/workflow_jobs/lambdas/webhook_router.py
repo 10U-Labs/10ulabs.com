@@ -211,31 +211,7 @@ def _enqueue_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str,
         return {"success": False, "error": str(err)}
 
 
-async def _enqueue_cancellation(cancellation_data: dict[str, Any]) -> dict[str, Any]:
-    """Enqueue a cancellation to the cancellation queue.
-
-    Returns:
-        Result dictionary with success status
-    """
-    queue_url = os.environ.get("CANCELLATION_QUEUE_URL")
-    if not queue_url:
-        logger.warning("CANCELLATION_QUEUE_URL not set, skipping cancellation enqueue")
-        return {"success": False, "error": "Cancellation queue not configured"}
-
-    try:
-        response = get_sqs_client().send_message(
-            QueueUrl=queue_url, MessageBody=json.dumps(cancellation_data)
-        )
-        logger.info(
-            "Enqueued cancellation to SQS: %s (job_id: %s, run_id: %s)",
-            response.get("MessageId"),
-            cancellation_data.get("job_id"),
-            cancellation_data.get("run_id"),
-        )
-        return {"success": True, "message_id": response.get("MessageId")}
-    except ClientError as err:
-        logger.error("Failed to enqueue cancellation: %s", str(err))
-        return {"success": False, "error": str(err)}
+# Note: _enqueue_cancellation removed - runners are ephemeral and self-terminate
 
 
 def _handle_workflow_run(event_data: dict[str, Any]) -> dict[str, Any]:
@@ -582,12 +558,7 @@ def _get_ingress_handler() -> IngressHandler:
             result = await _post_to_runners(job_data)
             return {"success": result.get("success", False)}
 
-        async def enqueue_cancellation(
-            self, cancellation_data: dict[str, Any]
-        ) -> dict[str, bool]:
-            """Enqueue cancellation to SQS."""
-            result = await _enqueue_cancellation(cancellation_data)
-            return {"success": result.get("success", False)}
+        # Note: enqueue_cancellation removed - runners are ephemeral and self-terminate
 
         def enqueue_ignored(self, payload: dict[str, Any], reason: str) -> None:
             """Enqueue ignored event to SQS."""
@@ -608,7 +579,6 @@ async def _async_handler(event: dict[str, Any]) -> dict[str, Any]:
 
     if is_sqs:
         # This Lambda handles webhook_ingress queue and forwards to /v1/runners
-        # cancellation_queue is handled by runner_terminator Lambda
         logger.info("Processing SQS event from webhook_ingress queue")
 
         ingress_handler = _get_ingress_handler()

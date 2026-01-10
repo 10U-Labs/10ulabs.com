@@ -37,7 +37,7 @@ def router_module_fixture():
         'IDEMPOTENCY_TABLE_NAME': 'test-idempotency-table',
         'JOB_QUEUE_URL': 'https://sqs.us-east-2.amazonaws.com/123456789/test-queue',
         'IGNORED_EVENTS_QUEUE_URL': 'https://sqs.us-east-2.amazonaws.com/123456789/ignored-queue',
-        'CANCELLATION_QUEUE_URL': 'https://sqs.us-east-2.amazonaws.com/123456789/cancel-queue',
+        # Note: CANCELLATION_QUEUE_URL removed - runners are ephemeral and self-terminate
         'API_BASE_URL': 'https://api.example.com',
         'API_KEY_PARAMETER_NAME': '/test/api-key',
     }
@@ -343,34 +343,7 @@ class TestEnqueueIgnoredEvent:
             assert result["success"] is False
 
 
-class TestEnqueueCancellation:
-    """Tests for _enqueue_cancellation function."""
-
-    def test_returns_success_on_send(self, router_module):
-        """Test that successful send returns success."""
-        mock_sqs = MagicMock()
-        mock_sqs.send_message.return_value = {"MessageId": "cancel-123"}
-        with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
-            result = _run_async(router_module._enqueue_cancellation({"job_id": 123, "run_id": 456}))
-            assert result["success"] is True
-
-    def test_returns_error_when_queue_url_not_set(self, router_module):
-        """Test that missing queue URL returns error."""
-        with patch.dict('os.environ', {'CANCELLATION_QUEUE_URL': ''}):
-            result = _run_async(router_module._enqueue_cancellation({"job_id": 123}))
-            assert result["success"] is False
-
-    def test_returns_error_on_sqs_failure(self, router_module):
-        """Test that SQS failure returns error."""
-        from botocore.exceptions import ClientError
-        mock_sqs = MagicMock()
-        mock_sqs.send_message.side_effect = ClientError(
-            {"Error": {"Code": "AccessDenied", "Message": "denied"}},
-            "SendMessage"
-        )
-        with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
-            result = _run_async(router_module._enqueue_cancellation({"job_id": 123}))
-            assert result["success"] is False
+# Note: TestEnqueueCancellation removed - runners are ephemeral and self-terminate
 
 
 class TestHandleWorkflowRun:
@@ -818,15 +791,7 @@ class TestIngressDeps:
             result = _run_async(deps.enqueue_job({"job": "data"}))
             assert result["success"] is True
 
-    def test_ingress_deps_enqueue_cancellation(self, router_module):
-        """Test IngressDeps.enqueue_cancellation calls _enqueue_cancellation."""
-        async def mock_enqueue(*args, **kwargs):
-            return {"success": True}
-        with patch.object(router_module, '_enqueue_cancellation', side_effect=mock_enqueue):
-            handler = router_module._get_ingress_handler()
-            deps = handler.get_deps()
-            result = _run_async(deps.enqueue_cancellation({"cancel": "data"}))
-            assert result["success"] is True
+    # Note: test_ingress_deps_enqueue_cancellation removed - runners are ephemeral
 
     def test_ingress_deps_enqueue_ignored(self, router_module):
         """Test IngressDeps.enqueue_ignored calls _enqueue_ignored_event."""

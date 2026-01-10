@@ -15,11 +15,7 @@ LAMBDA_FUNCTIONS = [
         "handler": "webhook_router.lambda_handler",
         "description_contains": "webhook",
     },
-    {
-        "resource_name": "runner_terminator",
-        "handler": "runner_terminator.lambda_handler",
-        "description_contains": "terminator",
-    },
+    # Note: runner_terminator removed - runners are ephemeral and self-terminate
     {
         "resource_name": "ignored_events_archiver",
         "handler": "ignored_events_archiver.lambda_handler",
@@ -198,12 +194,7 @@ class TestLambdaEventSourceMappings:
             "SQS event source mapping for runners_handler not found"
         )
 
-    def test_runner_terminator_has_sqs_trigger(self, lambda_tf_content):
-        """Verify runner_terminator has SQS event source mapping."""
-        pattern = r'resource\s+"aws_lambda_event_source_mapping"\s+"runner_terminator_sqs"'
-        assert re.search(pattern, lambda_tf_content), (
-            "SQS event source mapping for runner_terminator not found"
-        )
+    # Note: test_runner_terminator_has_sqs_trigger removed - runners are ephemeral
 
     def test_ignored_events_archiver_has_sqs_trigger(self, lambda_tf_content):
         """Verify ignored_events_archiver has SQS event source mapping."""
@@ -221,7 +212,7 @@ class TestLambdaEnvironmentVariables:
         required_vars = [
             "API_BASE_URL",
             "API_KEY_PARAMETER_NAME",
-            "CANCELLATION_QUEUE_URL",
+            # Note: CANCELLATION_QUEUE_URL removed - runners are ephemeral
             "CIRCUIT_BREAKER_TABLE_NAME",
             "GITHUB_REPO",
             "GITHUB_TOKEN_SECRET_NAME",

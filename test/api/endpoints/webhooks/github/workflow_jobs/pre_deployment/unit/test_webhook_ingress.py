@@ -89,7 +89,6 @@ class TestIngressHandler:
         deps.check_idempotency = AsyncMock(return_value=False)
         deps.get_runner_type = MagicMock(return_value=("ec2", "m5.large"))
         deps.enqueue_job = AsyncMock(return_value={"success": True})
-        deps.enqueue_cancellation = AsyncMock(return_value={"success": True})
         deps.enqueue_ignored = MagicMock()
         return deps
 
@@ -117,7 +116,6 @@ class TestIngressHandlerHandle:
         deps.check_idempotency = AsyncMock(return_value=False)
         deps.get_runner_type = MagicMock(return_value=("ec2", "m5.large"))
         deps.enqueue_job = AsyncMock(return_value={"success": True})
-        deps.enqueue_cancellation = AsyncMock(return_value={"success": True})
         deps.enqueue_ignored = MagicMock()
         return deps
 
@@ -150,7 +148,10 @@ class TestIngressHandlerHandle:
         mock_deps.enqueue_job.assert_called_once()
 
     def test_handle_workflow_job_cancelled(self, handler, mock_deps):
-        """Test handling a workflow_job with action=cancelled."""
+        """Test handling a workflow_job with action=cancelled is ignored.
+
+        Runners are ephemeral and self-terminate, so no termination action needed.
+        """
         record = {
             "body": json.dumps({
                 "action": "cancelled",
@@ -169,11 +170,14 @@ class TestIngressHandlerHandle:
         }
         result = _run_async(handler.handle(record))
         assert result["success"] is True
-        assert result["routed"] == "cancellation_queue"
-        mock_deps.enqueue_cancellation.assert_called_once()
+        assert result["routed"] == "ignored_events"
+        mock_deps.enqueue_ignored.assert_called_once()
 
     def test_handle_workflow_job_completed(self, handler, mock_deps):
-        """Test handling a workflow_job with action=completed."""
+        """Test handling a workflow_job with action=completed is ignored.
+
+        Runners are ephemeral and self-terminate, so no termination action needed.
+        """
         record = {
             "body": json.dumps({
                 "action": "completed",
@@ -192,7 +196,7 @@ class TestIngressHandlerHandle:
         }
         result = _run_async(handler.handle(record))
         assert result["success"] is True
-        assert result["routed"] == "cancellation_queue"
+        assert result["routed"] == "ignored_events"
 
     def test_handle_workflow_job_in_progress_ignored(self, handler, mock_deps):
         """Test handling a workflow_job with action=in_progress is ignored."""
@@ -431,27 +435,7 @@ class TestIngressHandlerHandle:
         result = _run_async(handler.handle(record))
         assert result["success"] is False
 
-    def test_handle_enqueue_cancellation_failure(self, handler, mock_deps):
-        """Test handling when enqueue_cancellation fails."""
-        mock_deps.enqueue_cancellation.return_value = {"success": False}
-        record = {
-            "body": json.dumps({
-                "action": "cancelled",
-                "workflow_job": {
-                    "id": 123,
-                    "run_id": 456,
-                    "runner_name": "runner-1"
-                },
-                "repository": {"full_name": "org/repo"}
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
-        result = _run_async(handler.handle(record))
-        assert result["success"] is False
+    # Note: test_handle_enqueue_cancellation_failure removed - runners are ephemeral
 
     def test_handle_empty_body(self, handler, mock_deps):
         """Test handling an empty body."""

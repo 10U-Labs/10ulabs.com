@@ -19,14 +19,7 @@ resource "aws_cloudwatch_log_subscription_filter" "runners_handler" {
   role_arn        = local.firehose_role_arn
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "runner_terminator" {
-  count           = local.create_subscriptions ? 1 : 0
-  name            = "runner-terminator-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.runner_terminator.name
-  filter_pattern  = ""
-  destination_arn = local.firehose_arn
-  role_arn        = local.firehose_role_arn
-}
+# Note: runner_terminator log subscription removed - runners are ephemeral and self-terminate
 
 resource "aws_cloudwatch_log_subscription_filter" "circuit_breaker_recovery" {
   count           = local.create_subscriptions ? 1 : 0

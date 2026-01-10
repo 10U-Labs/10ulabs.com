@@ -56,10 +56,7 @@ class IngressDeps(Protocol):
     async def enqueue_job(self, job_data: dict[str, Any]) -> dict[str, bool]:
         """Enqueue a job for processing."""
 
-    async def enqueue_cancellation(
-        self, cancellation_data: dict[str, Any]
-    ) -> dict[str, bool]:
-        """Enqueue a cancellation event."""
+    # Note: enqueue_cancellation removed - runners are ephemeral and self-terminate
 
     def enqueue_ignored(self, payload: dict[str, Any], reason: str) -> None:
         """Enqueue an ignored event for archival."""
@@ -110,26 +107,8 @@ class IngressHandler:
         """Route a workflow_job event to the appropriate queue."""
         action = payload.get("action")
 
-        # Route cancelled/completed actions to cancellation queue
-        if action in ("cancelled", "completed"):
-            job = payload.get("workflow_job", {})
-            cancellation_data = {
-                "action": action,
-                "job_id": job.get("id"),
-                "run_id": job.get("run_id"),
-                "runner_name": job.get("runner_name"),
-                "github_repo": payload.get("repository", {}).get("full_name"),
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            }
-            logger.info(
-                "Routing %s workflow_job to cancellation queue: job_id=%s, run_id=%s",
-                action,
-                job.get("id"),
-                job.get("run_id"),
-            )
-            result = await self._deps.enqueue_cancellation(cancellation_data)
-            return {"success": result.get("success", False), "routed": "cancellation_queue"}
-
+        # Only handle 'queued' action - runners are ephemeral and self-terminate
+        # so we don't need to handle completed/cancelled actions
         if action != "queued":
             logger.info("Ignoring workflow_job action '%s'", action)
             self._deps.enqueue_ignored(payload, f"workflow_job action {action} ignored")

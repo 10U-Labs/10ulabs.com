@@ -29,7 +29,7 @@ LAMBDA_TF_PATH = RUNNERS_SRC_PATH / "lambda.tf"
 # Format: (tf_resource_name, python_file, expected_handler_function)
 LAMBDA_DEFINITIONS = [
     ("runners_handler", "webhook_router.py", "lambda_handler"),
-    ("runner_terminator", "runner_terminator.py", "lambda_handler"),
+    # Note: runner_terminator removed - runners are ephemeral and self-terminate
     ("ignored_events_archiver", "ignored_events_archiver.py", "lambda_handler"),
     ("circuit_breaker_reset", "circuit_breaker_reset.py", "lambda_handler"),
     ("circuit_breaker_remediation", "circuit_breaker_remediation.py", "lambda_handler"),
