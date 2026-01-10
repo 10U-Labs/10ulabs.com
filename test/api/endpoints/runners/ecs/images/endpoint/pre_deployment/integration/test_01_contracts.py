@@ -28,10 +28,8 @@ class TestHandlerFileContract:
     def test_handler_file_is_valid_python(self):
         """Verify handler.py is valid Python syntax."""
         content = HANDLER_PATH.read_text()
-        try:
-            ast.parse(content)
-        except SyntaxError as e:
-            pytest.fail(f"Handler file has syntax error: {e}")
+        tree = ast.parse(content)
+        assert tree is not None
 
 
 class TestHandlerExportsContract:
