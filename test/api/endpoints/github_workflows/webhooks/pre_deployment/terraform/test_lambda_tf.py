@@ -96,17 +96,17 @@ class TestLambdaHandlerConfiguration:
         # Find the Lambda resource block and extract handler
         resource_pattern = rf'resource\s+"aws_lambda_function"\s+"{lambda_config["resource_name"]}"\s*\{{'
         match = re.search(resource_pattern, lambda_tf_content)
-        assert match, f"Lambda resource '{lambda_config['resource_name']}' not found"
 
-        # Extract handler from the block
-        start_pos = match.end()
-        handler_pattern = r'handler\s*=\s*"([^"]+)"'
-        handler_match = re.search(handler_pattern, lambda_tf_content[start_pos:start_pos+2000])
-        assert handler_match, f"Handler not found for '{lambda_config['resource_name']}'"
-        assert handler_match.group(1) == lambda_config["handler"], (
-            f"Handler mismatch for '{lambda_config['resource_name']}': "
-            f"expected '{lambda_config['handler']}', got '{handler_match.group(1)}'"
-        )
+        # Extract handler from the block if match found
+        handler_value = None
+        if match:
+            start_pos = match.end()
+            handler_pattern = r'handler\s*=\s*"([^"]+)"'
+            handler_match = re.search(handler_pattern, lambda_tf_content[start_pos:start_pos+2000])
+            if handler_match:
+                handler_value = handler_match.group(1)
+
+        assert match and handler_value == lambda_config["handler"]
 
 
 class TestLambdaRuntimeConfiguration:
@@ -176,12 +176,14 @@ class TestLambdaIAMConfiguration:
         """Verify Lambda references an IAM role."""
         resource_pattern = rf'resource\s+"aws_lambda_function"\s+"{lambda_config["resource_name"]}"\s*\{{'
         match = re.search(resource_pattern, lambda_tf_content)
-        assert match, f"Lambda resource '{lambda_config['resource_name']}' not found"
 
-        start_pos = match.end()
-        role_pattern = r'role\s*=\s*aws_iam_role\.\w+\.arn'
-        role_match = re.search(role_pattern, lambda_tf_content[start_pos:start_pos+2000])
-        assert role_match, f"IAM role reference not found for '{lambda_config['resource_name']}'"
+        role_match = None
+        if match:
+            start_pos = match.end()
+            role_pattern = r'role\s*=\s*aws_iam_role\.\w+\.arn'
+            role_match = re.search(role_pattern, lambda_tf_content[start_pos:start_pos+2000])
+
+        assert match and role_match
 
 
 class TestLambdaEventSourceMappings:
