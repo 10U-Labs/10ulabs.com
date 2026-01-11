@@ -108,7 +108,7 @@ def cloudwatch_logs_firehose_role_name(shared_config):
     depends on for subscription filters.
     """
     prefix = shared_config.get('resource_prefix', 'TenULabs')
-    return f"{prefix}-CloudWatchLogsFirehose"
+    return f"{prefix}CloudWatchLogsFirehose"
 
 
 @pytest.fixture(scope="session")
