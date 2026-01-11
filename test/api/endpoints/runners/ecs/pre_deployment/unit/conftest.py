@@ -140,3 +140,10 @@ def create_mock_ecs_for_status(task_arns=None):
 def ecs_runner_src_dir():
     """Provide the ECS runner source directory path."""
     return ECS_RUNNER_SRC
+
+
+@pytest.fixture(name='fargate_ops_module')
+def fixture_fargate_ops(ecs_runner_handler) -> ModuleType:
+    """Get fargate_ops module after handler has loaded it into sys.modules."""
+    _ = ecs_runner_handler
+    return sys.modules['fargate_ops']

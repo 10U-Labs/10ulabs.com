@@ -653,19 +653,19 @@ def test_wait_for_fargate_task_provisioned_returns_on_unknown_status(ecs_runner_
         assert result['success'] is False
 
 
-def test_get_capacity_provider_uses_spot_from_labels(ecs_runner_handler):
+def test_get_capacity_provider_uses_spot_from_labels(fargate_ops_module):
     """Test _get_capacity_provider returns FARGATE_SPOT when labels specify spot."""
-    import fargate_ops
     # Valid label set: platform=ecs, compute=fargate, arch=x86, pricing=spot, runner-id
-    result = fargate_ops._get_capacity_provider(['ecs', 'fargate', 'x86', 'spot', 'runner-12345'])
+    result = fargate_ops_module._get_capacity_provider(
+        ['ecs', 'fargate', 'x86', 'spot', 'runner-12345']
+    )
     assert result == 'FARGATE_SPOT'
 
 
-def test_get_capacity_provider_uses_on_demand_from_labels(ecs_runner_handler):
+def test_get_capacity_provider_uses_on_demand_from_labels(fargate_ops_module):
     """Test _get_capacity_provider returns FARGATE when labels don't specify spot."""
-    import fargate_ops
     # Valid label set: platform=ecs, compute=fargate, arch=x86, pricing=on-demand, runner-id
-    result = fargate_ops._get_capacity_provider(
+    result = fargate_ops_module._get_capacity_provider(
         ['ecs', 'fargate', 'x86', 'on-demand', 'runner-12345']
     )
     assert result == 'FARGATE'
@@ -812,9 +812,8 @@ def test_launch_fargate_runner_returns_runner_name_on_reuse(mock_boto_client, ec
             assert result.get('runner_name') == 'existing-runner-name'
 
 
-def test_try_launch_in_subnet_handles_capacity_failure(ecs_runner_handler):
+def test_try_launch_in_subnet_handles_capacity_failure(fargate_ops_module):
     """Test _try_launch_in_subnet handles capacity failure."""
-    import fargate_ops
     mock_ecs = MagicMock()
     mock_ecs.run_task.return_value = {
         'tasks': [],
@@ -828,13 +827,14 @@ def test_try_launch_in_subnet_handles_capacity_failure(ecs_runner_handler):
                 'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate',
                 'github_token': 'gh-token'
             }
-            result = fargate_ops._try_launch_in_subnet(cfg, 'subnet-1', 'test-cluster')
+            result = fargate_ops_module._try_launch_in_subnet(
+                cfg, 'subnet-1', 'test-cluster'
+            )
             assert result['retry'] is True
 
 
-def test_try_launch_in_subnet_handles_non_capacity_failure(ecs_runner_handler):
+def test_try_launch_in_subnet_handles_non_capacity_failure(fargate_ops_module):
     """Test _try_launch_in_subnet handles non-capacity failures."""
-    import fargate_ops
     mock_ecs = MagicMock()
     mock_ecs.run_task.return_value = {
         'tasks': [],
@@ -848,13 +848,14 @@ def test_try_launch_in_subnet_handles_non_capacity_failure(ecs_runner_handler):
                 'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate',
                 'github_token': 'gh-token'
             }
-            result = fargate_ops._try_launch_in_subnet(cfg, 'subnet-1', 'test-cluster')
+            result = fargate_ops_module._try_launch_in_subnet(
+                cfg, 'subnet-1', 'test-cluster'
+            )
             assert result['success'] is False
 
 
-def test_try_launch_in_subnet_handles_spot_interruption(ecs_runner_handler):
+def test_try_launch_in_subnet_handles_spot_interruption(fargate_ops_module):
     """Test _try_launch_in_subnet handles spot interruption."""
-    import fargate_ops
     mock_ecs = MagicMock()
     mock_ecs.run_task.return_value = {
         'tasks': [{'taskArn': 'arn:aws:ecs:us-east-1:123:task/test'}]
@@ -863,19 +864,21 @@ def test_try_launch_in_subnet_handles_spot_interruption(ecs_runner_handler):
     interrupted_result = {'success': False, 'spot_interrupted': True, 'status': 'STOPPED'}
     with patch('fargate_ops.get_ecs_client', return_value=mock_ecs):
         with patch.dict('os.environ', env):
-            with patch('fargate_ops.wait_for_fargate_task_provisioned', return_value=interrupted_result):
+            with patch('fargate_ops.wait_for_fargate_task_provisioned',
+                       return_value=interrupted_result):
                 cfg = {
                     'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
                     'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate',
                     'github_token': 'gh-token'
                 }
-                result = fargate_ops._try_launch_in_subnet(cfg, 'subnet-1', 'test-cluster')
+                result = fargate_ops_module._try_launch_in_subnet(
+                    cfg, 'subnet-1', 'test-cluster'
+                )
                 assert result['spot_interrupted'] is True
 
 
-def test_try_launch_in_subnet_handles_client_error(ecs_runner_handler):
+def test_try_launch_in_subnet_handles_client_error(fargate_ops_module):
     """Test _try_launch_in_subnet handles ClientError."""
-    import fargate_ops
     mock_ecs = MagicMock()
     mock_ecs.run_task.side_effect = ClientError(
         {'Error': {'Code': 'TestError', 'Message': 'Test'}}, 'run_task'
@@ -888,13 +891,14 @@ def test_try_launch_in_subnet_handles_client_error(ecs_runner_handler):
                 'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate',
                 'github_token': 'gh-token'
             }
-            result = fargate_ops._try_launch_in_subnet(cfg, 'subnet-1', 'test-cluster')
+            result = fargate_ops_module._try_launch_in_subnet(
+                cfg, 'subnet-1', 'test-cluster'
+            )
             assert result['success'] is False
 
 
-def test_try_launch_fargate_task_no_subnets_remaining(ecs_runner_handler):
+def test_try_launch_fargate_task_no_subnets_remaining(fargate_ops_module):
     """Test _try_launch_fargate_task when no subnets remaining."""
-    import fargate_ops
     env = create_fargate_runner_env()
     env['SUBNETS'] = 'subnet-1'
     interrupted_result = {'success': False, 'spot_interrupted': True, 'retry': True}
@@ -904,16 +908,16 @@ def test_try_launch_fargate_task_no_subnets_remaining(ecs_runner_handler):
                 'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
                 'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate'
             }
-            result = fargate_ops._try_launch_fargate_task(cfg)
+            result = fargate_ops_module._try_launch_fargate_task(cfg)
             assert result['success'] is False
 
 
-def test_try_launch_fargate_task_retries_on_spot_interruption(ecs_runner_handler):
+def test_try_launch_fargate_task_retries_on_spot_interruption(fargate_ops_module):
     """Test _try_launch_fargate_task retries after spot interruption."""
-    import fargate_ops
     env = create_fargate_runner_env()
     env['SUBNETS'] = 'subnet-1,subnet-2'
     call_count = [0]
+
     def mock_launch(cfg, subnet, cluster):
         call_count[0] += 1
         if call_count[0] == 1:
@@ -925,13 +929,12 @@ def test_try_launch_fargate_task_retries_on_spot_interruption(ecs_runner_handler
                 'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
                 'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate'
             }
-            result = fargate_ops._try_launch_fargate_task(cfg)
+            result = fargate_ops_module._try_launch_fargate_task(cfg)
             assert result['success'] is True
 
 
-def test_try_launch_fargate_task_exhausts_retries(ecs_runner_handler):
+def test_try_launch_fargate_task_exhausts_retries(fargate_ops_module):
     """Test _try_launch_fargate_task exhausts retries on repeated failures."""
-    import fargate_ops
     env = create_fargate_runner_env()
     env['SUBNETS'] = 'subnet-1,subnet-2,subnet-3'
     retry_result = {'success': False, 'retry': True, 'error': 'Capacity unavailable'}
@@ -941,7 +944,7 @@ def test_try_launch_fargate_task_exhausts_retries(ecs_runner_handler):
                 'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
                 'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate'
             }
-            result = fargate_ops._try_launch_fargate_task(cfg)
+            result = fargate_ops_module._try_launch_fargate_task(cfg)
             assert result['success'] is False
 
 
@@ -1073,12 +1076,12 @@ def test_get_header_case_insensitive_returns_empty_for_missing_header(ecs_runner
     assert result == ''
 
 
-def test_try_launch_fargate_task_logs_retry_on_spot_interruption(ecs_runner_handler):
+def test_try_launch_fargate_task_logs_retry_on_spot_interruption(fargate_ops_module):
     """Test _try_launch_fargate_task logs retry info after spot interruption."""
-    import fargate_ops
     env = create_fargate_runner_env()
     env['SUBNETS'] = 'subnet-1,subnet-2'
     call_count = [0]
+
     def mock_launch(cfg, subnet, cluster):
         call_count[0] += 1
         if call_count[0] == 1:
@@ -1092,13 +1095,12 @@ def test_try_launch_fargate_task_logs_retry_on_spot_interruption(ecs_runner_hand
                 'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
                 'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate'
             }
-            result = fargate_ops._try_launch_fargate_task(cfg)
+            result = fargate_ops_module._try_launch_fargate_task(cfg)
             assert result['success'] is False
 
 
-def test_try_launch_fargate_task_returns_error_on_non_retryable_failure(ecs_runner_handler):
+def test_try_launch_fargate_task_returns_error_on_non_retryable_failure(fargate_ops_module):
     """Test _try_launch_fargate_task returns error immediately on non-retryable failure."""
-    import fargate_ops
     env = create_fargate_runner_env()
     env['SUBNETS'] = 'subnet-1,subnet-2'
     failure_result = {'success': False, 'retry': False, 'error': 'Permission denied'}
@@ -1108,5 +1110,5 @@ def test_try_launch_fargate_task_returns_error_on_non_retryable_failure(ecs_runn
                 'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo',
                 'registration_token': 'token', 'run_id': None, 'runner_type': 'fargate'
             }
-            result = fargate_ops._try_launch_fargate_task(cfg)
+            result = fargate_ops_module._try_launch_fargate_task(cfg)
             assert result['error'] == 'Permission denied'

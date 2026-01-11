@@ -104,10 +104,7 @@ jobs:
           python3 -m mypy lib/python/ $SRC/lambda/
       - name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python
-          MYPYPATH=$MYPYPATH:src/api/endpoints/runners/lambda
-          MYPYPATH=$MYPYPATH:src/api/endpoints/runners/ecs/lambda
-          MYPYPATH=$MYPYPATH python3 -m mypy lib/python/ test/
+          MYPYPATH=lib/python python3 -m mypy lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
