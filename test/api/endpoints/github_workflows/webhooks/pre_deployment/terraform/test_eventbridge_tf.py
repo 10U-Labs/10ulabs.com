@@ -97,18 +97,18 @@ class TestScheduledRules:
         # Find the rule resource block
         rule_pattern = rf'resource\s+"aws_cloudwatch_event_rule"\s+"{rule_name}"'
         match = re.search(rule_pattern, eventbridge_tf_content)
-        assert match, f"Rule '{rule_name}' not found"
 
         # Look for schedule_expression in the block
-        start_pos = match.end()
-        block_end = eventbridge_tf_content.find('\nresource', start_pos)
-        if block_end == -1:
-            block_end = len(eventbridge_tf_content)
-        block = eventbridge_tf_content[start_pos:block_end]
+        if match:
+            start_pos = match.end()
+            block_end = eventbridge_tf_content.find('\nresource', start_pos)
+            if block_end == -1:
+                block_end = len(eventbridge_tf_content)
+            block = eventbridge_tf_content[start_pos:block_end]
+        else:
+            block = ""
 
-        assert 'schedule_expression' in block, (
-            f"Schedule expression not found for rule '{rule_name}'"
-        )
+        assert match and 'schedule_expression' in block
 
     def test_dlq_reprocessor_runs_periodically(self, eventbridge_tf_content):
         """Verify DLQ reprocessor runs on a schedule."""
@@ -131,44 +131,29 @@ class TestEventPatternRules:
         """Verify event pattern rules have event_pattern defined."""
         rule_pattern = rf'resource\s+"aws_cloudwatch_event_rule"\s+"{rule_name}"'
         match = re.search(rule_pattern, eventbridge_tf_content)
-        assert match, f"Rule '{rule_name}' not found"
 
-        start_pos = match.end()
-        block_end = eventbridge_tf_content.find('\nresource', start_pos)
-        if block_end == -1:
-            block_end = len(eventbridge_tf_content)
-        block = eventbridge_tf_content[start_pos:block_end]
+        if match:
+            start_pos = match.end()
+            block_end = eventbridge_tf_content.find('\nresource', start_pos)
+            if block_end == -1:
+                block_end = len(eventbridge_tf_content)
+            block = eventbridge_tf_content[start_pos:block_end]
+        else:
+            block = ""
 
-        assert 'event_pattern' in block, (
-            f"Event pattern not found for rule '{rule_name}'"
-        )
+        assert match and 'event_pattern' in block
 
     def test_circuit_breaker_remediation_listens_to_cloudwatch(self, eventbridge_tf_content):
         """Verify circuit breaker remediation listens to CloudWatch alarm changes."""
-        assert '"aws.cloudwatch"' in eventbridge_tf_content, (
-            "Circuit breaker remediation should listen to aws.cloudwatch events"
-        )
-        assert '"CloudWatch Alarm State Change"' in eventbridge_tf_content, (
-            "Circuit breaker remediation should listen to alarm state changes"
-        )
+        assert '"aws.cloudwatch"' in eventbridge_tf_content and '"CloudWatch Alarm State Change"' in eventbridge_tf_content
 
     def test_ecs_task_stopped_listens_to_ecs(self, eventbridge_tf_content):
         """Verify ECS task stopped rule listens to ECS events."""
-        assert '"aws.ecs"' in eventbridge_tf_content, (
-            "ECS task stopped rule should listen to aws.ecs events"
-        )
-        assert '"ECS Task State Change"' in eventbridge_tf_content, (
-            "ECS task stopped rule should listen to ECS Task State Change events"
-        )
+        assert '"aws.ecs"' in eventbridge_tf_content and '"ECS Task State Change"' in eventbridge_tf_content
 
     def test_ec2_spot_interruption_listens_to_ec2(self, eventbridge_tf_content):
         """Verify EC2 spot interruption rule listens to EC2 events."""
-        assert '"aws.ec2"' in eventbridge_tf_content, (
-            "EC2 spot interruption rule should listen to aws.ec2 events"
-        )
-        assert '"EC2 Spot Instance Interruption Warning"' in eventbridge_tf_content, (
-            "EC2 spot interruption rule should listen to spot interruption warnings"
-        )
+        assert '"aws.ec2"' in eventbridge_tf_content and '"EC2 Spot Instance Interruption Warning"' in eventbridge_tf_content
 
 
 class TestEventBridgeNamingConventions:

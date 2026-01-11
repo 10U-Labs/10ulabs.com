@@ -42,12 +42,7 @@ class TestIAMAssumeRolePolicy:
     def test_role_allows_lambda_assume(self, iam_tf_content, role_name):
         """Verify IAM role allows Lambda service to assume it."""
         # All Lambda roles should allow lambda.amazonaws.com to assume
-        assert '"lambda.amazonaws.com"' in iam_tf_content, (
-            "Lambda service principal not found in assume role policy"
-        )
-        assert '"sts:AssumeRole"' in iam_tf_content, (
-            "sts:AssumeRole action not found in assume role policy"
-        )
+        assert '"lambda.amazonaws.com"' in iam_tf_content and '"sts:AssumeRole"' in iam_tf_content
 
 
 class TestIAMBasicExecutionPolicy:
@@ -112,21 +107,11 @@ class TestIAMDynamoDBPermissions:
 
     def test_dynamodb_read_permissions_exist(self, iam_tf_content):
         """Verify DynamoDB read permissions are granted."""
-        assert '"dynamodb:GetItem"' in iam_tf_content, (
-            "DynamoDB GetItem permission not found"
-        )
-        assert '"dynamodb:Query"' in iam_tf_content, (
-            "DynamoDB Query permission not found"
-        )
+        assert '"dynamodb:GetItem"' in iam_tf_content and '"dynamodb:Query"' in iam_tf_content
 
     def test_dynamodb_write_permissions_exist(self, iam_tf_content):
         """Verify DynamoDB write permissions are granted."""
-        assert '"dynamodb:PutItem"' in iam_tf_content, (
-            "DynamoDB PutItem permission not found"
-        )
-        assert '"dynamodb:UpdateItem"' in iam_tf_content, (
-            "DynamoDB UpdateItem permission not found"
-        )
+        assert '"dynamodb:PutItem"' in iam_tf_content and '"dynamodb:UpdateItem"' in iam_tf_content
 
 
 class TestIAMCloudWatchPermissions:
