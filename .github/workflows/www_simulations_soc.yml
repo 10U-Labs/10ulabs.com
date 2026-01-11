@@ -6,6 +6,10 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     name: Deploy SoC simulations frontend
+    permissions:
+      actions: write
+      contents: read
+      id-token: write
     runs-on: >-
       ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -18,58 +22,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - continue-on-error: true
-        id: no_linter_configs_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert no linter config files (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
-        with:
-          directories: ${{ github.workspace }}
-          linters: pylint,mypy,yamllint
-          verbose: true
-      - continue-on-error: true
-        id: no_linter_configs_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert no linter config files (self-hosted)
-        run: >-
-          assert-no-linter-config-files
-          --linters pylint,mypy,yamllint
-          --verbose
-          ${{ github.workspace }}
-      - continue-on-error: true
-        id: no_inline_disables_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert no inline lint disables (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-no-inline-directives@latest
-        with:
-          files: ${{ github.workspace }}/**/*
-          tools: pylint,mypy,yamllint
-          verbose: true
-      - continue-on-error: true
-        id: no_inline_disables_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert no inline lint disables (self-hosted)
-        run: >-
-          assert-no-inline-directives
-          --tools pylint,mypy,yamllint
-          --verbose
-          ${{ github.workspace }}/**/*
-      - continue-on-error: true
-        id: one_assert_per_pytest_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert one assert per pytest (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-one-assert-per-pytest@latest
-        with:
-          files: ${{ github.workspace }}/test/**/*.py
-          verbose: true
-      - continue-on-error: true
-        id: one_assert_per_pytest_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert one assert per pytest (self-hosted)
-        run: >-
-          assert-one-assert-per-pytest
-          --verbose
-          ${{ github.workspace }}/test
       - name: Verify OIDC variables
         uses: ./.github/actions/verify-oidc-vars
         with:
@@ -95,10 +47,28 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
+            assert-no-inline-directives \
+            assert-no-linter-config-files \
+            assert-one-assert-per-pytest \
             yamllint
-      - continue-on-error: true
-        id: yamllint
-        name: Linting YAML files
+      - name: Assert no linter config files
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+      - name: Assert no inline lint disables
+        run: >-
+          assert-no-inline-directives
+          --tools pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
+      - name: Assert one assert per pytest
+        run: >-
+          assert-one-assert-per-pytest
+          --verbose
+          ${{ github.workspace }}/test
+      - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -128,17 +98,13 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
-      - continue-on-error: true
-        id: get_bucket
-        name: Get website bucket name
+      - name: Get website bucket name
         run: |
           terraform -chdir=src/www/common init \
             -backend=true -input=false > /dev/null
           BUCKET_NAME=$(terraform -chdir=src/www/common output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
-      - continue-on-error: true
-        id: sync_s3
-        name: Sync frontend to S3
+      - name: Sync frontend to S3
         run: |
           aws s3 sync src/www/paths/simulations/soc/ \
             s3://${{ env.BUCKET_NAME }}/simulations/soc/ \
@@ -146,8 +112,7 @@ jobs:
             --cache-control no-cache \
             --storage-class ONEZONE_IA \
             --exclude ".gitkeep"
-      - continue-on-error: true
-        id: check_files
+      - id: check_files
         name: Check if frontend files changed
         run: |
           set -e
@@ -163,9 +128,7 @@ jobs:
             else
               echo "changed=false" >> $GITHUB_OUTPUT
             fi
-      - continue-on-error: true
-        id: invalidate_cloudfront
-        if: >-
+      - if: >-
           github.event.inputs.invalidate_cloudfront == 'true' ||
           contains(github.event.head_commit.message,
           '[invalidate cloudfront]') ||
@@ -178,37 +141,6 @@ jobs:
             --fqdn "$WEBSITE_FQDN" \
             --region ${{ vars.AWS_REGION }} \
             --paths "/simulations/soc/*"
-      - env:
-          S02: ${{ steps.no_linter_configs_sh.outcome }}
-          S03: ${{ steps.no_inline_disables_gh.outcome }}
-          S04: ${{ steps.no_inline_disables_sh.outcome }}
-          S05: ${{ steps.one_assert_per_pytest_gh.outcome }}
-          S06: ${{ steps.one_assert_per_pytest_sh.outcome }}
-          S07: ${{ steps.yamllint.outcome }}
-          S08: ${{ steps.get_bucket.outcome }}
-          S09: ${{ steps.sync_s3.outcome }}
-          S10: ${{ steps.check_files.outcome }}
-          S11: ${{ steps.invalidate_cloudfront.outcome }}
-        name: Assert no step failed
-        run: |
-          failed=""
-          f="failure"
-          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
-          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
-          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
-          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
-          [ "$S05" = "$f" ] && failed="$failed one_assert_per_pytest_gh"
-          [ "$S06" = "$f" ] && failed="$failed one_assert_per_pytest_sh"
-          [ "$S07" = "$f" ] && failed="$failed yamllint"
-          [ "$S08" = "$f" ] && failed="$failed get_bucket"
-          [ "$S09" = "$f" ] && failed="$failed sync_s3"
-          [ "$S10" = "$f" ] && failed="$failed check_files"
-          [ "$S11" = "$f" ] && failed="$failed invalidate_cloudfront"
-          if [ -n "$failed" ]; then
-            echo "Steps that failed:$failed"
-            exit 1
-          fi
-          echo "All steps succeeded"
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-

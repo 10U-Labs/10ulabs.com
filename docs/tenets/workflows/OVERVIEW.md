@@ -1,176 +1,158 @@
 # Workflow Tenets
 
 This document defines the standard patterns for GitHub Actions workflows in this
-repository. These patterns are derived from the following reference workflows:
+repository. The reference implementation is:
 
-- `bootstrap.yml`
-- `www_common.yml`
-- `api_common_routing.yml`
-- `api_operational_health.yml`
-- `api_common_networking.yml`
+- `api_endpoint_v1_github_workflows_webhooks.yml`
 
-## 1. Static Analysis Step Ordering
+## 1. Step Ordering
 
-Static analysis steps must follow this order:
+Steps must follow this order:
 
-1. Terraform Format Check
-2. Terraform Init
-3. Run tflint
-4. Linting YAML files
-5. Run pylint on source
-6. Run pylint on tests
-7. Run mypy on source
-8. Run mypy on tests
-9. Check for duplicate code in source Python files
-10. Check for duplicate code in test Python files
+1. Checkout code
+2. Verify OIDC variables
+3. Configure AWS credentials via OIDC
+4. Set up Python (conditional on GitHub-hosted)
+5. Install Python dependencies (conditional on GitHub-hosted)
+6. Assert no linter config files
+7. Assert no inline lint disables
+8. Assert one assert per pytest
+9. Linting YAML files
+10. Run pylint on source
+11. Run pylint on tests
+12. Run mypy on source
+13. Run mypy on tests
+14. Install jscpd (conditional on GitHub-hosted)
+15. Check for duplicate code in source Python files
+16. Check for duplicate code in test Python files
+17. Extract Terraform version (conditional on GitHub-hosted)
+18. Setup Terraform (conditional on GitHub-hosted)
+19. Terraform Format Check
+20. Terraform Init
+21. Setup TFLint (conditional on GitHub-hosted)
+22. Run tflint
+23. Run unit tests
+24. Run pre-deployment integration tests
+25. Terraform Plan
+26. Terraform Apply
+27. Run post-deployment integration tests
+28. Run E2E tests
+29. Dispatch descendant workflows (conditional)
 
-For workflows without source Python files (e.g., infrastructure-only workflows like
-`www_common.yml`), omit source steps (5, 7, 9). See sections 2-4 for details.
+For workflows without source Python files (e.g., infrastructure-only workflows),
+omit source steps (10, 12, 15).
 
-## 2. Pylint Separation: Source vs Tests
+## 2. Assertion Steps
+
+Three assertion steps must run before any linting:
+
+```yaml
+- name: Assert no linter config files
+  run: >-
+    assert-no-linter-config-files
+    --linters pylint,mypy,yamllint
+    --verbose
+    ${{ github.workspace }}
+
+- name: Assert no inline lint disables
+  run: >-
+    assert-no-inline-directives
+    --tools pylint,mypy,yamllint
+    --verbose
+    ${{ github.workspace }}/**/*
+
+- name: Assert one assert per pytest
+  run: >-
+    assert-one-assert-per-pytest
+    --verbose
+    ${{ github.workspace }}/test
+```
+
+These require installing the assertion tools in the Python dependencies step:
+
+```yaml
+python3 -m pip install \
+  assert-no-inline-directives \
+  assert-no-linter-config-files \
+  assert-one-assert-per-pytest \
+  ...
+```
+
+## 3. Pylint Separation: Source vs Tests
 
 Pylint must run in two separate steps when source code exists:
 
 ```yaml
 - name: Run pylint on source
   run: |
-    python3 -m pylint lib/python/ src/path/to/handler.py \
-      --fail-on=C,R,W --fail-under=10.0
+    SRC=src/api/endpoints/your_endpoint
+    python3 -m pylint lib/python/ $SRC/lambdas/ --fail-under=10.0
 
 - name: Run pylint on tests
   run: |
-    PYTHONPATH=lib/python python3 -m pylint \
-      lib/python/ test/ \
-      --fail-on=C,R,W --fail-under=10.0
-```
-
-For workflows without source Python files (e.g., infrastructure-only workflows like
-`www_common.yml`), use only the test step:
-
-```yaml
-- name: Run pylint on tests
-  run: |
-    PYTHONPATH=lib/python python3 -m pylint \
-      lib/python/ test/ \
+    TEST=test/api/endpoints/your_endpoint
+    PYTHONPATH=lib/python:. python3 -m pylint \
+      lib/python/ $TEST/ \
       --fail-on=C,R,W --fail-under=10.0
 ```
 
 Key points:
 
 - Source step runs without `PYTHONPATH` prefix
-- Test step requires `PYTHONPATH=lib/python` prefix
+- Test step requires `PYTHONPATH=lib/python:.` prefix
 - Both include `lib/python/` in the targets
-- Test step targets the full `test/` directory, not workflow-specific subdirectories
-- Both use `--fail-on=C,R,W --fail-under=10.0`
-- Skip the source step when the only Python source is `lib/python/` (already covered by
-  test step)
+- Test step targets the workflow-specific test directory
+- Source uses `--fail-under=10.0` only
+- Test uses `--fail-on=C,R,W --fail-under=10.0`
 
-## 3. Mypy Separation: Source vs Tests
+## 4. Mypy Separation: Source vs Tests
 
 Mypy must run in two separate steps when source code exists:
 
 ```yaml
 - name: Run mypy on source
   run: |
-    python3 -m mypy lib/python/ src/path/to/handler.py
+    SRC=src/api/endpoints/your_endpoint
+    python3 -m mypy lib/python/ $SRC/lambdas/
 
 - name: Run mypy on tests
   run: |
-    MYPYPATH=lib/python python3 -m mypy \
-      lib/python/ test/
-```
-
-For workflows without source Python files (e.g., infrastructure-only workflows like
-`www_common.yml`), use only the test step:
-
-```yaml
-- name: Run mypy on tests
-  run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/
+    TEST=test/api/endpoints/your_endpoint
+    MYPYPATH=lib/python
+    MYPYPATH=$MYPYPATH:src/api/endpoints/other/lambda  # Add as needed
+    MYPYPATH=$MYPYPATH python3 -m mypy lib/python/ $TEST/
 ```
 
 Key points:
 
 - Source step runs without `MYPYPATH` prefix
 - Test step requires `MYPYPATH=lib/python` prefix
+- Add additional paths to MYPYPATH as needed for test imports
 - Both include `lib/python/` in the targets
-- Test step targets the full `test/` directory, not workflow-specific subdirectories
-- Skip the source step when the only Python source is `lib/python/` (already covered by
-  test step)
+- Test step targets the workflow-specific test directory
 
-## 4. Duplicate Code Checking (jscpd)
+## 5. Duplicate Code Checking (jscpd)
 
 Duplicate code detection must run in two separate steps when source code exists:
 
 ```yaml
 - name: Check for duplicate code in source Python files
   run: |
+    SRC=src/api/endpoints/your_endpoint
     jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-      lib/python/ src/path/to/lambda/
+      lib/python/ $SRC/lambdas/
 
 - name: Check for duplicate code in test Python files
   run: |
     jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-      lib/python/ test/
-```
-
-For workflows without source Python files (e.g., infrastructure-only workflows like
-`www_common.yml`), use only the test step:
-
-```yaml
-- name: Check for duplicate code in test Python files
-  run: |
-    jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-      lib/python/ test/
+      lib/python/ test/api/endpoints/your_endpoint/
 ```
 
 Key points:
 
 - Threshold is always 0 (no duplicates allowed)
 - Both include `lib/python/` in the targets
-- Test step targets the full `test/` directory, not workflow-specific subdirectories
-- Skip the source step when the only Python source is `lib/python/` (already covered by
-  test step)
-
-## 5. Batched Dependency Installation
-
-All tool installations must happen at the start of the workflow, immediately after
-Checkout and assertion steps. This ensures linting and tests can run even if
-credentials or Terraform init fails (due to `continue-on-error: true`).
-
-Consolidate installations by package manager - use a single `pip install` for all
-Python packages and a single `npm install` for all Node packages.
-
-```yaml
-# After Checkout and assertion steps, install all tools:
-- if: [GITHUB_HOSTED_CONDITION]
-  name: Setup Terraform
-  uses: hashicorp/setup-terraform@v3
-- if: [GITHUB_HOSTED_CONDITION]
-  name: Setup TFLint
-  uses: terraform-linters/setup-tflint@v6
-- if: [GITHUB_HOSTED_CONDITION]
-  name: Set up Python
-  uses: actions/setup-python@v5
-- if: [GITHUB_HOSTED_CONDITION]
-  name: Install Python dependencies
-  run: |
-    python3 -m pip install \
-      boto3 \
-      boto3-stubs \
-      mypy \
-      pylint \
-      pytest \
-      types-requests \
-      yamllint
-- if: [GITHUB_HOSTED_CONDITION]
-  name: Install jscpd
-  run: npm install -g jscpd
-
-# Then run checks, credentials, and tests
-```
-
-Batching installations at the start enables all independent checks to run regardless
-of failures in credential or infrastructure steps.
+- Test step targets the workflow-specific test directory
 
 ## 6. Conditional Installation for GitHub-Hosted vs ECS Runners
 
@@ -178,147 +160,253 @@ Tool installation steps must be conditional on GitHub-hosted runners:
 
 ```yaml
 if: >-
-  vars.USE_GITHUB_HOSTED == 'true' ||
+  vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
   github.event.inputs.github_hosted == 'true' ||
   contains(github.event.head_commit.message, '[github-hosted]')
 ```
 
 This applies to:
 
-- Setup Terraform
 - Set up Python
-- Install yamllint
-- Install pylint
-- Install mypy
+- Install Python dependencies
 - Install jscpd
-- Install pytest dependencies
+- Extract Terraform version
+- Setup Terraform
+- Setup TFLint
 
-The actual usage steps (linting, testing) run unconditionally on all runners.
+The actual usage steps (assertions, linting, testing) run unconditionally on all
+runners since ECS runners have these tools pre-installed.
 
-## 7. Test Execution Ordering
+## 7. Batched Dependency Installation
+
+All Python dependencies must be installed in a single `pip install` command:
+
+```yaml
+- if: [GITHUB_HOSTED_CONDITION]
+  name: Install Python dependencies
+  run: |
+    python3 -m pip install \
+      assert-no-inline-directives \
+      assert-no-linter-config-files \
+      assert-one-assert-per-pytest \
+      boto3 \
+      boto3-stubs \
+      botocore \
+      dnspython \
+      mypy \
+      pylint \
+      pytest \
+      python-hcl2 \
+      requests \
+      types-PyYAML \
+      types-requests \
+      yamllint
+```
+
+## 8. Test Execution Ordering
 
 Tests must follow the testing pyramid and deployment lifecycle:
 
 ```yaml
 # Pre-deployment
 - name: Run unit tests
-  run: python3 -m pytest test/path/pre_deployment/unit/ ...
+  run: |
+    TEST=test/api/endpoints/your_endpoint
+    PYTHONPATH=lib/python python3 -m pytest \
+      $TEST/pre_deployment/unit/ \
+      --confcutdir=test --verbose --pythonwarnings=error
 
 - name: Run pre-deployment integration tests
-  run: python3 -m pytest test/path/pre_deployment/integration/ ...
+  run: |
+    BASE=test/api/endpoints/your_endpoint
+    PYTHONPATH=lib/python python3 -m pytest \
+      $BASE/pre_deployment/integration/ \
+      --capture=no --confcutdir=test --verbose --pythonwarnings=error
 
 # Deploy
+- name: Terraform Plan
+  run: |
+    cd src/api/endpoints/your_endpoint && \
+      terraform plan
+
 - name: Terraform Apply
-  run: cd src/path && terraform apply -auto-approve
+  run: |
+    cd src/api/endpoints/your_endpoint && \
+      terraform apply -auto-approve
 
 # Post-deployment
 - name: Run post-deployment integration tests
-  run: python3 -m pytest test/path/post_deployment/integration/ ...
+  run: |
+    BASE=test/api/endpoints/your_endpoint
+    PYTHONPATH=lib/python python3 -m pytest \
+      $BASE/post_deployment/integration/ \
+      --confcutdir=test --verbose --pythonwarnings=error
 
 - name: Run E2E tests
-  run: python3 -m pytest test/path/post_deployment/e2e/ ...
+  run: |
+    BASE=test/api/endpoints/your_endpoint
+    PYTHONPATH=lib/python python3 -m pytest \
+      $BASE/post_deployment/e2e/ \
+      --confcutdir=test --verbose --pythonwarnings=error
 ```
 
-## 8. Terraform Workflow Order
+Key points:
+
+- All pytest commands use `--confcutdir=test --verbose --pythonwarnings=error`
+- Pre-deployment integration tests add `--capture=no`
+- Tests target workflow-specific directories
+
+## 9. Terraform Workflow Order
 
 Terraform steps must follow this order:
 
 1. **Terraform Format Check** - `terraform fmt -diff -check -recursive`
 2. **Terraform Init** - `terraform init`
 3. **Run tflint** - `tflint --init && tflint`
-4. [Static analysis and tests...]
-5. **Terraform Apply** - `terraform apply -auto-approve`
+4. [Unit tests, pre-deployment integration tests...]
+5. **Terraform Plan** - `terraform plan`
+6. **Terraform Apply** - `terraform apply -auto-approve`
+7. [Post-deployment integration tests, E2E tests...]
 
-## 9. Step Naming Conventions
+## 10. Step Naming Conventions
 
 Use these exact step names for consistency:
 
 | Step | Name |
 |------|------|
-| Terraform format | `Terraform Format Check` |
-| Terraform init | `Terraform Init` |
-| TFLint setup | `Setup TFLint` |
-| TFLint run | `Run tflint` |
+| Checkout | `Checkout code` |
+| OIDC verify | `Verify OIDC variables` |
+| AWS credentials | `Configure AWS credentials via OIDC` |
 | Python setup | `Set up Python` |
-| YAML lint install | `Install yamllint` |
-| YAML lint run | `Linting YAML files` |
-| Pylint install | `Install pylint` |
+| Python deps | `Install Python dependencies` |
+| Assert config | `Assert no linter config files` |
+| Assert inline | `Assert no inline lint disables` |
+| Assert pytest | `Assert one assert per pytest` |
+| YAML lint | `Linting YAML files` |
 | Pylint source | `Run pylint on source` |
 | Pylint tests | `Run pylint on tests` |
-| Mypy install | `Install mypy` |
 | Mypy source | `Run mypy on source` |
 | Mypy tests | `Run mypy on tests` |
 | jscpd install | `Install jscpd` |
 | jscpd source | `Check for duplicate code in source Python files` |
 | jscpd tests | `Check for duplicate code in test Python files` |
-| Pytest install | `Install pytest dependencies` |
+| TF version | `Extract Terraform version` |
+| TF setup | `Setup Terraform` |
+| TF format | `Terraform Format Check` |
+| TF init | `Terraform Init` |
+| TFLint setup | `Setup TFLint` |
+| TFLint run | `Run tflint` |
 | Unit tests | `Run unit tests` |
 | Pre-deploy integration | `Run pre-deployment integration tests` |
-| Terraform apply | `Terraform Apply` |
+| TF plan | `Terraform Plan` |
+| TF apply | `Terraform Apply` |
 | Post-deploy integration | `Run post-deployment integration tests` |
 | E2E tests | `Run E2E tests` |
+| Dispatch | `Dispatch descendant workflows` |
 
-## 10. Continue-On-Error Pattern
+## 11. Fail-Fast Behavior
 
-All check and test steps must use `continue-on-error: true` so that failures don't
-prevent subsequent steps from running. This ensures all issues are reported in a
-single workflow run.
+Workflows use fail-fast behavior - no `continue-on-error`. If a step fails, the
+workflow stops immediately. This provides faster feedback and clearer error
+messages.
 
-### Required Step Attributes
+## 12. Descendant Workflow Dispatch
 
-Every check/test step needs:
-
-- `continue-on-error: true`
-- `id: step_name` (snake_case identifier)
-
-Example:
-
-```yaml
-- continue-on-error: true
-  id: pylint
-  name: Run pylint on tests
-  run: ...
-
-- continue-on-error: true
-  id: unit_tests
-  name: Run unit tests
-  run: ...
-```
-
-### Final Assertion Step
-
-Add an "Assert no step failed" step at the end that checks all outcomes:
+Workflows that have dependents should include a conditional dispatch step:
 
 ```yaml
 - env:
-    PYLINT: ${{ steps.pylint.outcome }}
-    UNIT_TESTS: ${{ steps.unit_tests.outcome }}
-    # ... all other step outcomes
-  name: Assert no step failed
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  if: >-
+    github.event_name == 'workflow_dispatch' &&
+    (
+    github.event.inputs.trigger_descendants == 'true' ||
+     contains(github.event.head_commit.message,
+     '[trigger descendants]'))
+  name: Dispatch descendant workflows
   run: |
-    failed=""
-    [ "$PYLINT" = "failure" ] && failed="$failed pylint"
-    [ "$UNIT_TESTS" = "failure" ] && failed="$failed unit_tests"
-    # ... check all steps
-    if [ -n "$failed" ]; then
-      echo "Steps that failed:$failed"
-      exit 1
+    FLAGS=""
+    TRIGGER="${{ github.event.inputs.trigger_descendants }}"
+    INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
+    if [ "$TRIGGER" = "true" ]; then
+      FLAGS="$FLAGS --trigger-descendants"
     fi
-    echo "All steps succeeded"
+    if [ "$INVALIDATE" = "true" ]; then
+      FLAGS="$FLAGS --invalidate-cloudfront"
+    fi
+    python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
+      --workflow your_workflow_name \
+      --repo ${{ github.repository }} \
+      $FLAGS
 ```
 
-### Which Steps Get continue-on-error
+## 13. Workflow Inputs
 
-| Step Type                          | continue-on-error |
-|------------------------------------|-------------------|
-| Checkout, Setup, Install           | No                |
-| AWS credentials, Terraform Init    | Yes               |
-| Linting (yamllint, pylint, mypy)   | Yes               |
-| Duplicate code check (jscpd)       | Yes               |
-| Tests (unit, integration, e2e)     | Yes               |
-| Terraform Apply                    | Yes               |
-| Assert no step failed              | No (final gate)   |
+Standard workflow inputs:
 
-Steps like linting and unit tests don't depend on AWS credentials or Terraform Init
-succeeding, so those infrastructure steps should also use `continue-on-error: true`
-to allow independent steps to run.
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
+      invalidate_cloudfront:
+        default: false
+        description: Force CloudFront cache invalidation
+        type: boolean
+      spot_recovery_reason:
+        description: Spot recovery trigger reason
+        required: false
+        type: string
+      trigger_descendants:
+        default: false
+        description: Trigger descendant workflows after this workflow completes
+        type: boolean
+```
+
+## 14. Runner Selection
+
+Use this pattern for runner selection to support both GitHub-hosted and ECS runners:
+
+```yaml
+runs-on: >-
+  ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+        github.event.inputs.github_hosted == 'true' ||
+        contains(github.event.head_commit.message, '[github-hosted]') ) &&
+      'ubuntu-latest' ||
+      fromJSON(format('["ecs", "fargate", "arm", "spot", "runner-{0}"]',
+        github.run_id)) }}
+```
+
+## 15. Concurrency Control
+
+All workflows must include concurrency settings:
+
+```yaml
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+```
+
+## 16. Permissions
+
+Standard permissions for deploy jobs:
+
+```yaml
+permissions:
+  actions: write
+  contents: read
+  id-token: write
+```
+
+## 17. Deploy Condition
+
+Deploy jobs should only run on main branch:
+
+```yaml
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+```

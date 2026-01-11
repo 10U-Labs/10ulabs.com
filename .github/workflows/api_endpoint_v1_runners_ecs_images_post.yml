@@ -23,46 +23,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert no linter config files (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
-        with:
-          directories: ${{ github.workspace }}
-          linters: pylint,mypy,yamllint
-          verbose: true
-      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert no linter config files (self-hosted)
-        run: >-
-          assert-no-linter-config-files
-          --linters pylint,mypy,yamllint
-          --verbose
-          ${{ github.workspace }}
-      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert no inline lint disables (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-no-inline-directives@latest
-        with:
-          files: ${{ github.workspace }}/**/*
-          tools: pylint,mypy,yamllint
-          verbose: true
-      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert no inline lint disables (self-hosted)
-        run: >-
-          assert-no-inline-directives
-          --tools pylint,mypy,yamllint
-          --verbose
-          ${{ github.workspace }}/**/*
-      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert one assert per pytest (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-one-assert-per-pytest@latest
-        with:
-          files: ${{ github.workspace }}/test/**/*.py
-          verbose: true
-      - if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert one assert per pytest (self-hosted)
-        run: >-
-          assert-one-assert-per-pytest
-          --verbose
-          ${{ github.workspace }}/test
       - name: Verify OIDC variables
         uses: ./.github/actions/verify-oidc-vars
         with:
@@ -88,6 +48,9 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
+            assert-no-inline-directives \
+            assert-no-linter-config-files \
+            assert-one-assert-per-pytest \
             boto3 \
             boto3-stubs \
             botocore \
@@ -102,6 +65,23 @@ jobs:
             types-PyYAML \
             types-requests \
             yamllint
+      - name: Assert no linter config files
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+      - name: Assert no inline lint disables
+        run: >-
+          assert-no-inline-directives
+          --tools pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
+      - name: Assert one assert per pytest
+        run: >-
+          assert-one-assert-per-pytest
+          --verbose
+          ${{ github.workspace }}/test
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -131,8 +111,9 @@ jobs:
             --fail-on=C,R,W --fail-under=10.0
       - name: Run pylint on tests
         run: |
+          TEST=test/api/endpoints/runners/ecs/images/post
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/ \
+            lib/python/ $TEST/ \
             --fail-on=C,R,W --fail-under=10.0
       - name: Run mypy on source
         run: |
@@ -140,8 +121,9 @@ jobs:
             src/api/endpoints/runners/ecs/images/post/*.py
       - name: Run mypy on tests
         run: |
+          TEST=test/api/endpoints/runners/ecs/images/post
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
-            lib/python/ test/
+            lib/python/ $TEST/
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -149,7 +131,7 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
+            lib/python/ test/api/endpoints/runners/ecs/images/post/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -172,7 +154,7 @@ jobs:
       - name: Run unit tests
         run: |
           TEST=test/api/endpoints/runners/ecs/images/post/pre_deployment/unit/
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             $TEST --confcutdir=test --verbose --pythonwarnings=error
       - id: config
         name: Extract configuration values
@@ -207,7 +189,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/ecs/images/post/pre_deployment
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             $TEST/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - id: docker_config
@@ -322,12 +304,10 @@ jobs:
             .
           echo "image_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
           echo "ecr_repository=$REPO" >> $GITHUB_OUTPUT
-      - continue-on-error: true
-        id: post_integration_tests
-        name: Run post-deployment integration tests
+      - name: Run post-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/ecs/images/post/post_deployment
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             $TEST/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Get GitHub PAT from Parameter Store
@@ -340,27 +320,11 @@ jobs:
             --name "$GITHUB_TOKEN_SECRET_NAME" --with-decryption \
             --query 'Parameter.Value' --output text)
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
-      - continue-on-error: true
-        id: e2e_tests
-        name: Run E2E tests
+      - name: Run E2E tests
         run: |
           TEST=test/api/endpoints/runners/ecs/images/post/post_deployment
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             $TEST/e2e/ --confcutdir=test --verbose --pythonwarnings=error
-      - env:
-          S01: ${{ steps.post_integration_tests.outcome }}
-          S02: ${{ steps.e2e_tests.outcome }}
-        name: Assert no post-deployment step failed
-        run: |
-          failed=""
-          f="failure"
-          [ "$S01" = "$f" ] && failed="$failed post_integration_tests"
-          [ "$S02" = "$f" ] && failed="$failed e2e_tests"
-          if [ -n "$failed" ]; then
-            echo "Steps that failed:$failed"
-            exit 1
-          fi
-          echo "All post-deployment steps succeeded"
       - name: Promote image
         run: |
           POST_DIR=src/api/endpoints/runners/ecs/images/post

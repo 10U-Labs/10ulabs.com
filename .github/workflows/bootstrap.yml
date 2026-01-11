@@ -6,6 +6,10 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     name: Deploy bootstrap infrastructure
+    permissions:
+      actions: write
+      contents: read
+      id-token: write
     runs-on: >-
       ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -16,58 +20,116 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - continue-on-error: true
-        id: no_linter_configs_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert no linter config files (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
+      - id: oidc
+        name: Check OIDC availability
+        run: |
+          if [ -n "${{ vars.AWS_REGION }}" ] && \
+             [ -n "${{ vars.OIDC_ROLE_ARN }}" ]; then
+            echo "is_available=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_available=false" >> $GITHUB_OUTPUT
+          fi
+      - if: steps.oidc.outputs.is_available == 'true'
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          directories: ${{ github.workspace }}
-          linters: pylint,mypy,yamllint
-          verbose: true
-      - continue-on-error: true
-        id: no_linter_configs_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert no linter config files (self-hosted)
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - if: steps.oidc.outputs.is_available != 'true'
+        name: Extract AWS region (cold start)
+        run: |
+          AWS_REGION=$(grep 'aws_region' \
+            lib/terraform/common/locals.tf \
+            | grep -v '\$' | cut -d'"' -f2)
+          echo "aws_region=$AWS_REGION" >> $GITHUB_ENV
+      - if: steps.oidc.outputs.is_available != 'true'
+        name: Configure AWS credentials via static keys (cold start)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ env.aws_region }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-no-inline-directives \
+            assert-no-linter-config-files \
+            assert-one-assert-per-pytest \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            pylint \
+            pytest \
+            pytest-dependency \
+            python-hcl2 \
+            requests \
+            types-PyYAML \
+            types-requests \
+            yamllint
+      - name: Assert no linter config files
         run: >-
           assert-no-linter-config-files
           --linters pylint,mypy,yamllint
           --verbose
           ${{ github.workspace }}
-      - continue-on-error: true
-        id: no_inline_disables_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert no inline lint disables (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-no-inline-directives@latest
-        with:
-          files: ${{ github.workspace }}/**/*
-          tools: pylint,mypy,yamllint
-          verbose: true
-      - continue-on-error: true
-        id: no_inline_disables_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert no inline lint disables (self-hosted)
+      - name: Assert no inline lint disables
         run: >-
           assert-no-inline-directives
           --tools pylint,mypy,yamllint
           --verbose
           ${{ github.workspace }}/**/*
-      - continue-on-error: true
-        id: one_assert_per_pytest_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert one assert per pytest (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-one-assert-per-pytest@latest
-        with:
-          files: ${{ github.workspace }}/test/**/*.py
-          verbose: true
-      - continue-on-error: true
-        id: one_assert_per_pytest_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert one assert per pytest (self-hosted)
+      - name: Assert one assert per pytest
         run: >-
           assert-one-assert-per-pytest
           --verbose
           ${{ github.workspace }}/test
+      - name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
+          python3 -m yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/bootstrap.yml
+      - name: Run pylint on tests
+        run: |
+          TEST=test/bootstrap
+          PYTHONPATH=lib/python:. python3 -m pylint \
+            lib/python/ $TEST/ \
+            --fail-on=C,R,W --fail-under=10.0
+      - name: Run mypy on tests
+        run: |
+          TEST=test/bootstrap
+          MYPYPATH=lib/python
+          MYPYPATH=$MYPYPATH:src/api/endpoints/runners/lambda
+          MYPYPATH=$MYPYPATH python3 -m mypy lib/python/ $TEST/
+      - if: >-
+          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install jscpd
+        run: npm install -g jscpd
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/bootstrap/
       - id: terraform
         if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
@@ -86,6 +148,15 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
+      - name: Terraform Format Check
+        run: |
+          cd src/bootstrap && \
+            terraform fmt -diff -check -recursive
+      - name: Terraform Init
+        run: |
+          cd src/bootstrap && \
+            terraform init
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -94,158 +165,49 @@ jobs:
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            boto3-stubs \
-            botocore \
-            dnspython \
-            mypy \
-            pylint \
-            pytest \
-            pytest-dependency \
-            python-hcl2 \
-            requests \
-            types-PyYAML \
-            types-requests \
-            yamllint
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install jscpd
-        run: npm install -g jscpd
-      - continue-on-error: true
-        id: terraform_fmt
-        name: Terraform Format Check
-        run: cd src/bootstrap && terraform fmt -diff -check -recursive
-      - continue-on-error: true
-        id: oidc
-        name: Check OIDC availability
-        run: |
-          if [ -n "${{ vars.AWS_REGION }}" ] && \
-             [ -n "${{ vars.OIDC_ROLE_ARN }}" ]; then
-            echo "is_available=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_available=false" >> $GITHUB_OUTPUT
-          fi
-      - continue-on-error: true
-        id: aws_oidc
-        if: steps.oidc.outputs.is_available == 'true'
-        name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
-      - continue-on-error: true
-        id: aws_region_cold
-        if: steps.oidc.outputs.is_available != 'true'
-        name: Extract AWS region (cold start)
-        run: |
-          AWS_REGION=$(grep 'aws_region' \
-            lib/terraform/common/locals.tf \
-            | grep -v '\$' | cut -d'"' -f2)
-          echo "aws_region=$AWS_REGION" >> $GITHUB_ENV
-      - continue-on-error: true
-        id: aws_static
-        if: steps.oidc.outputs.is_available != 'true'
-        name: Configure AWS credentials via static keys (cold start)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-region: ${{ env.aws_region }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - continue-on-error: true
-        id: terraform_init
-        name: Terraform Init
-        run: cd src/bootstrap && terraform init
-      - continue-on-error: true
-        env:
+      - env:
           GITHUB_TOKEN: ${{ github.token }}
-        id: tflint
         name: Run tflint
-        run: cd src/bootstrap && tflint --init && tflint
-      - continue-on-error: true
-        id: yamllint
-        name: Linting YAML files
-        run: |
-          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
-          KEY_ORDERING='key-ordering: enable'
-          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
-          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
-          python3 -m yamllint --strict \
-            --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/bootstrap.yml
-      - continue-on-error: true
-        id: pylint
-        name: Run pylint on tests
-        run: |
-          PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/ \
-            --fail-on=C,R,W --fail-under=10.0
-      - continue-on-error: true
-        id: mypy
-        name: Run mypy on tests
-        run: |
-          MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
-            lib/python/ test/
-      - continue-on-error: true
-        id: jscpd
-        name: Check for duplicate code in test Python files
-        run: |
-          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
-      - continue-on-error: true
-        id: unit_tests
-        name: Run unit tests
-        run: |
-          python3 -m pytest \
-            test/bootstrap/pre_deployment/unit/ \
-            --verbose --pythonwarnings=error
-      - continue-on-error: true
-        id: pre_integration_tests
-        name: Run pre-deployment integration tests
-        run: |
-          python3 -m pytest \
-            test/bootstrap/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
-      - continue-on-error: true
-        id: terraform_apply
-        name: Terraform Apply
         run: |
           cd src/bootstrap && \
-            terraform apply \
-            -auto-approve \
+            tflint --init && \
+            tflint
+      - name: Run unit tests
+        run: |
+          TEST=test/bootstrap
+          PYTHONPATH=lib/python python3 -m pytest \
+            $TEST/pre_deployment/unit/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+      - name: Run pre-deployment integration tests
+        run: |
+          BASE=test/bootstrap
+          PYTHONPATH=lib/python python3 -m pytest \
+            $BASE/pre_deployment/integration/ \
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
+      - name: Terraform Plan
+        run: |
+          cd src/bootstrap && \
+            terraform plan \
             -var="github_pat=${{ secrets.GH_PAT }}" \
             -var="github_app_private_key=${{ secrets.GH_APP_PRIVATE_KEY }}"
-      - continue-on-error: true
-        id: post_integration_tests
-        name: Run post-deployment integration tests
+      - name: Terraform Apply
         run: |
-          python3 -m pytest \
-            test/bootstrap/post_deployment/integration/ \
-            --verbose --pythonwarnings=error
-      - continue-on-error: true
-        id: e2e_tests
-        name: Run E2E tests
+          cd src/bootstrap && \
+            terraform apply -auto-approve \
+            -var="github_pat=${{ secrets.GH_PAT }}" \
+            -var="github_app_private_key=${{ secrets.GH_APP_PRIVATE_KEY }}"
+      - name: Run post-deployment integration tests
         run: |
-          python3 -m pytest \
-            test/bootstrap/post_deployment/e2e/ \
-            --verbose --pythonwarnings=error
+          BASE=test/bootstrap
+          PYTHONPATH=lib/python python3 -m pytest \
+            $BASE/post_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+      - name: Run E2E tests
+        run: |
+          BASE=test/bootstrap
+          PYTHONPATH=lib/python python3 -m pytest \
+            $BASE/post_deployment/e2e/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         name: Set GitHub variables for OIDC authentication
@@ -258,73 +220,22 @@ jobs:
           gh variable set AWS_REGION --body "$AWS_REGION"
           gh variable set OIDC_ROLE_ARN --body "$ROLE_ARN"
       - env:
-          S01: ${{ steps.no_linter_configs_gh.outcome }}
-          S02: ${{ steps.no_linter_configs_sh.outcome }}
-          S03: ${{ steps.no_inline_disables_gh.outcome }}
-          S04: ${{ steps.no_inline_disables_sh.outcome }}
-          S05: ${{ steps.one_assert_per_pytest_gh.outcome }}
-          S06: ${{ steps.one_assert_per_pytest_sh.outcome }}
-          S07: ${{ steps.terraform_fmt.outcome }}
-          S08: ${{ steps.oidc.outcome }}
-          S09: ${{ steps.aws_oidc.outcome }}
-          S10: ${{ steps.aws_region_cold.outcome }}
-          S11: ${{ steps.aws_static.outcome }}
-          S12: ${{ steps.terraform_init.outcome }}
-          S13: ${{ steps.tflint.outcome }}
-          S14: ${{ steps.yamllint.outcome }}
-          S15: ${{ steps.pylint.outcome }}
-          S16: ${{ steps.mypy.outcome }}
-          S17: ${{ steps.jscpd.outcome }}
-          S18: ${{ steps.unit_tests.outcome }}
-          S19: ${{ steps.pre_integration_tests.outcome }}
-          S20: ${{ steps.terraform_apply.outcome }}
-          S21: ${{ steps.post_integration_tests.outcome }}
-          S22: ${{ steps.e2e_tests.outcome }}
-        name: Assert no step failed
-        run: |
-          failed=""
-          f="failure"
-          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
-          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
-          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
-          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
-          [ "$S05" = "$f" ] && failed="$failed one_assert_per_pytest_gh"
-          [ "$S06" = "$f" ] && failed="$failed one_assert_per_pytest_sh"
-          [ "$S07" = "$f" ] && failed="$failed terraform_fmt"
-          [ "$S08" = "$f" ] && failed="$failed oidc"
-          [ "$S09" = "$f" ] && failed="$failed aws_oidc"
-          [ "$S10" = "$f" ] && failed="$failed aws_region_cold"
-          [ "$S11" = "$f" ] && failed="$failed aws_static"
-          [ "$S12" = "$f" ] && failed="$failed terraform_init"
-          [ "$S13" = "$f" ] && failed="$failed tflint"
-          [ "$S14" = "$f" ] && failed="$failed yamllint"
-          [ "$S15" = "$f" ] && failed="$failed pylint"
-          [ "$S16" = "$f" ] && failed="$failed mypy"
-          [ "$S17" = "$f" ] && failed="$failed jscpd"
-          [ "$S18" = "$f" ] && failed="$failed unit_tests"
-          [ "$S19" = "$f" ] && failed="$failed pre_integration_tests"
-          [ "$S20" = "$f" ] && failed="$failed terraform_apply"
-          [ "$S21" = "$f" ] && failed="$failed post_integration_tests"
-          [ "$S22" = "$f" ] && failed="$failed e2e_tests"
-          if [ -n "$failed" ]; then
-            echo "Steps that failed:$failed"
-            exit 1
-          fi
-          echo "All steps succeeded"
-      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
           github.event_name == 'workflow_dispatch' &&
-          (github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message, '[trigger descendants]'))
+          (
+          github.event.inputs.trigger_descendants == 'true' ||
+           contains(github.event.head_commit.message,
+           '[trigger descendants]'))
         name: Dispatch descendant workflows
         run: |
           FLAGS=""
-          if [ "${{ github.event.inputs.trigger_descendants }}" = "true" ]; then
+          TRIGGER="${{ github.event.inputs.trigger_descendants }}"
+          INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
+          if [ "$TRIGGER" = "true" ]; then
             FLAGS="$FLAGS --trigger-descendants"
           fi
-          INV="${{ github.event.inputs.invalidate_cloudfront }}"
-          if [ "$INV" = "true" ]; then
+          if [ "$INVALIDATE" = "true" ]; then
             FLAGS="$FLAGS --invalidate-cloudfront"
           fi
           python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \

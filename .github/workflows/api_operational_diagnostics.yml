@@ -6,6 +6,10 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     name: Deploy diagnostics endpoint
+    permissions:
+      actions: write
+      contents: read
+      id-token: write
     runs-on: >-
       ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -16,58 +20,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - continue-on-error: true
-        id: no_linter_configs_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert no linter config files (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-no-linter-config-files@latest
-        with:
-          directories: ${{ github.workspace }}
-          linters: pylint,mypy,yamllint
-          verbose: true
-      - continue-on-error: true
-        id: no_linter_configs_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert no linter config files (self-hosted)
-        run: >-
-          assert-no-linter-config-files
-          --linters pylint,mypy,yamllint
-          --verbose
-          ${{ github.workspace }}
-      - continue-on-error: true
-        id: no_inline_disables_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert no inline lint disables (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-no-inline-directives@latest
-        with:
-          files: ${{ github.workspace }}/**/*
-          tools: pylint,mypy,yamllint
-          verbose: true
-      - continue-on-error: true
-        id: no_inline_disables_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert no inline lint disables (self-hosted)
-        run: >-
-          assert-no-inline-directives
-          --tools pylint,mypy,yamllint
-          --verbose
-          ${{ github.workspace }}/**/*
-      - continue-on-error: true
-        id: one_assert_per_pytest_gh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true'
-        name: Assert one assert per pytest (GitHub-hosted)
-        uses: 10U-Labs-LLC/assert-one-assert-per-pytest@latest
-        with:
-          files: ${{ github.workspace }}/test/**/*.py
-          verbose: true
-      - continue-on-error: true
-        id: one_assert_per_pytest_sh
-        if: vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS != 'true'
-        name: Assert one assert per pytest (self-hosted)
-        run: >-
-          assert-one-assert-per-pytest
-          --verbose
-          ${{ github.workspace }}/test
       - name: Verify OIDC variables
         uses: ./.github/actions/verify-oidc-vars
         with:
@@ -93,6 +45,9 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
+            assert-no-inline-directives \
+            assert-no-linter-config-files \
+            assert-one-assert-per-pytest \
             boto3 \
             boto3-stubs \
             botocore \
@@ -105,9 +60,24 @@ jobs:
             types-PyYAML \
             types-requests \
             yamllint
-      - continue-on-error: true
-        id: yamllint
-        name: Linting YAML files
+      - name: Assert no linter config files
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+      - name: Assert no inline lint disables
+        run: >-
+          assert-no-inline-directives
+          --tools pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
+      - name: Assert one assert per pytest
+        run: >-
+          assert-one-assert-per-pytest
+          --verbose
+          ${{ github.workspace }}/test
+      - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -118,55 +88,45 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_operational_diagnostics.yml
-      - continue-on-error: true
-        id: pylint_source
-        name: Run pylint on source
+      - name: Run pylint on source
         run: |
           python3 -m pylint \
             lib/python/ \
             src/api/operational/diagnostics/lambda/handler.py \
             --fail-on=C,R,W \
             --fail-under=10.0
-      - continue-on-error: true
-        id: pylint_tests
-        name: Run pylint on tests
+      - name: Run pylint on tests
         run: |
+          TEST=test/api/operational/diagnostics
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/ \
+            lib/python/ $TEST/ \
             --fail-on=C,R,W \
             --fail-under=10.0
-      - continue-on-error: true
-        id: mypy_source
-        name: Run mypy on source
+      - name: Run mypy on source
         run: |
           python3 -m mypy \
             lib/python/ \
             src/api/operational/diagnostics/lambda/handler.py
-      - continue-on-error: true
-        id: mypy_tests
-        name: Run mypy on tests
+      - name: Run mypy on tests
         run: |
+          TEST=test/api/operational/diagnostics
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
-            lib/python/ test/
+            lib/python/ $TEST/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
         run: npm install -g jscpd
-      - continue-on-error: true
-        id: jscpd_source
-        name: Check for duplicate code in source Python files
+      - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             lib/python/ \
             src/api/operational/diagnostics/lambda/
-      - continue-on-error: true
-        id: jscpd_tests
-        name: Check for duplicate code in test Python files
+      - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
+            lib/python/ test/api/operational/diagnostics/
       - id: terraform
         if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
@@ -187,15 +147,11 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
-      - continue-on-error: true
-        id: terraform_fmt
-        name: Terraform Format Check
+      - name: Terraform Format Check
         run: |
           cd src/api/operational/diagnostics && \
             terraform fmt -diff -check -recursive
-      - continue-on-error: true
-        id: terraform_init
-        name: Terraform Init
+      - name: Terraform Init
         run: cd src/api/operational/diagnostics && terraform init
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
@@ -205,98 +161,39 @@ jobs:
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - continue-on-error: true
-        env:
+      - env:
           GITHUB_TOKEN: ${{ github.token }}
-        id: tflint
         name: Run tflint
         run: |
           cd src/api/operational/diagnostics && \
             tflint --init && \
             tflint
-      - continue-on-error: true
-        id: unit_tests
-        name: Run unit tests
+      - name: Run unit tests
         run: |
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             test/api/operational/diagnostics/pre_deployment/unit/ \
-            --verbose --pythonwarnings=error
-      - continue-on-error: true
-        id: pre_integration_tests
-        name: Run pre-deployment integration tests
+            --confcutdir=test --verbose --pythonwarnings=error
+      - name: Run pre-deployment integration tests
         run: |
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             test/api/operational/diagnostics/pre_deployment/integration/ \
-            --capture=no --verbose --pythonwarnings=error
-      - continue-on-error: true
-        id: terraform_apply
-        name: Terraform Apply
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
+      - name: Terraform Plan
+        run: |
+          cd src/api/operational/diagnostics && \
+            terraform plan
+      - name: Terraform Apply
         run: cd src/api/operational/diagnostics && terraform apply -auto-approve
-      - continue-on-error: true
-        id: post_integration_tests
-        name: Run post-deployment integration tests
+      - name: Run post-deployment integration tests
         run: |
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             test/api/operational/diagnostics/post_deployment/integration/ \
-            --verbose --pythonwarnings=error
-      - continue-on-error: true
-        id: e2e_tests
-        name: Run E2E tests
+            --confcutdir=test --verbose --pythonwarnings=error
+      - name: Run E2E tests
         run: |
-          python3 -m pytest \
+          PYTHONPATH=lib/python python3 -m pytest \
             test/api/operational/diagnostics/post_deployment/e2e/ \
-            --verbose --pythonwarnings=error
-      - env:
-          S02: ${{ steps.no_linter_configs_sh.outcome }}
-          S03: ${{ steps.no_inline_disables_gh.outcome }}
-          S04: ${{ steps.no_inline_disables_sh.outcome }}
-          S05: ${{ steps.one_assert_per_pytest_gh.outcome }}
-          S06: ${{ steps.one_assert_per_pytest_sh.outcome }}
-          S07: ${{ steps.yamllint.outcome }}
-          S08: ${{ steps.pylint_source.outcome }}
-          S09: ${{ steps.pylint_tests.outcome }}
-          S10: ${{ steps.mypy_source.outcome }}
-          S11: ${{ steps.mypy_tests.outcome }}
-          S12: ${{ steps.jscpd_source.outcome }}
-          S13: ${{ steps.jscpd_tests.outcome }}
-          S14: ${{ steps.terraform_fmt.outcome }}
-          S15: ${{ steps.terraform_init.outcome }}
-          S16: ${{ steps.tflint.outcome }}
-          S17: ${{ steps.unit_tests.outcome }}
-          S18: ${{ steps.pre_integration_tests.outcome }}
-          S19: ${{ steps.terraform_apply.outcome }}
-          S20: ${{ steps.post_integration_tests.outcome }}
-          S21: ${{ steps.e2e_tests.outcome }}
-        name: Assert no step failed
-        run: |
-          failed=""
-          f="failure"
-          [ "$S01" = "$f" ] && failed="$failed no_linter_configs_gh"
-          [ "$S02" = "$f" ] && failed="$failed no_linter_configs_sh"
-          [ "$S03" = "$f" ] && failed="$failed no_inline_disables_gh"
-          [ "$S04" = "$f" ] && failed="$failed no_inline_disables_sh"
-          [ "$S05" = "$f" ] && failed="$failed one_assert_per_pytest_gh"
-          [ "$S06" = "$f" ] && failed="$failed one_assert_per_pytest_sh"
-          [ "$S07" = "$f" ] && failed="$failed yamllint"
-          [ "$S08" = "$f" ] && failed="$failed pylint_source"
-          [ "$S09" = "$f" ] && failed="$failed pylint_tests"
-          [ "$S10" = "$f" ] && failed="$failed mypy_source"
-          [ "$S11" = "$f" ] && failed="$failed mypy_tests"
-          [ "$S12" = "$f" ] && failed="$failed jscpd_source"
-          [ "$S13" = "$f" ] && failed="$failed jscpd_tests"
-          [ "$S14" = "$f" ] && failed="$failed terraform_fmt"
-          [ "$S15" = "$f" ] && failed="$failed terraform_init"
-          [ "$S16" = "$f" ] && failed="$failed tflint"
-          [ "$S17" = "$f" ] && failed="$failed unit_tests"
-          [ "$S18" = "$f" ] && failed="$failed pre_integration_tests"
-          [ "$S19" = "$f" ] && failed="$failed terraform_apply"
-          [ "$S20" = "$f" ] && failed="$failed post_integration_tests"
-          [ "$S21" = "$f" ] && failed="$failed e2e_tests"
-          if [ -n "$failed" ]; then
-            echo "Steps that failed:$failed"
-            exit 1
-          fi
-          echo "All steps succeeded"
+            --confcutdir=test --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
