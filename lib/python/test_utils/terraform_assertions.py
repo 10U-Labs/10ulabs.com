@@ -1,4 +1,4 @@
-"""Terraform file existence assertion utilities."""
+"""Terraform file existence check utilities."""
 from pathlib import Path
 from typing import List, Optional
 
@@ -17,28 +17,30 @@ DEFAULT_TERRAFORM_FILES = [
 ]
 
 
-def assert_terraform_files_exist(
+def get_missing_terraform_files(
     terraform_dir: Path,
     required_files: Optional[List[str]] = None,
-) -> None:
-    """Assert that required Terraform files exist in a directory.
+) -> List[str]:
+    """Check for missing Terraform files in a directory.
 
     Args:
         terraform_dir: Path to the Terraform directory
         required_files: List of required file names. If None, uses default set.
+
+    Returns:
+        List of missing filenames (empty if all exist).
     """
     files_to_check = required_files if required_files is not None else DEFAULT_TERRAFORM_FILES
-
-    for filename in files_to_check:
-        filepath = terraform_dir / filename
-        assert filepath.exists(), f"Required file {filename} not found"
+    return [f for f in files_to_check if not (terraform_dir / f).exists()]
 
 
-def assert_lambda_handler_exists(terraform_dir: Path) -> None:
-    """Assert that the Lambda handler Python file exists.
+def lambda_handler_exists(terraform_dir: Path) -> bool:
+    """Check if the Lambda handler Python file exists.
 
     Args:
         terraform_dir: Path to the Terraform directory
+
+    Returns:
+        True if handler.py exists, False otherwise.
     """
-    handler_path = terraform_dir / "lambda" / "handler.py"
-    assert handler_path.exists(), "Lambda handler.py not found"
+    return (terraform_dir / "lambda" / "handler.py").exists()

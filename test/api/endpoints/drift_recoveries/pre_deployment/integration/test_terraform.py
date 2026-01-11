@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 
 from test_utils.terraform_assertions import (
-    assert_terraform_files_exist,
-    assert_lambda_handler_exists,
+    get_missing_terraform_files,
+    lambda_handler_exists,
     DEFAULT_TERRAFORM_FILES,
 )
 
@@ -20,11 +20,11 @@ class TestDriftRecoveriesTerraformFiles:
 
     def test_all_required_terraform_files_exist(self, terraform_dir: Path):
         """All required Terraform configuration files exist."""
-        assert_terraform_files_exist(terraform_dir, DRIFT_RECOVERIES_ALL_FILES)
+        assert get_missing_terraform_files(terraform_dir, DRIFT_RECOVERIES_ALL_FILES) == []
 
     def test_lambda_handler_file_exists(self, terraform_dir: Path):
         """Lambda handler Python file exists in lambda subdirectory."""
-        assert_lambda_handler_exists(terraform_dir)
+        assert lambda_handler_exists(terraform_dir)
 
     def test_config_tf_for_aws_config_rules(self, terraform_dir: Path):
         """Drift recoveries has config.tf for AWS Config rule integration."""

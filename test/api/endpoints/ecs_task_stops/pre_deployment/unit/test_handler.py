@@ -104,8 +104,7 @@ class TestSendRetryRequestEcs:
                 resource_type="ecs", resource_id=ECS_TASK_ARN_SAMPLE,
             )
 
-        assert success is True
-        assert sqs_mock.send_message.call_count == 1
+        assert (success, sqs_mock.send_message.call_count) == (True, 1)
 
     def test_empty_queue_url_returns_false(self, handler_module):
         """Empty RETRIES_QUEUE_URL environment variable returns False."""
@@ -230,8 +229,7 @@ class TestEcsLambdaHandler:
         response = handler_module.lambda_handler(sqs_event, lambda_context)
         body = json.loads(response["body"])
 
-        assert response["statusCode"] == 200
-        assert "results" in body
+        assert (response["statusCode"], "results" in body) == (200, True)
 
     def test_non_stopped_task_ignored(self, handler_module, lambda_context):
         """Non-stopped task events are ignored with appropriate message."""
@@ -247,5 +245,4 @@ class TestEcsLambdaHandler:
         response = handler_module.lambda_handler(event, lambda_context)
         body = json.loads(response["body"])
 
-        assert response["statusCode"] == 200
-        assert "ignored" in body["message"].lower()
+        assert (response["statusCode"], "ignored" in body["message"].lower()) == (200, True)
