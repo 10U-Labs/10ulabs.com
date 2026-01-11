@@ -414,8 +414,8 @@ class TestMain:
         output = json.loads(capsys.readouterr().out)
         assert set(output["ready"]) == {"www_common", "api_common"}
 
-    def _run_main_with_missing_dep(self, compute_descendants) -> dict[str, Any]:
-        """Run main with a missing dependency and return parsed output."""
+    def _run_main_with_missing_dep(self, compute_descendants) -> None:
+        """Run main with a missing dependency."""
         mock_result = MagicMock()
         mock_result.stdout = ""
         with self._run_main_with_graph(compute_descendants, "www_common"):
