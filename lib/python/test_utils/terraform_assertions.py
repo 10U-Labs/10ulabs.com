@@ -3,6 +3,20 @@ from pathlib import Path
 from typing import List, Optional
 
 
+# Default Terraform files required by endpoint modules
+DEFAULT_TERRAFORM_FILES = [
+    "backend.tf",
+    "providers.tf",
+    "shared.tf",
+    "locals.tf",
+    "lambda.tf",
+    "iam.tf",
+    "sqs.tf",
+    "eventbridge.tf",
+    "outputs.tf",
+]
+
+
 def assert_terraform_files_exist(
     terraform_dir: Path,
     required_files: Optional[List[str]] = None,
@@ -13,20 +27,9 @@ def assert_terraform_files_exist(
         terraform_dir: Path to the Terraform directory
         required_files: List of required file names. If None, uses default set.
     """
-    if required_files is None:
-        required_files = [
-            "backend.tf",
-            "providers.tf",
-            "shared.tf",
-            "locals.tf",
-            "lambda.tf",
-            "iam.tf",
-            "sqs.tf",
-            "eventbridge.tf",
-            "outputs.tf",
-        ]
+    files_to_check = required_files if required_files is not None else DEFAULT_TERRAFORM_FILES
 
-    for filename in required_files:
+    for filename in files_to_check:
         filepath = terraform_dir / filename
         assert filepath.exists(), f"Required file {filename} not found"
 

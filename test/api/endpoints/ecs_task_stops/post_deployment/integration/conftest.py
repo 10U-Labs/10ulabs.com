@@ -1,23 +1,5 @@
 """Shared fixtures for ECS task stops post-deployment integration tests."""
-from typing import Dict
-
 import pytest
-
-
-@pytest.fixture
-def cfg(shared_config) -> Dict[str, str]:
-    """Provide config for integration tests."""
-    return {
-        'aws_region': shared_config['aws_region'],
-        'resource_prefix': shared_config['resource_prefix'],
-    }
-
-
-@pytest.fixture
-def res_prefix(request) -> str:
-    """Provide the resource prefix for AWS resources."""
-    config = request.getfixturevalue('cfg')
-    return config.get('resource_prefix', '10ULabs')
 
 
 @pytest.fixture

@@ -86,39 +86,37 @@ class TestGetEcsTaskTags:
         assert result == {}
 
 
-class TestSendRetryRequest:
-    """Tests for _send_retry_request function."""
+ECS_TASK_ARN_SAMPLE = "arn:aws:ecs:us-east-2:123456789012:task/cluster/task123"
 
-    def test_send_retry_request_success_returns_true(self, handler_module):
-        """Returns True when SQS send succeeds."""
-        mock_sqs = MagicMock()
 
-        with patch.object(handler_module, '_get_sqs_client', return_value=mock_sqs):
-            send_retry = getattr(handler_module, '_send_retry_request')
-            result = send_retry(
-                run_id=12345,
-                github_repo="org/repo",
-                reason="test reason",
-                resource_type="ecs",
-                resource_id="arn:aws:ecs:us-east-2:123456789012:task/cluster/task123",
+class TestSendRetryRequestEcs:
+    """Tests for _send_retry_request function in ECS context."""
+
+    def test_sqs_send_succeeds_returns_true(self, handler_module):
+        """SQS send_message success returns True."""
+        sqs_mock = MagicMock()
+        sqs_mock.send_message.return_value = {"MessageId": "msg-123"}
+
+        with patch.object(handler_module, '_get_sqs_client', return_value=sqs_mock):
+            fn = getattr(handler_module, '_send_retry_request')
+            success = fn(
+                run_id=12345, github_repo="org/repo", reason="test reason",
+                resource_type="ecs", resource_id=ECS_TASK_ARN_SAMPLE,
             )
 
-        assert result is True
-        mock_sqs.send_message.assert_called_once()
+        assert success is True
+        assert sqs_mock.send_message.call_count == 1
 
-    def test_send_retry_request_no_queue_url_returns_false(self, handler_module):
-        """Returns False when queue URL not set."""
+    def test_empty_queue_url_returns_false(self, handler_module):
+        """Empty RETRIES_QUEUE_URL environment variable returns False."""
         with patch.dict('os.environ', {'RETRIES_QUEUE_URL': ''}):
-            send_retry = getattr(handler_module, '_send_retry_request')
-            result = send_retry(
-                run_id=12345,
-                github_repo="org/repo",
-                reason="test reason",
-                resource_type="ecs",
-                resource_id="arn:aws:ecs:us-east-2:123456789012:task/cluster/task123",
+            fn = getattr(handler_module, '_send_retry_request')
+            success = fn(
+                run_id=12345, github_repo="org/repo", reason="test reason",
+                resource_type="ecs", resource_id=ECS_TASK_ARN_SAMPLE,
             )
 
-        assert result is False
+        assert success is False
 
 
 class TestHandleEcsTaskStopped:
@@ -190,13 +188,11 @@ class TestHandleEcsTaskStopped:
         assert (result["statusCode"], body["handled"]) == (200, True)
 
 
-class TestLambdaHandler:
-    """Tests for lambda_handler function."""
+class TestEcsLambdaHandler:
+    """Tests for ECS task stops lambda_handler function."""
 
-    def test_lambda_handler_ecs_task_stopped_event_handles(
-        self, handler_module, lambda_context
-    ):
-        """Handles ECS task stopped event."""
+    def test_ecs_task_stopped_event_returns_200(self, handler_module, lambda_context):
+        """ECS task stopped event returns 200 status code."""
         event = {
             "source": "aws.ecs",
             "detail-type": "ECS Task State Change",
@@ -209,15 +205,13 @@ class TestLambdaHandler:
             },
         }
 
-        result = handler_module.lambda_handler(event, lambda_context)
+        response = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200
+        assert response["statusCode"] == 200
 
-    def test_lambda_handler_sqs_event_processes_records(
-        self, handler_module, lambda_context
-    ):
-        """Processes SQS records containing EventBridge events."""
-        event = {
+    def test_sqs_wrapped_event_returns_results(self, handler_module, lambda_context):
+        """SQS-wrapped EventBridge events return results array."""
+        sqs_event = {
             "Records": [{
                 "body": json.dumps({
                     "source": "aws.ecs",
@@ -233,15 +227,14 @@ class TestLambdaHandler:
             }]
         }
 
-        result = handler_module.lambda_handler(event, lambda_context)
+        response = handler_module.lambda_handler(sqs_event, lambda_context)
+        body = json.loads(response["body"])
 
-        body = json.loads(result["body"])
-        assert result["statusCode"] == 200 and "results" in body
+        assert response["statusCode"] == 200
+        assert "results" in body
 
-    def test_lambda_handler_ignores_non_stopped_events(
-        self, handler_module, lambda_context
-    ):
-        """Ignores non-stopped task events."""
+    def test_non_stopped_task_ignored(self, handler_module, lambda_context):
+        """Non-stopped task events are ignored with appropriate message."""
         event = {
             "source": "aws.ecs",
             "detail-type": "ECS Task State Change",
@@ -251,7 +244,8 @@ class TestLambdaHandler:
             },
         }
 
-        result = handler_module.lambda_handler(event, lambda_context)
+        response = handler_module.lambda_handler(event, lambda_context)
+        body = json.loads(response["body"])
 
-        body = json.loads(result["body"])
-        assert result["statusCode"] == 200 and "ignored" in body["message"].lower()
+        assert response["statusCode"] == 200
+        assert "ignored" in body["message"].lower()

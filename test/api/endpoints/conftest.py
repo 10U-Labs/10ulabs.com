@@ -1,14 +1,18 @@
 """Shared pytest fixtures and utilities for API endpoint tests."""
 import io
 import re
+import sys
 import urllib.request
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, List
+from unittest.mock import Mock, patch
 
 import boto3
+import pytest
 
-from repo_utils import extract_brace_block
+from module_utils import create_lambda_loader
+from repo_utils import extract_brace_block, REPO_ROOT
 from terraform_config import (
     get_tfvars_values,
     get_endpoint_local_values,
@@ -153,3 +157,63 @@ def parse_locals_file(locals_path: Path, _shared: Dict[str, str]) -> Dict[str, s
         The _shared parameter is no longer used - terraform_config resolves references internally.
     """
     return get_endpoint_local_values(locals_path.parent)
+
+
+# --- Shared fixtures for endpoint integration tests ---
+
+@pytest.fixture
+def cfg(shared_config) -> Dict[str, str]:
+    """Provide config for integration tests from shared Terraform config."""
+    return {
+        'aws_region': shared_config['aws_region'],
+        'resource_prefix': shared_config['resource_prefix'],
+    }
+
+
+@pytest.fixture
+def res_prefix(request) -> str:
+    """Provide the resource prefix for AWS resources."""
+    config = request.getfixturevalue('cfg')
+    return config.get('resource_prefix', '10ULabs')
+
+
+# --- Shared handler module loader for unit tests ---
+
+def create_endpoint_handler_loader(endpoint_path: str):
+    """Create a handler module loader for a specific endpoint.
+
+    Args:
+        endpoint_path: Path relative to src/api/endpoints (e.g., 'drift_recoveries')
+
+    Returns:
+        A function that loads handler modules from the endpoint's lambda directory.
+    """
+    src_path = REPO_ROOT / "src" / "api" / "endpoints" / endpoint_path
+    lambda_path = src_path / "lambda"
+
+    if str(lambda_path) not in sys.path:
+        sys.path.insert(0, str(lambda_path))
+
+    return create_lambda_loader(lambda_path)
+
+
+def create_handler_module_fixture(endpoint_path: str, env_vars: Dict[str, str]):
+    """Create a handler module with mocked environment variables.
+
+    Args:
+        endpoint_path: Path relative to src/api/endpoints
+        env_vars: Environment variables to mock
+
+    Returns:
+        Loaded handler module with mocked environment.
+    """
+    loader = create_endpoint_handler_loader(endpoint_path)
+    with patch.dict('os.environ', env_vars):
+        module = loader("handler.py", "handler")
+        return module
+
+
+@pytest.fixture
+def lambda_context():
+    """Provide a mock Lambda context object for unit tests."""
+    return Mock()

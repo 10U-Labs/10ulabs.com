@@ -1,7 +1,7 @@
 """Shared fixtures for drift recoveries unit tests."""
 import sys
 from typing import Any, Dict
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -20,21 +20,6 @@ if str(DRIFT_RECOVERIES_LAMBDA_PATH) not in sys.path:
 
 # Use shared lambda loader for drift recoveries lambda
 load_lambda_module = create_lambda_loader(DRIFT_RECOVERIES_LAMBDA_PATH)
-
-
-@pytest.fixture
-def cfg(shared_config) -> Dict[str, str]:
-    """Provide config for unit tests."""
-    return {
-        'aws_region': shared_config['aws_region'],
-        'resource_prefix': shared_config['resource_prefix'],
-    }
-
-
-@pytest.fixture
-def lambda_context():
-    """Provide a mock Lambda context object."""
-    return Mock()
 
 
 @pytest.fixture

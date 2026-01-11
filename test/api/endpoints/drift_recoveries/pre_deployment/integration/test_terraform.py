@@ -1,50 +1,36 @@
 """Pre-deployment integration tests for drift recoveries Terraform config."""
 from pathlib import Path
 
+import pytest
 
-class TestTerraformFilesExist:
-    """Tests that required Terraform files exist."""
+from test_utils.terraform_assertions import (
+    assert_terraform_files_exist,
+    assert_lambda_handler_exists,
+    DEFAULT_TERRAFORM_FILES,
+)
 
-    def test_backend_tf_exists(self, terraform_dir: Path):
-        """Backend configuration file exists."""
-        assert (terraform_dir / "backend.tf").exists()
 
-    def test_providers_tf_exists(self, terraform_dir: Path):
-        """Providers configuration file exists."""
-        assert (terraform_dir / "providers.tf").exists()
+# Drift recoveries requires config.tf in addition to standard files
+DRIFT_RECOVERIES_EXTRA_FILES = ["config.tf"]
+DRIFT_RECOVERIES_ALL_FILES = DEFAULT_TERRAFORM_FILES + DRIFT_RECOVERIES_EXTRA_FILES
 
-    def test_shared_tf_exists(self, terraform_dir: Path):
-        """Shared module configuration file exists."""
-        assert (terraform_dir / "shared.tf").exists()
 
-    def test_locals_tf_exists(self, terraform_dir: Path):
-        """Locals configuration file exists."""
-        assert (terraform_dir / "locals.tf").exists()
+class TestDriftRecoveriesTerraformFiles:
+    """Tests that drift recoveries Terraform files exist."""
 
-    def test_lambda_tf_exists(self, terraform_dir: Path):
-        """Lambda configuration file exists."""
-        assert (terraform_dir / "lambda.tf").exists()
+    def test_all_required_terraform_files_exist(self, terraform_dir: Path):
+        """All required Terraform configuration files exist."""
+        assert_terraform_files_exist(terraform_dir, DRIFT_RECOVERIES_ALL_FILES)
 
-    def test_iam_tf_exists(self, terraform_dir: Path):
-        """IAM configuration file exists."""
-        assert (terraform_dir / "iam.tf").exists()
+    def test_lambda_handler_file_exists(self, terraform_dir: Path):
+        """Lambda handler Python file exists in lambda subdirectory."""
+        assert_lambda_handler_exists(terraform_dir)
 
-    def test_sqs_tf_exists(self, terraform_dir: Path):
-        """SQS configuration file exists."""
-        assert (terraform_dir / "sqs.tf").exists()
+    def test_config_tf_for_aws_config_rules(self, terraform_dir: Path):
+        """Drift recoveries has config.tf for AWS Config rule integration."""
+        assert (terraform_dir / "config.tf").is_file()
 
-    def test_eventbridge_tf_exists(self, terraform_dir: Path):
-        """EventBridge configuration file exists."""
-        assert (terraform_dir / "eventbridge.tf").exists()
-
-    def test_config_tf_exists(self, terraform_dir: Path):
-        """Config (AWS Config) configuration file exists."""
-        assert (terraform_dir / "config.tf").exists()
-
-    def test_outputs_tf_exists(self, terraform_dir: Path):
-        """Outputs configuration file exists."""
-        assert (terraform_dir / "outputs.tf").exists()
-
-    def test_lambda_handler_exists(self, terraform_dir: Path):
-        """Lambda handler Python file exists."""
-        assert (terraform_dir / "lambda" / "handler.py").exists()
+    @pytest.mark.parametrize("filename", DRIFT_RECOVERIES_EXTRA_FILES)
+    def test_drift_specific_files_exist(self, terraform_dir: Path, filename: str):
+        """Drift-specific Terraform files exist (parametrized)."""
+        assert (terraform_dir / filename).exists(), f"{filename} missing"
