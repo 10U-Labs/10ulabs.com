@@ -11,10 +11,6 @@ This includes:
 """
 import json
 
-import pytest
-
-
-
 
 # === EventBridge Rule Targets ===
 

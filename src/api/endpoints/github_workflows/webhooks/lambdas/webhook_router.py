@@ -602,4 +602,4 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     Returns:
         Response dictionary
     """
-    return asyncio.get_event_loop().run_until_complete(_async_handler(event))
+    return asyncio.run(_async_handler(event))

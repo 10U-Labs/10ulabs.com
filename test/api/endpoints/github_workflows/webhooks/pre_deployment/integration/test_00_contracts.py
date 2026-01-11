@@ -12,7 +12,6 @@ Contract tests catch mismatches between:
 
 import ast
 import re
-from pathlib import Path
 
 import pytest
 
@@ -66,7 +65,10 @@ def _read_python_file(filename: str) -> str:
 def _extract_handler_from_tf(tf_content: str, resource_name: str) -> str | None:
     """Extract the handler value from a Lambda resource in Terraform."""
     # Pattern to match: handler = "filename.function_name"
-    pattern = rf'resource\s+"aws_lambda_function"\s+"{resource_name}"\s*\{{[^}}]*?handler\s*=\s*"([^"]+)"'
+    pattern = (
+        rf'resource\s+"aws_lambda_function"\s+"{resource_name}"\s*\{{'
+        rf'[^}}]*?handler\s*=\s*"([^"]+)"'
+    )
     match = re.search(pattern, tf_content, re.DOTALL)
     if match:
         return match.group(1)
@@ -88,7 +90,10 @@ def _function_exists_in_python(python_content: str, function_name: str) -> bool:
 def _extract_env_vars_from_tf(tf_content: str, resource_name: str) -> set[str]:
     """Extract environment variable names from a Lambda resource in Terraform."""
     # Find the environment block for this Lambda
-    pattern = rf'resource\s+"aws_lambda_function"\s+"{resource_name}"\s*\{{[^}}]*?environment\s*\{{\s*variables\s*=\s*\{{([^}}]+)\}}'
+    pattern = (
+        rf'resource\s+"aws_lambda_function"\s+"{resource_name}"\s*\{{'
+        rf'[^}}]*?environment\s*\{{\s*variables\s*=\s*\{{([^}}]+)\}}'
+    )
     match = re.search(pattern, tf_content, re.DOTALL)
     if not match:
         return set()
@@ -161,15 +166,24 @@ class TestLambdaHandlerContracts:
         # Get what Terraform expects
         tf_handler = _extract_handler_from_tf(tf_content, resource_name)
         # Parse the handler (format: "filename.function_name")
-        expected_file, expected_func = tf_handler.rsplit(".", 1) if tf_handler else (None, None)
-        func_exists = _function_exists_in_python(python_content, handler_func) if tf_handler else False
-        assert tf_handler is not None and expected_file == python_file.replace(".py", "") and expected_func == handler_func and func_exists, (
+        if tf_handler:
+            expected_file, expected_func = tf_handler.rsplit(".", 1)
+        else:
+            expected_file, expected_func = None, None
+        func_exists = (
+            _function_exists_in_python(python_content, handler_func)
+            if tf_handler else False
+        )
+        file_matches = expected_file == python_file.replace(".py", "")
+        func_matches = expected_func == handler_func
+        assert tf_handler and file_matches and func_matches and func_exists, (
             f"Contract verification failed for {resource_name}: "
-            f"tf_handler={tf_handler}, expected_file={expected_file}, expected_func={expected_func}, func_exists={func_exists}"
+            f"tf_handler={tf_handler}, expected_file={expected_file}, "
+            f"expected_func={expected_func}, func_exists={func_exists}"
         )
 
-    @pytest.mark.parametrize("resource_name,python_file,handler_func", LAMBDA_DEFINITIONS)
-    def test_lambda_file_exists(self, resource_name, python_file, handler_func):
+    @pytest.mark.parametrize("resource_name,python_file,_handler_func", LAMBDA_DEFINITIONS)
+    def test_lambda_file_exists(self, resource_name, python_file, _handler_func):
         """Verify Lambda Python source file exists."""
         file_path = LAMBDAS_PATH / python_file
         assert file_path.exists(), (
@@ -181,8 +195,8 @@ class TestLambdaHandlerContracts:
 class TestEnvironmentVariableContracts:
     """Test that environment variables in Terraform match handler expectations."""
 
-    @pytest.mark.parametrize("resource_name,python_file,handler_func", LAMBDA_DEFINITIONS)
-    def test_env_vars_defined_in_terraform(self, resource_name, python_file, handler_func):
+    @pytest.mark.parametrize("resource_name,python_file,_handler_func", LAMBDA_DEFINITIONS)
+    def test_env_vars_defined_in_terraform(self, resource_name, python_file, _handler_func):
         """Verify env vars used in Python are defined in Terraform.
 
         Note: This test may have false positives if the Python code uses
@@ -223,14 +237,15 @@ class TestEnvironmentVariableContracts:
                 f"Env vars used in {python_file} but not in Terraform {resource_name}: {missing}. "
                 f"This may be intentional if vars are optional or provided elsewhere."
             )
-        assert not missing or True  # Pass if no missing vars or skipped above
+        # If we get here without skipping, there are no missing vars
+        assert not missing
 
 
 class TestArchiveSourceContracts:
     """Test that archive_file sources reference existing files."""
 
-    @pytest.mark.parametrize("resource_name,python_file,handler_func", LAMBDA_DEFINITIONS)
-    def test_archive_includes_main_lambda_file(self, resource_name, python_file, handler_func):
+    @pytest.mark.parametrize("resource_name,python_file,_handler_func", LAMBDA_DEFINITIONS)
+    def test_archive_includes_main_lambda_file(self, resource_name, python_file, _handler_func):
         """Verify archive_file includes the main Lambda Python file."""
         tf_content = _read_terraform_file()
 
@@ -252,10 +267,10 @@ class TestArchiveSourceContracts:
                 f"This module is expected to be included in Lambda archives."
             )
 
-    @pytest.mark.parametrize("resource_name,python_file,handler_func", [
+    @pytest.mark.parametrize("resource_name,_python_file,_handler_func", [
         d for d in LAMBDA_DEFINITIONS if d[0] != "dlq_reprocessor"
     ])
-    def test_archive_includes_common_modules(self, resource_name, python_file, handler_func):
+    def test_archive_includes_common_modules(self, resource_name, _python_file, _handler_func):
         """Verify archives include required common modules.
 
         Note: dlq_reprocessor uses source_file instead of source blocks,
@@ -335,7 +350,12 @@ class TestCrossFileConsistency:
 
         for resource_name, _, _ in LAMBDA_DEFINITIONS:
             # Check that Lambda references the correct archive
-            pattern = rf'resource\s+"aws_lambda_function"\s+"{resource_name}"[^}}]*?filename\s*=\s*data\.archive_file\.{resource_name}\.output_path'
+            pattern = (
+                rf'resource\s+"aws_lambda_function"\s+"{resource_name}"'
+                rf'[^}}]*?filename\s*=\s*data\.archive_file\.{resource_name}'
+                rf'\.output_path'
+            )
             assert re.search(pattern, tf_content, re.DOTALL), (
-                f"Lambda {resource_name} does not reference archive_file.{resource_name}.output_path"
+                f"Lambda {resource_name} does not reference "
+                f"archive_file.{resource_name}.output_path"
             )

@@ -11,8 +11,6 @@ Six-layer testing model:
 - Layer 5: Configuration - Are resources configured correctly?
 - Layer 6: Capability - Can we perform required operations?
 """
-import pytest
-
 from repo_utils import REPO_ROOT
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 

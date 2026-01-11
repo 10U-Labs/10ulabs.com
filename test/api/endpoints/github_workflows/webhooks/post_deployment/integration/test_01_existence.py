@@ -5,8 +5,6 @@ These tests run first to catch deployment failures before checking configuration
 """
 from test.api.endpoints.github_workflows.webhooks.conftest import find_sns_topic_arns
 
-import pytest
-
 
 # === Lambda Functions ===
 

@@ -12,7 +12,7 @@ from boto_mocks import (
     create_mock_lambda_list_mappings_error,
     create_mock_lambda_with_disabled_mappings,
 )
-from lambda_response import parse_response_body, assert_response_status
+from lambda_response import parse_response_body
 from .conftest import circuit_breaker_utils, create_closed_state_item
 
 

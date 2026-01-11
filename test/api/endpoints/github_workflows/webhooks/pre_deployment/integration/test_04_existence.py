@@ -319,4 +319,3 @@ class TestSQSTerraformConfigExistence:
             "ignored_events queue not found in sqs.tf. "
             "Required for storing unhandled webhook events."
         )
-

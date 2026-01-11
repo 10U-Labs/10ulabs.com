@@ -32,8 +32,8 @@ def test_github_webhook_for_github_workflows_webhooks_endpoint_exists(github_pat
     assert webhook is not None
 
 
-def test_github_webhook_github_workflows_webhooks_listens_for_workflow_job_events(github_pat, config):
-    """Test github webhook for github-workflows/webhooks endpoint listens for workflow_job."""
+def test_github_webhook_listens_for_workflow_job_events(github_pat, config):
+    """Test github webhook for github-workflows/webhooks listens for workflow_job."""
     hooks = _fetch_github_hooks(github_pat, config['github_repo'])
     webhook = _get_github_workflows_webhook(hooks, config['api_fqdn'])
     assert "workflow_job" in webhook["events"]

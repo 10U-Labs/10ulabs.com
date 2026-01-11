@@ -5,7 +5,7 @@ import hmac
 import json
 from contextlib import contextmanager
 from typing import Any, Iterator
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 

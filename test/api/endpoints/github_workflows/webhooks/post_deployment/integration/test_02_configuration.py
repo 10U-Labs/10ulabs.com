@@ -6,10 +6,6 @@ These tests run after existence tests pass.
 import json
 import re
 
-import pytest
-
-
-
 
 # === DynamoDB Table Configuration ===
 
