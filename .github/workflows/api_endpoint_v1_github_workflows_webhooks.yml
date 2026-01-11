@@ -177,10 +177,14 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $BASE/pre_deployment/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
+      - name: Terraform Plan
+        run: |
+          cd src/api/endpoints/github_workflows/webhooks && \
+            terraform plan -out=tfplan
       - name: Terraform Apply
         run: |
           cd src/api/endpoints/github_workflows/webhooks && \
-            terraform apply -auto-approve
+            terraform apply tfplan
       - name: Run post-deployment integration tests
         run: |
           BASE=test/api/endpoints/github_workflows/webhooks
