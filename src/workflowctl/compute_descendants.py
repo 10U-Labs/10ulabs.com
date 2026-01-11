@@ -58,7 +58,8 @@ def find_descendants(graph: dict[str, Any], workflow: str) -> list[str]:
 
 def get_workflow_name(graph: dict[str, Any], workflow_key: str) -> str:
     """Get the display name for a workflow from the graph."""
-    return graph.get(workflow_key, {}).get("name", workflow_key)
+    name: str = graph.get(workflow_key, {}).get("name", workflow_key)
+    return name
 
 
 def check_workflow_completed(

@@ -221,7 +221,8 @@ jobs:
         run: |
           TRIGGER="${{ github.event.inputs.trigger_descendants }}"
           INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
-          for workflow in $(echo '${{ steps.descendants.outputs.ready }}' | jq -r '.[]'); do
+          READY='${{ steps.descendants.outputs.ready }}'
+          for workflow in $(echo "$READY" | jq -r '.[]'); do
             FLAGS="-f trigger_descendants=${TRIGGER:-false}"
             if [ "$INVALIDATE" = "true" ]; then
               FLAGS="$FLAGS -f invalidate_cloudfront=true"

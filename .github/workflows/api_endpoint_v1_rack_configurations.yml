@@ -175,8 +175,8 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           TESTS=test/api/endpoints/rack_configurations/pre_deployment/integration/
-          PYTHONPATH=lib/python python3 -m pytest \
-            $TESTS --capture=no --confcutdir=test --verbose --pythonwarnings=error
+          PYTHONPATH=lib/python python3 -m pytest $TESTS \
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Plan
         run: |
           cd src/api/endpoints/rack_configurations && \
@@ -222,7 +222,8 @@ jobs:
         run: |
           TRIGGER="${{ github.event.inputs.trigger_descendants }}"
           INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
-          for workflow in $(echo '${{ steps.descendants.outputs.ready }}' | jq -r '.[]'); do
+          READY='${{ steps.descendants.outputs.ready }}'
+          for workflow in $(echo "$READY" | jq -r '.[]'); do
             FLAGS="-f trigger_descendants=${TRIGGER:-false}"
             if [ "$INVALIDATE" = "true" ]; then
               FLAGS="$FLAGS -f invalidate_cloudfront=true"

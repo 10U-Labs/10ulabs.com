@@ -375,7 +375,7 @@ class TestMain:
 
     @contextmanager
     def _run_main_with_graph(
-        self, compute_descendants, workflow: str = "bootstrap"
+        self, _compute_descendants: Any, workflow: str = "bootstrap"
     ) -> Generator[None, None, None]:
         """Context manager for running main with mocked graph."""
         argv = ["prog", "--workflow", workflow, "--repo", "o/r"]

@@ -364,7 +364,8 @@ jobs:
         name: Dispatch ready descendants
         run: |
           TRIGGER="${{ github.event.inputs.trigger_descendants }}"
-          for workflow in $(echo '${{ steps.descendants.outputs.ready }}' | jq -r '.[]'); do
+          READY='${{ steps.descendants.outputs.ready }}'
+          for workflow in $(echo "$READY" | jq -r '.[]'); do
             FLAGS="-f trigger_descendants=${TRIGGER:-false}"
             gh workflow run "${workflow}.yml" \
               --repo ${{ github.repository }} \
