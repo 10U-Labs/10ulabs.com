@@ -44,8 +44,7 @@ class TestGetDynamodbClient:
             mock_boto.return_value = mock_client
             first_call = aws_clients_module.get_dynamodb_client()
             second_call = aws_clients_module.get_dynamodb_client()
-            assert mock_boto.call_count == 1
-            assert first_call is second_call
+            assert mock_boto.call_count == 1 and first_call is second_call
 
 
 class TestGetEc2Client:
