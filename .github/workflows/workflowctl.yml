@@ -163,9 +163,8 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pylint on tests
         run: |
-          TEST=test/workflowctl
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ $TEST/ \
+            lib/python/ test/ \
             --fail-on=C,R,W --fail-under=10.0
       - if: >-
           github.event.inputs.force_testing == 'true' ||
@@ -177,11 +176,10 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on tests
         run: |
-          TEST=test/workflowctl
           MYPYPATH=lib/python
           MYPYPATH=$MYPYPATH:src/api/endpoints/runners/lambda
           MYPYPATH=$MYPYPATH:src/api/endpoints/runners/ecs/lambda
-          MYPYPATH=$MYPYPATH python3 -m mypy lib/python/ $TEST/
+          MYPYPATH=$MYPYPATH python3 -m mypy lib/python/ test/
       - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'

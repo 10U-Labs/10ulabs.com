@@ -95,9 +95,8 @@ jobs:
             --fail-on=C,R,W --fail-under=10.0
       - name: Run pylint on tests
         run: |
-          TEST=test/api/endpoints/runners/ecs/images
           PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ $TEST/ \
+            lib/python/ test/ \
             --fail-on=C,R,W --fail-under=10.0
       - name: Run mypy on source
         run: |
@@ -105,9 +104,8 @@ jobs:
           python3 -m mypy lib/python/ $SRC
       - name: Run mypy on tests
         run: |
-          TEST=test/api/endpoints/runners/ecs/images
           MYPYPATH=lib/python:src/api/endpoints/runners/lambda python3 -m mypy \
-            lib/python/ $TEST/
+            lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -237,7 +235,7 @@ on:
         required: false
         type: string
       trigger_descendants:
-        default: false
+        default: true
         description: Trigger descendant workflows after this workflow completes
         type: boolean
 permissions:
