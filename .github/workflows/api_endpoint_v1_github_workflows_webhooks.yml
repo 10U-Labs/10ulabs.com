@@ -95,7 +95,7 @@ jobs:
       - name: Run pylint on tests
         run: |
           TEST=test/api/endpoints/github_workflows/webhooks
-          PYTHONPATH=lib/python python3 -m pylint \
+          PYTHONPATH=lib/python:. python3 -m pylint \
             lib/python/ $TEST/ \
             --fail-on=C,R,W --fail-under=10.0
       - name: Run mypy on source
