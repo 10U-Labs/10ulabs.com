@@ -186,10 +186,10 @@ class TestGetDependencyStatus:
             )
         assert result["all_met"] is True
 
-    def test_all_deps_completed_has_both_in_satisfied(
+    def test_all_deps_completed_has_www_common_in_satisfied(
         self, compute_descendants
     ) -> None:
-        """Test that both deps are in satisfied when all completed."""
+        """Test that www_common is in satisfied when all completed."""
         mock_result = MagicMock()
         mock_result.stdout = "12345\n"
 
@@ -198,6 +198,18 @@ class TestGetDependencyStatus:
                 SAMPLE_GRAPH, "www_app", "www_common", "owner/repo", 24
             )
         assert "www_common" in result["satisfied"]
+
+    def test_all_deps_completed_has_api_common_in_satisfied(
+        self, compute_descendants
+    ) -> None:
+        """Test that api_common is in satisfied when all completed."""
+        mock_result = MagicMock()
+        mock_result.stdout = "12345\n"
+
+        with patch("compute_descendants.subprocess.run", return_value=mock_result):
+            result = compute_descendants.get_dependency_status(
+                SAMPLE_GRAPH, "www_app", "www_common", "owner/repo", 24
+            )
         assert "api_common" in result["satisfied"]
 
     def test_missing_dep_returns_not_all_met(self, compute_descendants) -> None:
@@ -226,45 +238,95 @@ class TestGetDependencyStatus:
 class TestComputeDescendantsStatus:
     """Tests for compute_descendants_status function."""
 
-    def test_returns_empty_for_leaf_workflow(self, compute_descendants) -> None:
-        """Test returns empty ready and waiting for leaf workflow."""
-        ready, waiting = compute_descendants.compute_descendants_status(
+    def test_returns_empty_ready_for_leaf_workflow(self, compute_descendants) -> None:
+        """Test returns empty ready for leaf workflow."""
+        ready, _ = compute_descendants.compute_descendants_status(
             SAMPLE_GRAPH, "www_app", "owner/repo", 24
         )
         assert ready == []
+
+    def test_returns_empty_waiting_for_leaf_workflow(self, compute_descendants) -> None:
+        """Test returns empty waiting for leaf workflow."""
+        _, waiting = compute_descendants.compute_descendants_status(
+            SAMPLE_GRAPH, "www_app", "owner/repo", 24
+        )
         assert waiting == {}
 
-    def test_single_dep_descendants_are_ready(self, compute_descendants) -> None:
-        """Test that single-dependency descendants are ready."""
-        ready, waiting = compute_descendants.compute_descendants_status(
+    def test_single_dep_descendants_are_in_ready(self, compute_descendants) -> None:
+        """Test that single-dependency descendants are in ready list."""
+        ready, _ = compute_descendants.compute_descendants_status(
             SAMPLE_GRAPH, "bootstrap", "owner/repo", 24
         )
         assert set(ready) == {"www_common", "api_common"}
+
+    def test_single_dep_descendants_have_empty_waiting(
+        self, compute_descendants
+    ) -> None:
+        """Test that single-dependency descendants have empty waiting dict."""
+        _, waiting = compute_descendants.compute_descendants_status(
+            SAMPLE_GRAPH, "bootstrap", "owner/repo", 24
+        )
         assert waiting == {}
 
-    def test_multi_dep_with_missing_goes_to_waiting(self, compute_descendants) -> None:
-        """Test that multi-dependency workflows with missing deps go to waiting."""
+    def test_multi_dep_with_missing_has_empty_ready(self, compute_descendants) -> None:
+        """Test that multi-dep workflows with missing deps have empty ready."""
         mock_result = MagicMock()
         mock_result.stdout = ""
 
         with patch("compute_descendants.subprocess.run", return_value=mock_result):
-            ready, waiting = compute_descendants.compute_descendants_status(
+            ready, _ = compute_descendants.compute_descendants_status(
                 SAMPLE_GRAPH, "www_common", "owner/repo", 24
             )
         assert ready == []
+
+    def test_multi_dep_with_missing_has_workflow_in_waiting(
+        self, compute_descendants
+    ) -> None:
+        """Test that multi-dep workflows with missing deps are in waiting."""
+        mock_result = MagicMock()
+        mock_result.stdout = ""
+
+        with patch("compute_descendants.subprocess.run", return_value=mock_result):
+            _, waiting = compute_descendants.compute_descendants_status(
+                SAMPLE_GRAPH, "www_common", "owner/repo", 24
+            )
         assert "www_app" in waiting
+
+    def test_multi_dep_with_missing_shows_missing_dep(
+        self, compute_descendants
+    ) -> None:
+        """Test that waiting workflow shows missing dependency."""
+        mock_result = MagicMock()
+        mock_result.stdout = ""
+
+        with patch("compute_descendants.subprocess.run", return_value=mock_result):
+            _, waiting = compute_descendants.compute_descendants_status(
+                SAMPLE_GRAPH, "www_common", "owner/repo", 24
+            )
         assert "api_common" in waiting["www_app"]["missing"]
 
-    def test_multi_dep_with_all_met_goes_to_ready(self, compute_descendants) -> None:
-        """Test that multi-dependency workflows with all deps met go to ready."""
+    def test_multi_dep_with_all_met_is_in_ready(self, compute_descendants) -> None:
+        """Test that multi-dependency workflows with all deps met are in ready."""
         mock_result = MagicMock()
         mock_result.stdout = "12345\n"
 
         with patch("compute_descendants.subprocess.run", return_value=mock_result):
-            ready, waiting = compute_descendants.compute_descendants_status(
+            ready, _ = compute_descendants.compute_descendants_status(
                 SAMPLE_GRAPH, "www_common", "owner/repo", 24
             )
         assert "www_app" in ready
+
+    def test_multi_dep_with_all_met_has_empty_waiting(
+        self, compute_descendants
+    ) -> None:
+        """Test that multi-dependency workflows with all deps met have empty waiting."""
+        mock_result = MagicMock()
+        mock_result.stdout = "12345\n"
+
+        with patch("compute_descendants.subprocess.run", return_value=mock_result):
+            _, waiting = compute_descendants.compute_descendants_status(
+                SAMPLE_GRAPH, "www_common", "owner/repo", 24
+            )
         assert waiting == {}
 
 
@@ -276,10 +338,9 @@ class TestWriteGithubOutput:
     ) -> None:
         """Test that nothing is written when GITHUB_OUTPUT is not set."""
         with patch.dict(os.environ, {}, clear=True):
-            # Remove GITHUB_OUTPUT if it exists
             os.environ.pop("GITHUB_OUTPUT", None)
             compute_descendants.write_github_output(["a"], {"b": {"missing": ["c"]}})
-        # No assertion needed - just verify no exception
+        assert True  # No exception means success
 
     def test_writes_ready_to_output_file(
         self, compute_descendants, tmp_path
@@ -294,10 +355,10 @@ class TestWriteGithubOutput:
         content = output_file.read_text()
         assert 'ready=["www_common"]' in content
 
-    def test_writes_waiting_to_output_file(
+    def test_writes_waiting_key_to_output_file(
         self, compute_descendants, tmp_path
     ) -> None:
-        """Test that waiting dict is written to GITHUB_OUTPUT."""
+        """Test that waiting key is written to GITHUB_OUTPUT."""
         output_file = tmp_path / "output"
         output_file.touch()
 
@@ -307,6 +368,19 @@ class TestWriteGithubOutput:
 
         content = output_file.read_text()
         assert "waiting=" in content
+
+    def test_writes_waiting_workflow_to_output_file(
+        self, compute_descendants, tmp_path
+    ) -> None:
+        """Test that waiting workflow is written to GITHUB_OUTPUT."""
+        output_file = tmp_path / "output"
+        output_file.touch()
+
+        waiting = {"www_app": {"missing": ["api_common"], "satisfied": ["www_common"]}}
+        with patch.dict(os.environ, {"GITHUB_OUTPUT": str(output_file)}):
+            compute_descendants.write_github_output([], waiting)
+
+        content = output_file.read_text()
         assert "www_app" in content
 
 
@@ -320,12 +394,12 @@ class TestWriteStepSummary:
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("GITHUB_STEP_SUMMARY", None)
             compute_descendants.write_step_summary("bootstrap", ["a"], {})
-        # No exception means success
+        assert True  # No exception means success
 
-    def test_writes_completed_workflow(
+    def test_writes_workflow_name_to_summary(
         self, compute_descendants, tmp_path
     ) -> None:
-        """Test that completed workflow is written to summary."""
+        """Test that completed workflow name is written to summary."""
         summary_file = tmp_path / "summary"
         summary_file.touch()
 
@@ -334,12 +408,24 @@ class TestWriteStepSummary:
 
         content = summary_file.read_text()
         assert "bootstrap" in content
-        assert "Completed" in content
 
-    def test_writes_ready_descendants(
+    def test_writes_completed_label_to_summary(
         self, compute_descendants, tmp_path
     ) -> None:
-        """Test that ready descendants are shown in summary."""
+        """Test that Completed label is written to summary."""
+        summary_file = tmp_path / "summary"
+        summary_file.touch()
+
+        with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary_file)}):
+            compute_descendants.write_step_summary("bootstrap", [], {})
+
+        content = summary_file.read_text()
+        assert "Completed" in content
+
+    def test_writes_ready_workflow_to_summary(
+        self, compute_descendants, tmp_path
+    ) -> None:
+        """Test that ready descendant workflow is shown in summary."""
         summary_file = tmp_path / "summary"
         summary_file.touch()
 
@@ -348,12 +434,24 @@ class TestWriteStepSummary:
 
         content = summary_file.read_text()
         assert "www_common" in content
-        assert "Ready" in content
 
-    def test_writes_waiting_descendants(
+    def test_writes_ready_label_to_summary(
         self, compute_descendants, tmp_path
     ) -> None:
-        """Test that waiting descendants are shown in summary."""
+        """Test that Ready label is shown in summary."""
+        summary_file = tmp_path / "summary"
+        summary_file.touch()
+
+        with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary_file)}):
+            compute_descendants.write_step_summary("bootstrap", ["www_common"], {})
+
+        content = summary_file.read_text()
+        assert "Ready" in content
+
+    def test_writes_waiting_workflow_to_summary(
+        self, compute_descendants, tmp_path
+    ) -> None:
+        """Test that waiting descendant workflow is shown in summary."""
         summary_file = tmp_path / "summary"
         summary_file.touch()
 
@@ -363,7 +461,33 @@ class TestWriteStepSummary:
 
         content = summary_file.read_text()
         assert "www_app" in content
+
+    def test_writes_waiting_label_to_summary(
+        self, compute_descendants, tmp_path
+    ) -> None:
+        """Test that Waiting label is shown in summary."""
+        summary_file = tmp_path / "summary"
+        summary_file.touch()
+
+        waiting = {"www_app": {"missing": ["api_common"], "satisfied": ["www_common"]}}
+        with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary_file)}):
+            compute_descendants.write_step_summary("www_common", [], waiting)
+
+        content = summary_file.read_text()
         assert "Waiting" in content
+
+    def test_writes_missing_dep_to_summary(
+        self, compute_descendants, tmp_path
+    ) -> None:
+        """Test that missing dependency is shown in summary."""
+        summary_file = tmp_path / "summary"
+        summary_file.touch()
+
+        waiting = {"www_app": {"missing": ["api_common"], "satisfied": ["www_common"]}}
+        with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary_file)}):
+            compute_descendants.write_step_summary("www_common", [], waiting)
+
+        content = summary_file.read_text()
         assert "api_common" in content
 
     def test_shows_no_descendants_message(
@@ -396,8 +520,8 @@ class TestMain:
                     result = compute_descendants.main()
         assert result == 0
 
-    def test_prints_json_to_stdout(self, compute_descendants, capsys) -> None:
-        """Test that JSON output is printed to stdout."""
+    def test_stdout_contains_completed_workflow(self, compute_descendants, capsys) -> None:
+        """Test that stdout contains completed_workflow field."""
         argv = ["prog", "--workflow", "bootstrap", "--repo", "o/r"]
         with patch.object(sys, "argv", argv):
             with patch(
@@ -411,10 +535,25 @@ class TestMain:
         captured = capsys.readouterr()
         output = json.loads(captured.out)
         assert output["completed_workflow"] == "bootstrap"
+
+    def test_stdout_contains_ready_descendants(self, compute_descendants, capsys) -> None:
+        """Test that stdout contains ready descendants."""
+        argv = ["prog", "--workflow", "bootstrap", "--repo", "o/r"]
+        with patch.object(sys, "argv", argv):
+            with patch(
+                "compute_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
+            ):
+                with patch.dict(os.environ, {}, clear=True):
+                    os.environ.pop("GITHUB_OUTPUT", None)
+                    os.environ.pop("GITHUB_STEP_SUMMARY", None)
+                    compute_descendants.main()
+
+        captured = capsys.readouterr()
+        output = json.loads(captured.out)
         assert set(output["ready"]) == {"www_common", "api_common"}
 
-    def test_outputs_ready_descendants(self, compute_descendants, capsys) -> None:
-        """Test that ready descendants are in output."""
+    def test_stdout_contains_www_common_in_ready(self, compute_descendants, capsys) -> None:
+        """Test that www_common is in ready list."""
         argv = ["prog", "--workflow", "bootstrap", "--repo", "o/r"]
         with patch.object(sys, "argv", argv):
             with patch(
@@ -428,10 +567,25 @@ class TestMain:
         captured = capsys.readouterr()
         output = json.loads(captured.out)
         assert "www_common" in output["ready"]
+
+    def test_stdout_contains_api_common_in_ready(self, compute_descendants, capsys) -> None:
+        """Test that api_common is in ready list."""
+        argv = ["prog", "--workflow", "bootstrap", "--repo", "o/r"]
+        with patch.object(sys, "argv", argv):
+            with patch(
+                "compute_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
+            ):
+                with patch.dict(os.environ, {}, clear=True):
+                    os.environ.pop("GITHUB_OUTPUT", None)
+                    os.environ.pop("GITHUB_STEP_SUMMARY", None)
+                    compute_descendants.main()
+
+        captured = capsys.readouterr()
+        output = json.loads(captured.out)
         assert "api_common" in output["ready"]
 
-    def test_outputs_waiting_descendants(self, compute_descendants, capsys) -> None:
-        """Test that waiting descendants are in output."""
+    def test_stdout_contains_waiting_workflow(self, compute_descendants, capsys) -> None:
+        """Test that waiting workflow is in output."""
         argv = ["prog", "--workflow", "www_common", "--repo", "o/r"]
         mock_result = MagicMock()
         mock_result.stdout = ""
@@ -449,4 +603,23 @@ class TestMain:
         captured = capsys.readouterr()
         output = json.loads(captured.out)
         assert "www_app" in output["waiting"]
+
+    def test_stdout_contains_missing_dependency(self, compute_descendants, capsys) -> None:
+        """Test that missing dependency is in output."""
+        argv = ["prog", "--workflow", "www_common", "--repo", "o/r"]
+        mock_result = MagicMock()
+        mock_result.stdout = ""
+
+        with patch.object(sys, "argv", argv):
+            with patch(
+                "compute_descendants.load_dependency_graph", return_value=SAMPLE_GRAPH
+            ):
+                with patch("compute_descendants.subprocess.run", return_value=mock_result):
+                    with patch.dict(os.environ, {}, clear=True):
+                        os.environ.pop("GITHUB_OUTPUT", None)
+                        os.environ.pop("GITHUB_STEP_SUMMARY", None)
+                        compute_descendants.main()
+
+        captured = capsys.readouterr()
+        output = json.loads(captured.out)
         assert "api_common" in output["waiting"]["www_app"]["missing"]
