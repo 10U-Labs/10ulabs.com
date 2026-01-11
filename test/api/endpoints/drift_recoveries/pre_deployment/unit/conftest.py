@@ -1,6 +1,5 @@
 """Shared fixtures for drift recoveries unit tests."""
 import sys
-from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import MagicMock, Mock, patch
 
@@ -24,7 +23,7 @@ load_lambda_module = create_lambda_loader(DRIFT_RECOVERIES_LAMBDA_PATH)
 
 
 @pytest.fixture
-def config(shared_config) -> Dict[str, str]:
+def cfg(shared_config) -> Dict[str, str]:
     """Provide config for unit tests."""
     return {
         'aws_region': shared_config['aws_region'],
@@ -39,7 +38,7 @@ def lambda_context():
 
 
 @pytest.fixture
-def mock_env_vars():
+def env_vars():
     """Mock environment variables for Lambda handler."""
     return {
         'GITHUB_REPO': '10U-Labs-LLC/10ulabs.com',
@@ -50,9 +49,10 @@ def mock_env_vars():
 
 
 @pytest.fixture
-def handler_module(config, mock_env_vars):
+def handler_module(request):
     """Provide the handler module with mocked environment."""
-    with patch.dict('os.environ', mock_env_vars):
+    env = request.getfixturevalue('env_vars')
+    with patch.dict('os.environ', env):
         module = load_lambda_module("handler.py", "handler")
         yield module
 

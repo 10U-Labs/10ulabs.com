@@ -23,7 +23,8 @@ class TestGetEc2InstanceTags:
         }
 
         with patch.object(handler_module, '_get_ec2_client', return_value=mock_ec2):
-            result = handler_module._get_ec2_instance_tags("i-abc123")
+            get_tags = getattr(handler_module, '_get_ec2_instance_tags')
+            result = get_tags("i-abc123")
 
         assert (result["RunId"], result["GitHubRepo"]) == ("12345", "org/repo")
 
@@ -33,7 +34,8 @@ class TestGetEc2InstanceTags:
         mock_ec2.describe_instances.return_value = {"Reservations": []}
 
         with patch.object(handler_module, '_get_ec2_client', return_value=mock_ec2):
-            result = handler_module._get_ec2_instance_tags("i-abc123")
+            get_tags = getattr(handler_module, '_get_ec2_instance_tags')
+            result = get_tags("i-abc123")
 
         assert result == {}
 
@@ -46,7 +48,8 @@ class TestGetEc2InstanceTags:
         )
 
         with patch.object(handler_module, '_get_ec2_client', return_value=mock_ec2):
-            result = handler_module._get_ec2_instance_tags("i-abc123")
+            get_tags = getattr(handler_module, '_get_ec2_instance_tags')
+            result = get_tags("i-abc123")
 
         assert result == {}
 
@@ -59,7 +62,8 @@ class TestSendRetryRequest:
         mock_sqs = MagicMock()
 
         with patch.object(handler_module, '_get_sqs_client', return_value=mock_sqs):
-            result = handler_module._send_retry_request(
+            send_retry = getattr(handler_module, '_send_retry_request')
+            result = send_retry(
                 run_id=12345,
                 github_repo="org/repo",
                 reason="test reason",
@@ -73,7 +77,8 @@ class TestSendRetryRequest:
     def test_send_retry_request_no_queue_url_returns_false(self, handler_module):
         """Returns False when queue URL not set."""
         with patch.dict('os.environ', {'RETRIES_QUEUE_URL': ''}):
-            result = handler_module._send_retry_request(
+            send_retry = getattr(handler_module, '_send_retry_request')
+            result = send_retry(
                 run_id=12345,
                 github_repo="org/repo",
                 reason="test reason",
@@ -92,7 +97,8 @@ class TestSendRetryRequest:
         )
 
         with patch.object(handler_module, '_get_sqs_client', return_value=mock_sqs):
-            result = handler_module._send_retry_request(
+            send_retry = getattr(handler_module, '_send_retry_request')
+            result = send_retry(
                 run_id=12345,
                 github_repo="org/repo",
                 reason="test reason",
@@ -110,7 +116,8 @@ class TestHandleEc2SpotInterruption:
         """Returns 400 when instance-id is missing."""
         event = {"detail": {}}
 
-        result = handler_module._handle_ec2_spot_interruption(event)
+        handle_fn = getattr(handler_module, '_handle_ec2_spot_interruption')
+        result = handle_fn(event)
 
         assert result["statusCode"] == 400
 
@@ -119,7 +126,8 @@ class TestHandleEc2SpotInterruption:
         event = {"detail": {"instance-id": "i-abc123"}}
 
         with patch.object(handler_module, '_get_ec2_instance_tags', return_value={}):
-            result = handler_module._handle_ec2_spot_interruption(event)
+            handle_fn = getattr(handler_module, '_handle_ec2_spot_interruption')
+            result = handle_fn(event)
 
         assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, False)
 
@@ -132,7 +140,8 @@ class TestHandleEc2SpotInterruption:
             '_get_ec2_instance_tags',
             return_value={"Name": "some-other-instance"}
         ):
-            result = handler_module._handle_ec2_spot_interruption(event)
+            handle_fn = getattr(handler_module, '_handle_ec2_spot_interruption')
+            result = handle_fn(event)
 
         assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, False)
 
@@ -146,9 +155,11 @@ class TestHandleEc2SpotInterruption:
             return_value={"RunId": "12345", "GitHubRepo": "org/repo"}
         ):
             with patch.object(handler_module, '_send_retry_request', return_value=True):
-                result = handler_module._handle_ec2_spot_interruption(event)
+                handle_fn = getattr(handler_module, '_handle_ec2_spot_interruption')
+                result = handle_fn(event)
 
-        assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, True)
+        body = json.loads(result["body"])
+        assert (result["statusCode"], body["handled"]) == (200, True)
 
 
 class TestLambdaHandler:
@@ -186,7 +197,8 @@ class TestLambdaHandler:
         with patch.object(handler_module, '_get_ec2_instance_tags', return_value={}):
             result = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200 and "results" in json.loads(result["body"])
+        body = json.loads(result["body"])
+        assert result["statusCode"] == 200 and "results" in body
 
     def test_lambda_handler_ignores_non_spot_events(
         self, handler_module, lambda_context
@@ -200,4 +212,5 @@ class TestLambdaHandler:
 
         result = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200 and "ignored" in json.loads(result["body"])["message"].lower()
+        body = json.loads(result["body"])
+        assert result["statusCode"] == 200 and "ignored" in body["message"].lower()

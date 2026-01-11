@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.fixture
-def config(shared_config) -> Dict[str, str]:
+def cfg(shared_config) -> Dict[str, str]:
     """Provide config for integration tests."""
     return {
         'aws_region': shared_config['aws_region'],
@@ -14,18 +14,21 @@ def config(shared_config) -> Dict[str, str]:
 
 
 @pytest.fixture
-def resource_prefix(config) -> str:
+def res_prefix(request) -> str:
     """Provide the resource prefix for AWS resources."""
+    config = request.getfixturevalue('cfg')
     return config.get('resource_prefix', '10ULabs')
 
 
 @pytest.fixture
-def function_name(resource_prefix: str) -> str:
+def function_name(request) -> str:
     """Provide the Lambda function name."""
-    return f"{resource_prefix}EC2SpotInterruptions"
+    prefix = request.getfixturevalue('res_prefix')
+    return f"{prefix}EC2SpotInterruptions"
 
 
 @pytest.fixture
-def queue_name(resource_prefix: str) -> str:
+def queue_name(request) -> str:
     """Provide the SQS queue name."""
-    return f"{resource_prefix}EC2SpotInterruptions"
+    prefix = request.getfixturevalue('res_prefix')
+    return f"{prefix}EC2SpotInterruptions"

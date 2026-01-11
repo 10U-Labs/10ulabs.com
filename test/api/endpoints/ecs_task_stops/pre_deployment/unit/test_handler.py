@@ -10,19 +10,22 @@ class TestIsSpotInterruption:
 
     def test_is_spot_interruption_with_spot_code_returns_true(self, handler_module):
         """Returns True when stopCode contains SpotInterruption."""
-        result = handler_module._is_spot_interruption("SpotInterruption", "")
+        is_spot = getattr(handler_module, '_is_spot_interruption')
+        result = is_spot("SpotInterruption", "")
 
         assert result is True
 
     def test_is_spot_interruption_with_capacity_reason_returns_true(self, handler_module):
         """Returns True when stoppedReason contains capacity."""
-        result = handler_module._is_spot_interruption("", "Insufficient capacity")
+        is_spot = getattr(handler_module, '_is_spot_interruption')
+        result = is_spot("", "Insufficient capacity")
 
         assert result is True
 
     def test_is_spot_interruption_normal_stop_returns_false(self, handler_module):
         """Returns False for normal task stops."""
-        result = handler_module._is_spot_interruption("TaskCompleted", "Container exited")
+        is_spot = getattr(handler_module, '_is_spot_interruption')
+        result = is_spot("TaskCompleted", "Container exited")
 
         assert result is False
 
@@ -43,7 +46,8 @@ class TestGetEcsTaskTags:
         }
 
         with patch.object(handler_module, '_get_ecs_client', return_value=mock_ecs):
-            result = handler_module._get_ecs_task_tags(
+            get_tags = getattr(handler_module, '_get_ecs_task_tags')
+            result = get_tags(
                 "arn:aws:ecs:us-east-2:123456789012:task/cluster/task123",
                 "arn:aws:ecs:us-east-2:123456789012:cluster/cluster"
             )
@@ -56,7 +60,8 @@ class TestGetEcsTaskTags:
         mock_ecs.describe_tasks.return_value = {"tasks": []}
 
         with patch.object(handler_module, '_get_ecs_client', return_value=mock_ecs):
-            result = handler_module._get_ecs_task_tags(
+            get_tags = getattr(handler_module, '_get_ecs_task_tags')
+            result = get_tags(
                 "arn:aws:ecs:us-east-2:123456789012:task/cluster/task123",
                 "arn:aws:ecs:us-east-2:123456789012:cluster/cluster"
             )
@@ -72,7 +77,8 @@ class TestGetEcsTaskTags:
         )
 
         with patch.object(handler_module, '_get_ecs_client', return_value=mock_ecs):
-            result = handler_module._get_ecs_task_tags(
+            get_tags = getattr(handler_module, '_get_ecs_task_tags')
+            result = get_tags(
                 "arn:aws:ecs:us-east-2:123456789012:task/cluster/task123",
                 "arn:aws:ecs:us-east-2:123456789012:cluster/cluster"
             )
@@ -88,7 +94,8 @@ class TestSendRetryRequest:
         mock_sqs = MagicMock()
 
         with patch.object(handler_module, '_get_sqs_client', return_value=mock_sqs):
-            result = handler_module._send_retry_request(
+            send_retry = getattr(handler_module, '_send_retry_request')
+            result = send_retry(
                 run_id=12345,
                 github_repo="org/repo",
                 reason="test reason",
@@ -102,7 +109,8 @@ class TestSendRetryRequest:
     def test_send_retry_request_no_queue_url_returns_false(self, handler_module):
         """Returns False when queue URL not set."""
         with patch.dict('os.environ', {'RETRIES_QUEUE_URL': ''}):
-            result = handler_module._send_retry_request(
+            send_retry = getattr(handler_module, '_send_retry_request')
+            result = send_retry(
                 run_id=12345,
                 github_repo="org/repo",
                 reason="test reason",
@@ -120,7 +128,8 @@ class TestHandleEcsTaskStopped:
         """Returns 400 when taskArn is missing."""
         event = {"detail": {}}
 
-        result = handler_module._handle_ecs_task_stopped(event)
+        handle_fn = getattr(handler_module, '_handle_ecs_task_stopped')
+        result = handle_fn(event)
 
         assert result["statusCode"] == 400
 
@@ -135,7 +144,8 @@ class TestHandleEcsTaskStopped:
             }
         }
 
-        result = handler_module._handle_ecs_task_stopped(event)
+        handle_fn = getattr(handler_module, '_handle_ecs_task_stopped')
+        result = handle_fn(event)
 
         assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, False)
 
@@ -151,7 +161,8 @@ class TestHandleEcsTaskStopped:
         }
 
         with patch.object(handler_module, '_get_ecs_task_tags', return_value={}):
-            result = handler_module._handle_ecs_task_stopped(event)
+            handle_fn = getattr(handler_module, '_handle_ecs_task_stopped')
+            result = handle_fn(event)
 
         assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, False)
 
@@ -172,9 +183,11 @@ class TestHandleEcsTaskStopped:
             return_value={"RunId": "12345", "GitHubRepo": "org/repo"}
         ):
             with patch.object(handler_module, '_send_retry_request', return_value=True):
-                result = handler_module._handle_ecs_task_stopped(event)
+                handle_fn = getattr(handler_module, '_handle_ecs_task_stopped')
+                result = handle_fn(event)
 
-        assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, True)
+        body = json.loads(result["body"])
+        assert (result["statusCode"], body["handled"]) == (200, True)
 
 
 class TestLambdaHandler:
@@ -222,7 +235,8 @@ class TestLambdaHandler:
 
         result = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200 and "results" in json.loads(result["body"])
+        body = json.loads(result["body"])
+        assert result["statusCode"] == 200 and "results" in body
 
     def test_lambda_handler_ignores_non_stopped_events(
         self, handler_module, lambda_context
@@ -239,4 +253,5 @@ class TestLambdaHandler:
 
         result = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200 and "ignored" in json.loads(result["body"])["message"].lower()
+        body = json.loads(result["body"])
+        assert result["statusCode"] == 200 and "ignored" in body["message"].lower()

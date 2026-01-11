@@ -36,7 +36,7 @@ load_lambda_module = create_lambda_loader(ECS_TASK_STOPS_LAMBDA_PATH)
 
 
 @pytest.fixture
-def config(shared_config) -> Dict[str, str]:
+def cfg(shared_config) -> Dict[str, str]:
     """Provide config for unit tests."""
     return {
         'aws_region': shared_config['aws_region'],
@@ -51,8 +51,9 @@ def lambda_context():
 
 
 @pytest.fixture
-def handler_module(config):
+def handler_module(request):
     """Provide the handler module with mocked environment."""
+    config = request.getfixturevalue('cfg')
     env_vars = {
         'AWS_REGION': config['aws_region'],
         'RETRIES_QUEUE_URL': 'https://sqs.us-east-2.amazonaws.com/123456789012/test-queue',
