@@ -123,12 +123,7 @@ class TestCircuitBreakerAlarms:
 
     def test_circuit_breaker_open_alarm_configuration(self, cloudwatch_tf_content):
         """Verify circuit breaker open alarm has correct metric configuration."""
-        assert '"CircuitBreakerState"' in cloudwatch_tf_content, (
-            "CircuitBreakerState metric not found"
-        )
-        assert '"WebhookRouter"' in cloudwatch_tf_content, (
-            "WebhookRouter namespace not found"
-        )
+        assert '"CircuitBreakerState"' in cloudwatch_tf_content and '"WebhookRouter"' in cloudwatch_tf_content
 
     def test_webhook_handler_errors_uses_metric_query(self, cloudwatch_tf_content):
         """Verify webhook handler errors alarm uses metric queries for error rate."""
