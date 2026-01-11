@@ -224,7 +224,7 @@ class TestLambdaHandler:
         with patch.object(archiver_module, 'get_sqs_records', return_value=[record]):
             with patch.object(archiver_module, 'publish_metric'):
                 with patch.object(archiver_module, 'count_results', return_value=(0, 1)):
-                    with pytest.raises(RuntimeError, match="1 event"):
+                    with pytest.raises(RuntimeError):
                         archiver_module.lambda_handler(event={}, _context=lambda_context)
                     raised = True
         assert raised

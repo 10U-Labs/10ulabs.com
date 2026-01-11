@@ -146,10 +146,12 @@ class TestGithubApiRequest:
             hdrs={},
             fp=MagicMock(read=MagicMock(return_value=b'{"message": "Not found"}'))
         )
+        raised = False
         with patch.object(github_api_module.urllib.request, 'urlopen', side_effect=error):
             with pytest.raises(urllib.error.HTTPError):
                 github_api_module.github_api_request("GET", "/test/path", token="test-token")
-        assert error.code == 404
+            raised = True
+        assert raised
 
     def test_sets_correct_headers(self, github_api_module):
         """Test that correct headers are set."""
@@ -191,7 +193,9 @@ class TestGithubApiRequest:
             hdrs={},
             fp=None
         )
+        raised = False
         with patch.object(github_api_module.urllib.request, 'urlopen', side_effect=error):
             with pytest.raises(urllib.error.HTTPError):
                 github_api_module.github_api_request("GET", "/test/path", token="test-token")
-        assert error.code == 500
+            raised = True
+        assert raised
