@@ -99,14 +99,6 @@ jobs:
             types-requests \
             yamllint
       - if: >-
-          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')) &&
-          (github.event.inputs.force_testing == 'true' ||
-          steps.detect-changes.outputs.workflowctl_changed == 'true')
-        name: Install npm dependencies
-        run: npm install -g jscpd jsonlint
-      - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Assert no linter config files
@@ -146,6 +138,14 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/workflowctl.yml
+      - if: >-
+          (vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')) &&
+          (github.event.inputs.force_testing == 'true' ||
+          steps.detect-changes.outputs.workflowctl_changed == 'true')
+        name: Install npm dependencies
+        run: npm install -g jscpd jsonlint
       - if: >-
           github.event.inputs.force_testing == 'true' ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
