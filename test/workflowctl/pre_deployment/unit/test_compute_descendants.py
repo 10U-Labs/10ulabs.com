@@ -414,17 +414,19 @@ class TestMain:
         output = json.loads(capsys.readouterr().out)
         assert set(output["ready"]) == {"www_common", "api_common"}
 
-    def test_stdout_contains_waiting_workflow(
-        self, compute_descendants, capsys
-    ) -> None:
-        """Test that waiting workflow is in output."""
+    def _run_main_with_missing_dep(self, compute_descendants) -> dict[str, Any]:
+        """Run main with a missing dependency and return parsed output."""
         mock_result = MagicMock()
         mock_result.stdout = ""
-
         with self._run_main_with_graph(compute_descendants, "www_common"):
             with patch("compute_descendants.subprocess.run", return_value=mock_result):
                 compute_descendants.main()
 
+    def test_stdout_contains_waiting_workflow(
+        self, compute_descendants, capsys
+    ) -> None:
+        """Test that waiting workflow is in output."""
+        self._run_main_with_missing_dep(compute_descendants)
         output = json.loads(capsys.readouterr().out)
         assert "www_app" in output["waiting"]
 
@@ -432,12 +434,6 @@ class TestMain:
         self, compute_descendants, capsys
     ) -> None:
         """Test that missing dependency is in output."""
-        mock_result = MagicMock()
-        mock_result.stdout = ""
-
-        with self._run_main_with_graph(compute_descendants, "www_common"):
-            with patch("compute_descendants.subprocess.run", return_value=mock_result):
-                compute_descendants.main()
-
+        self._run_main_with_missing_dep(compute_descendants)
         output = json.loads(capsys.readouterr().out)
         assert "api_common" in output["waiting"]["www_app"]["missing"]
