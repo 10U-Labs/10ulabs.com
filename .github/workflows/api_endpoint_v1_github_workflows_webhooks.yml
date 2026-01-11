@@ -217,7 +217,7 @@ jobs:
             FLAGS="$FLAGS --invalidate-cloudfront"
           fi
           python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
-            --workflow github_workflows_webhooks \
+            --workflow api_endpoint_v1_github_workflows_webhooks \
             --repo ${{ github.repository }} \
             $FLAGS
 name: >-
