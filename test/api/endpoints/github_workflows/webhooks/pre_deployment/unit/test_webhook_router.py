@@ -164,8 +164,9 @@ class TestGetApiKey:
         """Test that RuntimeError is raised when parameter name not set."""
         router_module._cache["api_key"] = None
         with patch.dict('os.environ', {'API_KEY_PARAMETER_NAME': ''}):
-            with pytest.raises(RuntimeError, match="API_KEY_PARAMETER_NAME"):
+            with pytest.raises(RuntimeError) as exc_info:
                 router_module._get_api_key()
+            assert "API_KEY_PARAMETER_NAME" in str(exc_info.value)
 
     def test_raises_runtime_error_on_ssm_error(self, router_module):
         """Test that RuntimeError is raised on SSM client error."""
@@ -177,8 +178,9 @@ class TestGetApiKey:
             "GetParameter"
         )
         with patch.object(router_module, 'get_ssm_client', return_value=mock_ssm):
-            with pytest.raises(RuntimeError, match="Cannot retrieve API key"):
+            with pytest.raises(RuntimeError) as exc_info:
                 router_module._get_api_key()
+            assert "Cannot retrieve API key" in str(exc_info.value)
 
 
 class TestVerifySignature:
@@ -245,8 +247,7 @@ class TestParseEventBody:
         """Test that JSON body is parsed correctly."""
         event = {"body": '{"action": "queued"}'}
         body_str, payload = router_module._parse_event_body(event)
-        assert body_str == '{"action": "queued"}'
-        assert payload == {"action": "queued"}
+        assert (body_str, payload) == ('{"action": "queued"}', {"action": "queued"})
 
     def test_parses_base64_encoded_body(self, router_module):
         """Test that base64 encoded body is decoded and parsed."""
@@ -266,8 +267,9 @@ class TestParseEventBody:
     def test_raises_value_error_for_invalid_json(self, router_module):
         """Test that ValueError is raised for invalid JSON."""
         event = {"body": "not valid json"}
-        with pytest.raises(json.JSONDecodeError):
+        with pytest.raises(json.JSONDecodeError) as exc_info:
             router_module._parse_event_body(event)
+        assert "Expecting value" in str(exc_info.value)
 
 
 class TestCheckAndRecordIdempotency:
@@ -534,8 +536,9 @@ class TestGetWebhookSecret:
             "GetParameter"
         )
         with patch.object(router_module, 'get_ssm_client', return_value=mock_ssm):
-            with pytest.raises(RuntimeError, match="Cannot retrieve webhook secret"):
+            with pytest.raises(RuntimeError) as exc_info:
                 _run_async(router_module._get_webhook_secret())
+            assert "Cannot retrieve webhook secret" in str(exc_info.value)
 
 
 class TestVerifyWebhookSignature:
@@ -711,8 +714,9 @@ class TestAsyncHandler:
             return {"success": False}
         mock_ingress.handle = mock_handle
         with patch.object(router_module, '_get_ingress_handler', return_value=mock_ingress):
-            with pytest.raises(RuntimeError, match="failed"):
+            with pytest.raises(RuntimeError) as exc_info:
                 _run_async(router_module._async_handler(event))
+            assert "failed" in str(exc_info.value)
 
 
 class TestIngressDeps:

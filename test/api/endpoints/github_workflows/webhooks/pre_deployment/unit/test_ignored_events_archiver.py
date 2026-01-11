@@ -82,8 +82,7 @@ class TestBuildS3Key:
         message_id = "msg-789"
         result = archiver_module._build_s3_key(timestamp, message_id)
         # Should still build a valid path using current time
-        assert result.startswith("ignored-events/")
-        assert result.endswith("/msg-789.json")
+        assert result.startswith("ignored-events/") and result.endswith("/msg-789.json")
 
     def test_pads_month_and_day_with_zeros(self, archiver_module):
         """Test that single-digit month and day are zero-padded."""
@@ -224,8 +223,9 @@ class TestLambdaHandler:
         with patch.object(archiver_module, 'get_sqs_records', return_value=[record]):
             with patch.object(archiver_module, 'publish_metric'):
                 with patch.object(archiver_module, 'count_results', return_value=(0, 1)):
-                    with pytest.raises(RuntimeError, match="1 event"):
+                    with pytest.raises(RuntimeError) as exc_info:
                         archiver_module.lambda_handler(event={}, _context=lambda_context)
+                    assert "1 event" in str(exc_info.value)
 
     def test_publishes_archive_errors_metric_on_failure(self, archiver_module, lambda_context):
         """Test that ArchiveErrors metric is published on failure."""
