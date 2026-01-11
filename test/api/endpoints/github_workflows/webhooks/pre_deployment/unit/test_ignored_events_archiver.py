@@ -161,8 +161,11 @@ class TestLambdaHandler:
     def test_returns_empty_response_when_no_records(self, archiver_module, lambda_context):
         """Test that empty response is returned when no records."""
         event = {"Records": []}
+        empty_resp_patch = patch.object(
+            archiver_module, 'empty_records_response', return_value={"statusCode": 200}
+        )
         with patch.object(archiver_module, 'get_sqs_records', return_value=None):
-            with patch.object(archiver_module, 'empty_records_response', return_value={"statusCode": 200}):
+            with empty_resp_patch:
                 result = archiver_module.lambda_handler(event, lambda_context)
                 assert result["statusCode"] == 200
 
@@ -195,8 +198,9 @@ class TestLambdaHandler:
                 with patch.object(archiver_module, 'publish_metric') as mock_pub:
                     with patch.object(archiver_module, 'count_results', return_value=(1, 0)):
                         archiver_module.lambda_handler(event={}, _context=lambda_context)
-                        events_archived_calls = [c for c in mock_pub.call_args_list if "EventsArchived" in str(c)]
-                        assert len(events_archived_calls) == 1
+                        calls = mock_pub.call_args_list
+                        archived_calls = [c for c in calls if "EventsArchived" in str(c)]
+                        assert len(archived_calls) == 1
 
     def test_raises_runtime_error_on_failures(self, archiver_module, lambda_context):
         """Test that RuntimeError is raised when archiving fails."""
@@ -226,5 +230,6 @@ class TestLambdaHandler:
             with patch.object(archiver_module, 'publish_metric') as mock_pub:
                 with patch.object(archiver_module, 'count_results', return_value=(0, 0)):
                     archiver_module.lambda_handler(event={}, _context=lambda_context)
-                    processing_time_calls = [c for c in mock_pub.call_args_list if "ProcessingTime" in str(c)]
-                    assert len(processing_time_calls) == 1
+                    calls = mock_pub.call_args_list
+                    time_calls = [c for c in calls if "ProcessingTime" in str(c)]
+                    assert len(time_calls) == 1

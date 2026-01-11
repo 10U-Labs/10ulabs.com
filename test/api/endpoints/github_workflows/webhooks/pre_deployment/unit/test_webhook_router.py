@@ -484,8 +484,9 @@ class TestPostToRunners:
     def test_returns_error_on_url_error(self, router_module):
         """Test that URL error returns error."""
         import urllib.error
+        url_err = urllib.error.URLError("Network error")
         with patch.object(router_module, '_get_api_key', return_value="test-key"):
-            with patch('urllib.request.urlopen', side_effect=urllib.error.URLError("Network error")):
+            with patch('urllib.request.urlopen', side_effect=url_err):
                 result = _run_async(router_module._post_to_runners({"job_id": 123}))
                 assert result["success"] is False
 
