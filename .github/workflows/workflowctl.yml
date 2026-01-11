@@ -30,7 +30,9 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
       - id: detect-changes
-        if: github.event.inputs.force_testing != 'true'
+        if: >-
+          github.event.inputs.force_testing != 'true' &&
+          !contains(github.event.head_commit.message, '[force testing]')
         name: Detect workflowctl-related changes
         run: |
           echo "Checking for workflowctl-related file changes..."
@@ -57,11 +59,13 @@ jobs:
           echo "workflowctl_changed=$WORKFLOWCTL_CHANGED" >> "$GITHUB_OUTPUT"
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Workflowctl testing required
         run: echo "Workflowctl-related files changed. Running tests..."
       - if: >-
           github.event.inputs.force_testing != 'true' &&
+          !contains(github.event.head_commit.message, '[force testing]') &&
           steps.detect-changes.outputs.workflowctl_changed != 'true'
         name: Workflowctl testing not required
         run: echo "No workflowctl-related files changed. Skipping tests."
@@ -78,6 +82,7 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')) &&
           (github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true')
         name: Install Python dependencies
         run: |
@@ -100,6 +105,7 @@ jobs:
             yamllint
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Assert no linter config files
         run: >-
@@ -109,6 +115,7 @@ jobs:
           ${{ github.workspace }}
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Assert no inline lint disables
         run: >-
@@ -118,6 +125,7 @@ jobs:
           ${{ github.workspace }}/**/*
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Assert one assert per pytest
         run: >-
@@ -126,6 +134,7 @@ jobs:
           ${{ github.workspace }}/test
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Linting YAML files
         run: |
@@ -143,16 +152,19 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')) &&
           (github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true')
         name: Install npm dependencies
         run: npm install -g jscpd jsonlint
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Linting JSON files
         run: jsonlint -q etc/workflow_dependencies.json
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pylint on source
         run: |
@@ -160,6 +172,7 @@ jobs:
             --fail-on=C,R,W --fail-under=10.0
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pylint on tests
         run: |
@@ -168,11 +181,13 @@ jobs:
             --fail-on=C,R,W --fail-under=10.0
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on source
         run: python3 -m mypy lib/python/ src/workflowctl/
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on tests
         run: |
@@ -182,6 +197,7 @@ jobs:
           MYPYPATH=$MYPYPATH python3 -m mypy lib/python/ test/
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Check for duplicate code in source Python files
         run: |
@@ -189,6 +205,7 @@ jobs:
             lib/python/ src/workflowctl/
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Check for duplicate code in test Python files
         run: |
@@ -196,6 +213,7 @@ jobs:
             lib/python/ test/workflowctl/
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run unit tests
         run: |
@@ -205,6 +223,7 @@ jobs:
             --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
           github.event.inputs.force_testing == 'true' ||
+          contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run pre-deployment integration tests
         run: |
