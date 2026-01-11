@@ -126,7 +126,7 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/api/endpoints/runners/ec2/images/post/
+            lib/python/ test/
       - name: Run unit tests
         run: |
           TEST=test/api/endpoints/runners/ec2/images/post/pre_deployment

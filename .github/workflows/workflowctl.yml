@@ -210,7 +210,7 @@ jobs:
         name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/workflowctl/
+            lib/python/ test/
       - if: >-
           github.event.inputs.force_testing == 'true' ||
           contains(github.event.head_commit.message, '[force testing]') ||
