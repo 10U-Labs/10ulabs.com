@@ -57,14 +57,7 @@ resource "aws_cloudwatch_log_subscription_filter" "dlq_reprocessor" {
   role_arn        = local.firehose_role_arn
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "drift_recovery" {
-  count           = local.create_subscriptions ? 1 : 0
-  name            = "drift-recovery-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.drift_recovery.name
-  filter_pattern  = ""
-  destination_arn = local.firehose_arn
-  role_arn        = local.firehose_role_arn
-}
+# Note: drift_recovery log subscription removed - migrated to /v1/drift-recoveries endpoint
 
 resource "aws_cloudwatch_log_subscription_filter" "ignored_events_archiver" {
   count           = local.create_subscriptions ? 1 : 0
@@ -75,20 +68,5 @@ resource "aws_cloudwatch_log_subscription_filter" "ignored_events_archiver" {
   role_arn        = local.firehose_role_arn
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "spot_interruption_handler" {
-  count           = local.create_subscriptions ? 1 : 0
-  name            = "spot-interruption-handler-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.spot_interruption_handler.name
-  filter_pattern  = ""
-  destination_arn = local.firehose_arn
-  role_arn        = local.firehose_role_arn
-}
-
-resource "aws_cloudwatch_log_subscription_filter" "stale_runner_cleanup" {
-  count           = local.create_subscriptions ? 1 : 0
-  name            = "stale-runner-cleanup-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.stale_runner_cleanup.name
-  filter_pattern  = ""
-  destination_arn = local.firehose_arn
-  role_arn        = local.firehose_role_arn
-}
+# Note: spot_interruption_handler log subscription removed - migrated to /v1/ec2-spot-interruptions
+# Note: stale_runner_cleanup log subscription removed - migrated to /v1/runners/cleanups
