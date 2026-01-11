@@ -16,17 +16,17 @@ api_common_routing                                                              
     │                                                                                                  │
     ├── api_endpoint_v1_soc_simulations ───────────────────────────────────────────────────────────────┴─→ www_simulations_soc
     │
-    ├── api_endpoint_v1_github_workflows_retries ─┬─→ api_endpoint_v1_ec2_spot_interruptions
-    │                                             └─→ api_endpoint_v1_ecs_task_stops
-    │
-    ├── api_common_networking
-    │       └── api_endpoint_v1_runners_ec2_images ───────────────────┬─→ api_endpoint_v1_runners_ec2 ─┐
-    │                                                                 │                                │
-    └── api_common_docker_repository ─┬─→ api_endpoint_v1_runners_ecs_images ─→ api_endpoint_v1_runners_ecs
-                                      │                                                  │             │
-                                      └──────────────────────────────────────────────────┘             │
-                                                                                                       │
-                                                             api_endpoint_v1_runners_cleanups ◄────────┘
+    ├── api_endpoint_v1_github_workflows_retries ─┬─→ api_endpoint_v1_ec2_spot_interruptions ─┐
+    │                                             └─→ api_endpoint_v1_ecs_task_stops ─────────┼────────┐
+    │                                                                                         │        │
+    ├── api_common_networking                                                                 │        │
+    │       └── api_endpoint_v1_runners_ec2_images ───────────────────────────────────────────┴─→ api_endpoint_v1_runners_ec2 ─┐
+    │                                                                                                                           │
+    └── api_common_docker_repository ─┬─→ api_endpoint_v1_runners_ecs_images ─→ api_endpoint_v1_runners_ecs ◄──────────────────┘
+                                      │                                                  ↑
+                                      └──────────────────────────────────────────────────┘
+
+                                                             api_endpoint_v1_runners_cleanups ◄── runners_ec2 & runners_ecs
                                                                          │
                                                                          └─→ api_endpoint_v1_runners
                                                                                      │

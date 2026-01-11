@@ -112,7 +112,6 @@
   "api_endpoint_v1_runners_ecs": {
     "depends_on": [
       "api_endpoint_v1_ecs_task_stops",
-      "api_endpoint_v1_github_workflows_retries",
       "api_endpoint_v1_runners_ecs_images"
     ],
     "name": "Ensuring the /v1/runners/ecs API endpoint exists and is properly configured",
