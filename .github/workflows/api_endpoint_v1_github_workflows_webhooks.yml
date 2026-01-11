@@ -45,6 +45,9 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
+            assert-no-inline-directives \
+            assert-no-linter-config-files \
+            assert-one-assert-per-pytest \
             boto3 \
             boto3-stubs \
             botocore \
