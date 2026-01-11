@@ -1,5 +1,4 @@
 """Unit tests for webhook_router Lambda."""
-import asyncio
 import base64
 import hashlib
 import hmac
@@ -10,7 +9,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
 
-from .conftest import load_lambda_module
+from .conftest import load_lambda_module, run_async
 
 
 def _compute_signature(body: str, secret: str) -> str:
@@ -18,15 +17,6 @@ def _compute_signature(body: str, secret: str) -> str:
     return hmac.new(
         secret.encode("utf-8"), body.encode("utf-8"), hashlib.sha256
     ).hexdigest()
-
-
-def _run_async(coro):
-    """Run an async coroutine synchronously."""
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
 
 
 def _create_mock_sqs_with_error() -> MagicMock:
@@ -286,7 +276,7 @@ class TestCheckAndRecordIdempotency:
         mock_dynamodb = MagicMock()
         mock_dynamodb.put_item.return_value = {}
         with patch.object(router_module, 'get_dynamodb_client', return_value=mock_dynamodb):
-            result = _run_async(router_module._check_and_record_idempotency("new-request-id"))
+            result = run_async(router_module._check_and_record_idempotency("new-request-id"))
             assert result is False
 
     def test_returns_true_for_duplicate_request(self, router_module):
@@ -298,13 +288,13 @@ class TestCheckAndRecordIdempotency:
             "PutItem"
         )
         with patch.object(router_module, 'get_dynamodb_client', return_value=mock_dynamodb):
-            result = _run_async(router_module._check_and_record_idempotency("dup-request-id"))
+            result = run_async(router_module._check_and_record_idempotency("dup-request-id"))
             assert result is True
 
     def test_returns_false_when_table_name_not_set(self, router_module):
         """Test that missing table name returns False and skips check."""
         with patch.dict('os.environ', {'IDEMPOTENCY_TABLE_NAME': ''}):
-            result = _run_async(router_module._check_and_record_idempotency("any-id"))
+            result = run_async(router_module._check_and_record_idempotency("any-id"))
             assert result is False
 
     def test_returns_false_on_other_dynamodb_errors(self, router_module):
@@ -316,7 +306,7 @@ class TestCheckAndRecordIdempotency:
             "PutItem"
         )
         with patch.object(router_module, 'get_dynamodb_client', return_value=mock_dynamodb):
-            result = _run_async(router_module._check_and_record_idempotency("request-id"))
+            result = run_async(router_module._check_and_record_idempotency("request-id"))
             assert result is False
 
 
@@ -332,20 +322,20 @@ class TestEnqueueJob:
         }
         with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
             with patch.object(router_module, '_publish_metric'):
-                result = _run_async(router_module._enqueue_job({"job_id": 123}))
+                result = run_async(router_module._enqueue_job({"job_id": 123}))
                 assert result["success"] is True and result["message_id"] == "msg-123"
 
     def test_returns_error_when_queue_url_not_set(self, router_module):
         """Test that missing queue URL returns error."""
         with patch.dict('os.environ', {'JOB_QUEUE_URL': ''}):
-            result = _run_async(router_module._enqueue_job({"job_id": 123}))
+            result = run_async(router_module._enqueue_job({"job_id": 123}))
             assert result["success"] is False and "not configured" in result["error"]
 
     def test_returns_error_on_sqs_failure(self, router_module):
         """Test that SQS failure returns error."""
         mock_sqs = _create_mock_sqs_with_error()
         with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
-            result = _run_async(router_module._enqueue_job({"job_id": 123}))
+            result = run_async(router_module._enqueue_job({"job_id": 123}))
             assert result["success"] is False
 
 
@@ -415,7 +405,7 @@ class TestHandleWorkflowJob:
             "workflow_job": {"id": 123, "name": "test", "labels": [], "status": "completed"},
             "repository": {"full_name": "test/repo"}
         }
-        result = _run_async(router_module._handle_workflow_job(event_data))
+        result = run_async(router_module._handle_workflow_job(event_data))
         body = json.loads(result["body"])
         assert result["statusCode"] == 200 and "Ignored action" in body["message"]
 
@@ -433,7 +423,7 @@ class TestHandleWorkflowJob:
             },
             "repository": {"full_name": "test/repo"}
         }
-        result = _run_async(router_module._handle_workflow_job(event_data))
+        result = run_async(router_module._handle_workflow_job(event_data))
         body = json.loads(result["body"])
         assert result["statusCode"] == 200 and body["test_mode"] is True
 
@@ -444,7 +434,7 @@ class TestHandleWorkflowJob:
         async def mock_post(*args, **kwargs):
             return {"success": True}
         with patch.object(router_module, '_post_to_runners', side_effect=mock_post):
-            result = _run_async(router_module._handle_workflow_job(event_data))
+            result = run_async(router_module._handle_workflow_job(event_data))
             body = json.loads(result["body"])
             assert result["statusCode"] == 200 and "forwarded" in body["message"].lower()
 
@@ -455,7 +445,7 @@ class TestHandleWorkflowJob:
         async def mock_post(*args, **kwargs):
             return {"success": False, "error": "Network error"}
         with patch.object(router_module, '_post_to_runners', side_effect=mock_post):
-            result = _run_async(router_module._handle_workflow_job(event_data))
+            result = run_async(router_module._handle_workflow_job(event_data))
             assert result["statusCode"] == 500
 
 
@@ -465,13 +455,13 @@ class TestPostToRunners:
     def test_returns_error_when_api_base_url_not_set(self, router_module):
         """Test that missing API base URL returns error."""
         with patch.dict('os.environ', {'API_BASE_URL': ''}):
-            result = _run_async(router_module._post_to_runners({"job_id": 123}))
+            result = run_async(router_module._post_to_runners({"job_id": 123}))
             assert result["success"] is False and "not configured" in result["error"]
 
     def test_returns_error_when_api_key_unavailable(self, router_module):
         """Test that unavailable API key returns error."""
         with patch.object(router_module, '_get_api_key', side_effect=RuntimeError("No key")):
-            result = _run_async(router_module._post_to_runners({"job_id": 123}))
+            result = run_async(router_module._post_to_runners({"job_id": 123}))
             assert result["success"] is False
 
     def test_returns_success_on_successful_post(self, router_module):
@@ -482,7 +472,7 @@ class TestPostToRunners:
         mock_response.__exit__ = MagicMock(return_value=False)
         with patch.object(router_module, '_get_api_key', return_value="test-key"):
             with patch('urllib.request.urlopen', return_value=mock_response):
-                result = _run_async(router_module._post_to_runners({"job_id": 123}))
+                result = run_async(router_module._post_to_runners({"job_id": 123}))
                 assert result["success"] is True and result["status_code"] == 200
 
     def test_returns_error_on_http_error(self, router_module):
@@ -492,7 +482,7 @@ class TestPostToRunners:
             with patch('urllib.request.urlopen', side_effect=urllib.error.HTTPError(
                 url="", code=500, msg="Internal Server Error", hdrs={}, fp=None
             )):
-                result = _run_async(router_module._post_to_runners({"job_id": 123}))
+                result = run_async(router_module._post_to_runners({"job_id": 123}))
                 assert result["success"] is False and result["status_code"] == 500
 
     def test_returns_error_on_url_error(self, router_module):
@@ -501,7 +491,7 @@ class TestPostToRunners:
         url_err = urllib.error.URLError("Network error")
         with patch.object(router_module, '_get_api_key', return_value="test-key"):
             with patch('urllib.request.urlopen', side_effect=url_err):
-                result = _run_async(router_module._post_to_runners({"job_id": 123}))
+                result = run_async(router_module._post_to_runners({"job_id": 123}))
                 assert result["success"] is False
 
 
@@ -511,7 +501,7 @@ class TestGetWebhookSecret:
     def test_returns_cached_secret(self, router_module):
         """Test that cached secret is returned."""
         router_module._cache["webhook_secret"] = "cached-secret"
-        result = _run_async(router_module._get_webhook_secret())
+        result = run_async(router_module._get_webhook_secret())
         assert result == "cached-secret"
 
     def test_retrieves_secret_from_ssm(self, router_module):
@@ -520,7 +510,7 @@ class TestGetWebhookSecret:
         mock_ssm = MagicMock()
         mock_ssm.get_parameter.return_value = {"Parameter": {"Value": "ssm-secret"}}
         with patch.object(router_module, 'get_ssm_client', return_value=mock_ssm):
-            result = _run_async(router_module._get_webhook_secret())
+            result = run_async(router_module._get_webhook_secret())
             assert result == "ssm-secret"
 
     def test_force_refresh_clears_cache(self, router_module):
@@ -529,7 +519,7 @@ class TestGetWebhookSecret:
         mock_ssm = MagicMock()
         mock_ssm.get_parameter.return_value = {"Parameter": {"Value": "new-secret"}}
         with patch.object(router_module, 'get_ssm_client', return_value=mock_ssm):
-            result = _run_async(router_module._get_webhook_secret(force_refresh=True))
+            result = run_async(router_module._get_webhook_secret(force_refresh=True))
             assert result == "new-secret"
 
     def test_raises_runtime_error_on_ssm_error(self, router_module):
@@ -544,7 +534,7 @@ class TestGetWebhookSecret:
         raised = False
         with patch.object(router_module, 'get_ssm_client', return_value=mock_ssm):
             with pytest.raises(RuntimeError):
-                _run_async(router_module._get_webhook_secret())
+                run_async(router_module._get_webhook_secret())
             raised = True
         assert raised
 
@@ -560,7 +550,7 @@ class TestVerifyWebhookSignature:
         async def mock_get_secret(*args, **kwargs):
             return secret
         with patch.object(router_module, '_get_webhook_secret', side_effect=mock_get_secret):
-            result = _run_async(router_module._verify_webhook_signature(body, signature))
+            result = run_async(router_module._verify_webhook_signature(body, signature))
             assert result == {}
 
     def test_returns_401_on_invalid_signature(self, router_module):
@@ -568,7 +558,7 @@ class TestVerifyWebhookSignature:
         async def mock_get_secret(*args, **kwargs):
             return "secret"
         with patch.object(router_module, '_get_webhook_secret', side_effect=mock_get_secret):
-            result = _run_async(router_module._verify_webhook_signature("body", "sha256=invalid"))
+            result = run_async(router_module._verify_webhook_signature("body", "sha256=invalid"))
             assert result["statusCode"] == 401
 
     def test_returns_500_when_secret_unavailable(self, router_module):
@@ -576,7 +566,7 @@ class TestVerifyWebhookSignature:
         async def mock_get_secret(*args, **kwargs):
             raise RuntimeError("No secret")
         with patch.object(router_module, '_get_webhook_secret', side_effect=mock_get_secret):
-            result = _run_async(router_module._verify_webhook_signature("body", "sha256=sig"))
+            result = run_async(router_module._verify_webhook_signature("body", "sha256=sig"))
             assert result["statusCode"] == 500
 
 
@@ -586,7 +576,7 @@ class TestProcessWebhookEvent:
     def test_returns_400_for_invalid_json(self, router_module):
         """Test that invalid JSON returns 400."""
         event = {"body": "not json"}
-        result = _run_async(router_module._process_webhook_event(event, {}, 0))
+        result = run_async(router_module._process_webhook_event(event, {}, 0))
         assert result["statusCode"] == 400
 
     def test_returns_200_for_ping_event(self, router_module):
@@ -594,7 +584,7 @@ class TestProcessWebhookEvent:
         event = {"body": '{"zen": "test"}'}
         headers = {"x-github-event": "ping"}
         with patch.object(router_module, '_publish_metric'):
-            result = _run_async(router_module._process_webhook_event(event, headers, 0))
+            result = run_async(router_module._process_webhook_event(event, headers, 0))
             body = json.loads(result["body"])
             assert result["statusCode"] == 200 and body["message"] == "pong"
 
@@ -603,7 +593,7 @@ class TestProcessWebhookEvent:
         event = {"body": '{"action": "queued"}'}
         headers = {"x-github-delivery": "dup-123", "x-github-event": "workflow_job"}
         with _mock_idempotency_check(router_module, is_duplicate=True):
-            result = _run_async(router_module._process_webhook_event(event, headers, 0))
+            result = run_async(router_module._process_webhook_event(event, headers, 0))
             body = json.loads(result["body"])
             assert result["statusCode"] == 200 and "Duplicate" in body["message"]
 
@@ -616,7 +606,7 @@ class TestProcessWebhookEvent:
         })}
         headers = {"x-github-event": "workflow_job", "x-github-delivery": "new-123"}
         with _mock_idempotency_check(router_module):
-            result = _run_async(router_module._process_webhook_event(event, headers, 0))
+            result = run_async(router_module._process_webhook_event(event, headers, 0))
             assert result["statusCode"] == 200
 
     def test_returns_error_on_signature_verification_failure(self, router_module):
@@ -626,7 +616,7 @@ class TestProcessWebhookEvent:
         async def mock_verify(*args, **kwargs):
             return {"statusCode": 401, "body": "Invalid signature"}
         with patch.object(router_module, '_verify_webhook_signature', side_effect=mock_verify):
-            result = _run_async(router_module._process_webhook_event(event, headers, 0))
+            result = run_async(router_module._process_webhook_event(event, headers, 0))
             assert result["statusCode"] == 401
 
     def test_ignores_unknown_event_type(self, router_module):
@@ -634,7 +624,7 @@ class TestProcessWebhookEvent:
         event = {"body": '{"action": "created"}'}
         headers = {"x-github-event": "issues", "x-github-delivery": "new-456"}
         with _mock_idempotency_check(router_module):
-            result = _run_async(router_module._process_webhook_event(event, headers, 0))
+            result = run_async(router_module._process_webhook_event(event, headers, 0))
             body = json.loads(result["body"])
             assert result["statusCode"] == 200 and "ignored" in body["message"].lower()
 
@@ -646,7 +636,7 @@ class TestProcessWebhookEvent:
         })}
         headers = {"x-github-event": "workflow_run", "x-github-delivery": "new-456"}
         with _mock_idempotency_check(router_module):
-            result = _run_async(router_module._process_webhook_event(event, headers, 0))
+            result = run_async(router_module._process_webhook_event(event, headers, 0))
             assert result["statusCode"] == 200
 
 
@@ -656,7 +646,7 @@ class TestHandleApiGatewayEvent:
     def test_returns_cors_headers_for_options(self, router_module):
         """Test that OPTIONS request returns CORS headers."""
         event = {"httpMethod": "OPTIONS", "headers": {}}
-        result = _run_async(router_module._handle_api_gateway_event(event, 0))
+        result = run_async(router_module._handle_api_gateway_event(event, 0))
         assert result["statusCode"] == 200 and "Access-Control-Allow-Origin" in result["headers"]
 
     def test_sets_test_mode_from_header(self, router_module):
@@ -669,7 +659,7 @@ class TestHandleApiGatewayEvent:
         async def mock_process(*args, **kwargs):
             return {"statusCode": 200}
         with patch.object(router_module, '_process_webhook_event', side_effect=mock_process):
-            _run_async(router_module._handle_api_gateway_event(event, 0))
+            run_async(router_module._handle_api_gateway_event(event, 0))
             assert router_module._cache["test_mode"] is True
 
     def test_extracts_method_from_request_context(self, router_module):
@@ -679,7 +669,7 @@ class TestHandleApiGatewayEvent:
             "requestContext": {"http": {"method": "OPTIONS"}},
             "body": ""
         }
-        result = _run_async(router_module._handle_api_gateway_event(event, 0))
+        result = run_async(router_module._handle_api_gateway_event(event, 0))
         assert result["statusCode"] == 200 and "Access-Control-Allow-Origin" in result["headers"]
 
 
@@ -689,7 +679,7 @@ class TestAsyncHandler:
     def test_handles_api_gateway_event(self, router_module):
         """Test that API Gateway event is handled."""
         event = {"httpMethod": "OPTIONS", "headers": {}}
-        result = _run_async(router_module._async_handler(event))
+        result = run_async(router_module._async_handler(event))
         assert result["statusCode"] == 200
 
     def test_handles_sqs_event(self, router_module):
@@ -707,7 +697,7 @@ class TestAsyncHandler:
             return {"success": True}
         mock_ingress.handle = mock_handle
         with patch.object(router_module, '_get_ingress_handler', return_value=mock_ingress):
-            result = _run_async(router_module._async_handler(event))
+            result = run_async(router_module._async_handler(event))
             assert result["statusCode"] == 200
 
     def test_raises_on_sqs_failure(self, router_module):
@@ -724,7 +714,7 @@ class TestAsyncHandler:
         raised = False
         with patch.object(router_module, '_get_ingress_handler', return_value=mock_ingress):
             with pytest.raises(RuntimeError):
-                _run_async(router_module._async_handler(event))
+                run_async(router_module._async_handler(event))
             raised = True
         assert raised
 
@@ -739,7 +729,7 @@ class TestIngressDeps:
         with patch.object(router_module, '_get_webhook_secret', side_effect=mock_get_secret):
             handler = router_module._get_ingress_handler()
             deps = handler.get_deps()
-            result = _run_async(deps.get_webhook_secret())
+            result = run_async(deps.get_webhook_secret())
             assert result == "test-secret"
 
     def test_ingress_deps_verify_signature(self, router_module):
@@ -765,7 +755,7 @@ class TestIngressDeps:
         with patch.object(router_module, '_check_and_record_idempotency', side_effect=mock_check):
             handler = router_module._get_ingress_handler()
             deps = handler.get_deps()
-            result = _run_async(deps.check_idempotency("delivery-id"))
+            result = run_async(deps.check_idempotency("delivery-id"))
             assert result is True
 
     def test_ingress_deps_get_runner_type(self, router_module):
@@ -782,7 +772,7 @@ class TestIngressDeps:
         with patch.object(router_module, '_post_to_runners', side_effect=mock_post):
             handler = router_module._get_ingress_handler()
             deps = handler.get_deps()
-            result = _run_async(deps.enqueue_job({"job": "data"}))
+            result = run_async(deps.enqueue_job({"job": "data"}))
             assert result["success"] is True
 
     # Note: test_ingress_deps_enqueue_cancellation removed - runners are ephemeral

@@ -14,6 +14,7 @@ from boto_mocks import (
     create_mock_lambda_with_mappings,
 )
 from lambda_response import parse_response_body, assert_response_status
+from .conftest import create_closed_state_item
 
 
 RECOVERY_ENV = {'STATE_TABLE_NAME': 'test-table', 'WEBHOOK_FUNCTION_NAME': 'test-function'}
@@ -81,18 +82,6 @@ def _run_recovery_with_sns(circuit_breaker_recovery, mock_client, extra_env=None
         with patch('boto3.client') as mock_boto:
             mock_boto.return_value = mock_client
             return circuit_breaker_recovery.attempt_recovery()
-
-
-def _create_closed_state_item():
-    """Create DynamoDB item for closed circuit breaker state."""
-    return {
-        'Item': {
-            'state': {'S': 'closed'},
-            'recovery_attempts': {'N': '0'},
-            'last_recovery_attempt': {'N': '0'},
-            'last_failure_time': {'N': '0'}
-        }
-    }
 
 
 def _run_handler_with_mock(circuit_breaker_recovery, mock_client, context, env=None):
@@ -371,7 +360,7 @@ def test_set_lambda_reserved_concurrency_handles_api_error(circuit_breaker_recov
 def test_attempt_recovery_skips_when_not_in_open_state(circuit_breaker_recovery):
     """Test attempt recovery skips when not in open state."""
     mock_client = MagicMock()
-    mock_client.get_item.return_value = _create_closed_state_item()
+    mock_client.get_item.return_value = create_closed_state_item(include_recovery_fields=True)
     result = _run_recovery_with_mock(circuit_breaker_recovery, mock_client)
     assert 'message' in result
 
@@ -459,7 +448,7 @@ def test_attempt_recovery_calculates_correct_concurrency_level(circuit_breaker_r
 def test_lambda_handler_processes_scheduled_event(circuit_breaker_recovery, lambda_context):
     """Test lambda handler processes scheduled event."""
     mock_client = MagicMock()
-    mock_client.get_item.return_value = _create_closed_state_item()
+    mock_client.get_item.return_value = create_closed_state_item(include_recovery_fields=True)
     response = _run_handler_with_mock(circuit_breaker_recovery, mock_client, lambda_context)
     assert response['statusCode'] == 200
 
@@ -467,7 +456,7 @@ def test_lambda_handler_processes_scheduled_event(circuit_breaker_recovery, lamb
 def test_lambda_handler_returns_recovery_result(circuit_breaker_recovery, lambda_context):
     """Test lambda handler returns recovery result."""
     mock_client = MagicMock()
-    mock_client.get_item.return_value = _create_closed_state_item()
+    mock_client.get_item.return_value = create_closed_state_item(include_recovery_fields=True)
     response = _run_handler_with_mock(circuit_breaker_recovery, mock_client, lambda_context)
     body = parse_response_body(response)
     assert 'current_state' in body

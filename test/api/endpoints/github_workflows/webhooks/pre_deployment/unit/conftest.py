@@ -1,4 +1,5 @@
 """Shared fixtures for runners pre-deployment unit tests."""
+import asyncio
 import importlib.util
 import sys
 from pathlib import Path
@@ -13,10 +14,42 @@ from repo_utils import REPO_ROOT
 # Re-exports for test files
 __all__ = [
     'circuit_breaker_utils',
+    'create_closed_state_item',
     'get_lambda_path',
     'load_lambda_module',
+    'run_async',
     'RUNNERS_LAMBDAS_PATH',
 ]
+
+
+def run_async(coro):
+    """Run an async coroutine synchronously."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+def create_closed_state_item(include_recovery_fields: bool = False) -> dict:
+    """Create DynamoDB item for a closed circuit breaker state.
+
+    Args:
+        include_recovery_fields: If True, include last_recovery_attempt field.
+
+    Returns:
+        DynamoDB item dict with closed state.
+    """
+    item = {
+        'Item': {
+            'state': {'S': 'closed'},
+            'last_failure_time': {'N': '0'},
+            'recovery_attempts': {'N': '0'},
+        }
+    }
+    if include_recovery_fields:
+        item['Item']['last_recovery_attempt'] = {'N': '0'}
+    return item
 
 
 def create_mock_dynamodb_for_reset():

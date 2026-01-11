@@ -1,22 +1,12 @@
 """Unit tests for webhook_ingress module."""
 
-import asyncio
 import json
 from typing import Any, Dict, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from .conftest import load_lambda_module
-
-
-def _run_async(coro):
-    """Run an async coroutine synchronously."""
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+from .conftest import load_lambda_module, run_async
 
 
 def _create_message_attrs(
@@ -160,7 +150,7 @@ class TestIngressHandlerHandle:
             "repository": {"full_name": "org/repo"}
         }
         record = _create_sqs_record(body)
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         mock_ingress_deps.enqueue_job.assert_called_once()
         assert result["success"] is True and result["routed"] == "/v1/runners"
 
@@ -175,7 +165,7 @@ class TestIngressHandlerHandle:
             "repository": {"full_name": "org/repo"}
         }
         record = _create_sqs_record(body)
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         mock_ingress_deps.enqueue_ignored.assert_called_once()
         assert result["success"] is True and result["routed"] == "ignored_events"
 
@@ -190,14 +180,14 @@ class TestIngressHandlerHandle:
             "repository": {"full_name": "org/repo"}
         }
         record = _create_sqs_record(body)
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "ignored_events"
 
     def test_handle_workflow_job_in_progress_ignored(self, handler, mock_ingress_deps):
         """Test handling a workflow_job with action=in_progress is ignored."""
         body = {"action": "in_progress", "workflow_job": {"id": 123, "run_id": 456}, "repository": {"full_name": "org/repo"}}
         record = _create_sqs_record(body)
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         mock_ingress_deps.enqueue_ignored.assert_called_once()
         assert result["success"] is True and result["routed"] == "ignored_events"
 
@@ -210,28 +200,28 @@ class TestIngressHandlerHandle:
             "repository": {"full_name": "org/repo"}
         }
         record = _create_sqs_record(body)
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "ignored_events"
 
     def test_handle_workflow_run(self, handler, mock_ingress_deps):
         """Test handling a workflow_run event."""
         body = {"action": "completed", "workflow_run": {"id": 789, "conclusion": "success"}}
         record = _create_sqs_record(body, event_type="workflow_run")
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "acknowledged"
 
     def test_handle_ping_event(self, handler, mock_ingress_deps):
         """Test handling a ping event."""
         body = {"zen": "Half measures are as bad as nothing at all."}
         record = _create_sqs_record(body, event_type="ping")
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "ping_acknowledged"
 
     def test_handle_unknown_event_type(self, handler, mock_ingress_deps):
         """Test handling an unknown event type."""
         body = {"action": "created"}
         record = _create_sqs_record(body, event_type="issues")
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         mock_ingress_deps.enqueue_ignored.assert_called_once()
         assert result["success"] is True and result["routed"] == "ignored_events"
 
@@ -239,7 +229,7 @@ class TestIngressHandlerHandle:
         """Test handling a duplicate delivery is skipped."""
         mock_ingress_deps.check_idempotency.return_value = True
         record = _create_sqs_record({"action": "queued"})
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         expected = (True, True, "duplicate")
         assert (result["success"], result["skipped"], result["reason"]) == expected
 
@@ -247,7 +237,7 @@ class TestIngressHandlerHandle:
         """Test handling an invalid signature."""
         mock_ingress_deps.verify_signature.return_value = False
         record = _create_sqs_record({"action": "queued"}, signature="sha256=invalid")
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         mock_ingress_deps.publish_metric.assert_called_with("InvalidSignature", 1.0, "Count")
         expected = (True, True, "invalid_signature")
         assert (result["success"], result["skipped"], result["reason"]) == expected
@@ -260,14 +250,14 @@ class TestIngressHandlerHandle:
             "repository": {"full_name": "org/repo"}
         }
         record = _create_sqs_record(body, signature=None)
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         mock_ingress_deps.verify_signature.assert_not_called()
         assert result["success"] is True
 
     def test_handle_invalid_json_body(self, handler, mock_ingress_deps):
         """Test handling an invalid JSON body is skipped."""
         record = {"body": "not-valid-json", "messageAttributes": _create_message_attrs()}
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         expected = (True, True, "invalid_json")
         assert (result["success"], result["skipped"], result["reason"]) == expected
 
@@ -275,7 +265,7 @@ class TestIngressHandlerHandle:
         """Test handling a signature verification error."""
         mock_ingress_deps.get_webhook_secret.side_effect = RuntimeError("Secret unavailable")
         record = _create_sqs_record({"action": "queued"})
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         assert result["success"] is False and "Secret unavailable" in result["error"]
 
     def test_handle_no_delivery_id_skips_idempotency(self, handler, mock_ingress_deps):
@@ -286,7 +276,7 @@ class TestIngressHandlerHandle:
             "repository": {"full_name": "org/repo"}
         }
         record = _create_sqs_record(body, delivery_id=None)
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         mock_ingress_deps.check_idempotency.assert_not_called()
         assert result["success"] is True
 
@@ -294,7 +284,7 @@ class TestIngressHandlerHandle:
         """Test that processing time metric is published."""
         body = {"action": "completed", "workflow_run": {"id": 789, "conclusion": "success"}}
         record = _create_sqs_record(body, event_type="workflow_run")
-        _run_async(handler.handle(record))
+        run_async(handler.handle(record))
         mock_ingress_deps.publish_metric.assert_called()
         call_args = mock_ingress_deps.publish_metric.call_args_list[-1]
         expected = ("WebhookIngressProcessingTime", "Milliseconds")
@@ -309,7 +299,7 @@ class TestIngressHandlerHandle:
             "repository": {"full_name": "org/repo"}
         }
         record = _create_sqs_record(body)
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         assert result["success"] is False
 
     # Note: test_handle_enqueue_cancellation_failure removed - runners are ephemeral
@@ -317,7 +307,7 @@ class TestIngressHandlerHandle:
     def test_handle_empty_body(self, handler, mock_ingress_deps):
         """Test handling an empty body."""
         record = {"body": "", "messageAttributes": _create_message_attrs()}
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         expected = (True, True, "invalid_json")
         assert (result["success"], result["skipped"], result["reason"]) == expected
 
@@ -325,14 +315,14 @@ class TestIngressHandlerHandle:
         """Test handling a ValueError during signature verification."""
         mock_ingress_deps.verify_signature.side_effect = ValueError("Invalid value")
         record = _create_sqs_record({"action": "queued"})
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         assert result["success"] is False and "Invalid value" in result["error"]
 
     def test_handle_signature_type_error(self, handler, mock_ingress_deps):
         """Test handling a TypeError during signature verification."""
         mock_ingress_deps.verify_signature.side_effect = TypeError("Type error")
         record = _create_sqs_record({"action": "queued"})
-        result = _run_async(handler.handle(record))
+        result = run_async(handler.handle(record))
         assert result["success"] is False and "Type error" in result["error"]
 
 

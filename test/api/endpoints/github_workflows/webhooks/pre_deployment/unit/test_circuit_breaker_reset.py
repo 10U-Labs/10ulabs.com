@@ -13,7 +13,7 @@ from boto_mocks import (
     create_mock_lambda_with_disabled_mappings,
 )
 from lambda_response import parse_response_body, assert_response_status
-from .conftest import circuit_breaker_utils
+from .conftest import circuit_breaker_utils, create_closed_state_item
 
 
 CB_ENV = {'WEBHOOK_FUNCTION_NAME': 'test-function', 'STATE_TABLE_NAME': 'test-table'}
@@ -44,17 +44,6 @@ def _create_post_reset_mocks():
     mock_lambda.list_event_source_mappings.return_value = {'EventSourceMappings': []}
     mock_dynamodb = MagicMock()
     return mock_dynamodb, mock_lambda
-
-
-def _create_closed_state_item():
-    """Create DynamoDB item for a closed circuit breaker state."""
-    return {
-        'Item': {
-            'state': {'S': 'closed'},
-            'last_failure_time': {'N': '0'},
-            'recovery_attempts': {'N': '0'}
-        }
-    }
 
 
 class TestGetCircuitBreakerStatus:
@@ -140,7 +129,7 @@ class TestGetCircuitBreakerStatus:
         """Test handles ClientError when listing event source mappings (line 50-52)."""
         with patch('boto3.client') as mock_boto_client:
             mock_dynamodb = MagicMock()
-            mock_dynamodb.get_item.return_value = _create_closed_state_item()
+            mock_dynamodb.get_item.return_value = create_closed_state_item()
             mock_lambda = MagicMock()
             mock_lambda.list_event_source_mappings.side_effect = ClientError(
                 {'Error': {'Code': 'ServiceUnavailable'}}, 'ListEventSourceMappings'
@@ -158,7 +147,7 @@ class TestGetCircuitBreakerStatus:
         """Test handles ResourceNotFoundException for concurrency (line 60-61)."""
         with patch('boto3.client') as mock_boto_client:
             mock_dynamodb = MagicMock()
-            mock_dynamodb.get_item.return_value = _create_closed_state_item()
+            mock_dynamodb.get_item.return_value = create_closed_state_item()
             mock_lambda = MagicMock()
             mock_lambda.list_event_source_mappings.return_value = {
                 'EventSourceMappings': [{'State': 'Enabled'}]
@@ -184,7 +173,7 @@ class TestGetCircuitBreakerStatus:
         """Test handles ClientError when getting concurrency (line 62-64)."""
         with patch('boto3.client') as mock_boto_client:
             mock_dynamodb = MagicMock()
-            mock_dynamodb.get_item.return_value = _create_closed_state_item()
+            mock_dynamodb.get_item.return_value = create_closed_state_item()
             mock_lambda = MagicMock()
             mock_lambda.list_event_source_mappings.return_value = {
                 'EventSourceMappings': [{'State': 'Enabled'}]

@@ -35,9 +35,8 @@ LAMBDA_DEFINITIONS = [
     ("circuit_breaker_remediation", "circuit_breaker_remediation.py", "lambda_handler"),
     ("dlq_reprocessor", "dlq_reprocessor.py", "handler"),
     ("circuit_breaker_recovery", "circuit_breaker_recovery.py", "lambda_handler"),
-    ("drift_recovery", "drift_recovery.py", "lambda_handler"),
-    ("spot_interruption_handler", "spot_interruption_handler.py", "lambda_handler"),
-    ("stale_runner_cleanup", "stale_runner_cleanup.py", "lambda_handler"),
+    # Note: drift_recovery, spot_interruption_handler, stale_runner_cleanup removed
+    # - Migrated to separate endpoints per API restructuring plan
 ]
 
 # Common modules that should be in most Lambda packages
