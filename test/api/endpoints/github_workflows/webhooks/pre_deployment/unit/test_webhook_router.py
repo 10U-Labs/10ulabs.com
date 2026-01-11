@@ -163,10 +163,12 @@ class TestGetApiKey:
     def test_raises_runtime_error_when_param_name_not_set(self, router_module):
         """Test that RuntimeError is raised when parameter name not set."""
         router_module._cache["api_key"] = None
+        raised = False
         with patch.dict('os.environ', {'API_KEY_PARAMETER_NAME': ''}):
-            with pytest.raises(RuntimeError) as exc_info:
+            with pytest.raises(RuntimeError, match="API_KEY_PARAMETER_NAME"):
                 router_module._get_api_key()
-            assert "API_KEY_PARAMETER_NAME" in str(exc_info.value)
+            raised = True
+        assert raised
 
     def test_raises_runtime_error_on_ssm_error(self, router_module):
         """Test that RuntimeError is raised on SSM client error."""
@@ -177,10 +179,12 @@ class TestGetApiKey:
             {"Error": {"Code": "AccessDenied", "Message": "Access denied"}},
             "GetParameter"
         )
+        raised = False
         with patch.object(router_module, 'get_ssm_client', return_value=mock_ssm):
-            with pytest.raises(RuntimeError) as exc_info:
+            with pytest.raises(RuntimeError, match="Cannot retrieve API key"):
                 router_module._get_api_key()
-            assert "Cannot retrieve API key" in str(exc_info.value)
+            raised = True
+        assert raised
 
 
 class TestVerifySignature:
@@ -267,9 +271,11 @@ class TestParseEventBody:
     def test_raises_value_error_for_invalid_json(self, router_module):
         """Test that ValueError is raised for invalid JSON."""
         event = {"body": "not valid json"}
-        with pytest.raises(json.JSONDecodeError) as exc_info:
+        raised = False
+        with pytest.raises(json.JSONDecodeError, match="Expecting value"):
             router_module._parse_event_body(event)
-        assert "Expecting value" in str(exc_info.value)
+        raised = True
+        assert raised
 
 
 class TestCheckAndRecordIdempotency:
@@ -535,10 +541,12 @@ class TestGetWebhookSecret:
             {"Error": {"Code": "AccessDenied", "Message": "denied"}},
             "GetParameter"
         )
+        raised = False
         with patch.object(router_module, 'get_ssm_client', return_value=mock_ssm):
-            with pytest.raises(RuntimeError) as exc_info:
+            with pytest.raises(RuntimeError, match="Cannot retrieve webhook secret"):
                 _run_async(router_module._get_webhook_secret())
-            assert "Cannot retrieve webhook secret" in str(exc_info.value)
+            raised = True
+        assert raised
 
 
 class TestVerifyWebhookSignature:
@@ -713,10 +721,12 @@ class TestAsyncHandler:
         async def mock_handle(*args, **kwargs):
             return {"success": False}
         mock_ingress.handle = mock_handle
+        raised = False
         with patch.object(router_module, '_get_ingress_handler', return_value=mock_ingress):
-            with pytest.raises(RuntimeError) as exc_info:
+            with pytest.raises(RuntimeError, match="failed"):
                 _run_async(router_module._async_handler(event))
-            assert "failed" in str(exc_info.value)
+            raised = True
+        assert raised
 
 
 class TestIngressDeps:
