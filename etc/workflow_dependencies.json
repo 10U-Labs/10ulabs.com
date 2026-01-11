@@ -182,13 +182,13 @@
       "test/lib/python/**"
     ]
   },
-  "ec2_spot_interruptions": {
+  "api_endpoint_v1_ec2_spot_interruptions": {
     "depends_on": [
-      "github_workflows_retries"
+      "api_endpoint_v1_github_workflows_retries"
     ],
     "name": "Ensuring EC2 spot interruption handler exists and is properly configured",
     "paths": [
-      ".github/workflows/ec2_spot_interruptions.yml",
+      ".github/workflows/api_endpoint_v1_ec2_spot_interruptions.yml",
       "lib/python/**",
       "src/api/endpoints/ec2_spot_interruptions/**",
       "test/api/conftest.py",
@@ -196,14 +196,14 @@
       "test/lib/python/**"
     ]
   },
-  "ecs_task_stops": {
+  "api_endpoint_v1_ecs_task_stops": {
     "depends_on": [
-      "github_workflows_retries",
+      "api_endpoint_v1_github_workflows_retries",
       "api_endpoint_v1_runners_ecs"
     ],
     "name": "Ensuring ECS task stops handler exists and is properly configured",
     "paths": [
-      ".github/workflows/ecs_task_stops.yml",
+      ".github/workflows/api_endpoint_v1_ecs_task_stops.yml",
       "lib/python/**",
       "src/api/endpoints/ecs_task_stops/**",
       "test/api/conftest.py",
@@ -211,13 +211,13 @@
       "test/lib/python/**"
     ]
   },
-  "drift_recoveries": {
+  "api_endpoint_v1_drift_recoveries": {
     "depends_on": [
       "api_common_routing"
     ],
     "name": "Ensuring drift recoveries handler exists and is properly configured",
     "paths": [
-      ".github/workflows/drift_recoveries.yml",
+      ".github/workflows/api_endpoint_v1_drift_recoveries.yml",
       "lib/python/**",
       "src/api/endpoints/drift_recoveries/**",
       "test/api/conftest.py",
@@ -225,14 +225,14 @@
       "test/lib/python/**"
     ]
   },
-  "runners_cleanups": {
+  "api_endpoint_v1_runners_cleanups": {
     "depends_on": [
       "api_endpoint_v1_runners_ecs",
       "api_endpoint_v1_runners_ec2"
     ],
     "name": "Ensuring runners cleanup handler exists and is properly configured",
     "paths": [
-      ".github/workflows/runners_cleanups.yml",
+      ".github/workflows/api_endpoint_v1_runners_cleanups.yml",
       "lib/python/**",
       "src/api/endpoints/runners/cleanups/**",
       "test/api/conftest.py",
@@ -240,13 +240,13 @@
       "test/lib/python/**"
     ]
   },
-  "github_workflows_retries": {
+  "api_endpoint_v1_github_workflows_retries": {
     "depends_on": [
-      "github_workflows_webhooks"
+      "api_endpoint_v1_github_workflows_webhooks"
     ],
     "name": "Ensuring the /v1/github-workflows/retries API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/github_workflows_retries.yml",
+      ".github/workflows/api_endpoint_v1_github_workflows_retries.yml",
       "lib/python/**",
       "src/api/endpoints/github_workflows/retries/**",
       "test/api/conftest.py",
@@ -254,13 +254,13 @@
       "test/lib/python/**"
     ]
   },
-  "github_workflows_webhooks": {
+  "api_endpoint_v1_github_workflows_webhooks": {
     "depends_on": [
       "api_endpoint_v1_runners"
     ],
     "name": "Ensuring the /v1/github-workflows/webhooks API endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/github_workflows_webhooks.yml",
+      ".github/workflows/api_endpoint_v1_github_workflows_webhooks.yml",
       "lib/python/**",
       "src/api/endpoints/github_workflows/webhooks/**",
       "test/api/conftest.py",
