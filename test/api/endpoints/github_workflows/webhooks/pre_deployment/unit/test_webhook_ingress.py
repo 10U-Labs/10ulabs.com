@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from typing import Any, Dict, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -18,11 +19,69 @@ def _run_async(coro):
         loop.close()
 
 
+def _create_message_attrs(
+    event_type: str = "workflow_job",
+    signature: Optional[str] = "sha256=abc",
+    delivery_id: Optional[str] = "delivery-123"
+) -> Dict[str, Any]:
+    """Create SQS message attributes for testing.
+
+    Args:
+        event_type: The GitHub event type.
+        signature: The webhook signature (None to omit).
+        delivery_id: The delivery ID (None to omit).
+
+    Returns:
+        Dict representing SQS message attributes.
+    """
+    attrs: Dict[str, Any] = {"x-github-event": {"stringValue": event_type}}
+    if signature is not None:
+        attrs["x-hub-signature-256"] = {"stringValue": signature}
+    if delivery_id is not None:
+        attrs["x-github-delivery"] = {"stringValue": delivery_id}
+    return attrs
+
+
+def _create_sqs_record(
+    body: Dict[str, Any],
+    event_type: str = "workflow_job",
+    signature: Optional[str] = "sha256=abc",
+    delivery_id: Optional[str] = "delivery-123"
+) -> Dict[str, Any]:
+    """Create an SQS record for testing webhook ingress.
+
+    Args:
+        body: The webhook event body as a dict (will be JSON-encoded).
+        event_type: The GitHub event type.
+        signature: The webhook signature (None to omit).
+        delivery_id: The delivery ID (None to omit).
+
+    Returns:
+        Dict representing an SQS record.
+    """
+    attrs = _create_message_attrs(event_type, signature, delivery_id)
+    return {"body": json.dumps(body), "messageAttributes": attrs}
+
+
 @pytest.fixture(name="webhook_ingress_module")
 def webhook_ingress_module_fixture():
     """Load webhook_ingress module for testing."""
     module = load_lambda_module("common/webhook_ingress.py", "webhook_ingress")
     yield module
+
+
+@pytest.fixture(name="mock_ingress_deps")
+def mock_ingress_deps_fixture():
+    """Create mock dependencies for IngressHandler."""
+    deps = MagicMock()
+    deps.get_webhook_secret = AsyncMock(return_value="test-secret")
+    deps.verify_signature = MagicMock(return_value=True)
+    deps.publish_metric = MagicMock()
+    deps.check_idempotency = AsyncMock(return_value=False)
+    deps.get_runner_type = MagicMock(return_value=("ec2", "m5.large"))
+    deps.enqueue_job = AsyncMock(return_value={"success": True})
+    deps.enqueue_ignored = MagicMock()
+    return deps
 
 
 class TestGetMessageAttribute:
@@ -79,391 +138,200 @@ class TestIsWebhookIngressQueue:
 class TestIngressHandler:
     """Tests for IngressHandler class."""
 
-    @pytest.fixture
-    def mock_deps(self):
-        """Create mock dependencies for IngressHandler."""
-        deps = MagicMock()
-        deps.get_webhook_secret = AsyncMock(return_value="test-secret")
-        deps.verify_signature = MagicMock(return_value=True)
-        deps.publish_metric = MagicMock()
-        deps.check_idempotency = AsyncMock(return_value=False)
-        deps.get_runner_type = MagicMock(return_value=("ec2", "m5.large"))
-        deps.enqueue_job = AsyncMock(return_value={"success": True})
-        deps.enqueue_ignored = MagicMock()
-        return deps
-
-    @pytest.fixture
-    def handler(self, webhook_ingress_module, mock_deps):
-        """Create an IngressHandler with mock dependencies."""
-        return webhook_ingress_module.IngressHandler(mock_deps)
-
-    def test_init_stores_deps(self, webhook_ingress_module, mock_deps):
+    def test_init_stores_deps(self, webhook_ingress_module, mock_ingress_deps):
         """Test that init stores dependencies."""
-        handler = webhook_ingress_module.IngressHandler(mock_deps)
-        assert handler.get_deps() == mock_deps
+        handler = webhook_ingress_module.IngressHandler(mock_ingress_deps)
+        assert handler.get_deps() == mock_ingress_deps
 
 
 class TestIngressHandlerHandle:
     """Tests for IngressHandler.handle method."""
 
     @pytest.fixture
-    def mock_deps(self):
-        """Create mock dependencies for IngressHandler."""
-        deps = MagicMock()
-        deps.get_webhook_secret = AsyncMock(return_value="test-secret")
-        deps.verify_signature = MagicMock(return_value=True)
-        deps.publish_metric = MagicMock()
-        deps.check_idempotency = AsyncMock(return_value=False)
-        deps.get_runner_type = MagicMock(return_value=("ec2", "m5.large"))
-        deps.enqueue_job = AsyncMock(return_value={"success": True})
-        deps.enqueue_ignored = MagicMock()
-        return deps
-
-    @pytest.fixture
-    def handler(self, webhook_ingress_module, mock_deps):
+    def handler(self, webhook_ingress_module, mock_ingress_deps):
         """Create an IngressHandler with mock dependencies."""
-        return webhook_ingress_module.IngressHandler(mock_deps)
+        return webhook_ingress_module.IngressHandler(mock_ingress_deps)
 
-    def test_handle_workflow_job_queued(self, handler, mock_deps):
+    def test_handle_workflow_job_queued(self, handler, mock_ingress_deps):
         """Test handling a workflow_job with action=queued."""
-        record = {
-            "body": json.dumps({
-                "action": "queued",
-                "workflow_job": {
-                    "id": 123,
-                    "run_id": 456,
-                    "labels": ["self-hosted", "linux", "ec2"]
-                },
-                "repository": {"full_name": "org/repo"}
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
+        body = {
+            "action": "queued",
+            "workflow_job": {"id": 123, "run_id": 456, "labels": ["self-hosted", "linux", "ec2"]},
+            "repository": {"full_name": "org/repo"}
         }
+        record = _create_sqs_record(body)
         result = _run_async(handler.handle(record))
-        mock_deps.enqueue_job.assert_called_once()
+        mock_ingress_deps.enqueue_job.assert_called_once()
         assert result["success"] is True and result["routed"] == "/v1/runners"
 
-    def test_handle_workflow_job_cancelled(self, handler, mock_deps):
+    def test_handle_workflow_job_cancelled(self, handler, mock_ingress_deps):
         """Test handling a workflow_job with action=cancelled is ignored.
 
         Runners are ephemeral and self-terminate, so no termination action needed.
         """
-        record = {
-            "body": json.dumps({
-                "action": "cancelled",
-                "workflow_job": {
-                    "id": 123,
-                    "run_id": 456,
-                    "runner_name": "runner-1"
-                },
-                "repository": {"full_name": "org/repo"}
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
+        body = {
+            "action": "cancelled",
+            "workflow_job": {"id": 123, "run_id": 456, "runner_name": "runner-1"},
+            "repository": {"full_name": "org/repo"}
         }
+        record = _create_sqs_record(body)
         result = _run_async(handler.handle(record))
-        mock_deps.enqueue_ignored.assert_called_once()
+        mock_ingress_deps.enqueue_ignored.assert_called_once()
         assert result["success"] is True and result["routed"] == "ignored_events"
 
-    def test_handle_workflow_job_completed(self, handler, mock_deps):
+    def test_handle_workflow_job_completed(self, handler, mock_ingress_deps):
         """Test handling a workflow_job with action=completed is ignored.
 
         Runners are ephemeral and self-terminate, so no termination action needed.
         """
-        record = {
-            "body": json.dumps({
-                "action": "completed",
-                "workflow_job": {
-                    "id": 123,
-                    "run_id": 456,
-                    "runner_name": "runner-1"
-                },
-                "repository": {"full_name": "org/repo"}
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
+        body = {
+            "action": "completed",
+            "workflow_job": {"id": 123, "run_id": 456, "runner_name": "runner-1"},
+            "repository": {"full_name": "org/repo"}
         }
+        record = _create_sqs_record(body)
         result = _run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "ignored_events"
 
-    def test_handle_workflow_job_in_progress_ignored(self, handler, mock_deps):
+    def test_handle_workflow_job_in_progress_ignored(self, handler, mock_ingress_deps):
         """Test handling a workflow_job with action=in_progress is ignored."""
-        record = {
-            "body": json.dumps({
-                "action": "in_progress",
-                "workflow_job": {"id": 123, "run_id": 456},
-                "repository": {"full_name": "org/repo"}
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        body = {"action": "in_progress", "workflow_job": {"id": 123, "run_id": 456}, "repository": {"full_name": "org/repo"}}
+        record = _create_sqs_record(body)
         result = _run_async(handler.handle(record))
-        mock_deps.enqueue_ignored.assert_called_once()
+        mock_ingress_deps.enqueue_ignored.assert_called_once()
         assert result["success"] is True and result["routed"] == "ignored_events"
 
-    def test_handle_workflow_job_no_runner_type(self, handler, mock_deps):
+    def test_handle_workflow_job_no_runner_type(self, handler, mock_ingress_deps):
         """Test handling a workflow_job with no matching runner type."""
-        mock_deps.get_runner_type.return_value = (None, None)
-        record = {
-            "body": json.dumps({
-                "action": "queued",
-                "workflow_job": {
-                    "id": 123,
-                    "run_id": 456,
-                    "labels": ["ubuntu-latest"]
-                },
-                "repository": {"full_name": "org/repo"}
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
+        mock_ingress_deps.get_runner_type.return_value = (None, None)
+        body = {
+            "action": "queued",
+            "workflow_job": {"id": 123, "run_id": 456, "labels": ["ubuntu-latest"]},
+            "repository": {"full_name": "org/repo"}
         }
+        record = _create_sqs_record(body)
         result = _run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "ignored_events"
 
-    def test_handle_workflow_run(self, handler, mock_deps):
+    def test_handle_workflow_run(self, handler, mock_ingress_deps):
         """Test handling a workflow_run event."""
-        record = {
-            "body": json.dumps({
-                "action": "completed",
-                "workflow_run": {
-                    "id": 789,
-                    "conclusion": "success"
-                }
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_run"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        body = {"action": "completed", "workflow_run": {"id": 789, "conclusion": "success"}}
+        record = _create_sqs_record(body, event_type="workflow_run")
         result = _run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "acknowledged"
 
-    def test_handle_ping_event(self, handler, mock_deps):
+    def test_handle_ping_event(self, handler, mock_ingress_deps):
         """Test handling a ping event."""
-        record = {
-            "body": json.dumps({"zen": "Half measures are as bad as nothing at all."}),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "ping"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        body = {"zen": "Half measures are as bad as nothing at all."}
+        record = _create_sqs_record(body, event_type="ping")
         result = _run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "ping_acknowledged"
 
-    def test_handle_unknown_event_type(self, handler, mock_deps):
+    def test_handle_unknown_event_type(self, handler, mock_ingress_deps):
         """Test handling an unknown event type."""
-        record = {
-            "body": json.dumps({"action": "created"}),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "issues"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        body = {"action": "created"}
+        record = _create_sqs_record(body, event_type="issues")
         result = _run_async(handler.handle(record))
-        mock_deps.enqueue_ignored.assert_called_once()
+        mock_ingress_deps.enqueue_ignored.assert_called_once()
         assert result["success"] is True and result["routed"] == "ignored_events"
 
-    def test_handle_duplicate_delivery(self, handler, mock_deps):
+    def test_handle_duplicate_delivery(self, handler, mock_ingress_deps):
         """Test handling a duplicate delivery is skipped."""
-        mock_deps.check_idempotency.return_value = True
-        record = {
-            "body": json.dumps({"action": "queued"}),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        mock_ingress_deps.check_idempotency.return_value = True
+        record = _create_sqs_record({"action": "queued"})
         result = _run_async(handler.handle(record))
         expected = (True, True, "duplicate")
         assert (result["success"], result["skipped"], result["reason"]) == expected
 
-    def test_handle_invalid_signature(self, handler, mock_deps):
+    def test_handle_invalid_signature(self, handler, mock_ingress_deps):
         """Test handling an invalid signature."""
-        mock_deps.verify_signature.return_value = False
-        record = {
-            "body": json.dumps({"action": "queued"}),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=invalid"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        mock_ingress_deps.verify_signature.return_value = False
+        record = _create_sqs_record({"action": "queued"}, signature="sha256=invalid")
         result = _run_async(handler.handle(record))
-        mock_deps.publish_metric.assert_called_with("InvalidSignature", 1.0, "Count")
+        mock_ingress_deps.publish_metric.assert_called_with("InvalidSignature", 1.0, "Count")
         expected = (True, True, "invalid_signature")
         assert (result["success"], result["skipped"], result["reason"]) == expected
 
-    def test_handle_no_signature_proceeds(self, handler, mock_deps):
+    def test_handle_no_signature_proceeds(self, handler, mock_ingress_deps):
         """Test handling without signature proceeds."""
-        record = {
-            "body": json.dumps({
-                "action": "queued",
-                "workflow_job": {
-                    "id": 123,
-                    "run_id": 456,
-                    "labels": ["self-hosted"]
-                },
-                "repository": {"full_name": "org/repo"}
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
+        body = {
+            "action": "queued",
+            "workflow_job": {"id": 123, "run_id": 456, "labels": ["self-hosted"]},
+            "repository": {"full_name": "org/repo"}
         }
+        record = _create_sqs_record(body, signature=None)
         result = _run_async(handler.handle(record))
-        mock_deps.verify_signature.assert_not_called()
+        mock_ingress_deps.verify_signature.assert_not_called()
         assert result["success"] is True
 
-    def test_handle_invalid_json_body(self, handler, mock_deps):
+    def test_handle_invalid_json_body(self, handler, mock_ingress_deps):
         """Test handling an invalid JSON body is skipped."""
-        record = {
-            "body": "not-valid-json",
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        record = {"body": "not-valid-json", "messageAttributes": _create_message_attrs()}
         result = _run_async(handler.handle(record))
         expected = (True, True, "invalid_json")
         assert (result["success"], result["skipped"], result["reason"]) == expected
 
-    def test_handle_signature_verification_error(self, handler, mock_deps):
+    def test_handle_signature_verification_error(self, handler, mock_ingress_deps):
         """Test handling a signature verification error."""
-        mock_deps.get_webhook_secret.side_effect = RuntimeError("Secret unavailable")
-        record = {
-            "body": json.dumps({"action": "queued"}),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        mock_ingress_deps.get_webhook_secret.side_effect = RuntimeError("Secret unavailable")
+        record = _create_sqs_record({"action": "queued"})
         result = _run_async(handler.handle(record))
         assert result["success"] is False and "Secret unavailable" in result["error"]
 
-    def test_handle_no_delivery_id_skips_idempotency(self, handler, mock_deps):
+    def test_handle_no_delivery_id_skips_idempotency(self, handler, mock_ingress_deps):
         """Test handling without delivery ID skips idempotency check."""
-        record = {
-            "body": json.dumps({
-                "action": "queued",
-                "workflow_job": {
-                    "id": 123,
-                    "run_id": 456,
-                    "labels": ["self-hosted"]
-                },
-                "repository": {"full_name": "org/repo"}
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"}
-            }
+        body = {
+            "action": "queued",
+            "workflow_job": {"id": 123, "run_id": 456, "labels": ["self-hosted"]},
+            "repository": {"full_name": "org/repo"}
         }
+        record = _create_sqs_record(body, delivery_id=None)
         result = _run_async(handler.handle(record))
-        mock_deps.check_idempotency.assert_not_called()
+        mock_ingress_deps.check_idempotency.assert_not_called()
         assert result["success"] is True
 
-    def test_handle_publishes_processing_time_metric(self, handler, mock_deps):
+    def test_handle_publishes_processing_time_metric(self, handler, mock_ingress_deps):
         """Test that processing time metric is published."""
-        record = {
-            "body": json.dumps({
-                "action": "completed",
-                "workflow_run": {"id": 789, "conclusion": "success"}
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_run"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        body = {"action": "completed", "workflow_run": {"id": 789, "conclusion": "success"}}
+        record = _create_sqs_record(body, event_type="workflow_run")
         _run_async(handler.handle(record))
-        mock_deps.publish_metric.assert_called()
-        call_args = mock_deps.publish_metric.call_args_list[-1]
+        mock_ingress_deps.publish_metric.assert_called()
+        call_args = mock_ingress_deps.publish_metric.call_args_list[-1]
         expected = ("WebhookIngressProcessingTime", "Milliseconds")
         assert (call_args[0][0], call_args[0][2]) == expected
 
-    def test_handle_enqueue_job_failure(self, handler, mock_deps):
+    def test_handle_enqueue_job_failure(self, handler, mock_ingress_deps):
         """Test handling when enqueue_job fails."""
-        mock_deps.enqueue_job.return_value = {"success": False}
-        record = {
-            "body": json.dumps({
-                "action": "queued",
-                "workflow_job": {
-                    "id": 123,
-                    "run_id": 456,
-                    "labels": ["self-hosted"]
-                },
-                "repository": {"full_name": "org/repo"}
-            }),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
+        mock_ingress_deps.enqueue_job.return_value = {"success": False}
+        body = {
+            "action": "queued",
+            "workflow_job": {"id": 123, "run_id": 456, "labels": ["self-hosted"]},
+            "repository": {"full_name": "org/repo"}
         }
+        record = _create_sqs_record(body)
         result = _run_async(handler.handle(record))
         assert result["success"] is False
 
     # Note: test_handle_enqueue_cancellation_failure removed - runners are ephemeral
 
-    def test_handle_empty_body(self, handler, mock_deps):
+    def test_handle_empty_body(self, handler, mock_ingress_deps):
         """Test handling an empty body."""
-        record = {
-            "body": "",
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        record = {"body": "", "messageAttributes": _create_message_attrs()}
         result = _run_async(handler.handle(record))
         expected = (True, True, "invalid_json")
         assert (result["success"], result["skipped"], result["reason"]) == expected
 
-    def test_handle_signature_value_error(self, handler, mock_deps):
+    def test_handle_signature_value_error(self, handler, mock_ingress_deps):
         """Test handling a ValueError during signature verification."""
-        mock_deps.verify_signature.side_effect = ValueError("Invalid value")
-        record = {
-            "body": json.dumps({"action": "queued"}),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        mock_ingress_deps.verify_signature.side_effect = ValueError("Invalid value")
+        record = _create_sqs_record({"action": "queued"})
         result = _run_async(handler.handle(record))
         assert result["success"] is False and "Invalid value" in result["error"]
 
-    def test_handle_signature_type_error(self, handler, mock_deps):
+    def test_handle_signature_type_error(self, handler, mock_ingress_deps):
         """Test handling a TypeError during signature verification."""
-        mock_deps.verify_signature.side_effect = TypeError("Type error")
-        record = {
-            "body": json.dumps({"action": "queued"}),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        mock_ingress_deps.verify_signature.side_effect = TypeError("Type error")
+        record = _create_sqs_record({"action": "queued"})
         result = _run_async(handler.handle(record))
         assert result["success"] is False and "Type error" in result["error"]
 
@@ -472,25 +340,18 @@ class TestIngressHandlerExtractHeadersAndBody:
     """Tests for IngressHandler._extract_headers_and_body method."""
 
     @pytest.fixture
-    def mock_deps(self):
+    def mock_ingress_deps(self):
         """Create mock dependencies."""
         return MagicMock()
 
     @pytest.fixture
-    def handler(self, webhook_ingress_module, mock_deps):
+    def handler(self, webhook_ingress_module, mock_ingress_deps):
         """Create an IngressHandler with mock dependencies."""
-        return webhook_ingress_module.IngressHandler(mock_deps)
+        return webhook_ingress_module.IngressHandler(mock_ingress_deps)
 
     def test_extracts_all_headers(self, handler):
         """Test that all headers are extracted."""
-        record = {
-            "body": json.dumps({"test": "data"}),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "workflow_job"},
-                "x-hub-signature-256": {"stringValue": "sha256=abc"},
-                "x-github-delivery": {"stringValue": "delivery-123"}
-            }
-        }
+        record = _create_sqs_record({"test": "data"})
         headers, body_str, payload = handler._extract_headers_and_body(record)
         expected = ("workflow_job", "sha256=abc", "delivery-123", {"test": "data"})
         actual = (
@@ -503,12 +364,7 @@ class TestIngressHandlerExtractHeadersAndBody:
 
     def test_handles_missing_headers(self, handler):
         """Test handling when some headers are missing."""
-        record = {
-            "body": json.dumps({"test": "data"}),
-            "messageAttributes": {
-                "x-github-event": {"stringValue": "ping"}
-            }
-        }
+        record = _create_sqs_record({"test": "data"}, event_type="ping", signature=None, delivery_id=None)
         headers, body_str, payload = handler._extract_headers_and_body(record)
         headers_match = headers == {"x-github-event": "ping"}
         sig_missing = "x-hub-signature-256" not in headers

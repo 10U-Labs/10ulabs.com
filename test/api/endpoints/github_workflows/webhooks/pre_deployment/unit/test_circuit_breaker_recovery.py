@@ -71,6 +71,18 @@ def _run_recovery_with_mock(circuit_breaker_recovery, mock_client):
         return circuit_breaker_recovery.attempt_recovery()
 
 
+def _run_recovery_with_sns(circuit_breaker_recovery, mock_client, extra_env=None):
+    """Run attempt_recovery with SNS configured and mock client."""
+    mock_client.publish.return_value = {'MessageId': 'test-id'}
+    env = {**RECOVERY_ENV, 'SNS_TOPIC_ARN': 'arn:aws:sns:test'}
+    if extra_env:
+        env.update(extra_env)
+    with patch.dict(os.environ, env):
+        with patch('boto3.client') as mock_boto:
+            mock_boto.return_value = mock_client
+            return circuit_breaker_recovery.attempt_recovery()
+
+
 def _create_closed_state_item():
     """Create DynamoDB item for closed circuit breaker state."""
     return {
@@ -558,12 +570,7 @@ def test_attempt_recovery_half_open_sends_notification_on_close(circuit_breaker_
 def test_attempt_recovery_sends_sns_on_successful_recovery(circuit_breaker_recovery):
     """Test sends SNS notification on successful recovery to half-open (line 165)."""
     mock_client = _create_recovery_mock()
-    mock_client.publish.return_value = {'MessageId': 'test-id'}
-    env = {**RECOVERY_ENV, 'SNS_TOPIC_ARN': 'arn:aws:sns:test'}
-    with patch.dict(os.environ, env):
-        with patch('boto3.client') as mock_boto:
-            mock_boto.return_value = mock_client
-            result = circuit_breaker_recovery.attempt_recovery()
+    result = _run_recovery_with_sns(circuit_breaker_recovery, mock_client)
     # Verify SNS was called and we moved to half-open
     assert mock_client.publish.called and result['new_state'] == 'half-open'
 
@@ -571,12 +578,7 @@ def test_attempt_recovery_sends_sns_on_successful_recovery(circuit_breaker_recov
 def test_attempt_recovery_half_open_sends_sns_on_health_failure(circuit_breaker_recovery):
     """Test sends SNS notification when health check fails in half-open (lines 190-191)."""
     mock_client = _create_half_open_mock(invoke_status=500)
-    mock_client.publish.return_value = {'MessageId': 'test-id'}
-    env = {**RECOVERY_ENV, 'SNS_TOPIC_ARN': 'arn:aws:sns:test'}
-    with patch.dict(os.environ, env):
-        with patch('boto3.client') as mock_boto:
-            mock_boto.return_value = mock_client
-            result = circuit_breaker_recovery.attempt_recovery()
+    result = _run_recovery_with_sns(circuit_breaker_recovery, mock_client)
     # Should call SNS and reopen circuit
     assert mock_client.publish.called and result['new_state'] == 'open'
 

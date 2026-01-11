@@ -1,11 +1,48 @@
 """Unit tests for ignored_events_archiver Lambda."""
 import json
+from contextlib import contextmanager
 from datetime import datetime, timezone
+from typing import Iterator, List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from .conftest import load_lambda_module
+
+
+def _create_capturing_s3_mock() -> tuple:
+    """Create an S3 mock that captures put_object body.
+
+    Returns:
+        tuple: (mock_s3, captured list where captured[0] will be the body)
+    """
+    mock_s3 = MagicMock()
+    captured: List[Optional[str]] = [None]
+
+    def capture_put_object(**kwargs):
+        captured[0] = kwargs.get('Body')
+        return {}
+
+    mock_s3.put_object.side_effect = capture_put_object
+    return mock_s3, captured
+
+
+@contextmanager
+def _mock_archiver_success_context(archiver_module, records: list) -> Iterator[MagicMock]:
+    """Context manager for successful archiver test setup.
+
+    Args:
+        archiver_module: The archiver module.
+        records: List of SQS records to process.
+
+    Yields:
+        mock_s3: The mock S3 client.
+    """
+    mock_s3 = MagicMock()
+    mock_s3.put_object.return_value = {}
+    with patch.object(archiver_module, 'get_sqs_records', return_value=records):
+        with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
+            yield mock_s3
 
 
 @pytest.fixture(name="archiver_module")
@@ -85,20 +122,14 @@ class TestArchiveEvent:
 
     def test_includes_archived_at_timestamp(self, archiver_module):
         """Test that archived_at timestamp is included in archived event."""
-        mock_s3 = MagicMock()
-        captured_body = None
-        def capture_put_object(**kwargs):
-            nonlocal captured_body
-            captured_body = kwargs.get('Body')
-            return {}
-        mock_s3.put_object.side_effect = capture_put_object
+        mock_s3, captured = _create_capturing_s3_mock()
         record = {
             "body": json.dumps({"event_data": {}, "timestamp": "2024-01-01T00:00:00Z"}),
             "messageId": "msg-456"
         }
         with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
             archiver_module._archive_event(record)
-            archived_event = json.loads(captured_body)
+            archived_event = json.loads(captured[0])
             assert "archived_at" in archived_event
 
     def test_returns_error_on_json_decode_error(self, archiver_module):
@@ -137,13 +168,7 @@ class TestArchiveEvent:
 
     def test_includes_sqs_attributes_in_archive(self, archiver_module):
         """Test that SQS attributes are included in archived event."""
-        mock_s3 = MagicMock()
-        captured_body = None
-        def capture_put_object(**kwargs):
-            nonlocal captured_body
-            captured_body = kwargs.get('Body')
-            return {}
-        mock_s3.put_object.side_effect = capture_put_object
+        mock_s3, captured = _create_capturing_s3_mock()
         record = {
             "body": json.dumps({"event_data": {}, "timestamp": "2024-01-01T00:00:00Z"}),
             "messageId": "msg-attrs",
@@ -151,7 +176,7 @@ class TestArchiveEvent:
         }
         with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
             archiver_module._archive_event(record)
-            archived_event = json.loads(captured_body)
+            archived_event = json.loads(captured[0])
             assert archived_event["sqs_attributes"]["ApproximateReceiveCount"] == "3"
 
 
@@ -175,32 +200,23 @@ class TestLambdaHandler:
             "body": json.dumps({"event_data": {}, "timestamp": "2024-01-01T00:00:00Z"}),
             "messageId": "msg-success"
         }
-        mock_s3 = MagicMock()
-        mock_s3.put_object.return_value = {}
-        with patch.object(archiver_module, 'get_sqs_records', return_value=[record]):
-            with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
-                with patch.object(archiver_module, 'publish_metric'):
-                    with patch.object(archiver_module, 'count_results', return_value=(1, 0)):
-                        result = archiver_module.lambda_handler(event={}, _context=lambda_context)
-                        body = json.loads(result["body"])
-                        assert result["statusCode"] == 200 and body["success"] == 1
+        with _mock_archiver_success_context(archiver_module, [record]):
+            with patch.object(archiver_module, 'publish_metric'):
+                with patch.object(archiver_module, 'count_results', return_value=(1, 0)):
+                    result = archiver_module.lambda_handler(event={}, _context=lambda_context)
+                    body = json.loads(result["body"])
+                    assert result["statusCode"] == 200 and body["success"] == 1
 
     def test_publishes_events_archived_metric(self, archiver_module, lambda_context):
         """Test that EventsArchived metric is published."""
-        record = {
-            "body": json.dumps({"event_data": {}}),
-            "messageId": "msg-metric"
-        }
-        mock_s3 = MagicMock()
-        mock_s3.put_object.return_value = {}
-        with patch.object(archiver_module, 'get_sqs_records', return_value=[record]):
-            with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
-                with patch.object(archiver_module, 'publish_metric') as mock_pub:
-                    with patch.object(archiver_module, 'count_results', return_value=(1, 0)):
-                        archiver_module.lambda_handler(event={}, _context=lambda_context)
-                        calls = mock_pub.call_args_list
-                        archived_calls = [c for c in calls if "EventsArchived" in str(c)]
-                        assert len(archived_calls) == 1
+        record = {"body": json.dumps({"event_data": {}}), "messageId": "msg-metric"}
+        with _mock_archiver_success_context(archiver_module, [record]):
+            with patch.object(archiver_module, 'publish_metric') as mock_pub:
+                with patch.object(archiver_module, 'count_results', return_value=(1, 0)):
+                    archiver_module.lambda_handler(event={}, _context=lambda_context)
+                    calls = mock_pub.call_args_list
+                    archived_calls = [c for c in calls if "EventsArchived" in str(c)]
+                    assert len(archived_calls) == 1
 
     def test_raises_runtime_error_on_failures(self, archiver_module, lambda_context):
         """Test that RuntimeError is raised when archiving fails."""

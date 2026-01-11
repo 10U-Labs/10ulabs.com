@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from botocore.exceptions import ClientError
+from urllib_mocks import create_mock_urllib_response
 
 from .conftest import load_lambda_module
 
@@ -90,10 +91,7 @@ class TestGithubApiRequest:
     def test_get_request_success(self, github_api_module):
         """Test successful GET request."""
         response_data = {"id": 123, "name": "test"}
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps(response_data).encode('utf-8')
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
+        mock_response = create_mock_urllib_response(json_data=response_data)
 
         with patch.object(github_api_module.urllib.request, 'urlopen', return_value=mock_response):
             result = github_api_module.github_api_request("GET", "/test/path", token="test-token")
@@ -102,11 +100,7 @@ class TestGithubApiRequest:
     def test_post_request_with_data(self, github_api_module):
         """Test POST request with data."""
         response_data = {"success": True}
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps(response_data).encode('utf-8')
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
+        mock_response = create_mock_urllib_response(json_data=response_data)
         urlopen_patch = patch.object(
             github_api_module.urllib.request, 'urlopen', return_value=mock_response
         )
@@ -120,11 +114,7 @@ class TestGithubApiRequest:
 
     def test_returns_empty_dict_on_empty_response(self, github_api_module):
         """Test that empty dict is returned when response body is empty."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = b''
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
+        mock_response = create_mock_urllib_response(read_value=b'')
         urlopen_patch = patch.object(
             github_api_module.urllib.request, 'urlopen', return_value=mock_response
         )
@@ -137,11 +127,7 @@ class TestGithubApiRequest:
     def test_uses_cached_token_when_none_provided(self, github_api_module):
         """Test that cached token is used when no token provided."""
         github_api_module._cache["token"] = "cached-token"
-        mock_response = MagicMock()
-        mock_response.read.return_value = b'{}'
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
+        mock_response = create_mock_urllib_response()
         urlopen_patch = patch.object(
             github_api_module.urllib.request, 'urlopen', return_value=mock_response
         )
@@ -166,11 +152,7 @@ class TestGithubApiRequest:
 
     def test_sets_correct_headers(self, github_api_module):
         """Test that correct headers are set."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = b'{}'
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
+        mock_response = create_mock_urllib_response()
         urlopen_patch = patch.object(
             github_api_module.urllib.request, 'urlopen', return_value=mock_response
         )
@@ -189,11 +171,7 @@ class TestGithubApiRequest:
     def test_no_auth_header_when_no_token(self, github_api_module):
         """Test that no auth header is set when no token available."""
         github_api_module._cache["token"] = None
-        mock_response = MagicMock()
-        mock_response.read.return_value = b'{}'
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
+        mock_response = create_mock_urllib_response()
         urlopen_patch = patch.object(
             github_api_module.urllib.request, 'urlopen', return_value=mock_response
         )

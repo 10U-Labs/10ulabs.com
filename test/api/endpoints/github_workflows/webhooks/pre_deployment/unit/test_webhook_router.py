@@ -29,6 +29,42 @@ def _run_async(coro):
         loop.close()
 
 
+def _create_mock_sqs_with_error() -> MagicMock:
+    """Create a mock SQS client that raises ClientError on send_message."""
+    from botocore.exceptions import ClientError
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.side_effect = ClientError(
+        {"Error": {"Code": "AccessDenied", "Message": "denied"}},
+        "SendMessage"
+    )
+    return mock_sqs
+
+
+def _create_queued_workflow_job_event() -> dict:
+    """Create a standard queued workflow_job event for testing."""
+    return {
+        "action": "queued",
+        "workflow_job": {
+            "id": 123,
+            "name": "test-job",
+            "labels": ["self-hosted"],
+            "status": "queued",
+            "run_id": 456
+        },
+        "repository": {"full_name": "test/repo"}
+    }
+
+
+@contextmanager
+def _mock_idempotency_check(router_module, is_duplicate: bool = False) -> Iterator[None]:
+    """Context manager to mock idempotency check and metrics publishing."""
+    async def mock_check(*args, **kwargs):
+        return is_duplicate
+    with patch.object(router_module, '_check_and_record_idempotency', side_effect=mock_check):
+        with patch.object(router_module, '_publish_metric'):
+            yield
+
+
 @pytest.fixture(name="router_module")
 def router_module_fixture():
     """Load webhook_router module for testing."""
@@ -299,12 +335,7 @@ class TestEnqueueJob:
 
     def test_returns_error_on_sqs_failure(self, router_module):
         """Test that SQS failure returns error."""
-        from botocore.exceptions import ClientError
-        mock_sqs = MagicMock()
-        mock_sqs.send_message.side_effect = ClientError(
-            {"Error": {"Code": "AccessDenied", "Message": "denied"}},
-            "SendMessage"
-        )
+        mock_sqs = _create_mock_sqs_with_error()
         with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
             result = _run_async(router_module._enqueue_job({"job_id": 123}))
             assert result["success"] is False
@@ -329,12 +360,7 @@ class TestEnqueueIgnoredEvent:
 
     def test_returns_error_on_sqs_failure(self, router_module):
         """Test that SQS failure returns error."""
-        from botocore.exceptions import ClientError
-        mock_sqs = MagicMock()
-        mock_sqs.send_message.side_effect = ClientError(
-            {"Error": {"Code": "AccessDenied", "Message": "denied"}},
-            "SendMessage"
-        )
+        mock_sqs = _create_mock_sqs_with_error()
         with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
             result = router_module._enqueue_ignored_event({"test": "data"}, "reason")
             assert result["success"] is False
@@ -406,17 +432,7 @@ class TestHandleWorkflowJob:
     def test_forwards_queued_job_to_runners(self, router_module):
         """Test that queued job is forwarded to /v1/runners."""
         router_module._cache["test_mode"] = False
-        event_data = {
-            "action": "queued",
-            "workflow_job": {
-                "id": 123,
-                "name": "test-job",
-                "labels": ["self-hosted"],
-                "status": "queued",
-                "run_id": 456
-            },
-            "repository": {"full_name": "test/repo"}
-        }
+        event_data = _create_queued_workflow_job_event()
         async def mock_post(*args, **kwargs):
             return {"success": True}
         with patch.object(router_module, '_post_to_runners', side_effect=mock_post):
@@ -427,17 +443,7 @@ class TestHandleWorkflowJob:
     def test_returns_500_when_forward_fails(self, router_module):
         """Test that failed forward returns 500."""
         router_module._cache["test_mode"] = False
-        event_data = {
-            "action": "queued",
-            "workflow_job": {
-                "id": 123,
-                "name": "test-job",
-                "labels": ["self-hosted"],
-                "status": "queued",
-                "run_id": 456
-            },
-            "repository": {"full_name": "test/repo"}
-        }
+        event_data = _create_queued_workflow_job_event()
         async def mock_post(*args, **kwargs):
             return {"success": False, "error": "Network error"}
         with patch.object(router_module, '_post_to_runners', side_effect=mock_post):
@@ -585,13 +591,10 @@ class TestProcessWebhookEvent:
         """Test that duplicate delivery returns 200."""
         event = {"body": '{"action": "queued"}'}
         headers = {"x-github-delivery": "dup-123", "x-github-event": "workflow_job"}
-        async def mock_check(*args, **kwargs):
-            return True
-        with patch.object(router_module, '_check_and_record_idempotency', side_effect=mock_check):
-            with patch.object(router_module, '_publish_metric'):
-                result = _run_async(router_module._process_webhook_event(event, headers, 0))
-                body = json.loads(result["body"])
-                assert result["statusCode"] == 200 and "Duplicate" in body["message"]
+        with _mock_idempotency_check(router_module, is_duplicate=True):
+            result = _run_async(router_module._process_webhook_event(event, headers, 0))
+            body = json.loads(result["body"])
+            assert result["statusCode"] == 200 and "Duplicate" in body["message"]
 
     def test_handles_workflow_job_event(self, router_module):
         """Test that workflow_job event is handled."""
@@ -601,12 +604,9 @@ class TestProcessWebhookEvent:
             "repository": {"full_name": "test/repo"}
         })}
         headers = {"x-github-event": "workflow_job", "x-github-delivery": "new-123"}
-        async def mock_check(*args, **kwargs):
-            return False
-        with patch.object(router_module, '_check_and_record_idempotency', side_effect=mock_check):
-            with patch.object(router_module, '_publish_metric'):
-                result = _run_async(router_module._process_webhook_event(event, headers, 0))
-                assert result["statusCode"] == 200
+        with _mock_idempotency_check(router_module):
+            result = _run_async(router_module._process_webhook_event(event, headers, 0))
+            assert result["statusCode"] == 200
 
     def test_returns_error_on_signature_verification_failure(self, router_module):
         """Test that signature verification failure returns error."""
@@ -622,13 +622,10 @@ class TestProcessWebhookEvent:
         """Test that unknown event types are ignored."""
         event = {"body": '{"action": "created"}'}
         headers = {"x-github-event": "issues", "x-github-delivery": "new-456"}
-        async def mock_check(*args, **kwargs):
-            return False
-        with patch.object(router_module, '_check_and_record_idempotency', side_effect=mock_check):
-            with patch.object(router_module, '_publish_metric'):
-                result = _run_async(router_module._process_webhook_event(event, headers, 0))
-                body = json.loads(result["body"])
-                assert result["statusCode"] == 200 and "ignored" in body["message"].lower()
+        with _mock_idempotency_check(router_module):
+            result = _run_async(router_module._process_webhook_event(event, headers, 0))
+            body = json.loads(result["body"])
+            assert result["statusCode"] == 200 and "ignored" in body["message"].lower()
 
     def test_handles_workflow_run_event(self, router_module):
         """Test that workflow_run event is handled."""
@@ -637,12 +634,9 @@ class TestProcessWebhookEvent:
             "workflow_run": {"id": 123, "name": "CI", "conclusion": "success"}
         })}
         headers = {"x-github-event": "workflow_run", "x-github-delivery": "new-456"}
-        async def mock_check(*args, **kwargs):
-            return False
-        with patch.object(router_module, '_check_and_record_idempotency', side_effect=mock_check):
-            with patch.object(router_module, '_publish_metric'):
-                result = _run_async(router_module._process_webhook_event(event, headers, 0))
-                assert result["statusCode"] == 200
+        with _mock_idempotency_check(router_module):
+            result = _run_async(router_module._process_webhook_event(event, headers, 0))
+            assert result["statusCode"] == 200
 
 
 class TestHandleApiGatewayEvent:
