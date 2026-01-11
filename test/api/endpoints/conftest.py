@@ -1,7 +1,6 @@
 """Shared pytest fixtures and utilities for API endpoint tests."""
 import io
 import re
-import sys
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -11,8 +10,8 @@ from unittest.mock import Mock, patch
 import boto3
 import pytest
 
-from module_utils import create_lambda_loader
-from repo_utils import extract_brace_block, REPO_ROOT
+from repo_utils import extract_brace_block
+from test_utils import create_endpoint_handler_loader
 from terraform_config import (
     get_tfvars_values,
     get_endpoint_local_values,
@@ -178,24 +177,6 @@ def res_prefix(request) -> str:
 
 
 # --- Shared handler module loader for unit tests ---
-
-def create_endpoint_handler_loader(endpoint_path: str):
-    """Create a handler module loader for a specific endpoint.
-
-    Args:
-        endpoint_path: Path relative to src/api/endpoints (e.g., 'drift_recoveries')
-
-    Returns:
-        A function that loads handler modules from the endpoint's lambda directory.
-    """
-    src_path = REPO_ROOT / "src" / "api" / "endpoints" / endpoint_path
-    lambda_path = src_path / "lambda"
-
-    if str(lambda_path) not in sys.path:
-        sys.path.insert(0, str(lambda_path))
-
-    return create_lambda_loader(lambda_path)
-
 
 def create_handler_module_fixture(endpoint_path: str, env_vars: Dict[str, str]):
     """Create a handler module with mocked environment variables.

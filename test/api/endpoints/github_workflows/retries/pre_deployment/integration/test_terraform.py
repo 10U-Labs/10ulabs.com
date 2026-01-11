@@ -1,44 +1,20 @@
 """Pre-deployment integration tests for retries Terraform configuration."""
-from pathlib import Path
-
-import pytest
+from test_utils.terraform_tests import TerraformFilesExistTestMixin
 
 
-class TestTerraformFilesExist:
-    """Tests that required Terraform files exist."""
+class TestTerraformFilesExist(TerraformFilesExistTestMixin):
+    """Tests that required Terraform files exist.
 
-    def test_backend_tf_exists(self, terraform_dir: Path):
-        """Backend configuration file exists."""
-        assert (terraform_dir / "backend.tf").exists()
+    Retries endpoint does not use EventBridge, so excludes eventbridge.tf.
+    """
 
-    def test_providers_tf_exists(self, terraform_dir: Path):
-        """Providers configuration file exists."""
-        assert (terraform_dir / "providers.tf").exists()
-
-    def test_shared_tf_exists(self, terraform_dir: Path):
-        """Shared module configuration file exists."""
-        assert (terraform_dir / "shared.tf").exists()
-
-    def test_locals_tf_exists(self, terraform_dir: Path):
-        """Locals configuration file exists."""
-        assert (terraform_dir / "locals.tf").exists()
-
-    def test_lambda_tf_exists(self, terraform_dir: Path):
-        """Lambda configuration file exists."""
-        assert (terraform_dir / "lambda.tf").exists()
-
-    def test_iam_tf_exists(self, terraform_dir: Path):
-        """IAM configuration file exists."""
-        assert (terraform_dir / "iam.tf").exists()
-
-    def test_sqs_tf_exists(self, terraform_dir: Path):
-        """SQS configuration file exists."""
-        assert (terraform_dir / "sqs.tf").exists()
-
-    def test_outputs_tf_exists(self, terraform_dir: Path):
-        """Outputs configuration file exists."""
-        assert (terraform_dir / "outputs.tf").exists()
-
-    def test_lambda_handler_exists(self, terraform_dir: Path):
-        """Lambda handler Python file exists."""
-        assert (terraform_dir / "lambda" / "handler.py").exists()
+    REQUIRED_TF_FILES = [
+        "backend.tf",
+        "providers.tf",
+        "shared.tf",
+        "locals.tf",
+        "lambda.tf",
+        "iam.tf",
+        "sqs.tf",
+        "outputs.tf",
+    ]

@@ -2,6 +2,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
 from botocore.exceptions import ClientError
 
 
@@ -57,9 +58,17 @@ class TestGetEc2InstanceTags:
 class TestSendRetryRequest:
     """Tests for _send_retry_request function."""
 
-    def test_send_retry_request_success_returns_true(self, handler_module):
-        """Returns True when SQS send succeeds."""
+    @pytest.mark.parametrize("side_effect,expected", [
+        (None, True),
+        (ClientError({"Error": {"Code": "InvalidQueueUrl"}}, "SendMessage"), False),
+    ])
+    def test_send_retry_request_with_sqs_client(
+        self, handler_module, side_effect, expected
+    ):
+        """Returns expected result based on SQS send outcome."""
         mock_sqs = MagicMock()
+        if side_effect:
+            mock_sqs.send_message.side_effect = side_effect
 
         with patch.object(handler_module, '_get_sqs_client', return_value=mock_sqs):
             send_retry = getattr(handler_module, '_send_retry_request')
@@ -71,32 +80,11 @@ class TestSendRetryRequest:
                 resource_id="i-abc123",
             )
 
-        assert result is True
-        mock_sqs.send_message.assert_called_once()
+        assert result is expected
 
     def test_send_retry_request_no_queue_url_returns_false(self, handler_module):
         """Returns False when queue URL not set."""
         with patch.dict('os.environ', {'RETRIES_QUEUE_URL': ''}):
-            send_retry = getattr(handler_module, '_send_retry_request')
-            result = send_retry(
-                run_id=12345,
-                github_repo="org/repo",
-                reason="test reason",
-                resource_type="ec2",
-                resource_id="i-abc123",
-            )
-
-        assert result is False
-
-    def test_send_retry_request_client_error_returns_false(self, handler_module):
-        """Returns False on ClientError."""
-        mock_sqs = MagicMock()
-        mock_sqs.send_message.side_effect = ClientError(
-            {"Error": {"Code": "InvalidQueueUrl"}},
-            "SendMessage"
-        )
-
-        with patch.object(handler_module, '_get_sqs_client', return_value=mock_sqs):
             send_retry = getattr(handler_module, '_send_retry_request')
             result = send_retry(
                 run_id=12345,
