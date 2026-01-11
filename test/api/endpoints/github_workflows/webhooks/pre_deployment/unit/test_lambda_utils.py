@@ -58,28 +58,24 @@ class TestCountResults:
         """Test counting successful results."""
         results = [{"success": True}, {"success": True}, {"success": False}]
         success, fail = lambda_utils_module.count_results(results)
-        assert success == 2
-        assert fail == 1
+        assert (success, fail) == (2, 1)
 
     def test_counts_failed_results(self, lambda_utils_module):
         """Test counting failed results."""
         results = [{"success": False}, {"success": False}]
         success, fail = lambda_utils_module.count_results(results)
-        assert success == 0
-        assert fail == 2
+        assert (success, fail) == (0, 2)
 
     def test_handles_empty_list(self, lambda_utils_module):
         """Test handling of empty results list."""
         success, fail = lambda_utils_module.count_results([])
-        assert success == 0
-        assert fail == 0
+        assert (success, fail) == (0, 0)
 
     def test_handles_missing_success_key(self, lambda_utils_module):
         """Test handling of results without success key (treated as failure)."""
         results = [{"other": "data"}]
         success, fail = lambda_utils_module.count_results(results)
-        assert success == 0
-        assert fail == 1
+        assert (success, fail) == (0, 1)
 
 
 class TestParseErrorResponse:

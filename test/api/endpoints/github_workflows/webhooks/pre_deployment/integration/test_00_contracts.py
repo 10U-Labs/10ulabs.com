@@ -161,25 +161,12 @@ class TestLambdaHandlerContracts:
 
         # Get what Terraform expects
         tf_handler = _extract_handler_from_tf(tf_content, resource_name)
-        assert tf_handler is not None, (
-            f"Could not find handler definition for aws_lambda_function.{resource_name} in lambda.tf"
-        )
-
         # Parse the handler (format: "filename.function_name")
-        expected_file, expected_func = tf_handler.rsplit(".", 1)
-        assert expected_file == python_file.replace(".py", ""), (
-            f"Terraform handler file mismatch for {resource_name}: "
-            f"expected {expected_file}, got {python_file.replace('.py', '')}"
-        )
-        assert expected_func == handler_func, (
-            f"Handler function mismatch for {resource_name}: "
-            f"expected {handler_func}, got {expected_func}"
-        )
-
-        # Verify the function exists in Python
-        assert _function_exists_in_python(python_content, handler_func), (
-            f"Handler function '{handler_func}' not found in {python_file}. "
-            f"Terraform expects handler '{tf_handler}' but function does not exist."
+        expected_file, expected_func = tf_handler.rsplit(".", 1) if tf_handler else (None, None)
+        func_exists = _function_exists_in_python(python_content, handler_func) if tf_handler else False
+        assert tf_handler is not None and expected_file == python_file.replace(".py", "") and expected_func == handler_func and func_exists, (
+            f"Contract verification failed for {resource_name}: "
+            f"tf_handler={tf_handler}, expected_file={expected_file}, expected_func={expected_func}, func_exists={func_exists}"
         )
 
     @pytest.mark.parametrize("resource_name,python_file,handler_func", LAMBDA_DEFINITIONS)
@@ -300,11 +287,8 @@ class TestTerraformResourceNaming:
 
         # All local names should be snake_case, and the actual function names
         # (from locals.tf) should be PascalCase
-        # This test verifies the pattern is consistent
-        assert len(local_names) > 0, "No Lambda function_name references found in lambda.tf"
-
-        # Verify we have expected number of lambdas
-        assert len(local_names) == len(LAMBDA_DEFINITIONS), (
+        # This test verifies the pattern is consistent and we have expected number of lambdas
+        assert len(local_names) > 0 and len(local_names) == len(LAMBDA_DEFINITIONS), (
             f"Expected {len(LAMBDA_DEFINITIONS)} Lambda functions, "
             f"found {len(local_names)} function_name references"
         )
@@ -337,16 +321,13 @@ class TestCrossFileConsistency:
         tf_content = _read_terraform_file()
 
         for resource_name, _, _ in LAMBDA_DEFINITIONS:
-            # Check archive_file data source exists
+            # Check archive_file data source exists and Lambda resource exists
             archive_pattern = rf'data\s+"archive_file"\s+"{resource_name}"'
-            assert re.search(archive_pattern, tf_content), (
-                f"Missing archive_file.{resource_name} for Lambda {resource_name}"
-            )
-
-            # Check Lambda resource exists
             lambda_pattern = rf'resource\s+"aws_lambda_function"\s+"{resource_name}"'
-            assert re.search(lambda_pattern, tf_content), (
-                f"Missing aws_lambda_function.{resource_name}"
+            archive_exists = re.search(archive_pattern, tf_content)
+            lambda_exists = re.search(lambda_pattern, tf_content)
+            assert archive_exists and lambda_exists, (
+                f"Missing archive_file or aws_lambda_function for {resource_name}"
             )
 
     def test_lambda_resources_reference_correct_archives(self):

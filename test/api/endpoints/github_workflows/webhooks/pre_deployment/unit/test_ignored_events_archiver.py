@@ -64,8 +64,7 @@ class TestArchiveEvent:
         with patch.dict('os.environ', {'ARCHIVE_BUCKET_NAME': ''}):
             record = {"body": '{"event_data": {}}', "messageId": "msg-123"}
             result = archiver_module._archive_event(record)
-            assert result["success"] is False
-            assert "not configured" in result["error"]
+            assert result["success"] is False and "not configured" in result["error"]
 
     def test_archives_event_successfully(self, archiver_module):
         """Test that event is archived successfully."""
@@ -82,8 +81,7 @@ class TestArchiveEvent:
         }
         with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
             result = archiver_module._archive_event(record)
-            assert result["success"] is True
-            assert "ignored-events/" in result["key"]
+            assert result["success"] is True and "ignored-events/" in result["key"]
 
     def test_includes_archived_at_timestamp(self, archiver_module):
         """Test that archived_at timestamp is included in archived event."""
@@ -181,9 +179,8 @@ class TestLambdaHandler:
                 with patch.object(archiver_module, 'publish_metric'):
                     with patch.object(archiver_module, 'count_results', return_value=(1, 0)):
                         result = archiver_module.lambda_handler(event={}, _context=lambda_context)
-                        assert result["statusCode"] == 200
                         body = json.loads(result["body"])
-                        assert body["success"] == 1
+                        assert result["statusCode"] == 200 and body["success"] == 1
 
     def test_publishes_events_archived_metric(self, archiver_module, lambda_context):
         """Test that EventsArchived metric is published."""

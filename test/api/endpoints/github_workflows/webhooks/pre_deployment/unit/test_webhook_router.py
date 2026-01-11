@@ -289,15 +289,13 @@ class TestEnqueueJob:
         with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
             with patch.object(router_module, '_publish_metric'):
                 result = _run_async(router_module._enqueue_job({"job_id": 123}))
-                assert result["success"] is True
-                assert result["message_id"] == "msg-123"
+                assert result["success"] is True and result["message_id"] == "msg-123"
 
     def test_returns_error_when_queue_url_not_set(self, router_module):
         """Test that missing queue URL returns error."""
         with patch.dict('os.environ', {'JOB_QUEUE_URL': ''}):
             result = _run_async(router_module._enqueue_job({"job_id": 123}))
-            assert result["success"] is False
-            assert "not configured" in result["error"]
+            assert result["success"] is False and "not configured" in result["error"]
 
     def test_returns_error_on_sqs_failure(self, router_module):
         """Test that SQS failure returns error."""
@@ -321,8 +319,7 @@ class TestEnqueueIgnoredEvent:
         mock_sqs.send_message.return_value = {"MessageId": "ignored-123"}
         with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
             result = router_module._enqueue_ignored_event({"test": "data"}, "test reason")
-            assert result["success"] is True
-            assert result["message_id"] == "ignored-123"
+            assert result["success"] is True and result["message_id"] == "ignored-123"
 
     def test_returns_error_when_queue_url_not_set(self, router_module):
         """Test that missing queue URL returns error."""
@@ -360,9 +357,8 @@ class TestHandleWorkflowRun:
             }
         }
         result = router_module._handle_workflow_run(event_data)
-        assert result["statusCode"] == 200
         body = json.loads(result["body"])
-        assert body["run_id"] == 12345
+        assert result["statusCode"] == 200 and body["run_id"] == 12345
 
     def test_includes_action_in_response(self, router_module):
         """Test that action is included in response message."""
@@ -386,9 +382,8 @@ class TestHandleWorkflowJob:
             "repository": {"full_name": "test/repo"}
         }
         result = _run_async(router_module._handle_workflow_job(event_data))
-        assert result["statusCode"] == 200
         body = json.loads(result["body"])
-        assert "Ignored action" in body["message"]
+        assert result["statusCode"] == 200 and "Ignored action" in body["message"]
 
     def test_returns_test_mode_response_when_enabled(self, router_module):
         """Test that test mode returns test response without forwarding."""
@@ -405,9 +400,8 @@ class TestHandleWorkflowJob:
             "repository": {"full_name": "test/repo"}
         }
         result = _run_async(router_module._handle_workflow_job(event_data))
-        assert result["statusCode"] == 200
         body = json.loads(result["body"])
-        assert body["test_mode"] is True
+        assert result["statusCode"] == 200 and body["test_mode"] is True
 
     def test_forwards_queued_job_to_runners(self, router_module):
         """Test that queued job is forwarded to /v1/runners."""
@@ -427,9 +421,8 @@ class TestHandleWorkflowJob:
             return {"success": True}
         with patch.object(router_module, '_post_to_runners', side_effect=mock_post):
             result = _run_async(router_module._handle_workflow_job(event_data))
-            assert result["statusCode"] == 200
             body = json.loads(result["body"])
-            assert "forwarded" in body["message"].lower()
+            assert result["statusCode"] == 200 and "forwarded" in body["message"].lower()
 
     def test_returns_500_when_forward_fails(self, router_module):
         """Test that failed forward returns 500."""
@@ -459,8 +452,7 @@ class TestPostToRunners:
         """Test that missing API base URL returns error."""
         with patch.dict('os.environ', {'API_BASE_URL': ''}):
             result = _run_async(router_module._post_to_runners({"job_id": 123}))
-            assert result["success"] is False
-            assert "not configured" in result["error"]
+            assert result["success"] is False and "not configured" in result["error"]
 
     def test_returns_error_when_api_key_unavailable(self, router_module):
         """Test that unavailable API key returns error."""
@@ -477,8 +469,7 @@ class TestPostToRunners:
         with patch.object(router_module, '_get_api_key', return_value="test-key"):
             with patch('urllib.request.urlopen', return_value=mock_response):
                 result = _run_async(router_module._post_to_runners({"job_id": 123}))
-                assert result["success"] is True
-                assert result["status_code"] == 200
+                assert result["success"] is True and result["status_code"] == 200
 
     def test_returns_error_on_http_error(self, router_module):
         """Test that HTTP error returns error."""
@@ -488,8 +479,7 @@ class TestPostToRunners:
                 url="", code=500, msg="Internal Server Error", hdrs={}, fp=None
             )):
                 result = _run_async(router_module._post_to_runners({"job_id": 123}))
-                assert result["success"] is False
-                assert result["status_code"] == 500
+                assert result["success"] is False and result["status_code"] == 500
 
     def test_returns_error_on_url_error(self, router_module):
         """Test that URL error returns error."""
@@ -587,9 +577,8 @@ class TestProcessWebhookEvent:
         headers = {"x-github-event": "ping"}
         with patch.object(router_module, '_publish_metric'):
             result = _run_async(router_module._process_webhook_event(event, headers, 0))
-            assert result["statusCode"] == 200
             body = json.loads(result["body"])
-            assert body["message"] == "pong"
+            assert result["statusCode"] == 200 and body["message"] == "pong"
 
     def test_returns_200_for_duplicate_delivery(self, router_module):
         """Test that duplicate delivery returns 200."""
@@ -600,9 +589,8 @@ class TestProcessWebhookEvent:
         with patch.object(router_module, '_check_and_record_idempotency', side_effect=mock_check):
             with patch.object(router_module, '_publish_metric'):
                 result = _run_async(router_module._process_webhook_event(event, headers, 0))
-                assert result["statusCode"] == 200
                 body = json.loads(result["body"])
-                assert "Duplicate" in body["message"]
+                assert result["statusCode"] == 200 and "Duplicate" in body["message"]
 
     def test_handles_workflow_job_event(self, router_module):
         """Test that workflow_job event is handled."""
@@ -638,9 +626,8 @@ class TestProcessWebhookEvent:
         with patch.object(router_module, '_check_and_record_idempotency', side_effect=mock_check):
             with patch.object(router_module, '_publish_metric'):
                 result = _run_async(router_module._process_webhook_event(event, headers, 0))
-                assert result["statusCode"] == 200
                 body = json.loads(result["body"])
-                assert "ignored" in body["message"].lower()
+                assert result["statusCode"] == 200 and "ignored" in body["message"].lower()
 
     def test_handles_workflow_run_event(self, router_module):
         """Test that workflow_run event is handled."""
@@ -664,8 +651,7 @@ class TestHandleApiGatewayEvent:
         """Test that OPTIONS request returns CORS headers."""
         event = {"httpMethod": "OPTIONS", "headers": {}}
         result = _run_async(router_module._handle_api_gateway_event(event, 0))
-        assert result["statusCode"] == 200
-        assert "Access-Control-Allow-Origin" in result["headers"]
+        assert result["statusCode"] == 200 and "Access-Control-Allow-Origin" in result["headers"]
 
     def test_sets_test_mode_from_header(self, router_module):
         """Test that x-test-mode header enables test mode."""
@@ -688,8 +674,7 @@ class TestHandleApiGatewayEvent:
             "body": ""
         }
         result = _run_async(router_module._handle_api_gateway_event(event, 0))
-        assert result["statusCode"] == 200
-        assert "Access-Control-Allow-Origin" in result["headers"]
+        assert result["statusCode"] == 200 and "Access-Control-Allow-Origin" in result["headers"]
 
 
 class TestAsyncHandler:

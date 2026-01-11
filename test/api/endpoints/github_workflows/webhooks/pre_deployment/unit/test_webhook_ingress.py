@@ -143,9 +143,8 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["routed"] == "/v1/runners"
         mock_deps.enqueue_job.assert_called_once()
+        assert result["success"] is True and result["routed"] == "/v1/runners"
 
     def test_handle_workflow_job_cancelled(self, handler, mock_deps):
         """Test handling a workflow_job with action=cancelled is ignored.
@@ -169,9 +168,8 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["routed"] == "ignored_events"
         mock_deps.enqueue_ignored.assert_called_once()
+        assert result["success"] is True and result["routed"] == "ignored_events"
 
     def test_handle_workflow_job_completed(self, handler, mock_deps):
         """Test handling a workflow_job with action=completed is ignored.
@@ -195,8 +193,7 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["routed"] == "ignored_events"
+        assert result["success"] is True and result["routed"] == "ignored_events"
 
     def test_handle_workflow_job_in_progress_ignored(self, handler, mock_deps):
         """Test handling a workflow_job with action=in_progress is ignored."""
@@ -213,9 +210,8 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["routed"] == "ignored_events"
         mock_deps.enqueue_ignored.assert_called_once()
+        assert result["success"] is True and result["routed"] == "ignored_events"
 
     def test_handle_workflow_job_no_runner_type(self, handler, mock_deps):
         """Test handling a workflow_job with no matching runner type."""
@@ -237,8 +233,7 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["routed"] == "ignored_events"
+        assert result["success"] is True and result["routed"] == "ignored_events"
 
     def test_handle_workflow_run(self, handler, mock_deps):
         """Test handling a workflow_run event."""
@@ -257,8 +252,7 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["routed"] == "acknowledged"
+        assert result["success"] is True and result["routed"] == "acknowledged"
 
     def test_handle_ping_event(self, handler, mock_deps):
         """Test handling a ping event."""
@@ -271,8 +265,7 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["routed"] == "ping_acknowledged"
+        assert result["success"] is True and result["routed"] == "ping_acknowledged"
 
     def test_handle_unknown_event_type(self, handler, mock_deps):
         """Test handling an unknown event type."""
@@ -285,9 +278,8 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["routed"] == "ignored_events"
         mock_deps.enqueue_ignored.assert_called_once()
+        assert result["success"] is True and result["routed"] == "ignored_events"
 
     def test_handle_duplicate_delivery(self, handler, mock_deps):
         """Test handling a duplicate delivery is skipped."""
@@ -301,9 +293,7 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["skipped"] is True
-        assert result["reason"] == "duplicate"
+        assert result["success"] is True and result["skipped"] is True and result["reason"] == "duplicate"
 
     def test_handle_invalid_signature(self, handler, mock_deps):
         """Test handling an invalid signature."""
@@ -317,10 +307,8 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["skipped"] is True
-        assert result["reason"] == "invalid_signature"
         mock_deps.publish_metric.assert_called_with("InvalidSignature", 1.0, "Count")
+        assert result["success"] is True and result["skipped"] is True and result["reason"] == "invalid_signature"
 
     def test_handle_no_signature_proceeds(self, handler, mock_deps):
         """Test handling without signature proceeds."""
@@ -340,8 +328,8 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
         mock_deps.verify_signature.assert_not_called()
+        assert result["success"] is True
 
     def test_handle_invalid_json_body(self, handler, mock_deps):
         """Test handling an invalid JSON body is skipped."""
@@ -354,9 +342,7 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["skipped"] is True
-        assert result["reason"] == "invalid_json"
+        assert result["success"] is True and result["skipped"] is True and result["reason"] == "invalid_json"
 
     def test_handle_signature_verification_error(self, handler, mock_deps):
         """Test handling a signature verification error."""
@@ -370,8 +356,7 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is False
-        assert "Secret unavailable" in result["error"]
+        assert result["success"] is False and "Secret unavailable" in result["error"]
 
     def test_handle_no_delivery_id_skips_idempotency(self, handler, mock_deps):
         """Test handling without delivery ID skips idempotency check."""
@@ -391,8 +376,8 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
         mock_deps.check_idempotency.assert_not_called()
+        assert result["success"] is True
 
     def test_handle_publishes_processing_time_metric(self, handler, mock_deps):
         """Test that processing time metric is published."""
@@ -410,8 +395,7 @@ class TestIngressHandlerHandle:
         _run_async(handler.handle(record))
         mock_deps.publish_metric.assert_called()
         call_args = mock_deps.publish_metric.call_args_list[-1]
-        assert call_args[0][0] == "WebhookIngressProcessingTime"
-        assert call_args[0][2] == "Milliseconds"
+        assert (call_args[0][0], call_args[0][2]) == ("WebhookIngressProcessingTime", "Milliseconds")
 
     def test_handle_enqueue_job_failure(self, handler, mock_deps):
         """Test handling when enqueue_job fails."""
@@ -448,9 +432,7 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True
-        assert result["skipped"] is True
-        assert result["reason"] == "invalid_json"
+        assert result["success"] is True and result["skipped"] is True and result["reason"] == "invalid_json"
 
     def test_handle_signature_value_error(self, handler, mock_deps):
         """Test handling a ValueError during signature verification."""
@@ -464,8 +446,7 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is False
-        assert "Invalid value" in result["error"]
+        assert result["success"] is False and "Invalid value" in result["error"]
 
     def test_handle_signature_type_error(self, handler, mock_deps):
         """Test handling a TypeError during signature verification."""
@@ -479,8 +460,7 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is False
-        assert "Type error" in result["error"]
+        assert result["success"] is False and "Type error" in result["error"]
 
 
 class TestIngressHandlerExtractHeadersAndBody:
@@ -507,10 +487,7 @@ class TestIngressHandlerExtractHeadersAndBody:
             }
         }
         headers, body_str, payload = handler._extract_headers_and_body(record)
-        assert headers["x-github-event"] == "workflow_job"
-        assert headers["x-hub-signature-256"] == "sha256=abc"
-        assert headers["x-github-delivery"] == "delivery-123"
-        assert payload == {"test": "data"}
+        assert (headers["x-github-event"], headers["x-hub-signature-256"], headers["x-github-delivery"], payload) == ("workflow_job", "sha256=abc", "delivery-123", {"test": "data"})
 
     def test_handles_missing_headers(self, handler):
         """Test handling when some headers are missing."""
@@ -521,9 +498,7 @@ class TestIngressHandlerExtractHeadersAndBody:
             }
         }
         headers, body_str, payload = handler._extract_headers_and_body(record)
-        assert headers == {"x-github-event": "ping"}
-        assert "x-hub-signature-256" not in headers
-        assert "x-github-delivery" not in headers
+        assert headers == {"x-github-event": "ping"} and "x-hub-signature-256" not in headers and "x-github-delivery" not in headers
 
     def test_handles_invalid_json(self, handler):
         """Test handling invalid JSON body."""
@@ -532,19 +507,16 @@ class TestIngressHandlerExtractHeadersAndBody:
             "messageAttributes": {}
         }
         headers, body_str, payload = handler._extract_headers_and_body(record)
-        assert payload is None
-        assert body_str == "not-json"
+        assert payload is None and body_str == "not-json"
 
     def test_handles_empty_body(self, handler):
         """Test handling empty body."""
         record = {"body": "", "messageAttributes": {}}
         headers, body_str, payload = handler._extract_headers_and_body(record)
-        assert payload is None
-        assert body_str == ""
+        assert payload is None and body_str == ""
 
     def test_handles_missing_body(self, handler):
         """Test handling missing body key."""
         record = {"messageAttributes": {}}
         headers, body_str, payload = handler._extract_headers_and_body(record)
-        assert body_str == ""
-        assert payload is None
+        assert body_str == "" and payload is None

@@ -40,10 +40,7 @@ class TestListRunningTaskArns:
 
         with patch.object(ecs_utils_module, 'get_ecs_client', return_value=mock_ecs):
             result = ecs_utils_module.list_running_task_arns("test-cluster")
-            assert len(result) == 3
-            assert "arn:task:1" in result
-            assert "arn:task:2" in result
-            assert "arn:task:3" in result
+            assert len(result) == 3 and set(result) == {"arn:task:1", "arn:task:2", "arn:task:3"}
 
     def test_handles_empty_results(self, ecs_utils_module):
         """Test handling when no tasks found."""
@@ -114,13 +111,9 @@ class TestDescribeTasksWithTags:
 
         with patch.object(ecs_utils_module, 'get_ecs_client', return_value=mock_ecs):
             ecs_utils_module.describe_tasks_with_tags("test-cluster", task_arns)
-            assert mock_ecs.describe_tasks.call_count == 2
-            # First batch should have 100 tasks
-            first_call = mock_ecs.describe_tasks.call_args_list[0]
-            assert len(first_call.kwargs["tasks"]) == 100
-            # Second batch should have 50 tasks
-            second_call = mock_ecs.describe_tasks.call_args_list[1]
-            assert len(second_call.kwargs["tasks"]) == 50
+            # First batch should have 100 tasks, second batch 50 tasks
+            calls = mock_ecs.describe_tasks.call_args_list
+            assert mock_ecs.describe_tasks.call_count == 2 and len(calls[0].kwargs["tasks"]) == 100 and len(calls[1].kwargs["tasks"]) == 50
 
 
 class TestExtractTaskTags:

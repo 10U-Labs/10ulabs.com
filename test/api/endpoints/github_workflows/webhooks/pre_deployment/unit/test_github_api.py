@@ -111,11 +111,9 @@ class TestGithubApiRequest:
             result = github_api_module.github_api_request(
                 "POST", "/test/path", data={"key": "value"}, token="test-token"
             )
-            assert result == response_data
-            # Verify request was made with body
             call_args = mock_urlopen.call_args
             request = call_args[0][0]
-            assert request.data == b'{"key": "value"}'
+            assert result == response_data and request.data == b'{"key": "value"}'
 
     def test_returns_empty_dict_on_empty_response(self, github_api_module):
         """Test that empty dict is returned when response body is empty."""
@@ -166,9 +164,7 @@ class TestGithubApiRequest:
             github_api_module.github_api_request("GET", "/test/path", token="test-token")
             call_args = mock_urlopen.call_args
             request = call_args[0][0]
-            assert request.get_header('Accept') == 'application/vnd.github+json'
-            assert request.get_header('X-github-api-version') == '2022-11-28'
-            assert request.get_header('User-agent') == 'TenULabs-Lambda'
+            assert (request.get_header('Accept'), request.get_header('X-github-api-version'), request.get_header('User-agent')) == ('application/vnd.github+json', '2022-11-28', 'TenULabs-Lambda')
 
     def test_no_auth_header_when_no_token(self, github_api_module):
         """Test that no auth header is set when no token available."""
