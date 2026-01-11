@@ -111,6 +111,7 @@ jobs:
         run: |
           MYPYPATH=lib/python
           MYPYPATH=$MYPYPATH:src/api/endpoints/runners/lambda
+          MYPYPATH=$MYPYPATH:src/api/endpoints/runners/ecs/lambda
           MYPYPATH=$MYPYPATH python3 -m mypy lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
