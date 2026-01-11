@@ -220,14 +220,11 @@ class TestLambdaHandler:
     def test_raises_runtime_error_on_failures(self, archiver_module, lambda_context):
         """Test that RuntimeError is raised when archiving fails."""
         record = {"body": "not json", "messageId": "msg-fail"}
-        raised = False
         with patch.object(archiver_module, 'get_sqs_records', return_value=[record]):
             with patch.object(archiver_module, 'publish_metric'):
                 with patch.object(archiver_module, 'count_results', return_value=(0, 1)):
-                    with pytest.raises(RuntimeError):
+                    with pytest.raises(RuntimeError, match=".*"):
                         archiver_module.lambda_handler(event={}, _context=lambda_context)
-                    raised = True
-        assert raised
 
     def test_publishes_archive_errors_metric_on_failure(self, archiver_module, lambda_context):
         """Test that ArchiveErrors metric is published on failure."""
