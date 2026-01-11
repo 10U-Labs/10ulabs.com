@@ -66,7 +66,7 @@ def _load_module(name: str):
 _workflowctl_module = _load_module("workflowctl")
 _utils_module = _load_module("utils")
 _cancel_module = _load_module("cancel")
-_dispatch_descendants_module = _load_module("dispatch_descendants")
+_compute_descendants_module = _load_module("compute_descendants")
 _dispatch_roots_module = _load_module("dispatch_roots")
 _get_changed_files_module = _load_module("get_changed_files")
 _get_running_module = _load_module("get_running")
@@ -93,9 +93,9 @@ def cancel():
 
 
 @pytest.fixture
-def dispatch_descendants():
-    """Provide access to the dispatch_descendants module."""
-    return _dispatch_descendants_module
+def compute_descendants():
+    """Provide access to the compute_descendants module."""
+    return _compute_descendants_module
 
 
 @pytest.fixture

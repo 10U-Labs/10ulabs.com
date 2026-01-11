@@ -3,21 +3,21 @@
 
 This is the main entry point for workflowctl commands. It provides subcommands
 for computing root workflows, getting running workflows, canceling workflows,
-and dispatching descendant workflows.
+and computing descendant workflows.
 
 Usage:
     python3 src/workflowctl/workflowctl.py compute-root-workflows --changed-files x,y
     python3 src/workflowctl/workflowctl.py get-running-workflows --repo owner/repo
     python3 src/workflowctl/workflowctl.py cancel-superseded-workflows --repo o/r --changed-files x
-    python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows --workflow x
+    python3 src/workflowctl/workflowctl.py compute-descendants --workflow x --repo o/r
     python3 src/workflowctl/workflowctl.py get-changed-files --base SHA --head SHA
     python3 src/workflowctl/workflowctl.py dispatch-root-workflows --repo o/r --changed-files x
 """
 import sys
 
 import cancel
+import compute_descendants
 import compute_roots
-import dispatch_descendants
 import dispatch_roots
 import dispatch_workflow
 import get_changed_files
@@ -26,8 +26,8 @@ import get_running
 
 COMMANDS = {
     "cancel-superseded-workflows": ("Cancel superseded workflow runs", cancel.main),
+    "compute-descendants": ("Compute descendant workflows ready to dispatch", compute_descendants.main),
     "compute-root-workflows": ("Compute root workflows from changed files", compute_roots.main),
-    "dispatch-descendant-workflows": ("Dispatch descendant workflows", dispatch_descendants.main),
     "dispatch-root-workflows": ("Dispatch root workflows", dispatch_roots.main),
     "dispatch-workflow": ("Dispatch a single workflow", dispatch_workflow.main),
     "get-changed-files": ("Get changed files between commits", get_changed_files.main),

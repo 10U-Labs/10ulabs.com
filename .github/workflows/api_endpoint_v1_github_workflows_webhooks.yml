@@ -199,27 +199,40 @@ jobs:
             --confcutdir=test --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: descendants
         if: >-
           github.event_name == 'workflow_dispatch' &&
           (
           github.event.inputs.trigger_descendants == 'true' ||
            contains(github.event.head_commit.message,
            '[trigger descendants]'))
-        name: Dispatch descendant workflows
+        name: Compute descendants
         run: |
-          FLAGS=""
+          python3 src/workflowctl/workflowctl.py compute-descendants \
+            --workflow api_endpoint_v1_github_workflows_webhooks \
+            --repo ${{ github.repository }}
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: >-
+          steps.descendants.outputs.ready != '[]' &&
+          github.event_name == 'workflow_dispatch' &&
+          (
+          github.event.inputs.trigger_descendants == 'true' ||
+           contains(github.event.head_commit.message,
+           '[trigger descendants]'))
+        name: Dispatch ready descendants
+        run: |
           TRIGGER="${{ github.event.inputs.trigger_descendants }}"
           INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
-          if [ "$TRIGGER" = "true" ]; then
-            FLAGS="$FLAGS --trigger-descendants"
-          fi
-          if [ "$INVALIDATE" = "true" ]; then
-            FLAGS="$FLAGS --invalidate-cloudfront"
-          fi
-          python3 src/workflowctl/workflowctl.py dispatch-descendant-workflows \
-            --workflow api_endpoint_v1_github_workflows_webhooks \
-            --repo ${{ github.repository }} \
-            $FLAGS
+          for workflow in $(echo '${{ steps.descendants.outputs.ready }}' | jq -r '.[]'); do
+            FLAGS="-f trigger_descendants=${TRIGGER:-false}"
+            if [ "$INVALIDATE" = "true" ]; then
+              FLAGS="$FLAGS -f invalidate_cloudfront=true"
+            fi
+            gh workflow run "${workflow}.yml" \
+              --repo ${{ github.repository }} \
+              $FLAGS
+          done
 name: >-
   Ensuring the /v1/github-workflows/webhooks API endpoint
   exists and is properly configured
