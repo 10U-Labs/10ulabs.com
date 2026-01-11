@@ -293,7 +293,8 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True and result["skipped"] is True and result["reason"] == "duplicate"
+        expected = (True, True, "duplicate")
+        assert (result["success"], result["skipped"], result["reason"]) == expected
 
     def test_handle_invalid_signature(self, handler, mock_deps):
         """Test handling an invalid signature."""
@@ -308,7 +309,8 @@ class TestIngressHandlerHandle:
         }
         result = _run_async(handler.handle(record))
         mock_deps.publish_metric.assert_called_with("InvalidSignature", 1.0, "Count")
-        assert result["success"] is True and result["skipped"] is True and result["reason"] == "invalid_signature"
+        expected = (True, True, "invalid_signature")
+        assert (result["success"], result["skipped"], result["reason"]) == expected
 
     def test_handle_no_signature_proceeds(self, handler, mock_deps):
         """Test handling without signature proceeds."""
@@ -342,7 +344,8 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True and result["skipped"] is True and result["reason"] == "invalid_json"
+        expected = (True, True, "invalid_json")
+        assert (result["success"], result["skipped"], result["reason"]) == expected
 
     def test_handle_signature_verification_error(self, handler, mock_deps):
         """Test handling a signature verification error."""
@@ -395,7 +398,8 @@ class TestIngressHandlerHandle:
         _run_async(handler.handle(record))
         mock_deps.publish_metric.assert_called()
         call_args = mock_deps.publish_metric.call_args_list[-1]
-        assert (call_args[0][0], call_args[0][2]) == ("WebhookIngressProcessingTime", "Milliseconds")
+        expected = ("WebhookIngressProcessingTime", "Milliseconds")
+        assert (call_args[0][0], call_args[0][2]) == expected
 
     def test_handle_enqueue_job_failure(self, handler, mock_deps):
         """Test handling when enqueue_job fails."""
@@ -432,7 +436,8 @@ class TestIngressHandlerHandle:
             }
         }
         result = _run_async(handler.handle(record))
-        assert result["success"] is True and result["skipped"] is True and result["reason"] == "invalid_json"
+        expected = (True, True, "invalid_json")
+        assert (result["success"], result["skipped"], result["reason"]) == expected
 
     def test_handle_signature_value_error(self, handler, mock_deps):
         """Test handling a ValueError during signature verification."""
@@ -487,7 +492,14 @@ class TestIngressHandlerExtractHeadersAndBody:
             }
         }
         headers, body_str, payload = handler._extract_headers_and_body(record)
-        assert (headers["x-github-event"], headers["x-hub-signature-256"], headers["x-github-delivery"], payload) == ("workflow_job", "sha256=abc", "delivery-123", {"test": "data"})
+        expected = ("workflow_job", "sha256=abc", "delivery-123", {"test": "data"})
+        actual = (
+            headers["x-github-event"],
+            headers["x-hub-signature-256"],
+            headers["x-github-delivery"],
+            payload
+        )
+        assert actual == expected
 
     def test_handles_missing_headers(self, handler):
         """Test handling when some headers are missing."""
@@ -498,7 +510,10 @@ class TestIngressHandlerExtractHeadersAndBody:
             }
         }
         headers, body_str, payload = handler._extract_headers_and_body(record)
-        assert headers == {"x-github-event": "ping"} and "x-hub-signature-256" not in headers and "x-github-delivery" not in headers
+        headers_match = headers == {"x-github-event": "ping"}
+        sig_missing = "x-hub-signature-256" not in headers
+        delivery_missing = "x-github-delivery" not in headers
+        assert headers_match and sig_missing and delivery_missing
 
     def test_handles_invalid_json(self, handler):
         """Test handling invalid JSON body."""

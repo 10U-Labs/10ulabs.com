@@ -107,7 +107,10 @@ class TestGithubApiRequest:
         mock_response.__enter__ = MagicMock(return_value=mock_response)
         mock_response.__exit__ = MagicMock(return_value=False)
 
-        with patch.object(github_api_module.urllib.request, 'urlopen', return_value=mock_response) as mock_urlopen:
+        urlopen_patch = patch.object(
+            github_api_module.urllib.request, 'urlopen', return_value=mock_response
+        )
+        with urlopen_patch as mock_urlopen:
             result = github_api_module.github_api_request(
                 "POST", "/test/path", data={"key": "value"}, token="test-token"
             )
@@ -122,8 +125,13 @@ class TestGithubApiRequest:
         mock_response.__enter__ = MagicMock(return_value=mock_response)
         mock_response.__exit__ = MagicMock(return_value=False)
 
-        with patch.object(github_api_module.urllib.request, 'urlopen', return_value=mock_response):
-            result = github_api_module.github_api_request("DELETE", "/test/path", token="test-token")
+        urlopen_patch = patch.object(
+            github_api_module.urllib.request, 'urlopen', return_value=mock_response
+        )
+        with urlopen_patch:
+            result = github_api_module.github_api_request(
+                "DELETE", "/test/path", token="test-token"
+            )
             assert result == {}
 
     def test_uses_cached_token_when_none_provided(self, github_api_module):
@@ -134,7 +142,10 @@ class TestGithubApiRequest:
         mock_response.__enter__ = MagicMock(return_value=mock_response)
         mock_response.__exit__ = MagicMock(return_value=False)
 
-        with patch.object(github_api_module.urllib.request, 'urlopen', return_value=mock_response) as mock_urlopen:
+        urlopen_patch = patch.object(
+            github_api_module.urllib.request, 'urlopen', return_value=mock_response
+        )
+        with urlopen_patch as mock_urlopen:
             github_api_module.github_api_request("GET", "/test/path")
             call_args = mock_urlopen.call_args
             request = call_args[0][0]
@@ -160,11 +171,20 @@ class TestGithubApiRequest:
         mock_response.__enter__ = MagicMock(return_value=mock_response)
         mock_response.__exit__ = MagicMock(return_value=False)
 
-        with patch.object(github_api_module.urllib.request, 'urlopen', return_value=mock_response) as mock_urlopen:
+        urlopen_patch = patch.object(
+            github_api_module.urllib.request, 'urlopen', return_value=mock_response
+        )
+        with urlopen_patch as mock_urlopen:
             github_api_module.github_api_request("GET", "/test/path", token="test-token")
             call_args = mock_urlopen.call_args
             request = call_args[0][0]
-            assert (request.get_header('Accept'), request.get_header('X-github-api-version'), request.get_header('User-agent')) == ('application/vnd.github+json', '2022-11-28', 'TenULabs-Lambda')
+            expected = ('application/vnd.github+json', '2022-11-28', 'TenULabs-Lambda')
+            actual = (
+                request.get_header('Accept'),
+                request.get_header('X-github-api-version'),
+                request.get_header('User-agent')
+            )
+            assert actual == expected
 
     def test_no_auth_header_when_no_token(self, github_api_module):
         """Test that no auth header is set when no token available."""
@@ -174,12 +194,14 @@ class TestGithubApiRequest:
         mock_response.__enter__ = MagicMock(return_value=mock_response)
         mock_response.__exit__ = MagicMock(return_value=False)
 
-        with patch.dict('os.environ', {}, clear=True):
-            with patch.object(github_api_module.urllib.request, 'urlopen', return_value=mock_response) as mock_urlopen:
-                github_api_module.github_api_request("GET", "/test/path")
-                call_args = mock_urlopen.call_args
-                request = call_args[0][0]
-                assert request.get_header('Authorization') is None
+        urlopen_patch = patch.object(
+            github_api_module.urllib.request, 'urlopen', return_value=mock_response
+        )
+        with patch.dict('os.environ', {}, clear=True), urlopen_patch as mock_urlopen:
+            github_api_module.github_api_request("GET", "/test/path")
+            call_args = mock_urlopen.call_args
+            request = call_args[0][0]
+            assert request.get_header('Authorization') is None
 
     def test_http_error_without_body(self, github_api_module):
         """Test HTTPError handling when fp is None."""

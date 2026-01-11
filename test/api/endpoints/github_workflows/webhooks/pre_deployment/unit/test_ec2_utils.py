@@ -81,7 +81,8 @@ class TestFindInstancesByTags:
         with patch.object(ec2_utils_module, 'get_ec2_client', return_value=mock_ec2):
             result = ec2_utils_module.find_instances_by_tags(filters)
             mock_ec2.describe_instances.assert_called_once_with(Filters=filters)
-            assert len(result) == 3 and [r["InstanceId"] for r in result] == ["i-123", "i-456", "i-789"]
+            expected_ids = ["i-123", "i-456", "i-789"]
+            assert len(result) == 3 and [r["InstanceId"] for r in result] == expected_ids
 
     def test_returns_empty_list_when_no_instances(self, ec2_utils_module):
         """Test returns empty list when no instances found."""

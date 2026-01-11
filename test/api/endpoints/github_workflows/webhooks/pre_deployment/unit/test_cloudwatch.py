@@ -51,7 +51,14 @@ class TestPublishMetric:
             mock_client.put_metric_data.assert_called_once()
             call_args = mock_client.put_metric_data.call_args
             metric_data = call_args.kwargs["MetricData"][0]
-            assert (call_args.kwargs["Namespace"], metric_data["MetricName"], metric_data["Value"], metric_data["Unit"]) == ("TestNamespace", "TestMetric", 1.0, "Count")
+            expected = ("TestNamespace", "TestMetric", 1.0, "Count")
+            actual = (
+                call_args.kwargs["Namespace"],
+                metric_data["MetricName"],
+                metric_data["Value"],
+                metric_data["Unit"]
+            )
+            assert actual == expected
 
     def test_uses_default_unit_when_not_specified(self, cloudwatch_module):
         """Test that default unit 'None' is used when not specified."""

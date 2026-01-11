@@ -113,7 +113,10 @@ class TestDescribeTasksWithTags:
             ecs_utils_module.describe_tasks_with_tags("test-cluster", task_arns)
             # First batch should have 100 tasks, second batch 50 tasks
             calls = mock_ecs.describe_tasks.call_args_list
-            assert mock_ecs.describe_tasks.call_count == 2 and len(calls[0].kwargs["tasks"]) == 100 and len(calls[1].kwargs["tasks"]) == 50
+            call_count_ok = mock_ecs.describe_tasks.call_count == 2
+            first_batch_ok = len(calls[0].kwargs["tasks"]) == 100
+            second_batch_ok = len(calls[1].kwargs["tasks"]) == 50
+            assert call_count_ok and first_batch_ok and second_batch_ok
 
 
 class TestExtractTaskTags:

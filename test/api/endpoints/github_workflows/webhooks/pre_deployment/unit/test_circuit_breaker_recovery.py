@@ -601,4 +601,7 @@ def test_attempt_recovery_returns_error_on_missing_env(circuit_breaker_recovery)
         with patch('boto3.client') as mock_boto:
             mock_boto.return_value = MagicMock()
             result = circuit_breaker_recovery.attempt_recovery()
-    assert 'error' in result and ('Missing' in result.get('message', '') or 'Configuration error' in result.get('error', ''))
+    has_error = 'error' in result
+    msg_check = 'Missing' in result.get('message', '')
+    err_check = 'Configuration error' in result.get('error', '')
+    assert has_error and (msg_check or err_check)
