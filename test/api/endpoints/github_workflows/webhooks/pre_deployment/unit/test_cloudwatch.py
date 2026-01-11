@@ -37,8 +37,7 @@ class TestGetCloudwatchClient:
             mock_boto.return_value = mock_client
             first_call = cloudwatch_module._get_cloudwatch_client()
             second_call = cloudwatch_module._get_cloudwatch_client()
-            assert mock_boto.call_count == 1
-            assert first_call is second_call
+            assert mock_boto.call_count == 1 and first_call is second_call
 
 
 class TestPublishMetric:
@@ -51,10 +50,8 @@ class TestPublishMetric:
             cloudwatch_module.publish_metric("TestNamespace", "TestMetric", 1.0, "Count")
             mock_client.put_metric_data.assert_called_once()
             call_args = mock_client.put_metric_data.call_args
-            assert call_args.kwargs["Namespace"] == "TestNamespace"
-            assert call_args.kwargs["MetricData"][0]["MetricName"] == "TestMetric"
-            assert call_args.kwargs["MetricData"][0]["Value"] == 1.0
-            assert call_args.kwargs["MetricData"][0]["Unit"] == "Count"
+            metric_data = call_args.kwargs["MetricData"][0]
+            assert (call_args.kwargs["Namespace"], metric_data["MetricName"], metric_data["Value"], metric_data["Unit"]) == ("TestNamespace", "TestMetric", 1.0, "Count")
 
     def test_uses_default_unit_when_not_specified(self, cloudwatch_module):
         """Test that default unit 'None' is used when not specified."""

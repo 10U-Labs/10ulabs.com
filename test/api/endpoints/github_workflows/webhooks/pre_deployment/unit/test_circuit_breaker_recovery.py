@@ -565,8 +565,7 @@ def test_attempt_recovery_sends_sns_on_successful_recovery(circuit_breaker_recov
             mock_boto.return_value = mock_client
             result = circuit_breaker_recovery.attempt_recovery()
     # Verify SNS was called and we moved to half-open
-    assert mock_client.publish.called
-    assert result['new_state'] == 'half-open'
+    assert mock_client.publish.called and result['new_state'] == 'half-open'
 
 
 def test_attempt_recovery_half_open_sends_sns_on_health_failure(circuit_breaker_recovery):
@@ -579,8 +578,7 @@ def test_attempt_recovery_half_open_sends_sns_on_health_failure(circuit_breaker_
             mock_boto.return_value = mock_client
             result = circuit_breaker_recovery.attempt_recovery()
     # Should call SNS and reopen circuit
-    assert mock_client.publish.called
-    assert result['new_state'] == 'open'
+    assert mock_client.publish.called and result['new_state'] == 'open'
 
 
 def test_attempt_recovery_sends_sns_on_max_attempts(circuit_breaker_recovery):
@@ -594,8 +592,7 @@ def test_attempt_recovery_sends_sns_on_max_attempts(circuit_breaker_recovery):
             mock_boto.return_value = mock_client
             result = circuit_breaker_recovery.attempt_recovery()
     # Should call SNS and require manual intervention
-    assert mock_client.publish.called
-    assert result.get('manual_intervention_required') is True
+    assert mock_client.publish.called and result.get('manual_intervention_required') is True
 
 
 def test_attempt_recovery_returns_error_on_missing_env(circuit_breaker_recovery):
@@ -604,5 +601,4 @@ def test_attempt_recovery_returns_error_on_missing_env(circuit_breaker_recovery)
         with patch('boto3.client') as mock_boto:
             mock_boto.return_value = MagicMock()
             result = circuit_breaker_recovery.attempt_recovery()
-    assert 'error' in result
-    assert 'Missing' in result.get('message', '') or 'Configuration error' in result.get('error', '')
+    assert 'error' in result and ('Missing' in result.get('message', '') or 'Configuration error' in result.get('error', ''))

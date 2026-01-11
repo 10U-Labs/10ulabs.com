@@ -179,8 +179,7 @@ class TestGetCircuitBreakerStatus:
                 'test-function', 'test-table'
             )
         # No concurrency set is healthy (returns None)
-        assert result['reserved_concurrency'] is None
-        assert result['healthy'] is True
+        assert result['reserved_concurrency'] is None and result['healthy'] is True
 
     def test_08_handles_concurrency_client_error(self, circuit_breaker_reset):
         """Test handles ClientError when getting concurrency (line 62-64)."""
