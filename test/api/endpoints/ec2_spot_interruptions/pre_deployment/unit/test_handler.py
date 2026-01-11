@@ -25,8 +25,7 @@ class TestGetEc2InstanceTags:
         with patch.object(handler_module, '_get_ec2_client', return_value=mock_ec2):
             result = handler_module._get_ec2_instance_tags("i-abc123")
 
-        assert result["RunId"] == "12345"
-        assert result["GitHubRepo"] == "org/repo"
+        assert (result["RunId"], result["GitHubRepo"]) == ("12345", "org/repo")
 
     def test_get_ec2_instance_tags_no_reservations_returns_empty(self, handler_module):
         """Returns empty dict when no reservations found."""
@@ -122,8 +121,7 @@ class TestHandleEc2SpotInterruption:
         with patch.object(handler_module, '_get_ec2_instance_tags', return_value={}):
             result = handler_module._handle_ec2_spot_interruption(event)
 
-        assert result["statusCode"] == 200
-        assert json.loads(result["body"])["handled"] is False
+        assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, False)
 
     def test_handle_ec2_spot_interruption_not_our_runner_returns_200(self, handler_module):
         """Returns 200 with handled=False when not our runner."""
@@ -136,8 +134,7 @@ class TestHandleEc2SpotInterruption:
         ):
             result = handler_module._handle_ec2_spot_interruption(event)
 
-        assert result["statusCode"] == 200
-        assert json.loads(result["body"])["handled"] is False
+        assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, False)
 
     def test_handle_ec2_spot_interruption_our_runner_sends_retry(self, handler_module):
         """Sends retry request when instance is our runner."""
@@ -151,8 +148,7 @@ class TestHandleEc2SpotInterruption:
             with patch.object(handler_module, '_send_retry_request', return_value=True):
                 result = handler_module._handle_ec2_spot_interruption(event)
 
-        assert result["statusCode"] == 200
-        assert json.loads(result["body"])["handled"] is True
+        assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, True)
 
 
 class TestLambdaHandler:
@@ -190,8 +186,7 @@ class TestLambdaHandler:
         with patch.object(handler_module, '_get_ec2_instance_tags', return_value={}):
             result = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200
-        assert "results" in json.loads(result["body"])
+        assert result["statusCode"] == 200 and "results" in json.loads(result["body"])
 
     def test_lambda_handler_ignores_non_spot_events(
         self, handler_module, lambda_context
@@ -205,5 +200,4 @@ class TestLambdaHandler:
 
         result = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200
-        assert "ignored" in json.loads(result["body"])["message"].lower()
+        assert result["statusCode"] == 200 and "ignored" in json.loads(result["body"])["message"].lower()

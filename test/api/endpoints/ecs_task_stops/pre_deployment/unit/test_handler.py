@@ -48,8 +48,7 @@ class TestGetEcsTaskTags:
                 "arn:aws:ecs:us-east-2:123456789012:cluster/cluster"
             )
 
-        assert result["RunId"] == "12345"
-        assert result["GitHubRepo"] == "org/repo"
+        assert (result["RunId"], result["GitHubRepo"]) == ("12345", "org/repo")
 
     def test_get_ecs_task_tags_no_tasks_returns_empty(self, handler_module):
         """Returns empty dict when no tasks found."""
@@ -138,8 +137,7 @@ class TestHandleEcsTaskStopped:
 
         result = handler_module._handle_ecs_task_stopped(event)
 
-        assert result["statusCode"] == 200
-        assert json.loads(result["body"])["handled"] is False
+        assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, False)
 
     def test_handle_ecs_task_stopped_no_tags_returns_200(self, handler_module):
         """Returns 200 with handled=False when no tags found."""
@@ -155,8 +153,7 @@ class TestHandleEcsTaskStopped:
         with patch.object(handler_module, '_get_ecs_task_tags', return_value={}):
             result = handler_module._handle_ecs_task_stopped(event)
 
-        assert result["statusCode"] == 200
-        assert json.loads(result["body"])["handled"] is False
+        assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, False)
 
     def test_handle_ecs_task_stopped_our_runner_sends_retry(self, handler_module):
         """Sends retry request when task is our runner."""
@@ -177,8 +174,7 @@ class TestHandleEcsTaskStopped:
             with patch.object(handler_module, '_send_retry_request', return_value=True):
                 result = handler_module._handle_ecs_task_stopped(event)
 
-        assert result["statusCode"] == 200
-        assert json.loads(result["body"])["handled"] is True
+        assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, True)
 
 
 class TestLambdaHandler:
@@ -226,8 +222,7 @@ class TestLambdaHandler:
 
         result = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200
-        assert "results" in json.loads(result["body"])
+        assert result["statusCode"] == 200 and "results" in json.loads(result["body"])
 
     def test_lambda_handler_ignores_non_stopped_events(
         self, handler_module, lambda_context
@@ -244,5 +239,4 @@ class TestLambdaHandler:
 
         result = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200
-        assert "ignored" in json.loads(result["body"])["message"].lower()
+        assert result["statusCode"] == 200 and "ignored" in json.loads(result["body"])["message"].lower()

@@ -55,8 +55,7 @@ class TestProcessRetryRequest:
             ):
                 result = handler_module._process_retry_request(body)
 
-        assert result["statusCode"] == 200
-        assert json.loads(result["body"])["retried"] is False
+        assert (result["statusCode"], json.loads(result["body"])["retried"]) == (200, False)
 
 
 class TestLambdaHandler:
@@ -73,8 +72,7 @@ class TestLambdaHandler:
         with patch.object(handler_module, '_get_github_token', return_value=''):
             result = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200
-        assert "results" in json.loads(result["body"])
+        assert result["statusCode"] == 200 and "results" in json.loads(result["body"])
 
     def test_lambda_handler_direct_invocation_processes_body(
         self, handler_module, lambda_context
@@ -224,9 +222,7 @@ class TestGetWorkflowInfoFromRun:
         ):
             result = handler_module._get_workflow_info_from_run("token", "org/repo", 123)
 
-        assert result["workflow_id"] == "456"
-        assert result["head_sha"] == "abc123"
-        assert result["head_branch"] == "main"
+        assert (result["workflow_id"], result["head_sha"], result["head_branch"]) == ("456", "abc123", "main")
 
 
 class TestDispatchWorkflow:

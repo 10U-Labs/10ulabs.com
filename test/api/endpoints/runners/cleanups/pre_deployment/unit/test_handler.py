@@ -122,9 +122,7 @@ class TestIsOrphanedEcsTask:
 
         result = handler_module._is_orphaned_ecs_task(task, now.timestamp())
 
-        assert result is not None
-        assert result["task_arn"] == task["taskArn"]
-        assert result["job_id"] == "12345"
+        assert result is not None and result["task_arn"] == task["taskArn"] and result["job_id"] == "12345"
 
 
 class TestExtractRunIdFromRunnerName:
@@ -165,10 +163,7 @@ class TestRunCleanup:
                 ):
                     result = handler_module._run_cleanup()
 
-        assert "orphaned_ecs_cleaned" in result
-        assert "orphaned_ec2_cleaned" in result
-        assert "orphaned_github_cleaned" in result
-        assert "errors" in result
+        assert all(k in result for k in ["orphaned_ecs_cleaned", "orphaned_ec2_cleaned", "orphaned_github_cleaned", "errors"])
 
 
 class TestLambdaHandler:
@@ -204,5 +199,4 @@ class TestLambdaHandler:
         ):
             result = handler_module.lambda_handler(event, lambda_context)
 
-        assert result["statusCode"] == 200
-        assert "results" in json.loads(result["body"])
+        assert result["statusCode"] == 200 and "results" in json.loads(result["body"])
