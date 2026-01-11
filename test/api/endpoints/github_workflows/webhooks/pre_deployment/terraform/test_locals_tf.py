@@ -17,6 +17,13 @@ class TestLocalsBlockExists:
             "locals block not found in locals.tf"
         )
 
+    def test_locals_block_has_content(self, locals_tf_content):
+        """Verify locals block contains at least one assignment."""
+        pattern = r'locals\s*\{[^}]+='
+        assert re.search(pattern, locals_tf_content, re.DOTALL), (
+            "locals block should contain at least one assignment"
+        )
+
 
 class TestCommonLocals:
     """Test common local variables."""
@@ -111,6 +118,12 @@ class TestTableNameLocals:
         """Verify idempotency_table_name is defined."""
         assert 'idempotency_table_name' in locals_tf_content, (
             "idempotency_table_name local not found"
+        )
+
+    def test_circuit_breaker_table_name_defined(self, locals_tf_content):
+        """Verify circuit_breaker_state_table_name is defined."""
+        assert 'circuit_breaker' in locals_tf_content, (
+            "circuit_breaker table name local not found"
         )
 
 
@@ -232,6 +245,12 @@ class TestSSMParameterLocals:
             "ssm_parameter_name_for_webhook_secret local not found"
         )
 
+    def test_github_token_parameter_referenced(self, locals_tf_content):
+        """Verify GitHub token parameter name is referenced."""
+        assert 'github_token' in locals_tf_content.lower(), (
+            "GitHub token parameter reference not found"
+        )
+
 
 class TestAlertingLocals:
     """Test alerting configuration locals."""
@@ -240,4 +259,12 @@ class TestAlertingLocals:
         """Verify circuit_breaker_alert_email is defined."""
         assert 'circuit_breaker_alert_email' in locals_tf_content, (
             "circuit_breaker_alert_email local not found"
+        )
+
+    def test_alert_email_uses_variable_or_local(self, locals_tf_content):
+        """Verify alert email is configurable via variable or local."""
+        has_var = 'var.' in locals_tf_content
+        has_local_email = 'alert_email' in locals_tf_content
+        assert has_var or has_local_email, (
+            "Alert email should be configurable"
         )

@@ -39,6 +39,14 @@ class TestSQSQueuesExist:
             f"SQS queue '{queue_name}' not found in sqs.tf"
         )
 
+    def test_queue_count_matches_expected(self, sqs_tf_content):
+        """Verify the number of SQS queues matches expected count."""
+        queue_pattern = r'resource\s+"aws_sqs_queue"\s+"\w+"'
+        actual_count = len(re.findall(queue_pattern, sqs_tf_content))
+        assert actual_count >= len(SQS_QUEUES), (
+            f"Expected at least {len(SQS_QUEUES)} queues, found {actual_count}"
+        )
+
 
 class TestSQSQueueConfiguration:
     """Test SQS queue configurations."""
@@ -92,6 +100,12 @@ class TestSQSNamingConventions:
             f"found {total_local_refs} local refs for {queue_count} queues"
         )
 
+    def test_no_hardcoded_queue_names(self, sqs_tf_content):
+        """Verify no hardcoded queue names (names should use locals)."""
+        hardcoded = r'name\s*=\s*"[^$\{]'
+        hardcoded_count = len(re.findall(hardcoded, sqs_tf_content))
+        assert hardcoded_count == 0, "Queue names should not be hardcoded strings"
+
 
 class TestSQSEncryption:
     """Test SQS encryption configurations.
@@ -123,3 +137,9 @@ class TestSQSEncryption:
             assert kms_count + sse_count >= 1, (
                 "Expected explicit encryption configuration to be consistent"
             )
+
+    def test_no_plaintext_encryption_disabled(self, sqs_tf_content):
+        """Verify encryption is not explicitly disabled."""
+        disabled_pattern = r'sqs_managed_sse_enabled\s*=\s*false'
+        disabled_count = len(re.findall(disabled_pattern, sqs_tf_content))
+        assert disabled_count == 0, "SQS encryption should not be explicitly disabled"

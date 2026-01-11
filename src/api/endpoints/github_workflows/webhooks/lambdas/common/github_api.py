@@ -13,13 +13,13 @@ from common.aws_clients import get_ssm_client
 
 logger = logging.getLogger(__name__)
 
-_cache: dict[str, Any] = {"token": None}
+cache: dict[str, Any] = {"token": None}
 
 
 def get_github_token() -> str:
     """Retrieve GitHub token from SSM Parameter Store with caching."""
-    if _cache["token"]:
-        return _cache["token"]
+    if cache["token"]:
+        return cache["token"]
 
     parameter_name = os.environ.get("GITHUB_TOKEN_SECRET_NAME")
     if not parameter_name:
@@ -30,7 +30,7 @@ def get_github_token() -> str:
             Name=parameter_name, WithDecryption=True
         )
         token = response.get("Parameter", {}).get("Value", "")
-        _cache["token"] = token
+        cache["token"] = token
         return token
     except ClientError as err:
         error_code = err.response.get("Error", {}).get("Code", "")
@@ -44,7 +44,7 @@ def get_github_token() -> str:
 
 def clear_token_cache() -> None:
     """Clear the cached GitHub token."""
-    _cache["token"] = None
+    cache["token"] = None
 
 
 def github_api_request(

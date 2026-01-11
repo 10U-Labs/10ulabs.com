@@ -24,7 +24,7 @@ from urllib.parse import unquote
 from botocore.exceptions import ClientError
 
 from common.aws_clients import get_dynamodb_client, get_sqs_client, get_ssm_client
-from common.cloudwatch import publish_metric as _common_publish_metric
+from common.cloudwatch import publish_metric as common_publish_metric
 from common.webhook_ingress import IngressHandler
 
 logger = logging.getLogger(__name__)
@@ -32,29 +32,29 @@ logger.setLevel(logging.INFO)
 
 METRICS_NAMESPACE = "WebhookRouter"
 
-_cache: dict[str, Any] = {
+cache: dict[str, Any] = {
     "webhook_secret": None,
     "api_key": None,
     "test_mode": False,
 }
 
 
-def _set_test_mode(enabled: bool) -> None:
+def set_test_mode(enabled: bool) -> None:
     """Set test mode."""
-    _cache["test_mode"] = enabled
+    cache["test_mode"] = enabled
 
 
-def _publish_metric(metric_name: str, value: float, unit: str = "None") -> None:
+def publish_metric(metric_name: str, value: float, unit: str = "None") -> None:
     """Publish a metric to CloudWatch (with test mode check)."""
-    if _cache["test_mode"]:
+    if cache["test_mode"]:
         return
-    _common_publish_metric(METRICS_NAMESPACE, metric_name, value, unit)
+    common_publish_metric(METRICS_NAMESPACE, metric_name, value, unit)
 
 
-def _get_api_key() -> str:
+def get_api_key() -> str:
     """Get API key from SSM Parameter Store (cached)."""
-    if _cache["api_key"]:
-        return _cache["api_key"]
+    if cache["api_key"]:
+        return cache["api_key"]
 
     parameter_name = os.environ.get("API_KEY_PARAMETER_NAME")
     if not parameter_name:
@@ -65,14 +65,14 @@ def _get_api_key() -> str:
             Name=parameter_name, WithDecryption=True
         )
         api_key = response.get("Parameter", {}).get("Value", "")
-        _cache["api_key"] = api_key
+        cache["api_key"] = api_key
         return api_key
     except ClientError as err:
         logger.error("Failed to retrieve API key: %s", str(err))
         raise RuntimeError(f"Cannot retrieve API key: {err}") from err
 
 
-async def _post_to_runners(job_data: dict[str, Any]) -> dict[str, Any]:
+async def post_to_runners(job_data: dict[str, Any]) -> dict[str, Any]:
     """POST job data to /v1/runners endpoint.
 
     Returns:
@@ -84,7 +84,7 @@ async def _post_to_runners(job_data: dict[str, Any]) -> dict[str, Any]:
         return {"success": False, "error": "API base URL not configured"}
 
     try:
-        api_key = _get_api_key()
+        api_key = get_api_key()
     except RuntimeError as err:
         return {"success": False, "error": str(err)}
 
@@ -115,7 +115,7 @@ async def _post_to_runners(job_data: dict[str, Any]) -> dict[str, Any]:
         return {"success": False, "error": str(err.reason)}
 
 
-async def _check_and_record_idempotency(request_id: str) -> bool:
+async def check_and_record_idempotency(request_id: str) -> bool:
     """Check and record idempotency for a request.
 
     Returns:
@@ -147,7 +147,7 @@ async def _check_and_record_idempotency(request_id: str) -> bool:
         return False
 
 
-async def _enqueue_job(job_data: dict[str, Any]) -> dict[str, Any]:
+async def enqueue_job(job_data: dict[str, Any]) -> dict[str, Any]:
     """Enqueue a job to the job queue.
 
     Returns:
@@ -170,7 +170,7 @@ async def _enqueue_job(job_data: dict[str, Any]) -> dict[str, Any]:
         queue_depth = int(
             attrs.get("Attributes", {}).get("ApproximateNumberOfMessages", "0")
         )
-        _publish_metric("QueueDepth", float(queue_depth), "Count")
+        publish_metric("QueueDepth", float(queue_depth), "Count")
 
         return {"success": True, "message_id": response.get("MessageId")}
     except ClientError as err:
@@ -178,7 +178,7 @@ async def _enqueue_job(job_data: dict[str, Any]) -> dict[str, Any]:
         return {"success": False, "error": str(err)}
 
 
-def _enqueue_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str, Any]:
+def enqueue_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str, Any]:
     """Enqueue an ignored event to the ignored events queue.
 
     Returns:
@@ -214,7 +214,7 @@ def _enqueue_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str,
 # Note: _enqueue_cancellation removed - runners are ephemeral and self-terminate
 
 
-def _handle_workflow_run(event_data: dict[str, Any]) -> dict[str, Any]:
+def handle_workflow_run(event_data: dict[str, Any]) -> dict[str, Any]:
     """Handle a workflow_run event."""
     action = event_data.get("action")
     workflow_run = event_data.get("workflow_run", {})
@@ -242,7 +242,7 @@ def _handle_workflow_run(event_data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def _get_webhook_secret(force_refresh: bool = False) -> str:
+async def get_webhook_secret(force_refresh: bool = False) -> str:
     """Get webhook secret from SSM Parameter Store with caching.
 
     Returns:
@@ -252,10 +252,10 @@ async def _get_webhook_secret(force_refresh: bool = False) -> str:
         RuntimeError: If secret cannot be retrieved
     """
     if force_refresh:
-        _cache["webhook_secret"] = None
+        cache["webhook_secret"] = None
 
-    if _cache["webhook_secret"]:
-        return _cache["webhook_secret"]
+    if cache["webhook_secret"]:
+        return cache["webhook_secret"]
 
     parameter_name = os.environ.get("WEBHOOK_SECRET_NAME")
     try:
@@ -263,14 +263,14 @@ async def _get_webhook_secret(force_refresh: bool = False) -> str:
             Name=parameter_name, WithDecryption=True
         )
         secret = response.get("Parameter", {}).get("Value", "")
-        _cache["webhook_secret"] = secret
+        cache["webhook_secret"] = secret
         return secret
     except ClientError as err:
         logger.error("Failed to retrieve webhook secret: %s", str(err))
         raise RuntimeError(f"Cannot retrieve webhook secret: {err}") from err
 
 
-def _verify_signature(payload_body: str, signature_header: str, secret: str) -> bool:
+def verify_signature(payload_body: str, signature_header: str, secret: str) -> bool:
     """Verify GitHub webhook signature.
 
     Args:
@@ -296,7 +296,7 @@ def _verify_signature(payload_body: str, signature_header: str, secret: str) -> 
     return hmac.compare_digest(computed_signature, github_signature)
 
 
-async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
+async def handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
     """Handle a workflow_job event.
 
     This is a dumb forwarder - it does NOT parse labels or determine runner type.
@@ -341,7 +341,7 @@ async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
         "run_id": run_id,
     }
 
-    if _cache["test_mode"]:
+    if cache["test_mode"]:
         logger.info("Test mode enabled - skipping forward to /v1/runners")
         return {
             "statusCode": 200,
@@ -355,7 +355,7 @@ async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
             ),
         }
 
-    result = await _post_to_runners(job_data)
+    result = await post_to_runners(job_data)
 
     if result.get("success"):
         return {
@@ -381,7 +381,7 @@ async def _handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _parse_event_body(event: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+def parse_event_body(event: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     """Parse event body from API Gateway event.
 
     Returns:
@@ -403,7 +403,7 @@ def _parse_event_body(event: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     return body_str, payload
 
 
-async def _verify_webhook_signature(
+async def verify_webhook_signature(
     body_str: str, signature_header: str | None
 ) -> dict[str, Any]:
     """Verify webhook signature.
@@ -412,8 +412,8 @@ async def _verify_webhook_signature(
         Error response dict if verification fails, empty dict if successful
     """
     try:
-        webhook_secret = await _get_webhook_secret()
-        if not _verify_signature(body_str, signature_header or "", webhook_secret):
+        webhook_secret = await get_webhook_secret()
+        if not verify_signature(body_str, signature_header or "", webhook_secret):
             logger.error("Webhook signature verification failed")
             return {
                 "statusCode": 401,
@@ -428,7 +428,7 @@ async def _verify_webhook_signature(
         }
 
 
-def _get_header_case_insensitive(
+def get_header_case_insensitive(
     headers: dict[str, str], key: str
 ) -> str | None:
     """Get header value case-insensitively."""
@@ -439,12 +439,12 @@ def _get_header_case_insensitive(
     return None
 
 
-async def _process_webhook_event(
+async def process_webhook_event(
     event: dict[str, Any], headers: dict[str, str], start_time: float
 ) -> dict[str, Any]:
     """Process a webhook event from API Gateway."""
     try:
-        body_str, payload = _parse_event_body(event)
+        body_str, payload = parse_event_body(event)
     except (json.JSONDecodeError, ValueError) as err:
         logger.error("Failed to parse request body: %s", str(err))
         logger.error(
@@ -455,37 +455,37 @@ async def _process_webhook_event(
             "body": json.dumps({"error": "Invalid JSON payload"}),
         }
 
-    signature_header = _get_header_case_insensitive(headers, "x-hub-signature-256")
+    signature_header = get_header_case_insensitive(headers, "x-hub-signature-256")
     if signature_header:
-        error_response = await _verify_webhook_signature(body_str, signature_header)
+        error_response = await verify_webhook_signature(body_str, signature_header)
         if error_response.get("statusCode"):
             return error_response
     else:
         logger.warning("No signature header found, proceeding without verification")
 
-    delivery_id = _get_header_case_insensitive(headers, "x-github-delivery")
-    if delivery_id and await _check_and_record_idempotency(delivery_id):
+    delivery_id = get_header_case_insensitive(headers, "x-github-delivery")
+    if delivery_id and await check_and_record_idempotency(delivery_id):
         logger.info("Duplicate webhook delivery detected, returning success")
         elapsed_ms = (time.time() - start_time) * 1000
-        _publish_metric("ProcessingTime", elapsed_ms, "Milliseconds")
+        publish_metric("ProcessingTime", elapsed_ms, "Milliseconds")
         return {
             "statusCode": 200,
             "body": json.dumps({"message": "Duplicate request ignored"}),
         }
 
     event_type = (
-        _get_header_case_insensitive(headers, "x-github-event")
+        get_header_case_insensitive(headers, "x-github-event")
         or payload.get("event_type")
     )
     logger.info("GitHub event type: %s", event_type)
     elapsed_ms = (time.time() - start_time) * 1000
-    _publish_metric("ProcessingTime", elapsed_ms, "Milliseconds")
+    publish_metric("ProcessingTime", elapsed_ms, "Milliseconds")
 
     if event_type == "workflow_job":
-        return await _handle_workflow_job(payload)
+        return await handle_workflow_job(payload)
 
     if event_type == "workflow_run":
-        return _handle_workflow_run(payload)
+        return handle_workflow_run(payload)
 
     if event_type == "ping":
         logger.info("Received ping event")
@@ -496,12 +496,12 @@ async def _process_webhook_event(
     return {"statusCode": 200, "body": json.dumps({"message": message})}
 
 
-async def _handle_api_gateway_event(
+async def handle_api_gateway_event(
     event: dict[str, Any], start_time: float
 ) -> dict[str, Any]:
     """Handle an API Gateway event."""
     headers = event.get("headers", {})
-    _set_test_mode(_get_header_case_insensitive(headers, "x-test-mode") == "true")
+    set_test_mode(get_header_case_insensitive(headers, "x-test-mode") == "true")
 
     http_context = event.get("requestContext", {}).get("http", {})
     http_method = event.get("httpMethod") or http_context.get("method", "")
@@ -519,10 +519,10 @@ async def _handle_api_gateway_event(
             "body": "",
         }
 
-    return await _process_webhook_event(event, headers, start_time)
+    return await process_webhook_event(event, headers, start_time)
 
 
-def _get_ingress_handler() -> IngressHandler:
+def get_ingress_handler() -> IngressHandler:
     """Create an ingress handler with dependencies."""
 
     class IngressDeps:
@@ -530,19 +530,19 @@ def _get_ingress_handler() -> IngressHandler:
 
         async def get_webhook_secret(self) -> str:
             """Get webhook secret from SSM."""
-            return await _get_webhook_secret()
+            return await get_webhook_secret()
 
         def verify_signature(self, body: str, signature: str, secret: str) -> bool:
             """Verify webhook signature."""
-            return _verify_signature(body, signature, secret)
+            return verify_signature(body, signature, secret)
 
         def publish_metric(self, name: str, value: float, unit: str) -> None:
             """Publish CloudWatch metric."""
-            _publish_metric(name, value, unit)
+            publish_metric(name, value, unit)
 
         async def check_idempotency(self, delivery_id: str) -> bool:
             """Check if delivery is duplicate."""
-            return await _check_and_record_idempotency(delivery_id)
+            return await check_and_record_idempotency(delivery_id)
 
         def get_runner_type(self, _labels: list[str]) -> tuple[str | None, str | None]:
             """No longer determines runner type - always returns placeholder.
@@ -555,19 +555,19 @@ def _get_ingress_handler() -> IngressHandler:
 
         async def enqueue_job(self, job_data: dict[str, Any]) -> dict[str, bool]:
             """Forward job to /v1/runners via HTTP POST."""
-            result = await _post_to_runners(job_data)
+            result = await post_to_runners(job_data)
             return {"success": result.get("success", False)}
 
         # Note: enqueue_cancellation removed - runners are ephemeral and self-terminate
 
         def enqueue_ignored(self, payload: dict[str, Any], reason: str) -> None:
             """Enqueue ignored event to SQS."""
-            _enqueue_ignored_event(payload, reason)
+            enqueue_ignored_event(payload, reason)
 
     return IngressHandler(IngressDeps())
 
 
-async def _async_handler(event: dict[str, Any]) -> dict[str, Any]:
+async def async_handler(event: dict[str, Any]) -> dict[str, Any]:
     """Async handler implementation."""
     start_time = time.time()
     logger.info("Received event: %s", json.dumps(event))
@@ -581,7 +581,7 @@ async def _async_handler(event: dict[str, Any]) -> dict[str, Any]:
         # This Lambda handles webhook_ingress queue and forwards to /v1/runners
         logger.info("Processing SQS event from webhook_ingress queue")
 
-        ingress_handler = _get_ingress_handler()
+        ingress_handler = get_ingress_handler()
         results = [await ingress_handler.handle(record) for record in records]
 
         if not all(r.get("success") for r in results):
@@ -589,7 +589,7 @@ async def _async_handler(event: dict[str, Any]) -> dict[str, Any]:
 
         return {"statusCode": 200, "body": json.dumps({"message": "Processed"})}
 
-    return await _handle_api_gateway_event(event, start_time)
+    return await handle_api_gateway_event(event, start_time)
 
 
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
@@ -602,4 +602,4 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     Returns:
         Response dictionary
     """
-    return asyncio.run(_async_handler(event))
+    return asyncio.run(async_handler(event))

@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
 
-from lambda_response import parse_response_body, assert_response_status
+from lambda_response import parse_response_body
 from test_fixtures.unit import assert_no_hardcoded_env_defaults
 from .conftest import get_lambda_path
 
@@ -322,5 +322,3 @@ def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(
         response = dlq_reprocessor.handler({}, lambda_context)
     body = json.loads(response['body'])
     assert body['webhook_dlq']['note'] == 'Manual intervention required'
-
-

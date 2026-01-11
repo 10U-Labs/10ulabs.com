@@ -1,6 +1,5 @@
 """Unit tests for lambda_utils module."""
 import json
-from unittest.mock import patch
 
 import pytest
 

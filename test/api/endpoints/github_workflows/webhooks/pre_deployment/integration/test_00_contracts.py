@@ -240,6 +240,14 @@ class TestEnvironmentVariableContracts:
         # If we get here without skipping, there are no missing vars
         assert not missing
 
+    def test_terraform_has_environment_block(self):
+        """Verify Terraform Lambda resources have environment blocks."""
+        tf_content = _read_terraform_file()
+        # At least some Lambdas should have environment blocks
+        pattern = r'environment\s*\{'
+        env_count = len(re.findall(pattern, tf_content))
+        assert env_count >= 1, "Expected at least one Lambda with environment block"
+
 
 class TestArchiveSourceContracts:
     """Test that archive_file sources reference existing files."""

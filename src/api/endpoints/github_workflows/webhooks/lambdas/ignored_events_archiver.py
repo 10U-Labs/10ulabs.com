@@ -19,7 +19,7 @@ logger.setLevel(logging.INFO)
 METRICS_NAMESPACE = "IgnoredEventsArchiver"
 
 
-def _build_s3_key(timestamp: str, message_id: str) -> str:
+def build_s3_key(timestamp: str, message_id: str) -> str:
     """Build S3 key for archived event.
 
     Args:
@@ -42,7 +42,7 @@ def _build_s3_key(timestamp: str, message_id: str) -> str:
     return f"ignored-events/{year}/{month}/{day}/{hour}/{message_id}.json"
 
 
-def _archive_event(record: dict[str, Any]) -> dict[str, Any]:
+def archive_event(record: dict[str, Any]) -> dict[str, Any]:
     """Archive a single SQS record to S3.
 
     Args:
@@ -70,7 +70,7 @@ def _archive_event(record: dict[str, Any]) -> dict[str, Any]:
             "sqs_attributes": record.get("attributes", {}),
         }
 
-        s3_key = _build_s3_key(timestamp, message_id)
+        s3_key = build_s3_key(timestamp, message_id)
 
         get_s3_client().put_object(
             Bucket=bucket_name,
@@ -106,7 +106,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
     logger.info("Archiving %d ignored event(s) to S3", len(records))
 
-    results = [_archive_event(record) for record in records]
+    results = [archive_event(record) for record in records]
 
     elapsed_ms = (time.time() - start_time) * 1000
     publish_metric(METRICS_NAMESPACE, "ProcessingTime", elapsed_ms, "Milliseconds")

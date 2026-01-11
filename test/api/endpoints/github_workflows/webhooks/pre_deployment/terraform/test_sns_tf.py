@@ -16,6 +16,12 @@ class TestSNSTopicsExist:
             "SNS topic 'circuit_breaker_alerts' not found in sns.tf"
         )
 
+    def test_topic_count_is_at_least_one(self, sns_tf_content):
+        """Verify at least one SNS topic is defined."""
+        topic_pattern = r'resource\s+"aws_sns_topic"\s+"\w+"'
+        topic_count = len(re.findall(topic_pattern, sns_tf_content))
+        assert topic_count >= 1, "Expected at least one SNS topic"
+
 
 class TestSNSTopicConfiguration:
     """Test SNS topic configurations."""
@@ -25,6 +31,12 @@ class TestSNSTopicConfiguration:
         pattern = r'name\s*=\s*"\$\{local\.resource_prefix\}'
         assert re.search(pattern, sns_tf_content), (
             "SNS topic name should use local.resource_prefix"
+        )
+
+    def test_topic_name_uses_resource_prefix(self, sns_tf_content):
+        """Verify topic name uses local.resource_prefix for consistency."""
+        assert 'local.resource_prefix' in sns_tf_content, (
+            "Topic name should reference local.resource_prefix"
         )
 
 
@@ -67,4 +79,10 @@ class TestSNSTags:
         pattern = r'tags\s*=\s*merge\(local\.common_tags'
         assert re.search(pattern, sns_tf_content), (
             "SNS topic should have tags using local.common_tags"
+        )
+
+    def test_tags_use_common_tags(self, sns_tf_content):
+        """Verify tags reference local.common_tags for consistency."""
+        assert 'local.common_tags' in sns_tf_content, (
+            "Tags should reference local.common_tags"
         )

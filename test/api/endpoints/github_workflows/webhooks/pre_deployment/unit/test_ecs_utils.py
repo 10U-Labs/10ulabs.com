@@ -30,8 +30,8 @@ class TestListRunningTaskArns:
         # Second call for PENDING status
         pending_pages = [{"taskArns": ["arn:task:3"]}]
 
-        def paginate_side_effect(cluster, desiredStatus):
-            if desiredStatus == "RUNNING":
+        def paginate_side_effect(**kwargs):
+            if kwargs.get("desiredStatus") == "RUNNING":
                 return iter(running_pages)
             return iter(pending_pages)
 

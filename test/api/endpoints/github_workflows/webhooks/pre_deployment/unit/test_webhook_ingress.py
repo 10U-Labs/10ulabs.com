@@ -133,6 +133,11 @@ class TestIngressHandler:
         handler = webhook_ingress_module.IngressHandler(mock_ingress_deps)
         assert handler.get_deps() == mock_ingress_deps
 
+    def test_get_deps_returns_same_object(self, webhook_ingress_module, mock_ingress_deps):
+        """Test that get_deps returns the same deps object."""
+        handler = webhook_ingress_module.IngressHandler(mock_ingress_deps)
+        assert handler.get_deps() is mock_ingress_deps
+
 
 class TestIngressHandlerHandle:
     """Tests for IngressHandler.handle method."""
@@ -169,7 +174,7 @@ class TestIngressHandlerHandle:
         mock_ingress_deps.enqueue_ignored.assert_called_once()
         assert result["success"] is True and result["routed"] == "ignored_events"
 
-    def test_handle_workflow_job_completed(self, handler, mock_ingress_deps):
+    def test_handle_workflow_job_completed(self, handler):
         """Test handling a workflow_job with action=completed is ignored.
 
         Runners are ephemeral and self-terminate, so no termination action needed.
@@ -185,7 +190,11 @@ class TestIngressHandlerHandle:
 
     def test_handle_workflow_job_in_progress_ignored(self, handler, mock_ingress_deps):
         """Test handling a workflow_job with action=in_progress is ignored."""
-        body = {"action": "in_progress", "workflow_job": {"id": 123, "run_id": 456}, "repository": {"full_name": "org/repo"}}
+        body = {
+            "action": "in_progress",
+            "workflow_job": {"id": 123, "run_id": 456},
+            "repository": {"full_name": "org/repo"}
+        }
         record = _create_sqs_record(body)
         result = run_async(handler.handle(record))
         mock_ingress_deps.enqueue_ignored.assert_called_once()
@@ -203,14 +212,14 @@ class TestIngressHandlerHandle:
         result = run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "ignored_events"
 
-    def test_handle_workflow_run(self, handler, mock_ingress_deps):
+    def test_handle_workflow_run(self, handler):
         """Test handling a workflow_run event."""
         body = {"action": "completed", "workflow_run": {"id": 789, "conclusion": "success"}}
         record = _create_sqs_record(body, event_type="workflow_run")
         result = run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "acknowledged"
 
-    def test_handle_ping_event(self, handler, mock_ingress_deps):
+    def test_handle_ping_event(self, handler):
         """Test handling a ping event."""
         body = {"zen": "Half measures are as bad as nothing at all."}
         record = _create_sqs_record(body, event_type="ping")
@@ -254,7 +263,7 @@ class TestIngressHandlerHandle:
         mock_ingress_deps.verify_signature.assert_not_called()
         assert result["success"] is True
 
-    def test_handle_invalid_json_body(self, handler, mock_ingress_deps):
+    def test_handle_invalid_json_body(self, handler):
         """Test handling an invalid JSON body is skipped."""
         record = {"body": "not-valid-json", "messageAttributes": _create_message_attrs()}
         result = run_async(handler.handle(record))
@@ -304,7 +313,7 @@ class TestIngressHandlerHandle:
 
     # Note: test_handle_enqueue_cancellation_failure removed - runners are ephemeral
 
-    def test_handle_empty_body(self, handler, mock_ingress_deps):
+    def test_handle_empty_body(self, handler):
         """Test handling an empty body."""
         record = {"body": "", "messageAttributes": _create_message_attrs()}
         result = run_async(handler.handle(record))
@@ -327,7 +336,7 @@ class TestIngressHandlerHandle:
 
 
 class TestIngressHandlerExtractHeadersAndBody:
-    """Tests for IngressHandler._extract_headers_and_body method."""
+    """Tests for IngressHandler.extract_headers_and_body method."""
 
     @pytest.fixture
     def mock_ingress_deps(self):
@@ -342,7 +351,7 @@ class TestIngressHandlerExtractHeadersAndBody:
     def test_extracts_all_headers(self, handler):
         """Test that all headers are extracted."""
         record = _create_sqs_record({"test": "data"})
-        headers, body_str, payload = handler._extract_headers_and_body(record)
+        headers, _body_str, payload = handler.extract_headers_and_body(record)
         expected = ("workflow_job", "sha256=abc", "delivery-123", {"test": "data"})
         actual = (
             headers["x-github-event"],
@@ -354,8 +363,10 @@ class TestIngressHandlerExtractHeadersAndBody:
 
     def test_handles_missing_headers(self, handler):
         """Test handling when some headers are missing."""
-        record = _create_sqs_record({"test": "data"}, event_type="ping", signature=None, delivery_id=None)
-        headers, body_str, payload = handler._extract_headers_and_body(record)
+        record = _create_sqs_record(
+            {"test": "data"}, event_type="ping", signature=None, delivery_id=None
+        )
+        headers, _body_str, _payload = handler.extract_headers_and_body(record)
         headers_match = headers == {"x-github-event": "ping"}
         sig_missing = "x-hub-signature-256" not in headers
         delivery_missing = "x-github-delivery" not in headers
@@ -367,17 +378,17 @@ class TestIngressHandlerExtractHeadersAndBody:
             "body": "not-json",
             "messageAttributes": {}
         }
-        headers, body_str, payload = handler._extract_headers_and_body(record)
+        _headers, body_str, payload = handler.extract_headers_and_body(record)
         assert payload is None and body_str == "not-json"
 
     def test_handles_empty_body(self, handler):
         """Test handling empty body."""
         record = {"body": "", "messageAttributes": {}}
-        headers, body_str, payload = handler._extract_headers_and_body(record)
+        _headers, body_str, payload = handler.extract_headers_and_body(record)
         assert payload is None and body_str == ""
 
     def test_handles_missing_body(self, handler):
         """Test handling missing body key."""
         record = {"messageAttributes": {}}
-        headers, body_str, payload = handler._extract_headers_and_body(record)
+        _headers, body_str, payload = handler.extract_headers_and_body(record)
         assert body_str == "" and payload is None

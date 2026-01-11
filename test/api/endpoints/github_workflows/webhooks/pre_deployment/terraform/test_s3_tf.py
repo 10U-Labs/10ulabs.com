@@ -16,6 +16,12 @@ class TestS3BucketsExist:
             "S3 bucket 'ignored_events_archive' not found in s3.tf"
         )
 
+    def test_bucket_count_is_at_least_one(self, s3_tf_content):
+        """Verify at least one S3 bucket is defined."""
+        bucket_pattern = r'resource\s+"aws_s3_bucket"\s+"\w+"'
+        bucket_count = len(re.findall(bucket_pattern, s3_tf_content))
+        assert bucket_count >= 1, "Expected at least one S3 bucket"
+
 
 class TestS3BucketVersioning:
     """Test S3 bucket versioning configurations."""
@@ -39,7 +45,10 @@ class TestS3BucketEncryption:
 
     def test_encryption_resource_exists(self, s3_tf_content):
         """Verify server-side encryption resource is defined."""
-        pattern = r'resource\s+"aws_s3_bucket_server_side_encryption_configuration"\s+"ignored_events_archive"'
+        pattern = (
+            r'resource\s+"aws_s3_bucket_server_side_encryption_configuration"'
+            r'\s+"ignored_events_archive"'
+        )
         assert re.search(pattern, s3_tf_content), (
             "Server-side encryption resource not found in s3.tf"
         )
@@ -140,6 +149,12 @@ class TestS3NamingConventions:
             "Bucket name should use local.resource_prefix (lowercased)"
         )
 
+    def test_bucket_name_is_lowercased(self, s3_tf_content):
+        """Verify bucket name uses lower() function for S3 naming compliance."""
+        assert 'lower(' in s3_tf_content, (
+            "Bucket name should use lower() for S3 naming compliance"
+        )
+
 
 class TestS3Tags:
     """Test S3 resource tagging."""
@@ -149,4 +164,10 @@ class TestS3Tags:
         pattern = r'tags\s*=\s*merge\(local\.common_tags'
         assert re.search(pattern, s3_tf_content), (
             "S3 bucket should have tags using local.common_tags"
+        )
+
+    def test_tags_use_common_tags(self, s3_tf_content):
+        """Verify tags reference local.common_tags for consistency."""
+        assert 'local.common_tags' in s3_tf_content, (
+            "Tags should reference local.common_tags"
         )

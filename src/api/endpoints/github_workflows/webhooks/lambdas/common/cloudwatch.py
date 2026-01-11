@@ -9,14 +9,14 @@ from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
-_cache: dict[str, Any] = {"cloudwatch_client": None}
+cache: dict[str, Any] = {"cloudwatch_client": None}
 
 
-def _get_cloudwatch_client() -> Any:
+def get_cloudwatch_client() -> Any:
     """Get or create CloudWatch client (singleton)."""
-    if _cache["cloudwatch_client"] is None:
-        _cache["cloudwatch_client"] = boto3.client("cloudwatch")
-    return _cache["cloudwatch_client"]
+    if cache["cloudwatch_client"] is None:
+        cache["cloudwatch_client"] = boto3.client("cloudwatch")
+    return cache["cloudwatch_client"]
 
 
 def publish_metric(
@@ -31,7 +31,7 @@ def publish_metric(
         unit: Metric unit (default "None")
     """
     try:
-        _get_cloudwatch_client().put_metric_data(
+        get_cloudwatch_client().put_metric_data(
             Namespace=namespace,
             MetricData=[
                 {

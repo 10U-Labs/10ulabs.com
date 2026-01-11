@@ -1,6 +1,5 @@
 """Unit tests for github_api module."""
 
-import json
 import urllib.error
 from unittest.mock import MagicMock, patch
 
@@ -18,7 +17,7 @@ def github_api_module_fixture():
         mock_boto_client.return_value = MagicMock()
         module = load_lambda_module("common/github_api.py", "github_api")
         # Clear cache between tests
-        module._cache["token"] = None
+        module.cache["token"] = None
         yield module
 
 
@@ -27,7 +26,7 @@ class TestGetGithubToken:
 
     def test_returns_cached_token(self, github_api_module):
         """Test that cached token is returned."""
-        github_api_module._cache["token"] = "cached-token"
+        github_api_module.cache["token"] = "cached-token"
         result = github_api_module.get_github_token()
         assert result == "cached-token"
 
@@ -60,7 +59,7 @@ class TestGetGithubToken:
         with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
             with patch.object(github_api_module, 'get_ssm_client', return_value=mock_ssm):
                 github_api_module.get_github_token()
-                assert github_api_module._cache["token"] == "new-token"
+                assert github_api_module.cache["token"] == "new-token"
 
     def test_returns_empty_on_client_error(self, github_api_module):
         """Test that empty string is returned on ClientError."""
@@ -80,9 +79,15 @@ class TestClearTokenCache:
 
     def test_clears_cached_token(self, github_api_module):
         """Test that cached token is cleared."""
-        github_api_module._cache["token"] = "some-token"
+        github_api_module.cache["token"] = "some-token"
         github_api_module.clear_token_cache()
-        assert github_api_module._cache["token"] is None
+        assert github_api_module.cache["token"] is None
+
+    def test_clears_none_cache_safely(self, github_api_module):
+        """Test that clearing already-None cache is safe."""
+        github_api_module.cache["token"] = None
+        github_api_module.clear_token_cache()
+        assert github_api_module.cache["token"] is None
 
 
 class TestGithubApiRequest:
@@ -126,7 +131,7 @@ class TestGithubApiRequest:
 
     def test_uses_cached_token_when_none_provided(self, github_api_module):
         """Test that cached token is used when no token provided."""
-        github_api_module._cache["token"] = "cached-token"
+        github_api_module.cache["token"] = "cached-token"
         mock_response = create_mock_urllib_response()
         urlopen_patch = patch.object(
             github_api_module.urllib.request, 'urlopen', return_value=mock_response
@@ -170,7 +175,7 @@ class TestGithubApiRequest:
 
     def test_no_auth_header_when_no_token(self, github_api_module):
         """Test that no auth header is set when no token available."""
-        github_api_module._cache["token"] = None
+        github_api_module.cache["token"] = None
         mock_response = create_mock_urllib_response()
         urlopen_patch = patch.object(
             github_api_module.urllib.request, 'urlopen', return_value=mock_response

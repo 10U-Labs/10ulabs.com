@@ -13,7 +13,7 @@ from boto_mocks import (
     create_mock_lambda_with_disabled_mappings,
     create_mock_lambda_delete_concurrency_error,
 )
-from lambda_response import parse_response_body, assert_response_status
+from lambda_response import parse_response_body
 from .conftest import circuit_breaker_utils
 
 

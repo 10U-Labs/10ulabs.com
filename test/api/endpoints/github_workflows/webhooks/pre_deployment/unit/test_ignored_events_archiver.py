@@ -1,11 +1,11 @@
 """Unit tests for ignored_events_archiver Lambda."""
 import json
 from contextlib import contextmanager
-from datetime import datetime, timezone
 from typing import Iterator, List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
+from botocore.exceptions import ClientError
 
 from .conftest import load_lambda_module
 
@@ -60,27 +60,27 @@ def archiver_module_fixture():
 
 
 class TestBuildS3Key:
-    """Tests for _build_s3_key function."""
+    """Tests for build_s3_key function."""
 
     def test_builds_key_with_valid_timestamp(self, archiver_module):
         """Test that S3 key is built correctly with valid timestamp."""
         timestamp = "2024-03-15T14:30:00+00:00"
         message_id = "msg-123"
-        result = archiver_module._build_s3_key(timestamp, message_id)
+        result = archiver_module.build_s3_key(timestamp, message_id)
         assert result == "ignored-events/2024/03/15/14/msg-123.json"
 
     def test_builds_key_with_z_suffix_timestamp(self, archiver_module):
         """Test that Z suffix timestamp is parsed correctly."""
         timestamp = "2024-06-20T09:15:00Z"
         message_id = "msg-456"
-        result = archiver_module._build_s3_key(timestamp, message_id)
+        result = archiver_module.build_s3_key(timestamp, message_id)
         assert result == "ignored-events/2024/06/20/09/msg-456.json"
 
     def test_uses_current_time_for_invalid_timestamp(self, archiver_module):
         """Test that current time is used for invalid timestamp."""
         timestamp = "not-a-valid-timestamp"
         message_id = "msg-789"
-        result = archiver_module._build_s3_key(timestamp, message_id)
+        result = archiver_module.build_s3_key(timestamp, message_id)
         # Should still build a valid path using current time
         assert result.startswith("ignored-events/") and result.endswith("/msg-789.json")
 
@@ -88,18 +88,18 @@ class TestBuildS3Key:
         """Test that single-digit month and day are zero-padded."""
         timestamp = "2024-01-05T03:07:00+00:00"
         message_id = "msg-abc"
-        result = archiver_module._build_s3_key(timestamp, message_id)
+        result = archiver_module.build_s3_key(timestamp, message_id)
         assert result == "ignored-events/2024/01/05/03/msg-abc.json"
 
 
 class TestArchiveEvent:
-    """Tests for _archive_event function."""
+    """Tests for archive_event function."""
 
     def test_returns_error_when_bucket_not_configured(self, archiver_module):
         """Test that error is returned when bucket is not configured."""
         with patch.dict('os.environ', {'ARCHIVE_BUCKET_NAME': ''}):
             record = {"body": '{"event_data": {}}', "messageId": "msg-123"}
-            result = archiver_module._archive_event(record)
+            result = archiver_module.archive_event(record)
             assert result["success"] is False and "not configured" in result["error"]
 
     def test_archives_event_successfully(self, archiver_module):
@@ -116,7 +116,7 @@ class TestArchiveEvent:
             "attributes": {"ApproximateReceiveCount": "1"}
         }
         with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
-            result = archiver_module._archive_event(record)
+            result = archiver_module.archive_event(record)
             assert result["success"] is True and "ignored-events/" in result["key"]
 
     def test_includes_archived_at_timestamp(self, archiver_module):
@@ -127,19 +127,18 @@ class TestArchiveEvent:
             "messageId": "msg-456"
         }
         with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
-            archiver_module._archive_event(record)
+            archiver_module.archive_event(record)
             archived_event = json.loads(captured[0])
             assert "archived_at" in archived_event
 
     def test_returns_error_on_json_decode_error(self, archiver_module):
         """Test that error is returned on JSON decode error."""
         record = {"body": "not valid json", "messageId": "msg-789"}
-        result = archiver_module._archive_event(record)
+        result = archiver_module.archive_event(record)
         assert result["success"] is False
 
     def test_returns_error_on_s3_client_error(self, archiver_module):
         """Test that error is returned on S3 client error."""
-        from botocore.exceptions import ClientError
         mock_s3 = MagicMock()
         mock_s3.put_object.side_effect = ClientError(
             {"Error": {"Code": "AccessDenied", "Message": "denied"}},
@@ -150,7 +149,7 @@ class TestArchiveEvent:
             "messageId": "msg-error"
         }
         with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
-            result = archiver_module._archive_event(record)
+            result = archiver_module.archive_event(record)
             assert result["success"] is False
 
     def test_uses_current_time_when_no_timestamp(self, archiver_module):
@@ -162,7 +161,7 @@ class TestArchiveEvent:
             "messageId": "msg-no-ts"
         }
         with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
-            result = archiver_module._archive_event(record)
+            result = archiver_module.archive_event(record)
             assert result["success"] is True
 
     def test_includes_sqs_attributes_in_archive(self, archiver_module):
@@ -174,7 +173,7 @@ class TestArchiveEvent:
             "attributes": {"ApproximateReceiveCount": "3"}
         }
         with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
-            archiver_module._archive_event(record)
+            archiver_module.archive_event(record)
             archived_event = json.loads(captured[0])
             assert archived_event["sqs_attributes"]["ApproximateReceiveCount"] == "3"
 

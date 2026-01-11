@@ -13,7 +13,7 @@ from boto_mocks import (
     create_mock_sns_publish_error,
     create_mock_lambda_with_mappings,
 )
-from lambda_response import parse_response_body, assert_response_status
+from lambda_response import parse_response_body
 from .conftest import create_closed_state_item
 
 

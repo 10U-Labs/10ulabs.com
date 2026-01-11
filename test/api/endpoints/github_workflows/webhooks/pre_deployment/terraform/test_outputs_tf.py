@@ -36,27 +36,44 @@ class TestOutputsExist:
                 f"Output '{output_name}' not found in outputs.tf"
             )
 
+    def test_outputs_have_value_attribute(self, outputs_tf_content):
+        """Verify outputs have value attribute defined."""
+        output_count = len(re.findall(r'output\s+"', outputs_tf_content))
+        value_count = len(re.findall(r'value\s*=', outputs_tf_content))
+        assert value_count >= output_count, (
+            f"Not all outputs have value: found {value_count} for {output_count} outputs"
+        )
+
 
 class TestOutputValues:
     """Test output value references."""
 
     def test_lambda_function_arn_references_runners_handler(self, outputs_tf_content):
         """Verify lambda_function_arn references runners_handler."""
-        pattern = r'output\s+"lambda_function_arn"[^}]*value\s*=\s*aws_lambda_function\.runners_handler\.arn'
+        pattern = (
+            r'output\s+"lambda_function_arn"[^}]*'
+            r'value\s*=\s*aws_lambda_function\.runners_handler\.arn'
+        )
         assert re.search(pattern, outputs_tf_content, re.DOTALL), (
             "lambda_function_arn should reference runners_handler.arn"
         )
 
     def test_lambda_function_name_references_runners_handler(self, outputs_tf_content):
         """Verify lambda_function_name references runners_handler."""
-        pattern = r'output\s+"lambda_function_name"[^}]*value\s*=\s*aws_lambda_function\.runners_handler\.function_name'
+        pattern = (
+            r'output\s+"lambda_function_name"[^}]*'
+            r'value\s*=\s*aws_lambda_function\.runners_handler\.function_name'
+        )
         assert re.search(pattern, outputs_tf_content, re.DOTALL), (
             "lambda_function_name should reference runners_handler.function_name"
         )
 
     def test_webhook_ingress_queue_url_references_sqs(self, outputs_tf_content):
         """Verify webhook_ingress_queue_url references SQS queue."""
-        pattern = r'output\s+"webhook_ingress_queue_url"[^}]*value\s*=\s*aws_sqs_queue\.webhook_ingress\.url'
+        pattern = (
+            r'output\s+"webhook_ingress_queue_url"[^}]*'
+            r'value\s*=\s*aws_sqs_queue\.webhook_ingress\.url'
+        )
         assert re.search(pattern, outputs_tf_content, re.DOTALL), (
             "webhook_ingress_queue_url should reference webhook_ingress.url"
         )
@@ -74,6 +91,15 @@ class TestOutputDescriptions:
         ]
         for output_name in webhook_outputs:
             # Find the output block
+            pattern = rf'output\s+"{output_name}"\s*\{{[^}}]*description\s*='
+            assert re.search(pattern, outputs_tf_content, re.DOTALL), (
+                f"Output '{output_name}' should have a description"
+            )
+
+    def test_lambda_outputs_have_descriptions(self, outputs_tf_content):
+        """Verify Lambda-related outputs have descriptions."""
+        lambda_outputs = ["lambda_function_arn", "lambda_function_name"]
+        for output_name in lambda_outputs:
             pattern = rf'output\s+"{output_name}"\s*\{{[^}}]*description\s*='
             assert re.search(pattern, outputs_tf_content, re.DOTALL), (
                 f"Output '{output_name}' should have a description"
@@ -107,3 +133,9 @@ class TestOutputCount:
         assert output_count >= len(EXPECTED_OUTPUTS), (
             f"Expected at least {len(EXPECTED_OUTPUTS)} outputs, found {output_count}"
         )
+
+    def test_no_empty_outputs(self, outputs_tf_content):
+        """Verify no outputs are empty strings."""
+        empty_pattern = r'value\s*=\s*""'
+        empty_count = len(re.findall(empty_pattern, outputs_tf_content))
+        assert empty_count == 0, "Outputs should not have empty string values"

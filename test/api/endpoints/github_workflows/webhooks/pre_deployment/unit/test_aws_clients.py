@@ -13,7 +13,7 @@ def aws_clients_module_fixture():
         mock_boto_client.return_value = MagicMock()
         module = load_lambda_module("common/aws_clients.py", "aws_clients")
         # Clear the cache to ensure fresh state for each test
-        module._cache = {
+        module.cache = {
             "dynamodb_client": None,
             "ec2_client": None,
             "ecs_client": None,

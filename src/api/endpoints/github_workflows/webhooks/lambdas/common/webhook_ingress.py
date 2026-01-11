@@ -166,7 +166,7 @@ class IngressHandler:
         self._deps.enqueue_ignored(payload, f"event type {github_event} ignored")
         return {"success": True, "routed": "ignored_events"}
 
-    def _extract_headers_and_body(
+    def extract_headers_and_body(
         self, record: dict[str, Any]
     ) -> tuple[dict[str, str], str, dict[str, Any] | None]:
         """Extract headers and body from an SQS record.
@@ -205,7 +205,7 @@ class IngressHandler:
         """
         start_time = time.time()
 
-        headers, body_str, payload = self._extract_headers_and_body(record)
+        headers, body_str, payload = self.extract_headers_and_body(record)
         github_event = headers.get("x-github-event")
         signature = headers.get("x-hub-signature-256")
         delivery_id = headers.get("x-github-delivery")

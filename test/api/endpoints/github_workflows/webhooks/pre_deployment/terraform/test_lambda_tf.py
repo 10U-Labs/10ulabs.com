@@ -73,17 +73,19 @@ class TestLambdaResourcesExist:
     @pytest.mark.parametrize("lambda_config", LAMBDA_FUNCTIONS)
     def test_archive_file_data_source_exists(self, lambda_tf_content, lambda_config):
         """Verify archive_file data source exists for Lambda."""
-        pattern = rf'data\s+"archive_file"\s+"{lambda_config["resource_name"]}"'
+        resource = lambda_config["resource_name"]
+        pattern = rf'data\s+"archive_file"\s+"{resource}"'
         assert re.search(pattern, lambda_tf_content), (
-            f"Archive file data source for '{lambda_config['resource_name']}' not found in lambda.tf"
+            f"Archive file data source for '{resource}' not found in lambda.tf"
         )
 
     @pytest.mark.parametrize("lambda_config", LAMBDA_FUNCTIONS)
     def test_log_group_resource_exists(self, lambda_tf_content, lambda_config):
         """Verify CloudWatch log group is defined for Lambda."""
-        pattern = rf'resource\s+"aws_cloudwatch_log_group"\s+"{lambda_config["resource_name"]}"'
+        resource = lambda_config["resource_name"]
+        pattern = rf'resource\s+"aws_cloudwatch_log_group"\s+"{resource}"'
         assert re.search(pattern, lambda_tf_content), (
-            f"CloudWatch log group for '{lambda_config['resource_name']}' not found in lambda.tf"
+            f"CloudWatch log group for '{resource}' not found in lambda.tf"
         )
 
 
@@ -94,7 +96,8 @@ class TestLambdaHandlerConfiguration:
     def test_handler_value_correct(self, lambda_tf_content, lambda_config):
         """Verify Lambda handler value matches expected."""
         # Find the Lambda resource block and extract handler
-        resource_pattern = rf'resource\s+"aws_lambda_function"\s+"{lambda_config["resource_name"]}"\s*\{{'
+        resource = lambda_config["resource_name"]
+        resource_pattern = rf'resource\s+"aws_lambda_function"\s+"{resource}"\s*\{{'
         match = re.search(resource_pattern, lambda_tf_content)
 
         # Extract handler from the block if match found
@@ -107,6 +110,14 @@ class TestLambdaHandlerConfiguration:
                 handler_value = handler_match.group(1)
 
         assert match and handler_value == lambda_config["handler"]
+
+    def test_all_handlers_are_defined(self, lambda_tf_content):
+        """Verify all Lambda functions have handler attribute."""
+        lambda_count = len(re.findall(r'resource\s+"aws_lambda_function"', lambda_tf_content))
+        handler_count = len(re.findall(r'handler\s*=\s*"', lambda_tf_content))
+        assert handler_count >= lambda_count, (
+            f"Not all Lambdas have handlers: found {handler_count} for {lambda_count}"
+        )
 
 
 class TestLambdaRuntimeConfiguration:
@@ -149,7 +160,8 @@ class TestLambdaLoggingConfiguration:
 
     def test_log_groups_have_retention(self, lambda_tf_content):
         """Verify all log groups have retention_in_days set."""
-        log_group_count = len(re.findall(r'resource\s+"aws_cloudwatch_log_group"', lambda_tf_content))
+        log_pattern = r'resource\s+"aws_cloudwatch_log_group"'
+        log_group_count = len(re.findall(log_pattern, lambda_tf_content))
         retention_count = len(re.findall(r'retention_in_days\s*=', lambda_tf_content))
         assert retention_count == log_group_count, (
             f"Not all log groups have retention_in_days: "
@@ -163,9 +175,16 @@ class TestLambdaTracingConfiguration:
     def test_lambdas_have_tracing_config(self, lambda_tf_content):
         """Verify Lambdas have tracing_config for X-Ray."""
         # Most Lambdas should have tracing enabled (some may not)
-        tracing_count = len(re.findall(r'tracing_config\s*\{[^}]*mode\s*=\s*"Active"', lambda_tf_content, re.DOTALL))
+        tracing_pattern = r'tracing_config\s*\{[^}]*mode\s*=\s*"Active"'
+        tracing_count = len(re.findall(tracing_pattern, lambda_tf_content, re.DOTALL))
         # At minimum, the main webhook handler should have tracing
         assert tracing_count >= 1, "Expected at least one Lambda with X-Ray tracing enabled"
+
+    def test_tracing_mode_is_active(self, lambda_tf_content):
+        """Verify tracing mode is set to Active (not PassThrough)."""
+        assert '"Active"' in lambda_tf_content, (
+            "Tracing mode should be Active for proper X-Ray integration"
+        )
 
 
 class TestLambdaIAMConfiguration:
@@ -174,7 +193,8 @@ class TestLambdaIAMConfiguration:
     @pytest.mark.parametrize("lambda_config", LAMBDA_FUNCTIONS)
     def test_lambda_has_role_reference(self, lambda_tf_content, lambda_config):
         """Verify Lambda references an IAM role."""
-        resource_pattern = rf'resource\s+"aws_lambda_function"\s+"{lambda_config["resource_name"]}"\s*\{{'
+        resource = lambda_config["resource_name"]
+        resource_pattern = rf'resource\s+"aws_lambda_function"\s+"{resource}"\s*\{{'
         match = re.search(resource_pattern, lambda_tf_content)
 
         role_match = None
@@ -185,13 +205,24 @@ class TestLambdaIAMConfiguration:
 
         assert match and role_match
 
+    def test_all_lambdas_have_role(self, lambda_tf_content):
+        """Verify all Lambda functions reference IAM roles."""
+        lambda_count = len(re.findall(r'resource\s+"aws_lambda_function"', lambda_tf_content))
+        role_count = len(re.findall(r'role\s*=\s*aws_iam_role\.\w+\.arn', lambda_tf_content))
+        assert role_count >= lambda_count, (
+            f"Not all Lambdas have roles: found {role_count} for {lambda_count}"
+        )
+
 
 class TestLambdaEventSourceMappings:
     """Test Lambda event source mappings."""
 
     def test_webhook_handler_has_sqs_trigger(self, lambda_tf_content):
         """Verify webhook handler has SQS event source mapping."""
-        pattern = r'resource\s+"aws_lambda_event_source_mapping"\s+"runners_handler_webhook_ingress"'
+        pattern = (
+            r'resource\s+"aws_lambda_event_source_mapping"'
+            r'\s+"runners_handler_webhook_ingress"'
+        )
         assert re.search(pattern, lambda_tf_content), (
             "SQS event source mapping for runners_handler not found"
         )
@@ -229,6 +260,12 @@ class TestLambdaEnvironmentVariables:
                 f"Environment variable '{var}' not found in webhook handler"
             )
 
+    def test_environment_block_exists(self, lambda_tf_content):
+        """Verify environment block exists in Lambda configuration."""
+        pattern = r'environment\s*\{'
+        env_count = len(re.findall(pattern, lambda_tf_content))
+        assert env_count >= 1, "Expected at least one Lambda with environment block"
+
 
 class TestLambdaNamingConventions:
     """Test Lambda naming conventions."""
@@ -244,16 +281,30 @@ class TestLambdaNamingConventions:
             f"found {local_refs} local refs for {lambda_count} functions"
         )
 
+    def test_no_hardcoded_function_names(self, lambda_tf_content):
+        """Verify function names are not hardcoded."""
+        hardcoded = r'function_name\s*=\s*"[^$\{]'
+        hardcoded_count = len(re.findall(hardcoded, lambda_tf_content))
+        assert hardcoded_count == 0, "Function names should use local variables"
+
 
 class TestLambdaLifecycleConfiguration:
     """Test Lambda lifecycle configurations."""
 
     def test_lambdas_have_lifecycle_blocks(self, lambda_tf_content):
         """Verify Lambdas have lifecycle blocks for IAM role replacement."""
-        lifecycle_count = len(re.findall(r'lifecycle\s*\{[^}]*replace_triggered_by', lambda_tf_content, re.DOTALL))
-        lambda_count = len(re.findall(r'resource\s+"aws_lambda_function"', lambda_tf_content))
+        lifecycle_pattern = r'lifecycle\s*\{[^}]*replace_triggered_by'
+        lifecycle_count = len(re.findall(lifecycle_pattern, lambda_tf_content, re.DOTALL))
+        lambda_pattern = r'resource\s+"aws_lambda_function"'
+        lambda_count = len(re.findall(lambda_pattern, lambda_tf_content))
         # Most Lambdas should have lifecycle blocks (at least the major ones)
         assert lifecycle_count >= lambda_count - 2, (
             f"Expected most Lambdas to have lifecycle blocks: "
             f"found {lifecycle_count} for {lambda_count} functions"
+        )
+
+    def test_lifecycle_uses_replace_triggered_by(self, lambda_tf_content):
+        """Verify lifecycle blocks use replace_triggered_by."""
+        assert 'replace_triggered_by' in lambda_tf_content, (
+            "Lifecycle blocks should use replace_triggered_by for IAM updates"
         )

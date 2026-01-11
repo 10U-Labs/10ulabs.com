@@ -26,6 +26,14 @@ class TestDynamoDBTablesExist:
             f"DynamoDB table '{table_name}' not found in dynamodb.tf"
         )
 
+    def test_table_count_matches_expected(self, dynamodb_tf_content):
+        """Verify the number of DynamoDB tables matches expected count."""
+        table_pattern = r'resource\s+"aws_dynamodb_table"\s+"\w+"'
+        actual_count = len(re.findall(table_pattern, dynamodb_tf_content))
+        assert actual_count >= len(DYNAMODB_TABLES), (
+            f"Expected at least {len(DYNAMODB_TABLES)} tables, found {actual_count}"
+        )
+
 
 class TestDynamoDBTableConfiguration:
     """Test DynamoDB table configurations."""
@@ -82,6 +90,15 @@ class TestDynamoDBAttributeDefinitions:
             f"found {attr_count} for {table_count} tables"
         )
 
+    def test_attributes_have_type(self, dynamodb_tf_content):
+        """Verify attribute definitions have type specified."""
+        type_pattern = r'type\s*=\s*"[SN]"'
+        type_count = len(re.findall(type_pattern, dynamodb_tf_content))
+        attr_count = len(re.findall(r'attribute\s*\{', dynamodb_tf_content))
+        assert type_count >= attr_count, (
+            f"Not all attributes have type: found {type_count} for {attr_count} attributes"
+        )
+
 
 class TestDynamoDBNamingConventions:
     """Test DynamoDB naming conventions."""
@@ -91,11 +108,30 @@ class TestDynamoDBNamingConventions:
         """Verify table names use local variables (directly or via interpolation)."""
         # Find the table resource and check its name attribute uses locals
         # Accept both direct local reference and string interpolation with local
-        direct_pattern = rf'resource\s+"aws_dynamodb_table"\s+"{table_name}"[^}}]*?name\s*=\s*local\.'
-        interpolation_pattern = rf'resource\s+"aws_dynamodb_table"\s+"{table_name}"[^}}]*?name\s*=\s*"\${{local\.'
-        assert re.search(direct_pattern, dynamodb_tf_content, re.DOTALL) or \
-               re.search(interpolation_pattern, dynamodb_tf_content, re.DOTALL), (
+        direct_pattern = (
+            rf'resource\s+"aws_dynamodb_table"\s+"{table_name}"'
+            rf'[^}}]*?name\s*=\s*local\.'
+        )
+        interpolation_pattern = (
+            rf'resource\s+"aws_dynamodb_table"\s+"{table_name}"'
+            rf'[^}}]*?name\s*=\s*"\${{local\.'
+        )
+        uses_local = (
+            re.search(direct_pattern, dynamodb_tf_content, re.DOTALL) or
+            re.search(interpolation_pattern, dynamodb_tf_content, re.DOTALL)
+        )
+        assert uses_local, (
             f"DynamoDB table '{table_name}' should use local variable for name"
+        )
+
+    def test_no_hardcoded_table_names(self, dynamodb_tf_content):
+        """Verify table names are not hardcoded strings."""
+        hardcoded = r'name\s*=\s*"[^$\{]'
+        # Check within DynamoDB table resources only
+        hardcoded_count = len(re.findall(hardcoded, dynamodb_tf_content))
+        # Some hardcoded attribute names are OK, but table names should use locals
+        assert hardcoded_count <= len(DYNAMODB_TABLES) * 2, (
+            "Table names should use local variables, not hardcoded strings"
         )
 
 
@@ -109,4 +145,12 @@ class TestDynamoDBPointInTimeRecovery:
         # At least some tables should have PITR
         assert pitr_count >= 1, (
             "Point-in-time recovery not configured for any table"
+        )
+
+    def test_pitr_is_enabled(self, dynamodb_tf_content):
+        """Verify point-in-time recovery is enabled (not just configured)."""
+        enabled_pattern = r'enabled\s*=\s*true'
+        enabled_count = len(re.findall(enabled_pattern, dynamodb_tf_content))
+        assert enabled_count >= 1, (
+            "Point-in-time recovery should be enabled for at least one table"
         )

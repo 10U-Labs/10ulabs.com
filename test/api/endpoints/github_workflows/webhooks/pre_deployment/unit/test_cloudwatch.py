@@ -14,19 +14,19 @@ def cloudwatch_module_fixture():
         mock_boto_client.return_value = MagicMock()
         module = load_lambda_module("common/cloudwatch.py", "cloudwatch")
         # Clear the cache to ensure fresh state for each test
-        module._cache = {"cloudwatch_client": None}
+        module.cache = {"cloudwatch_client": None}
         yield module
 
 
 class TestGetCloudwatchClient:
-    """Tests for _get_cloudwatch_client function."""
+    """Tests for get_cloudwatch_client function."""
 
     def test_creates_client_on_first_call(self, cloudwatch_module):
         """Test that client is created on first call."""
         with patch('boto3.client') as mock_boto:
             mock_client = MagicMock()
             mock_boto.return_value = mock_client
-            result = cloudwatch_module._get_cloudwatch_client()
+            result = cloudwatch_module.get_cloudwatch_client()
             mock_boto.assert_called_once_with("cloudwatch")
             assert result == mock_client
 
@@ -35,8 +35,8 @@ class TestGetCloudwatchClient:
         with patch('boto3.client') as mock_boto:
             mock_client = MagicMock()
             mock_boto.return_value = mock_client
-            first_call = cloudwatch_module._get_cloudwatch_client()
-            second_call = cloudwatch_module._get_cloudwatch_client()
+            first_call = cloudwatch_module.get_cloudwatch_client()
+            second_call = cloudwatch_module.get_cloudwatch_client()
             assert mock_boto.call_count == 1 and first_call is second_call
 
 
@@ -46,7 +46,7 @@ class TestPublishMetric:
     def test_publishes_metric_successfully(self, cloudwatch_module):
         """Test that metric is published successfully."""
         mock_client = MagicMock()
-        with patch.object(cloudwatch_module, '_get_cloudwatch_client', return_value=mock_client):
+        with patch.object(cloudwatch_module, 'get_cloudwatch_client', return_value=mock_client):
             cloudwatch_module.publish_metric("TestNamespace", "TestMetric", 1.0, "Count")
             mock_client.put_metric_data.assert_called_once()
             call_args = mock_client.put_metric_data.call_args
@@ -63,7 +63,7 @@ class TestPublishMetric:
     def test_uses_default_unit_when_not_specified(self, cloudwatch_module):
         """Test that default unit 'None' is used when not specified."""
         mock_client = MagicMock()
-        with patch.object(cloudwatch_module, '_get_cloudwatch_client', return_value=mock_client):
+        with patch.object(cloudwatch_module, 'get_cloudwatch_client', return_value=mock_client):
             cloudwatch_module.publish_metric("TestNamespace", "TestMetric", 1.0)
             call_args = mock_client.put_metric_data.call_args
             assert call_args.kwargs["MetricData"][0]["Unit"] == "None"
@@ -71,7 +71,7 @@ class TestPublishMetric:
     def test_includes_timestamp_in_metric(self, cloudwatch_module):
         """Test that timestamp is included in metric data."""
         mock_client = MagicMock()
-        with patch.object(cloudwatch_module, '_get_cloudwatch_client', return_value=mock_client):
+        with patch.object(cloudwatch_module, 'get_cloudwatch_client', return_value=mock_client):
             cloudwatch_module.publish_metric("TestNamespace", "TestMetric", 1.0)
             call_args = mock_client.put_metric_data.call_args
             assert "Timestamp" in call_args.kwargs["MetricData"][0]
@@ -82,7 +82,7 @@ class TestPublishMetric:
         error = ClientError({"Error": {"Code": "500", "Message": "Error"}}, "PutMetricData")
         mock_client.put_metric_data.side_effect = error
 
-        with patch.object(cloudwatch_module, '_get_cloudwatch_client', return_value=mock_client):
+        with patch.object(cloudwatch_module, 'get_cloudwatch_client', return_value=mock_client):
             # Should not raise, just log warning
             cloudwatch_module.publish_metric("TestNamespace", "TestMetric", 1.0)
             assert mock_client.put_metric_data.call_count == 1

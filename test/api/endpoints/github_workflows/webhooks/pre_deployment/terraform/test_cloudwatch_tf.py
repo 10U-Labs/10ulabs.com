@@ -27,13 +27,22 @@ class TestCloudWatchAlarmsExist:
             f"CloudWatch alarm '{alarm_name}' not found in cloudwatch.tf"
         )
 
+    def test_alarm_count_matches_expected(self, cloudwatch_tf_content):
+        """Verify the number of CloudWatch alarms matches expected count."""
+        alarm_pattern = r'resource\s+"aws_cloudwatch_metric_alarm"\s+"\w+"'
+        actual_count = len(re.findall(alarm_pattern, cloudwatch_tf_content))
+        assert actual_count >= len(CLOUDWATCH_ALARMS), (
+            f"Expected at least {len(CLOUDWATCH_ALARMS)} alarms, found {actual_count}"
+        )
+
 
 class TestCloudWatchAlarmConfiguration:
     """Test CloudWatch alarm configurations."""
 
     def test_alarms_have_comparison_operator(self, cloudwatch_tf_content):
         """Verify alarms have comparison_operator defined."""
-        alarm_count = len(re.findall(r'resource\s+"aws_cloudwatch_metric_alarm"', cloudwatch_tf_content))
+        alarm_pattern = r'resource\s+"aws_cloudwatch_metric_alarm"'
+        alarm_count = len(re.findall(alarm_pattern, cloudwatch_tf_content))
         operator_count = len(re.findall(r'comparison_operator\s*=', cloudwatch_tf_content))
         assert operator_count >= alarm_count, (
             f"Not all alarms have comparison_operator: "
@@ -42,7 +51,8 @@ class TestCloudWatchAlarmConfiguration:
 
     def test_alarms_have_evaluation_periods(self, cloudwatch_tf_content):
         """Verify alarms have evaluation_periods defined."""
-        alarm_count = len(re.findall(r'resource\s+"aws_cloudwatch_metric_alarm"', cloudwatch_tf_content))
+        alarm_pattern = r'resource\s+"aws_cloudwatch_metric_alarm"'
+        alarm_count = len(re.findall(alarm_pattern, cloudwatch_tf_content))
         periods_count = len(re.findall(r'evaluation_periods\s*=', cloudwatch_tf_content))
         assert periods_count >= alarm_count, (
             f"Not all alarms have evaluation_periods: "
@@ -51,8 +61,10 @@ class TestCloudWatchAlarmConfiguration:
 
     def test_alarms_have_treat_missing_data(self, cloudwatch_tf_content):
         """Verify alarms have treat_missing_data set to notBreaching."""
-        alarm_count = len(re.findall(r'resource\s+"aws_cloudwatch_metric_alarm"', cloudwatch_tf_content))
-        not_breaching_count = len(re.findall(r'treat_missing_data\s*=\s*"notBreaching"', cloudwatch_tf_content))
+        alarm_pattern = r'resource\s+"aws_cloudwatch_metric_alarm"'
+        alarm_count = len(re.findall(alarm_pattern, cloudwatch_tf_content))
+        missing_pattern = r'treat_missing_data\s*=\s*"notBreaching"'
+        not_breaching_count = len(re.findall(missing_pattern, cloudwatch_tf_content))
         assert not_breaching_count >= alarm_count, (
             f"Not all alarms use notBreaching for missing data: "
             f"found {not_breaching_count} for {alarm_count} alarms"
@@ -64,7 +76,8 @@ class TestCloudWatchAlarmActions:
 
     def test_alarms_have_alarm_actions(self, cloudwatch_tf_content):
         """Verify alarms have alarm_actions configured."""
-        alarm_count = len(re.findall(r'resource\s+"aws_cloudwatch_metric_alarm"', cloudwatch_tf_content))
+        alarm_pattern = r'resource\s+"aws_cloudwatch_metric_alarm"'
+        alarm_count = len(re.findall(alarm_pattern, cloudwatch_tf_content))
         actions_count = len(re.findall(r'alarm_actions\s*=', cloudwatch_tf_content))
         assert actions_count >= alarm_count, (
             f"Not all alarms have alarm_actions: "
@@ -84,12 +97,19 @@ class TestCloudWatchAlarmDescriptions:
 
     def test_alarms_have_descriptions(self, cloudwatch_tf_content):
         """Verify alarms have alarm_description defined."""
-        alarm_count = len(re.findall(r'resource\s+"aws_cloudwatch_metric_alarm"', cloudwatch_tf_content))
+        alarm_pattern = r'resource\s+"aws_cloudwatch_metric_alarm"'
+        alarm_count = len(re.findall(alarm_pattern, cloudwatch_tf_content))
         desc_count = len(re.findall(r'alarm_description\s*=', cloudwatch_tf_content))
         assert desc_count >= alarm_count, (
             f"Not all alarms have alarm_description: "
             f"found {desc_count} for {alarm_count} alarms"
         )
+
+    def test_descriptions_are_not_empty(self, cloudwatch_tf_content):
+        """Verify alarm descriptions are not empty strings."""
+        empty_desc = r'alarm_description\s*=\s*""'
+        empty_count = len(re.findall(empty_desc, cloudwatch_tf_content))
+        assert empty_count == 0, "Alarm descriptions should not be empty"
 
 
 class TestCloudWatchAlarmNamingConventions:
@@ -99,11 +119,18 @@ class TestCloudWatchAlarmNamingConventions:
         """Verify alarm names use local.resource_prefix."""
         pattern = r'alarm_name\s*=\s*"\$\{local\.resource_prefix\}'
         prefix_count = len(re.findall(pattern, cloudwatch_tf_content))
-        alarm_count = len(re.findall(r'resource\s+"aws_cloudwatch_metric_alarm"', cloudwatch_tf_content))
+        alarm_pattern = r'resource\s+"aws_cloudwatch_metric_alarm"'
+        alarm_count = len(re.findall(alarm_pattern, cloudwatch_tf_content))
         assert prefix_count >= alarm_count, (
             f"Not all alarm names use resource_prefix: "
             f"found {prefix_count} for {alarm_count} alarms"
         )
+
+    def test_no_hardcoded_alarm_names(self, cloudwatch_tf_content):
+        """Verify alarm names are not hardcoded."""
+        hardcoded = r'alarm_name\s*=\s*"[^$\{]'
+        hardcoded_count = len(re.findall(hardcoded, cloudwatch_tf_content))
+        assert hardcoded_count == 0, "Alarm names should use resource_prefix"
 
 
 class TestCloudWatchAlarmTags:
@@ -111,10 +138,18 @@ class TestCloudWatchAlarmTags:
 
     def test_alarms_have_tags(self, cloudwatch_tf_content):
         """Verify alarms have tags defined."""
-        alarm_count = len(re.findall(r'resource\s+"aws_cloudwatch_metric_alarm"', cloudwatch_tf_content))
-        tags_count = len(re.findall(r'tags\s*=\s*merge\(local\.common_tags', cloudwatch_tf_content))
+        alarm_pattern = r'resource\s+"aws_cloudwatch_metric_alarm"'
+        alarm_count = len(re.findall(alarm_pattern, cloudwatch_tf_content))
+        tags_pattern = r'tags\s*=\s*merge\(local\.common_tags'
+        tags_count = len(re.findall(tags_pattern, cloudwatch_tf_content))
         assert tags_count >= alarm_count, (
             f"Not all alarms have tags: found {tags_count} for {alarm_count} alarms"
+        )
+
+    def test_tags_use_common_tags(self, cloudwatch_tf_content):
+        """Verify tags use local.common_tags for consistency."""
+        assert 'local.common_tags' in cloudwatch_tf_content, (
+            "Tags should reference local.common_tags"
         )
 
 
@@ -123,7 +158,9 @@ class TestCircuitBreakerAlarms:
 
     def test_circuit_breaker_open_alarm_configuration(self, cloudwatch_tf_content):
         """Verify circuit breaker open alarm has correct metric configuration."""
-        assert '"CircuitBreakerState"' in cloudwatch_tf_content and '"WebhookRouter"' in cloudwatch_tf_content
+        has_state = '"CircuitBreakerState"' in cloudwatch_tf_content
+        has_router = '"WebhookRouter"' in cloudwatch_tf_content
+        assert has_state and has_router
 
     def test_webhook_handler_errors_uses_metric_query(self, cloudwatch_tf_content):
         """Verify webhook handler errors alarm uses metric queries for error rate."""
