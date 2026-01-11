@@ -177,7 +177,9 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $BASE/pre_deployment/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
-      - name: Terraform Plan
+      - env:
+          TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
+        name: Terraform Plan
         run: |
           cd src/api/endpoints/contact_submissions && \
             terraform plan
