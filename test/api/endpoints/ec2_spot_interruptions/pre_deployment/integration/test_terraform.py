@@ -1,8 +1,6 @@
 """Pre-deployment integration tests for EC2 spot interruptions Terraform config."""
 from pathlib import Path
 
-import pytest
-
 
 class TestTerraformFilesExist:
     """Tests that required Terraform files exist."""
