@@ -26,7 +26,7 @@ import get_running
 
 COMMANDS = {
     "cancel-superseded-workflows": ("Cancel superseded workflow runs", cancel.main),
-    "compute-descendants": ("Compute descendant workflows ready to dispatch", compute_descendants.main),
+    "compute-descendants": ("Compute descendants ready to dispatch", compute_descendants.main),
     "compute-root-workflows": ("Compute root workflows from changed files", compute_roots.main),
     "dispatch-root-workflows": ("Dispatch root workflows", dispatch_roots.main),
     "dispatch-workflow": ("Dispatch a single workflow", dispatch_workflow.main),
