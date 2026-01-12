@@ -1,6 +1,5 @@
 locals {
   resource_prefix = module.common.resource_prefix
-  aws_region      = module.common.aws_region
   aws_account_id  = module.common.aws_account_id
   github_repo     = "${module.common.github_org}/${module.common.name_for_github_repo}"
 
