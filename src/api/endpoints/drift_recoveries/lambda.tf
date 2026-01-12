@@ -15,14 +15,12 @@ resource "aws_lambda_function" "handler" {
   timeout          = 120
   memory_size      = 256
 
-  layers = [data.terraform_remote_state.common_shared.outputs.lambda_layer_arn]
-
   environment {
     variables = {
       GITHUB_REPO                 = local.github_repo
-      GITHUB_TOKEN_PARAMETER_NAME = data.terraform_remote_state.common_shared.outputs.github_token_parameter_name
-      SNS_TOPIC_ARN               = data.terraform_remote_state.common_shared.outputs.alerts_topic_arn
-      MANAGED_VPC_ID              = data.terraform_remote_state.common_shared.outputs.vpc_id
+      GITHUB_TOKEN_PARAMETER_NAME = module.common.ssm_github_pat_name
+      SNS_TOPIC_ARN               = aws_sns_topic.alerts.arn
+      MANAGED_VPC_ID              = data.terraform_remote_state.api_common_networking.outputs.vpc_id
     }
   }
 

@@ -1,9 +1,9 @@
-data "terraform_remote_state" "common_shared" {
+data "terraform_remote_state" "api_common_networking" {
   backend = "s3"
   config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "common/shared/terraform.tfstate"
-    region = "us-east-2"
+    bucket = module.common.name_for_terraform_state_bucket
+    key    = "api/common/networking/terraform.tfstate"
+    region = module.common.aws_region
   }
 }
 

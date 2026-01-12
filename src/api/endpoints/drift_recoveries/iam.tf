@@ -54,7 +54,7 @@ resource "aws_iam_role_policy" "lambda_ssm" {
         "ssm:GetParameter"
       ]
       Resource = [
-        "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter/${local.resource_prefix}/*"
+        module.common.ssm_github_pat_arn
       ]
     }]
   })
@@ -90,7 +90,7 @@ resource "aws_iam_role_policy" "lambda_sns" {
         "sns:Publish"
       ]
       Resource = [
-        data.terraform_remote_state.common_shared.outputs.alerts_topic_arn
+        aws_sns_topic.alerts.arn
       ]
     }]
   })

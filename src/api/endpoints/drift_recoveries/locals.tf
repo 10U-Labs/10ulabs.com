@@ -8,6 +8,7 @@ locals {
   lambda_role_name          = "${local.resource_prefix}DriftRecoveriesRole"
   queue_name                = "${local.resource_prefix}DriftRecoveries"
   config_recorder_role_name = "${local.resource_prefix}ConfigRecorderRole"
+  alert_email               = "jdrowne@10ulabs.com"
 
   common_tags = {
     ManagedBy = "Terraform"
