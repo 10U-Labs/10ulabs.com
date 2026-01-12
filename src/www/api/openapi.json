@@ -472,11 +472,6 @@
               }
             }
           }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${DriftRecoveriesHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
         }
       }
     },
@@ -536,11 +531,6 @@
               }
             }
           }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${DriftRecoveriesHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
         },
         "parameters": [
           {
@@ -616,11 +606,6 @@
               }
             }
           }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${Ec2SpotInterruptionsHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
         }
       }
     },
@@ -683,11 +668,6 @@
               }
             }
           }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${Ec2SpotInterruptionsHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
         },
         "parameters": [
           {
@@ -763,11 +743,6 @@
               }
             }
           }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${EcsTaskStopsHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
         }
       }
     },
@@ -830,11 +805,6 @@
               }
             }
           }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${EcsTaskStopsHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
         },
         "parameters": [
           {
@@ -910,11 +880,6 @@
               }
             }
           }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${GithubWorkflowsRetriesHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
         }
       }
     },
@@ -977,11 +942,6 @@
               }
             }
           }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${GithubWorkflowsRetriesHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
         },
         "parameters": [
           {
@@ -1964,11 +1924,6 @@
               }
             }
           }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${RunnersCleanupHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
         }
       }
     },
@@ -2028,11 +1983,6 @@
               }
             }
           }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${RunnersCleanupHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
         },
         "parameters": [
           {
