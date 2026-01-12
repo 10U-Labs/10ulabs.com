@@ -1,3 +1,3 @@
-module "shared" {
-  source = "../../common/shared"
+module "common" {
+  source = "../../../../lib/terraform/common"
 }

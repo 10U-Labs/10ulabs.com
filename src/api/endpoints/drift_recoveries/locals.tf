@@ -1,8 +1,8 @@
 locals {
-  resource_prefix = module.shared.resource_prefix
-  aws_region      = module.shared.aws_region
-  aws_account_id  = module.shared.aws_account_id
-  github_repo     = module.shared.github_repo
+  resource_prefix = module.common.resource_prefix
+  aws_region      = module.common.aws_region
+  aws_account_id  = module.common.aws_account_id
+  github_repo     = "${module.common.github_org}/${module.common.name_for_github_repo}"
 
   function_name             = "${local.resource_prefix}DriftRecoveries"
   lambda_role_name          = "${local.resource_prefix}DriftRecoveriesRole"
