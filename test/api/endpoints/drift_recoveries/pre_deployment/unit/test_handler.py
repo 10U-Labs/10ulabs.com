@@ -3,6 +3,8 @@ import urllib.error
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
+from botocore.exceptions import ClientError
+
 
 class TestExtractEventFromSqs:
     """Tests for _extract_event_from_sqs function."""
@@ -348,7 +350,6 @@ class TestIsResourceInManagedVpcErrorHandling:
 
     def test_returns_false_on_client_error(self, handler_module):
         """Returns False when EC2 API call fails."""
-        from botocore.exceptions import ClientError
         with patch.object(
             handler_module, 'get_ec2_client'
         ) as mock_get_ec2:
@@ -401,12 +402,11 @@ class TestIsResourceInManagedVpcErrorHandling:
             assert result is True
 
 
-class TestGetGithubTokenErrorHandling:
-    """Tests for _get_github_token error handling."""
+class TestClientErrorHandling:
+    """Tests for client error handling in helper functions."""
 
-    def test_returns_empty_on_client_error(self, handler_module):
+    def test_get_github_token_returns_empty_on_client_error(self, handler_module):
         """Returns empty string when SSM API call fails."""
-        from botocore.exceptions import ClientError
         with patch.object(
             handler_module, 'get_ssm_client'
         ) as mock_get_ssm:
@@ -419,13 +419,8 @@ class TestGetGithubTokenErrorHandling:
             result = get_token_fn()
             assert result == ''
 
-
-class TestSendNotificationErrorHandling:
-    """Tests for _send_notification error handling."""
-
-    def test_handles_sns_publish_error(self, handler_module):
+    def test_send_notification_handles_sns_publish_error(self, handler_module):
         """Handles error when SNS publish fails."""
-        from botocore.exceptions import ClientError
         with patch.object(
             handler_module, 'get_sns_client'
         ) as mock_get_sns:

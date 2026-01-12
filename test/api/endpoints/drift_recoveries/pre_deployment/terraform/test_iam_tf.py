@@ -24,10 +24,6 @@ class TestLambdaIAMRole:
         """Verify Lambda role allows Lambda service to assume it."""
         assert '"lambda.amazonaws.com"' in iam_tf_content
 
-
-class TestLambdaBasicExecutionPolicy:
-    """Test Lambda basic execution policy attachment."""
-
     def test_basic_execution_policy_attached(self, iam_tf_content):
         """Verify AWSLambdaBasicExecutionRole is attached."""
         pattern = r'aws:policy/service-role/AWSLambdaBasicExecutionRole'

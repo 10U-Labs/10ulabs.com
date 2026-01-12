@@ -95,17 +95,13 @@ class TestConfigRecorderConfiguration:
         assert re.search(pattern, config_tf_content)
 
 
-class TestConfigRuleResources:
-    """Test AWS Config rule resources."""
+class TestConfigRuleConfiguration:
+    """Test Config rule configuration."""
 
     def test_required_tags_rule_exists(self, config_tf_content):
         """Verify required tags rule is defined."""
         pattern = r'resource\s+"aws_config_config_rule"\s+"required_tags"'
         assert re.search(pattern, config_tf_content)
-
-
-class TestConfigRuleConfiguration:
-    """Test Config rule configuration."""
 
     def test_rule_uses_aws_managed_source(self, config_tf_content):
         """Verify rule uses AWS managed source."""

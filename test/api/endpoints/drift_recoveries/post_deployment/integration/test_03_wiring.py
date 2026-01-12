@@ -69,20 +69,13 @@ def test_sqs_queue_redrives_to_dlq(sqs_client, queue_name):
 
 def test_lambda_role_has_sqs_permissions(lambda_client, iam_client, function_name):
     """Verify Lambda role has SQS permissions."""
-    # Get Lambda's role ARN
     lambda_config = lambda_client.get_function(FunctionName=function_name)
     role_arn = lambda_config["Configuration"]["Role"]
     role_name = role_arn.split("/")[-1]
 
-    # Check attached policies
-    response = iam_client.list_attached_role_policies(RoleName=role_name)
-    attached_policies = [p["PolicyName"] for p in response.get("AttachedPolicies", [])]
-
-    # Check inline policies
     inline_response = iam_client.list_role_policies(RoleName=role_name)
     inline_policies = inline_response.get("PolicyNames", [])
 
-    # Should have SQSAccess inline policy
     assert "SQSAccess" in inline_policies
 
 
@@ -137,7 +130,7 @@ def test_lambda_role_has_basic_execution(lambda_client, iam_client, function_nam
 # === Config Recorder Wiring ===
 
 
-def test_config_recorder_uses_correct_role(config_client, iam_client, cfg):
+def test_config_recorder_uses_correct_role(config_client, cfg):
     """Verify Config recorder uses the correct IAM role."""
     recorder_name = f"{cfg['resource_prefix']}-recorder"
     response = config_client.describe_configuration_recorders()

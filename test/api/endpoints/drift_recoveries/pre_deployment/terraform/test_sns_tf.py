@@ -20,10 +20,6 @@ class TestSNSTopicResources:
         pattern = r'resource\s+"aws_sns_topic_subscription"\s+"alerts_email"'
         assert re.search(pattern, sns_tf_content)
 
-
-class TestSNSTopicConfiguration:
-    """Test SNS topic configuration."""
-
     def test_topic_name_uses_resource_prefix(self, sns_tf_content):
         """Verify topic name uses resource prefix."""
         pattern = r'name\s*=\s*"\$\{local\.resource_prefix\}-drift-recovery-alerts"'
