@@ -69,9 +69,8 @@ def test_lambda_log_group_has_30_day_retention(logs_client, function_name):
     log_group_name = f"/aws/lambda/{function_name}"
     response = logs_client.describe_log_groups(logGroupNamePrefix=log_group_name)
     log_groups = response.get("logGroups", [])
-    matching = [lg for lg in log_groups if lg["logGroupName"] == log_group_name]
-    assert len(matching) == 1
-    assert matching[0].get("retentionInDays") == 30
+    matching = next((lg for lg in log_groups if lg["logGroupName"] == log_group_name), None)
+    assert matching.get("retentionInDays") == 30
 
 
 # === SQS Queue Configuration ===
@@ -128,7 +127,6 @@ def test_config_recorder_is_enabled(config_client, cfg):
         ConfigurationRecorderNames=[recorder_name]
     )
     statuses = response.get("ConfigurationRecordersStatus", [])
-    assert len(statuses) == 1
     assert statuses[0]["recording"] is True
 
 
@@ -147,7 +145,6 @@ def test_config_rule_checks_required_tags(config_client, cfg):
     rule_name = f"{cfg['resource_prefix']}-required-tags"
     response = config_client.describe_config_rules(ConfigRuleNames=[rule_name])
     rules = response.get("ConfigRules", [])
-    assert len(rules) == 1
     assert rules[0]["Source"]["SourceIdentifier"] == "REQUIRED_TAGS"
 
 

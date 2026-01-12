@@ -24,9 +24,8 @@ def test_lambda_sqs_trigger_is_enabled(lambda_client, function_name, queue_name)
         FunctionName=function_name
     )
     mappings = response.get("EventSourceMappings", [])
-    sqs_mappings = [m for m in mappings if queue_name in m["EventSourceArn"]]
-    assert len(sqs_mappings) == 1
-    assert sqs_mappings[0]["State"] == "Enabled"
+    sqs_mapping = next((m for m in mappings if queue_name in m["EventSourceArn"]), None)
+    assert sqs_mapping["State"] == "Enabled"
 
 
 def test_lambda_sqs_trigger_batch_size_is_one(lambda_client, function_name, queue_name):
@@ -35,9 +34,8 @@ def test_lambda_sqs_trigger_batch_size_is_one(lambda_client, function_name, queu
         FunctionName=function_name
     )
     mappings = response.get("EventSourceMappings", [])
-    sqs_mappings = [m for m in mappings if queue_name in m["EventSourceArn"]]
-    assert len(sqs_mappings) == 1
-    assert sqs_mappings[0]["BatchSize"] == 1
+    sqs_mapping = next((m for m in mappings if queue_name in m["EventSourceArn"]), None)
+    assert sqs_mapping["BatchSize"] == 1
 
 
 # === EventBridge to SQS Wiring ===

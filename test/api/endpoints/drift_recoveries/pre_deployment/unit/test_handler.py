@@ -435,8 +435,8 @@ class TestSendNotificationErrorHandling:
                 'Publish'
             )
             send_fn = getattr(handler_module, '_send_notification')
-            # Should not raise, just log error
-            send_fn('Test Subject', 'Test Message')
+            result = send_fn('Test Subject', 'Test Message')
+            assert result is None
 
 
 class TestFormatDriftDetailsEdgeCases:
