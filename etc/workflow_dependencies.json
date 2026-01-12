@@ -215,7 +215,7 @@
     "depends_on": [
       "api_common_routing"
     ],
-    "name": "Ensuring drift recoveries handler exists and is properly configured",
+    "name": "Ensuring the /v1/drift-recoveries API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_drift_recoveries.yml",
       "lib/python/**",
