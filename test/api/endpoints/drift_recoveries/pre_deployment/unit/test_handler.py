@@ -1,9 +1,34 @@
 """Unit tests for drift recoveries Lambda handler."""
 import urllib.error
+from contextlib import contextmanager
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 from botocore.exceptions import ClientError
+
+
+def create_mock_url_response(status: int = 204) -> MagicMock:
+    """Create a mock urllib response with context manager support."""
+    mock_response = MagicMock()
+    mock_response.status = status
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+    return mock_response
+
+
+@contextmanager
+def mock_aws_clients(module, token_value: str = 'test-github-token'):
+    """Create mock AWS clients for handler tests."""
+    with patch.object(module, 'get_ec2_client') as mock_ec2:
+        mock_ec2.return_value.describe_security_groups.return_value = {
+            'SecurityGroups': [{'VpcId': 'vpc-12345678', 'GroupName': 'test'}]
+        }
+        with patch.object(module, 'get_ssm_client') as mock_ssm:
+            mock_ssm.return_value.get_parameter.return_value = {
+                'Parameter': {'Value': token_value}
+            }
+            with patch.object(module, 'get_sns_client'):
+                yield
 
 
 class TestExtractEventFromSqs:
@@ -189,91 +214,31 @@ class TestLambdaHandler:
         self, handler_module, sample_sqs_event, lambda_context
     ):
         """Returns error when GitHub token not available."""
-        with patch.object(
-            handler_module, 'get_ec2_client'
-        ) as mock_get_ec2:
-            mock_client = mock_get_ec2.return_value
-            mock_client.describe_security_groups.return_value = {
-                'SecurityGroups': [{'VpcId': 'vpc-12345678', 'GroupName': 'test'}]
-            }
-            with patch.object(
-                handler_module, 'get_ssm_client'
-            ) as mock_get_ssm:
-                mock_ssm = mock_get_ssm.return_value
-                mock_ssm.get_parameter.return_value = {
-                    'Parameter': {'Value': ''}
-                }
-                with patch.object(
-                    handler_module, 'get_sns_client'
-                ):
-                    result = handler_module.lambda_handler(
-                        sample_sqs_event, lambda_context
-                    )
-                    assert result['statusCode'] == 500
+        with mock_aws_clients(handler_module, token_value=''):
+            result = handler_module.lambda_handler(sample_sqs_event, lambda_context)
+            assert result['statusCode'] == 500
 
     def test_triggers_workflow_successfully(
         self, handler_module, sample_sqs_event, lambda_context
     ):
         """Successfully triggers workflow when all conditions met."""
-        with patch.object(
-            handler_module, 'get_ec2_client'
-        ) as mock_get_ec2:
-            mock_client = mock_get_ec2.return_value
-            mock_client.describe_security_groups.return_value = {
-                'SecurityGroups': [{'VpcId': 'vpc-12345678', 'GroupName': 'test'}]
-            }
-            with patch.object(
-                handler_module, 'get_ssm_client'
-            ) as mock_get_ssm:
-                mock_ssm = mock_get_ssm.return_value
-                mock_ssm.get_parameter.return_value = {
-                    'Parameter': {'Value': 'test-github-token'}
-                }
-                with patch.object(handler_module, 'get_sns_client'):
-                    with patch(
-                        'urllib.request.urlopen'
-                    ) as mock_urlopen:
-                        mock_response = MagicMock()
-                        mock_response.status = 204
-                        mock_response.__enter__ = MagicMock(
-                            return_value=mock_response
-                        )
-                        mock_response.__exit__ = MagicMock(return_value=False)
-                        mock_urlopen.return_value = mock_response
-                        result = handler_module.lambda_handler(
-                            sample_sqs_event, lambda_context
-                        )
-                        assert result['statusCode'] == 200
+        with mock_aws_clients(handler_module):
+            with patch('urllib.request.urlopen') as mock_urlopen:
+                mock_urlopen.return_value = create_mock_url_response(204)
+                result = handler_module.lambda_handler(sample_sqs_event, lambda_context)
+                assert result['statusCode'] == 200
 
     def test_returns_error_when_workflow_trigger_fails(
         self, handler_module, sample_sqs_event, lambda_context
     ):
         """Returns error when workflow trigger fails."""
-        with patch.object(
-            handler_module, 'get_ec2_client'
-        ) as mock_get_ec2:
-            mock_client = mock_get_ec2.return_value
-            mock_client.describe_security_groups.return_value = {
-                'SecurityGroups': [{'VpcId': 'vpc-12345678', 'GroupName': 'test'}]
-            }
-            with patch.object(
-                handler_module, 'get_ssm_client'
-            ) as mock_get_ssm:
-                mock_ssm = mock_get_ssm.return_value
-                mock_ssm.get_parameter.return_value = {
-                    'Parameter': {'Value': 'test-github-token'}
-                }
-                with patch.object(handler_module, 'get_sns_client'):
-                    with patch(
-                        'urllib.request.urlopen'
-                    ) as mock_urlopen:
-                        mock_urlopen.side_effect = urllib.error.HTTPError(
-                            'url', 403, 'Forbidden', {}, None
-                        )
-                        result = handler_module.lambda_handler(
-                            sample_sqs_event, lambda_context
-                        )
-                        assert result['statusCode'] == 500
+        with mock_aws_clients(handler_module):
+            with patch('urllib.request.urlopen') as mock_urlopen:
+                mock_urlopen.side_effect = urllib.error.HTTPError(
+                    'url', 403, 'Forbidden', {}, None
+                )
+                result = handler_module.lambda_handler(sample_sqs_event, lambda_context)
+                assert result['statusCode'] == 500
 
 
 class TestTriggerApiWorkflow:
@@ -282,11 +247,7 @@ class TestTriggerApiWorkflow:
     def test_returns_success_on_204_response(self, handler_module):
         """Returns success dict when GitHub returns 204."""
         with patch('urllib.request.urlopen') as mock_urlopen:
-            mock_response = MagicMock()
-            mock_response.status = 204
-            mock_response.__enter__ = MagicMock(return_value=mock_response)
-            mock_response.__exit__ = MagicMock(return_value=False)
-            mock_urlopen.return_value = mock_response
+            mock_urlopen.return_value = create_mock_url_response(204)
             trigger_fn = getattr(handler_module, '_trigger_api_workflow')
             result = trigger_fn('test-token')
             assert result['success'] is True
@@ -294,11 +255,7 @@ class TestTriggerApiWorkflow:
     def test_returns_failure_on_non_204_status(self, handler_module):
         """Returns failure dict when GitHub returns non-204 status."""
         with patch('urllib.request.urlopen') as mock_urlopen:
-            mock_response = MagicMock()
-            mock_response.status = 200
-            mock_response.__enter__ = MagicMock(return_value=mock_response)
-            mock_response.__exit__ = MagicMock(return_value=False)
-            mock_urlopen.return_value = mock_response
+            mock_urlopen.return_value = create_mock_url_response(200)
             trigger_fn = getattr(handler_module, '_trigger_api_workflow')
             result = trigger_fn('test-token')
             assert result['success'] is False
@@ -334,11 +291,7 @@ class TestTriggerApiWorkflow:
     def test_uses_correct_workflow_file(self, handler_module):
         """Uses api_common_routing.yml as workflow file."""
         with patch('urllib.request.urlopen') as mock_urlopen:
-            mock_response = MagicMock()
-            mock_response.status = 204
-            mock_response.__enter__ = MagicMock(return_value=mock_response)
-            mock_response.__exit__ = MagicMock(return_value=False)
-            mock_urlopen.return_value = mock_response
+            mock_urlopen.return_value = create_mock_url_response(204)
             trigger_fn = getattr(handler_module, '_trigger_api_workflow')
             trigger_fn('test-token')
             call_args = mock_urlopen.call_args[0][0]

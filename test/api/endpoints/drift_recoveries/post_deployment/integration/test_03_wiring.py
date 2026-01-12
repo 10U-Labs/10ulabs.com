@@ -67,61 +67,29 @@ def test_sqs_queue_redrives_to_dlq(sqs_client, queue_name):
 # === IAM Role Wiring ===
 
 
-def test_lambda_role_has_sqs_permissions(lambda_client, iam_client, function_name):
+def test_lambda_role_has_sqs_permissions(lambda_inline_policies):
     """Verify Lambda role has SQS permissions."""
-    lambda_config = lambda_client.get_function(FunctionName=function_name)
-    role_arn = lambda_config["Configuration"]["Role"]
-    role_name = role_arn.split("/")[-1]
-
-    inline_response = iam_client.list_role_policies(RoleName=role_name)
-    inline_policies = inline_response.get("PolicyNames", [])
-
-    assert "SQSAccess" in inline_policies
+    assert "SQSAccess" in lambda_inline_policies
 
 
-def test_lambda_role_has_sns_permissions(lambda_client, iam_client, function_name):
+def test_lambda_role_has_sns_permissions(lambda_inline_policies):
     """Verify Lambda role has SNS permissions."""
-    lambda_config = lambda_client.get_function(FunctionName=function_name)
-    role_arn = lambda_config["Configuration"]["Role"]
-    role_name = role_arn.split("/")[-1]
-
-    inline_response = iam_client.list_role_policies(RoleName=role_name)
-    inline_policies = inline_response.get("PolicyNames", [])
-
-    assert "SNSAccess" in inline_policies
+    assert "SNSAccess" in lambda_inline_policies
 
 
-def test_lambda_role_has_ssm_permissions(lambda_client, iam_client, function_name):
+def test_lambda_role_has_ssm_permissions(lambda_inline_policies):
     """Verify Lambda role has SSM permissions."""
-    lambda_config = lambda_client.get_function(FunctionName=function_name)
-    role_arn = lambda_config["Configuration"]["Role"]
-    role_name = role_arn.split("/")[-1]
-
-    inline_response = iam_client.list_role_policies(RoleName=role_name)
-    inline_policies = inline_response.get("PolicyNames", [])
-
-    assert "SSMAccess" in inline_policies
+    assert "SSMAccess" in lambda_inline_policies
 
 
-def test_lambda_role_has_ec2_permissions(lambda_client, iam_client, function_name):
+def test_lambda_role_has_ec2_permissions(lambda_inline_policies):
     """Verify Lambda role has EC2 permissions."""
-    lambda_config = lambda_client.get_function(FunctionName=function_name)
-    role_arn = lambda_config["Configuration"]["Role"]
-    role_name = role_arn.split("/")[-1]
-
-    inline_response = iam_client.list_role_policies(RoleName=role_name)
-    inline_policies = inline_response.get("PolicyNames", [])
-
-    assert "EC2Access" in inline_policies
+    assert "EC2Access" in lambda_inline_policies
 
 
-def test_lambda_role_has_basic_execution(lambda_client, iam_client, function_name):
+def test_lambda_role_has_basic_execution(iam_client, lambda_role_name):
     """Verify Lambda role has basic execution policy attached."""
-    lambda_config = lambda_client.get_function(FunctionName=function_name)
-    role_arn = lambda_config["Configuration"]["Role"]
-    role_name = role_arn.split("/")[-1]
-
-    response = iam_client.list_attached_role_policies(RoleName=role_name)
+    response = iam_client.list_attached_role_policies(RoleName=lambda_role_name)
     attached_arns = [p["PolicyArn"] for p in response.get("AttachedPolicies", [])]
 
     assert any("AWSLambdaBasicExecutionRole" in arn for arn in attached_arns)

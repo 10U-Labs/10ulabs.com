@@ -7,6 +7,7 @@ import pytest
 
 from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
+from test_fixtures.terraform import create_tf_content_fixture
 
 
 DRIFT_RECOVERIES_SRC_PATH = (
@@ -102,49 +103,12 @@ def fixture_terraform_dir():
     return TERRAFORM_DIR
 
 
-@pytest.fixture(name="lambda_tf_content")
-def fixture_lambda_tf_content(terraform_dir):
-    """Provide lambda.tf file content."""
-    return (terraform_dir / "lambda.tf").read_text()
-
-
-@pytest.fixture(name="iam_tf_content")
-def fixture_iam_tf_content(terraform_dir):
-    """Provide iam.tf file content."""
-    return (terraform_dir / "iam.tf").read_text()
-
-
-@pytest.fixture(name="sqs_tf_content")
-def fixture_sqs_tf_content(terraform_dir):
-    """Provide sqs.tf file content."""
-    return (terraform_dir / "sqs.tf").read_text()
-
-
-@pytest.fixture(name="sns_tf_content")
-def fixture_sns_tf_content(terraform_dir):
-    """Provide sns.tf file content."""
-    return (terraform_dir / "sns.tf").read_text()
-
-
-@pytest.fixture(name="eventbridge_tf_content")
-def fixture_eventbridge_tf_content(terraform_dir):
-    """Provide eventbridge.tf file content."""
-    return (terraform_dir / "eventbridge.tf").read_text()
-
-
-@pytest.fixture(name="config_tf_content")
-def fixture_config_tf_content(terraform_dir):
-    """Provide config.tf file content."""
-    return (terraform_dir / "config.tf").read_text()
-
-
-@pytest.fixture(name="locals_tf_content")
-def fixture_locals_tf_content(terraform_dir):
-    """Provide locals.tf file content."""
-    return (terraform_dir / "locals.tf").read_text()
-
-
-@pytest.fixture(name="outputs_tf_content")
-def fixture_outputs_tf_content(terraform_dir):
-    """Provide outputs.tf file content."""
-    return (terraform_dir / "outputs.tf").read_text()
+# Generate terraform file content fixtures using factory
+fixture_lambda_tf = create_tf_content_fixture("lambda.tf")
+fixture_iam_tf = create_tf_content_fixture("iam.tf")
+fixture_sqs_tf = create_tf_content_fixture("sqs.tf")
+fixture_sns_tf = create_tf_content_fixture("sns.tf")
+fixture_eventbridge_tf = create_tf_content_fixture("eventbridge.tf")
+fixture_config_tf = create_tf_content_fixture("config.tf")
+fixture_locals_tf = create_tf_content_fixture("locals.tf")
+fixture_outputs_tf = create_tf_content_fixture("outputs.tf")

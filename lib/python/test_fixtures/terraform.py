@@ -8,6 +8,32 @@ Use by adding to conftest.py:
 """
 import subprocess
 from pathlib import Path
+from typing import Callable
+
+import pytest
+
+
+def create_tf_content_fixture(filename: str) -> Callable:
+    """Create a pytest fixture that reads a terraform file's content.
+
+    Usage in conftest.py:
+        from test_fixtures.terraform import create_tf_content_fixture
+        fixture_lambda_tf = create_tf_content_fixture("lambda.tf")
+
+    Args:
+        filename: Name of the .tf file to read
+
+    Returns:
+        A pytest fixture function that reads the file content
+    """
+    fixture_name = filename.replace(".", "_") + "_content"
+
+    @pytest.fixture(name=fixture_name)
+    def fixture_func(terraform_dir: Path) -> str:
+        """Provide terraform file content."""
+        return (terraform_dir / filename).read_text()
+
+    return fixture_func
 
 
 def terraform_init(directory: Path) -> bool:
