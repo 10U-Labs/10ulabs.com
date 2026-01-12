@@ -16,98 +16,6 @@
     }
   ],
   "paths": {
-    "/health": {
-      "get": {
-        "summary": "Health Check",
-        "description": "Returns the health status of the API",
-        "operationId": "healthCheck",
-        "tags": [
-          "/health"
-        ],
-        "responses": {
-          "200": {
-            "description": "Service is healthy",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "status",
-                    "service",
-                    "version"
-                  ],
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "healthy"
-                    },
-                    "service": {
-                      "type": "string",
-                      "example": "10U Labs API"
-                    },
-                    "version": {
-                      "type": "string",
-                      "example": "1.0.0"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${HealthHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for health endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "healthOptions",
-        "tags": [
-          "/health"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-              }
-            }
-          }
-        }
-      }
-    },
     "/diagnostics/echo": {
       "post": {
         "summary": "Echo Endpoint",
@@ -250,10 +158,850 @@
         }
       }
     },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Returns the health status of the API",
+        "operationId": "healthCheck",
+        "tags": [
+          "/health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "service",
+                    "version"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "10U Labs API"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${HealthHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for health endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "healthOptions",
+        "tags": [
+          "/health"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/contact-submissions": {
+      "post": {
+        "summary": "Submit Contact Form",
+        "description": "Submits a contact form request with reCAPTCHA verification",
+        "operationId": "submitContactSubmission",
+        "tags": [
+          "/v1/contact-submissions"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "email",
+                  "message",
+                  "recaptcha_token"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 255
+                  },
+                  "message": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "recaptcha_token": {
+                    "type": "string",
+                    "description": "Google reCAPTCHA v3 token"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contact form submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or reCAPTCHA verification failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${ContactHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for contact submissions endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "contactSubmissionsOptions",
+        "tags": [
+          "/v1/contact-submissions"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/drift-recoveries": {
+      "get": {
+        "summary": "List Drift Recoveries",
+        "description": "Returns the 10 most recent drift recovery events",
+        "operationId": "listDriftRecoveries",
+        "tags": [
+          "/v1/drift-recoveries"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent drift recovery events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "items"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "resource_type": {
+                            "type": "string"
+                          },
+                          "resource_id": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${DriftRecoveriesHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/v1/drift-recoveries/{limit}": {
+      "get": {
+        "summary": "List Drift Recoveries (Custom Limit)",
+        "description": "Returns the N most recent drift recovery events",
+        "operationId": "listDriftRecoveriesWithLimit",
+        "tags": [
+          "/v1/drift-recoveries"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent drift recovery events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "items"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "resource_type": {
+                            "type": "string"
+                          },
+                          "resource_id": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${DriftRecoveriesHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Maximum number of records to return"
+          }
+        ]
+      }
+    },
+    "/v1/ec2-spot-interruptions": {
+      "get": {
+        "summary": "List EC2 Spot Interruptions",
+        "description": "Returns the 10 most recent EC2 Spot Instance interruption events",
+        "operationId": "listEc2SpotInterruptions",
+        "tags": [
+          "/v1/ec2-spot-interruptions"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent spot interruption events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "items"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "instance_id": {
+                            "type": "string"
+                          },
+                          "instance_type": {
+                            "type": "string"
+                          },
+                          "availability_zone": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${Ec2SpotInterruptionsHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/v1/ec2-spot-interruptions/{limit}": {
+      "get": {
+        "summary": "List EC2 Spot Interruptions (Custom Limit)",
+        "description": "Returns the N most recent EC2 Spot Instance interruption events",
+        "operationId": "listEc2SpotInterruptionsWithLimit",
+        "tags": [
+          "/v1/ec2-spot-interruptions"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent spot interruption events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "items"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "instance_id": {
+                            "type": "string"
+                          },
+                          "instance_type": {
+                            "type": "string"
+                          },
+                          "availability_zone": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${Ec2SpotInterruptionsHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Maximum number of records to return"
+          }
+        ]
+      }
+    },
+    "/v1/ecs-task-stops": {
+      "get": {
+        "summary": "List ECS Task Stops",
+        "description": "Returns the 10 most recent ECS task stop events",
+        "operationId": "listEcsTaskStops",
+        "tags": [
+          "/v1/ecs-task-stops"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent task stop events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "items"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "task_arn": {
+                            "type": "string"
+                          },
+                          "cluster": {
+                            "type": "string"
+                          },
+                          "stop_reason": {
+                            "type": "string"
+                          },
+                          "exit_code": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${EcsTaskStopsHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/v1/ecs-task-stops/{limit}": {
+      "get": {
+        "summary": "List ECS Task Stops (Custom Limit)",
+        "description": "Returns the N most recent ECS task stop events",
+        "operationId": "listEcsTaskStopsWithLimit",
+        "tags": [
+          "/v1/ecs-task-stops"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent task stop events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "items"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "task_arn": {
+                            "type": "string"
+                          },
+                          "cluster": {
+                            "type": "string"
+                          },
+                          "stop_reason": {
+                            "type": "string"
+                          },
+                          "exit_code": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${EcsTaskStopsHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Maximum number of records to return"
+          }
+        ]
+      }
+    },
+    "/v1/github-workflows/retries": {
+      "get": {
+        "summary": "List GitHub Workflow Retries",
+        "description": "Returns the 10 most recent GitHub workflow retry events",
+        "operationId": "listGithubWorkflowRetries",
+        "tags": [
+          "/v1/github-workflows"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent workflow retry events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "items"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "workflow_name": {
+                            "type": "string"
+                          },
+                          "run_id": {
+                            "type": "integer"
+                          },
+                          "attempt": {
+                            "type": "integer"
+                          },
+                          "status": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${GithubWorkflowsRetriesHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/v1/github-workflows/retries/{limit}": {
+      "get": {
+        "summary": "List GitHub Workflow Retries (Custom Limit)",
+        "description": "Returns the N most recent GitHub workflow retry events",
+        "operationId": "listGithubWorkflowRetriesWithLimit",
+        "tags": [
+          "/v1/github-workflows"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent workflow retry events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "items"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "workflow_name": {
+                            "type": "string"
+                          },
+                          "run_id": {
+                            "type": "integer"
+                          },
+                          "attempt": {
+                            "type": "integer"
+                          },
+                          "status": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${GithubWorkflowsRetriesHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Maximum number of records to return"
+          }
+        ]
+      }
+    },
     "/v1/github-workflows/webhooks": {
       "post": {
         "summary": "GitHub Workflow Job Webhook",
-        "description": "Receives GitHub workflow_job webhook events and queues them for processing (API Gateway → SQS direct integration, no Lambda in hot path)",
+        "description": "Receives GitHub workflow_job webhook events and queues them for processing (API Gateway \u2192 SQS direct integration, no Lambda in hot path)",
         "operationId": "receiveWorkflowJob",
         "tags": [
           "/v1/github-workflows"
@@ -715,1168 +1463,6 @@
         }
       }
     },
-    "/v1/runners/ec2/images": {
-      "post": {
-        "summary": "Build Image for EC2 Runners",
-        "description": "Triggers a build of a new EC2 runner AMI",
-        "operationId": "buildEC2RunnerAMI",
-        "tags": [
-          "/v1/runners/ec2/images"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "AMI build started successfully"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${ImageForEC2RunnersHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "get": {
-        "summary": "List Images for EC2 Runners",
-        "description": "Lists all available EC2 runner AMIs",
-        "operationId": "listEC2RunnerAMIs",
-        "tags": [
-          "/v1/runners/ec2/images"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of AMIs"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${ImageForEC2RunnersHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for image-for-ec2-runners endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "imageForEc2RunnersOptions",
-        "tags": [
-          "/v1/runners/ec2/images"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/runners/ec2/images/latest": {
-      "get": {
-        "summary": "Get Latest Image for EC2 Runners",
-        "description": "Returns the latest EC2 runner AMI",
-        "operationId": "getLatestEC2RunnerAMI",
-        "tags": [
-          "/v1/runners/ec2/images"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Latest AMI information"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${ImageForEC2RunnersHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for image-for-ec2-runners latest endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "imageForEc2RunnersLatestOptions",
-        "tags": [
-          "/v1/runners/ec2/images"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/runners/ec2/images/{ami_id}": {
-      "delete": {
-        "summary": "Delete Image for EC2 Runners",
-        "description": "Deletes a specific EC2 runner AMI",
-        "operationId": "deleteEC2RunnerAMI",
-        "tags": [
-          "/v1/runners/ec2/images"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "ami_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "AMI deleted successfully"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${ImageForEC2RunnersHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for image-for-ec2-runners ami_id endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "imageForEc2RunnersAmiIdOptions",
-        "tags": [
-          "/v1/runners/ec2/images"
-        ],
-        "parameters": [
-          {
-            "name": "ami_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'DELETE,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/runners/ecs/images": {
-      "post": {
-        "summary": "Build Image for ECS Runners",
-        "description": "Triggers a build of a new ECS runner image",
-        "operationId": "buildEcsRunnerImage",
-        "tags": [
-          "/v1/runners/ecs/images"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "ECS image build started successfully"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${ImageForEcsRunnersHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "get": {
-        "summary": "List Images for ECS Runners",
-        "description": "Lists all available ECS runner images",
-        "operationId": "listEcsRunnerImages",
-        "tags": [
-          "/v1/runners/ecs/images"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of ECS images"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${ImageForEcsRunnersHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for image-for-ecs-runners endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "imageForEcsRunnersOptions",
-        "tags": [
-          "/v1/runners/ecs/images"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/runners/ecs/images/latest": {
-      "get": {
-        "summary": "Get Latest Image for ECS Runners",
-        "description": "Returns the latest ECS runner image",
-        "operationId": "getLatestEcsRunnerImage",
-        "tags": [
-          "/v1/runners/ecs/images"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Latest ECS image information"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${ImageForEcsRunnersHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for image-for-ecs-runners latest endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "imageForEcsRunnersLatestOptions",
-        "tags": [
-          "/v1/runners/ecs/images"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/runners/ecs/images/{digest}": {
-      "get": {
-        "summary": "Get Image for ECS Runners by Digest",
-        "description": "Returns a specific ECS runner image by digest",
-        "operationId": "getEcsRunnerImageByDigest",
-        "tags": [
-          "/v1/runners/ecs/images"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "digest",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "ECS image information"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${ImageForEcsRunnersHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "delete": {
-        "summary": "Delete Image for ECS Runners",
-        "description": "Deletes a specific ECS runner image by digest",
-        "operationId": "deleteEcsRunnerImage",
-        "tags": [
-          "/v1/runners/ecs/images"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "digest",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "ECS image deleted successfully"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${ImageForEcsRunnersHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for image-for-ecs-runners digest endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "imageForEcsRunnersDigestOptions",
-        "tags": [
-          "/v1/runners/ecs/images"
-        ],
-        "parameters": [
-          {
-            "name": "digest",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'GET,DELETE,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/runners/ecs": {
-      "post": {
-        "summary": "Create ECS Runner",
-        "description": "Creates a new ECS runner instance",
-        "operationId": "createEcsRunner",
-        "tags": [
-          "/v1/runners/ecs"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "ECS runner created successfully"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${EcsRunnerHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "get": {
-        "summary": "Get ECS Runner Status",
-        "description": "Returns the status of currently running ECS (Fargate) runner instances",
-        "operationId": "getEcsRunnerStatus",
-        "tags": [
-          "/v1/runners/ecs"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "ECS runner status including running tasks count and task details",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "running_tasks",
-                    "tasks",
-                    "cluster"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "running_tasks": {
-                      "type": "integer",
-                      "example": 2
-                    },
-                    "tasks": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "task_arn": {
-                            "type": "string"
-                          },
-                          "task_id": {
-                            "type": "string"
-                          },
-                          "status": {
-                            "type": "string"
-                          },
-                          "desired_status": {
-                            "type": "string"
-                          },
-                          "started_at": {
-                            "type": "string"
-                          },
-                          "cpu": {
-                            "type": "string"
-                          },
-                          "memory": {
-                            "type": "string"
-                          },
-                          "job_id": {
-                            "type": "string"
-                          },
-                          "job_labels": {
-                            "type": "string"
-                          },
-                          "github_repo": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    },
-                    "cluster": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${EcsRunnerHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        },
-        "x-amazon-apigateway-api-key-required": true
-      },
-      "options": {
-        "summary": "CORS preflight for ecs-runner endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "ecsRunnerOptions",
-        "tags": [
-          "/v1/runners/ecs"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/runners": {
-      "post": {
-        "summary": "Route Runner Request",
-        "description": "Routes runner requests to the appropriate endpoint (/v1/runners/ec2 or /v1/runners/ecs) based on job labels. Uses API Gateway -> SQS direct integration.",
-        "operationId": "routeRunnerRequest",
-        "tags": [
-          "/v1/runners"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "job_id",
-                  "job_labels",
-                  "github_repo",
-                  "run_id"
-                ],
-                "properties": {
-                  "job_id": {
-                    "type": "integer",
-                    "description": "GitHub job ID"
-                  },
-                  "job_labels": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "GitHub job labels"
-                  },
-                  "github_repo": {
-                    "type": "string",
-                    "description": "GitHub repository (org/repo)"
-                  },
-                  "run_id": {
-                    "type": "integer",
-                    "description": "GitHub workflow run ID"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Runner request accepted and queued for routing",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "accepted"
-                    },
-                    "messageId": {
-                      "type": "string",
-                      "description": "SQS message ID for tracking"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "aws",
-          "httpMethod": "POST",
-          "uri": "${RunnersSqsUri}",
-          "credentials": "${ApiGatewaySqsRoleArn}",
-          "requestParameters": {
-            "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
-          },
-          "requestTemplates": {
-            "application/json": "Action=SendMessage&MessageBody=$util.urlEncode($input.body)"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseTemplates": {
-                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.path('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
-              }
-            }
-          }
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for runners endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "runnersOptions",
-        "tags": [
-          "/v1/runners"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/runners/ec2": {
-      "post": {
-        "summary": "Create EC2 Runner",
-        "description": "Creates a new EC2 runner instance",
-        "operationId": "createEC2Runner",
-        "tags": [
-          "/v1/runners/ec2"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "EC2 runner created successfully"
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${EC2RunnerHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "get": {
-        "summary": "Get EC2 Runner Status",
-        "description": "Returns the status of currently running EC2 runner instances",
-        "operationId": "getEC2RunnerStatus",
-        "tags": [
-          "/v1/runners/ec2"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "EC2 runner status including running instances count and instance details",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "running_instances",
-                    "instances"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "running_instances": {
-                      "type": "integer",
-                      "example": 1
-                    },
-                    "instances": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "instance_id": {
-                            "type": "string"
-                          },
-                          "instance_type": {
-                            "type": "string"
-                          },
-                          "state": {
-                            "type": "string"
-                          },
-                          "availability_zone": {
-                            "type": "string"
-                          },
-                          "launch_time": {
-                            "type": "string"
-                          },
-                          "public_ip": {
-                            "type": "string"
-                          },
-                          "job_id": {
-                            "type": "string"
-                          },
-                          "job_labels": {
-                            "type": "string"
-                          },
-                          "github_repo": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${EC2RunnerHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        },
-        "x-amazon-apigateway-api-key-required": true
-      },
-      "options": {
-        "summary": "CORS preflight for ec2-runner endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "ec2RunnerOptions",
-        "tags": [
-          "/v1/runners/ec2"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/contact-submissions": {
-      "post": {
-        "summary": "Submit Contact Form",
-        "description": "Submits a contact form request with reCAPTCHA verification",
-        "operationId": "submitContactSubmission",
-        "tags": [
-          "/v1/contact-submissions"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "name",
-                  "email",
-                  "message",
-                  "recaptcha_token"
-                ],
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 100
-                  },
-                  "email": {
-                    "type": "string",
-                    "format": "email",
-                    "maxLength": 255
-                  },
-                  "message": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 1000
-                  },
-                  "recaptcha_token": {
-                    "type": "string",
-                    "description": "Google reCAPTCHA v3 token"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Contact form submitted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "message"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input or reCAPTCHA verification failed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${ContactHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for contact submissions endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "contactSubmissionsOptions",
-        "tags": [
-          "/v1/contact-submissions"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type'"
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/rack-configurations": {
       "post": {
         "summary": "Save Rack Configuration",
@@ -2182,6 +1768,1311 @@
         }
       }
     },
+    "/v1/runners": {
+      "post": {
+        "summary": "Route Runner Request",
+        "description": "Routes runner requests to the appropriate endpoint (/v1/runners/ec2 or /v1/runners/ecs) based on job labels. Uses API Gateway -> SQS direct integration.",
+        "operationId": "routeRunnerRequest",
+        "tags": [
+          "/v1/runners"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "job_id",
+                  "job_labels",
+                  "github_repo",
+                  "run_id"
+                ],
+                "properties": {
+                  "job_id": {
+                    "type": "integer",
+                    "description": "GitHub job ID"
+                  },
+                  "job_labels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "GitHub job labels"
+                  },
+                  "github_repo": {
+                    "type": "string",
+                    "description": "GitHub repository (org/repo)"
+                  },
+                  "run_id": {
+                    "type": "integer",
+                    "description": "GitHub workflow run ID"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Runner request accepted and queued for routing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "accepted"
+                    },
+                    "messageId": {
+                      "type": "string",
+                      "description": "SQS message ID for tracking"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "aws",
+          "httpMethod": "POST",
+          "uri": "${RunnersSqsUri}",
+          "credentials": "${ApiGatewaySqsRoleArn}",
+          "requestParameters": {
+            "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
+          },
+          "requestTemplates": {
+            "application/json": "Action=SendMessage&MessageBody=$util.urlEncode($input.body)"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseTemplates": {
+                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.path('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for runners endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "runnersOptions",
+        "tags": [
+          "/v1/runners"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runners/cleanups": {
+      "get": {
+        "summary": "List Runner Cleanups",
+        "description": "Returns the 10 most recent runner cleanup events",
+        "operationId": "listRunnerCleanups",
+        "tags": [
+          "/v1/runners"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent cleanup events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "items"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "runner_type": {
+                            "type": "string"
+                          },
+                          "instances_cleaned": {
+                            "type": "integer"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${RunnersCleanupHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      }
+    },
+    "/v1/runners/cleanups/{limit}": {
+      "get": {
+        "summary": "List Runner Cleanups (Custom Limit)",
+        "description": "Returns the N most recent runner cleanup events",
+        "operationId": "listRunnerCleanupsWithLimit",
+        "tags": [
+          "/v1/runners"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent cleanup events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "items"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "runner_type": {
+                            "type": "string"
+                          },
+                          "instances_cleaned": {
+                            "type": "integer"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${RunnersCleanupHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Maximum number of records to return"
+          }
+        ]
+      }
+    },
+    "/v1/runners/ec2": {
+      "post": {
+        "summary": "Create EC2 Runner",
+        "description": "Creates a new EC2 runner instance",
+        "operationId": "createEC2Runner",
+        "tags": [
+          "/v1/runners/ec2"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "EC2 runner created successfully"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${EC2RunnerHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "get": {
+        "summary": "Get EC2 Runner Status",
+        "description": "Returns the status of currently running EC2 runner instances",
+        "operationId": "getEC2RunnerStatus",
+        "tags": [
+          "/v1/runners/ec2"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "EC2 runner status including running instances count and instance details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "running_instances",
+                    "instances"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "running_instances": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "instances": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "instance_id": {
+                            "type": "string"
+                          },
+                          "instance_type": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string"
+                          },
+                          "availability_zone": {
+                            "type": "string"
+                          },
+                          "launch_time": {
+                            "type": "string"
+                          },
+                          "public_ip": {
+                            "type": "string"
+                          },
+                          "job_id": {
+                            "type": "string"
+                          },
+                          "job_labels": {
+                            "type": "string"
+                          },
+                          "github_repo": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${EC2RunnerHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "x-amazon-apigateway-api-key-required": true
+      },
+      "options": {
+        "summary": "CORS preflight for ec2-runner endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "ec2RunnerOptions",
+        "tags": [
+          "/v1/runners/ec2"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runners/ec2/images": {
+      "post": {
+        "summary": "Build Image for EC2 Runners",
+        "description": "Triggers a build of a new EC2 runner AMI",
+        "operationId": "buildEC2RunnerAMI",
+        "tags": [
+          "/v1/runners/ec2/images"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AMI build started successfully"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${ImageForEC2RunnersHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "get": {
+        "summary": "List Images for EC2 Runners",
+        "description": "Lists all available EC2 runner AMIs",
+        "operationId": "listEC2RunnerAMIs",
+        "tags": [
+          "/v1/runners/ec2/images"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of AMIs"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${ImageForEC2RunnersHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for image-for-ec2-runners endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "imageForEc2RunnersOptions",
+        "tags": [
+          "/v1/runners/ec2/images"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runners/ec2/images/latest": {
+      "get": {
+        "summary": "Get Latest Image for EC2 Runners",
+        "description": "Returns the latest EC2 runner AMI",
+        "operationId": "getLatestEC2RunnerAMI",
+        "tags": [
+          "/v1/runners/ec2/images"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest AMI information"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${ImageForEC2RunnersHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for image-for-ec2-runners latest endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "imageForEc2RunnersLatestOptions",
+        "tags": [
+          "/v1/runners/ec2/images"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runners/ec2/images/{ami_id}": {
+      "delete": {
+        "summary": "Delete Image for EC2 Runners",
+        "description": "Deletes a specific EC2 runner AMI",
+        "operationId": "deleteEC2RunnerAMI",
+        "tags": [
+          "/v1/runners/ec2/images"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ami_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AMI deleted successfully"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${ImageForEC2RunnersHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for image-for-ec2-runners ami_id endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "imageForEc2RunnersAmiIdOptions",
+        "tags": [
+          "/v1/runners/ec2/images"
+        ],
+        "parameters": [
+          {
+            "name": "ami_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'DELETE,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runners/ecs": {
+      "post": {
+        "summary": "Create ECS Runner",
+        "description": "Creates a new ECS runner instance",
+        "operationId": "createEcsRunner",
+        "tags": [
+          "/v1/runners/ecs"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ECS runner created successfully"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${EcsRunnerHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "get": {
+        "summary": "Get ECS Runner Status",
+        "description": "Returns the status of currently running ECS (Fargate) runner instances",
+        "operationId": "getEcsRunnerStatus",
+        "tags": [
+          "/v1/runners/ecs"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ECS runner status including running tasks count and task details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "running_tasks",
+                    "tasks",
+                    "cluster"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "running_tasks": {
+                      "type": "integer",
+                      "example": 2
+                    },
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "task_arn": {
+                            "type": "string"
+                          },
+                          "task_id": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "desired_status": {
+                            "type": "string"
+                          },
+                          "started_at": {
+                            "type": "string"
+                          },
+                          "cpu": {
+                            "type": "string"
+                          },
+                          "memory": {
+                            "type": "string"
+                          },
+                          "job_id": {
+                            "type": "string"
+                          },
+                          "job_labels": {
+                            "type": "string"
+                          },
+                          "github_repo": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "cluster": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${EcsRunnerHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "x-amazon-apigateway-api-key-required": true
+      },
+      "options": {
+        "summary": "CORS preflight for ecs-runner endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "ecsRunnerOptions",
+        "tags": [
+          "/v1/runners/ecs"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runners/ecs/images": {
+      "post": {
+        "summary": "Build Image for ECS Runners",
+        "description": "Triggers a build of a new ECS runner image",
+        "operationId": "buildEcsRunnerImage",
+        "tags": [
+          "/v1/runners/ecs/images"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ECS image build started successfully"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${ImageForEcsRunnersHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "get": {
+        "summary": "List Images for ECS Runners",
+        "description": "Lists all available ECS runner images",
+        "operationId": "listEcsRunnerImages",
+        "tags": [
+          "/v1/runners/ecs/images"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of ECS images"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${ImageForEcsRunnersHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for image-for-ecs-runners endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "imageForEcsRunnersOptions",
+        "tags": [
+          "/v1/runners/ecs/images"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runners/ecs/images/latest": {
+      "get": {
+        "summary": "Get Latest Image for ECS Runners",
+        "description": "Returns the latest ECS runner image",
+        "operationId": "getLatestEcsRunnerImage",
+        "tags": [
+          "/v1/runners/ecs/images"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest ECS image information"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${ImageForEcsRunnersHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for image-for-ecs-runners latest endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "imageForEcsRunnersLatestOptions",
+        "tags": [
+          "/v1/runners/ecs/images"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runners/ecs/images/{digest}": {
+      "get": {
+        "summary": "Get Image for ECS Runners by Digest",
+        "description": "Returns a specific ECS runner image by digest",
+        "operationId": "getEcsRunnerImageByDigest",
+        "tags": [
+          "/v1/runners/ecs/images"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "digest",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ECS image information"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${ImageForEcsRunnersHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "delete": {
+        "summary": "Delete Image for ECS Runners",
+        "description": "Deletes a specific ECS runner image by digest",
+        "operationId": "deleteEcsRunnerImage",
+        "tags": [
+          "/v1/runners/ecs/images"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "digest",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ECS image deleted successfully"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${ImageForEcsRunnersHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for image-for-ecs-runners digest endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "imageForEcsRunnersDigestOptions",
+        "tags": [
+          "/v1/runners/ecs/images"
+        ],
+        "parameters": [
+          {
+            "name": "digest",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,DELETE,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/events": {
+      "post": {
+        "summary": "Save Session Analytics Events",
+        "description": "Saves analytics events for a session",
+        "operationId": "createSessionEvents",
+        "tags": [
+          "/v1/sessions"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "device_id",
+                  "events"
+                ],
+                "properties": {
+                  "device_id": {
+                    "type": "string"
+                  },
+                  "events": {
+                    "type": "array",
+                    "maxItems": 25,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "event_type",
+                        "timestamp"
+                      ],
+                      "properties": {
+                        "event_type": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "session_context": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Events saved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "events_saved"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "events_saved": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${SessionsHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for session events endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "sessionEventsOptions",
+        "tags": [
+          "/v1/sessions"
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type'"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/soc-simulations": {
       "post": {
         "summary": "Simulate Tri-mode SoC",
@@ -2389,174 +3280,6 @@
         }
       }
     },
-    "/v1/sessions/{session_id}/events": {
-      "post": {
-        "summary": "Save Session Analytics Events",
-        "description": "Saves analytics events for a session",
-        "operationId": "createSessionEvents",
-        "tags": [
-          "/v1/sessions"
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "device_id",
-                  "events"
-                ],
-                "properties": {
-                  "device_id": {
-                    "type": "string"
-                  },
-                  "events": {
-                    "type": "array",
-                    "maxItems": 25,
-                    "items": {
-                      "type": "object",
-                      "required": [
-                        "event_type",
-                        "timestamp"
-                      ],
-                      "properties": {
-                        "event_type": {
-                          "type": "string"
-                        },
-                        "timestamp": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  },
-                  "session_context": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Events saved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "events_saved"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "events_saved": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${SessionsHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for session events endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "sessionEventsOptions",
-        "tags": [
-          "/v1/sessions"
-        ],
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type'"
-              }
-            }
-          }
-        }
-      }
-    },
     "/{proxy+}": {
       "x-amazon-apigateway-any-method": {
         "summary": "Catch-all for undefined routes",
@@ -2623,16 +3346,36 @@
   },
   "tags": [
     {
-      "name": "/health",
-      "description": "Health check endpoints"
-    },
-    {
       "name": "/diagnostics",
       "description": "Diagnostics utility endpoints"
     },
     {
+      "name": "/health",
+      "description": "Health check endpoints"
+    },
+    {
       "name": "/v1/contact-submissions",
       "description": "Contact form submission endpoints"
+    },
+    {
+      "name": "/v1/drift-recoveries",
+      "description": "Drift recovery endpoints"
+    },
+    {
+      "name": "/v1/ec2-spot-interruptions",
+      "description": "EC2 Spot interruption handling endpoints"
+    },
+    {
+      "name": "/v1/ecs-task-stops",
+      "description": "ECS task stop handling endpoints"
+    },
+    {
+      "name": "/v1/github-workflows",
+      "description": "GitHub workflows endpoints"
+    },
+    {
+      "name": "/v1/rack-configurations",
+      "description": "Rack configuration endpoints"
     },
     {
       "name": "/v1/runners",
@@ -2643,28 +3386,20 @@
       "description": "EC2 runner management endpoints"
     },
     {
-      "name": "/v1/runners/ecs",
-      "description": "ECS runner management endpoints"
-    },
-    {
       "name": "/v1/runners/ec2/images",
       "description": "EC2 runner AMI management endpoints"
+    },
+    {
+      "name": "/v1/runners/ecs",
+      "description": "ECS runner management endpoints"
     },
     {
       "name": "/v1/runners/ecs/images",
       "description": "ECS runner image management endpoints"
     },
     {
-      "name": "/v1/rack-configurations",
-      "description": "Rack configuration endpoints"
-    },
-    {
       "name": "/v1/sessions",
       "description": "Session analytics endpoints"
-    },
-    {
-      "name": "/v1/github-workflows",
-      "description": "GitHub workflows endpoints"
     },
     {
       "name": "/v1/soc-simulations",
@@ -2683,15 +3418,18 @@
       "name": "/v1/",
       "tags": [
         "/v1/contact-submissions",
+        "/v1/drift-recoveries",
+        "/v1/ec2-spot-interruptions",
+        "/v1/ecs-task-stops",
+        "/v1/github-workflows",
+        "/v1/rack-configurations",
         "/v1/runners",
         "/v1/runners/ec2",
-        "/v1/runners/ecs",
         "/v1/runners/ec2/images",
+        "/v1/runners/ecs",
         "/v1/runners/ecs/images",
-        "/v1/rack-configurations",
         "/v1/sessions",
-        "/v1/soc-simulations",
-        "/v1/github-workflows"
+        "/v1/soc-simulations"
       ]
     }
   ],
