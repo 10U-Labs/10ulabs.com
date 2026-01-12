@@ -1125,11 +1125,11 @@
         }
       }
     },
-    "/v1/github-workflows/webhooks/circuit-breaker": {
+    "/v1/github-workflows/webhooks/circuit-opens": {
       "get": {
-        "summary": "Get Circuit Breaker Status",
-        "description": "Returns the current status of the github workflows webhook circuit breaker including DynamoDB state, SQS event source state, and Lambda concurrency",
-        "operationId": "getGithubWorkflowsCircuitBreakerStatus",
+        "summary": "Get Circuit Opens Status",
+        "description": "Returns the current status of the github workflows webhook circuit opens including DynamoDB state, SQS event source state, and Lambda concurrency",
+        "operationId": "getGithubWorkflowsCircuitOpensStatus",
         "tags": [
           "/v1/github-workflows"
         ],
@@ -1140,7 +1140,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Circuit breaker is healthy (closed state)",
+            "description": "Circuit opens is healthy (closed state)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1183,7 +1183,7 @@
             }
           },
           "503": {
-            "description": "Circuit breaker is unhealthy (open or half-open state)",
+            "description": "Circuit opens is unhealthy (open or half-open state)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1228,9 +1228,9 @@
         }
       },
       "post": {
-        "summary": "Reset Circuit Breaker",
-        "description": "Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
-        "operationId": "resetGithubWorkflowsCircuitBreaker",
+        "summary": "Reset Circuit Opens",
+        "description": "Resets the circuit opens by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
+        "operationId": "resetGithubWorkflowsCircuitOpens",
         "tags": [
           "/v1/github-workflows"
         ],
@@ -1241,7 +1241,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Circuit breaker reset successfully",
+            "description": "Circuit opens reset successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -1258,7 +1258,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "Circuit breaker reset"
+                      "example": "Circuit opens reset"
                     },
                     "details": {
                       "type": "object",
@@ -1342,9 +1342,9 @@
         }
       },
       "options": {
-        "summary": "CORS preflight for circuit breaker endpoint",
+        "summary": "CORS preflight for circuit opens endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "githubWorkflowsCircuitBreakerOptions",
+        "operationId": "githubWorkflowsCircuitOpensOptions",
         "tags": [
           "/v1/github-workflows"
         ],
@@ -1388,11 +1388,11 @@
         }
       }
     },
-    "/v1/github-workflows/webhooks/circuit-breaker/reset": {
+    "/v1/github-workflows/webhooks/circuit-opens/reset": {
       "post": {
-        "summary": "Reset Circuit Breaker (Deprecated)",
-        "description": "DEPRECATED: Use POST /v1/github-workflows/webhooks/circuit-breaker instead. Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
-        "operationId": "resetGithubWorkflowsCircuitBreakerLegacy",
+        "summary": "Reset Circuit Opens (Deprecated)",
+        "description": "DEPRECATED: Use POST /v1/github-workflows/webhooks/circuit-opens instead. Resets the circuit opens by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
+        "operationId": "resetGithubWorkflowsCircuitOpensLegacy",
         "deprecated": true,
         "tags": [
           "/v1/github-workflows"
@@ -1404,7 +1404,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Circuit breaker reset successfully"
+            "description": "Circuit opens reset successfully"
           },
           "500": {
             "description": "Partial or complete failure during reset"
@@ -1417,9 +1417,9 @@
         }
       },
       "options": {
-        "summary": "CORS preflight for circuit breaker reset endpoint",
+        "summary": "CORS preflight for circuit opens reset endpoint",
         "description": "Handles CORS preflight requests",
-        "operationId": "githubWorkflowsCircuitBreakerResetOptions",
+        "operationId": "githubWorkflowsCircuitOpensResetOptions",
         "tags": [
           "/v1/github-workflows"
         ],
