@@ -18,6 +18,17 @@ SAMPLE_GRAPH = {
 
 SAMPLE_WAITING = {"www_app": {"missing": ["api_common"], "satisfied": ["www_common"]}}
 
+FIXED_SINCE = datetime(2026, 1, 11, 2, 0, 0, tzinfo=timezone.utc)
+
+
+def get_api_url_from_check_workflow(compute_descendants: Any, workflow_key: str) -> str:
+    """Helper to capture the API URL from check_workflow_completed."""
+    mock_result = MagicMock()
+    mock_result.stdout = ""
+    with patch("compute_descendants.subprocess.run", return_value=mock_result) as mock_run:
+        compute_descendants.check_workflow_completed(workflow_key, "owner/repo", FIXED_SINCE)
+    return mock_run.call_args[0][0][2]
+
 
 class TestParseArgs:
     """Tests for parse_args function."""
@@ -131,48 +142,18 @@ class TestCheckWorkflowCompleted:
         assert result is False
 
     def test_uses_workflow_specific_api_endpoint(self, compute_descendants) -> None:
-        """Test that API call uses workflow-specific endpoint with server-side filters."""
-        mock_result = MagicMock()
-        mock_result.stdout = "12345\n"
-        since = datetime(2026, 1, 11, 2, 0, 0, tzinfo=timezone.utc)
-
-        with patch("compute_descendants.subprocess.run", return_value=mock_result) as mock_run:
-            compute_descendants.check_workflow_completed(
-                "www_common", "owner/repo", since
-            )
-
-        call_args = mock_run.call_args[0][0]
-        api_url = call_args[2]
+        """Test that API call uses workflow-specific endpoint."""
+        api_url = get_api_url_from_check_workflow(compute_descendants, "www_common")
         assert "actions/workflows/www_common.yml/runs" in api_url
 
     def test_api_url_includes_status_filter(self, compute_descendants) -> None:
         """Test that API URL includes status=success filter."""
-        mock_result = MagicMock()
-        mock_result.stdout = ""
-        since = datetime(2026, 1, 11, 2, 0, 0, tzinfo=timezone.utc)
-
-        with patch("compute_descendants.subprocess.run", return_value=mock_result) as mock_run:
-            compute_descendants.check_workflow_completed(
-                "bootstrap", "owner/repo", since
-            )
-
-        call_args = mock_run.call_args[0][0]
-        api_url = call_args[2]
+        api_url = get_api_url_from_check_workflow(compute_descendants, "bootstrap")
         assert "status=success" in api_url
 
     def test_api_url_includes_created_filter(self, compute_descendants) -> None:
         """Test that API URL includes created date filter."""
-        mock_result = MagicMock()
-        mock_result.stdout = ""
-        since = datetime(2026, 1, 11, 2, 0, 0, tzinfo=timezone.utc)
-
-        with patch("compute_descendants.subprocess.run", return_value=mock_result) as mock_run:
-            compute_descendants.check_workflow_completed(
-                "bootstrap", "owner/repo", since
-            )
-
-        call_args = mock_run.call_args[0][0]
-        api_url = call_args[2]
+        api_url = get_api_url_from_check_workflow(compute_descendants, "bootstrap")
         assert "created=%3E%3D2026-01-11T02:00:00Z" in api_url
 
 
