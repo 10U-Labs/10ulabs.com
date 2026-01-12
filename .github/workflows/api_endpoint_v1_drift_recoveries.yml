@@ -226,7 +226,7 @@ jobs:
               $FLAGS
           done
 name: >-
-  Ensuring drift recoveries handler
+  Ensuring the /v1/drift-recoveries API endpoint
   exists and is properly configured
 on:
   workflow_dispatch:
