@@ -89,26 +89,6 @@ class TestFindDescendants:
         assert result == []
 
 
-class TestGetWorkflowName:
-    """Tests for get_workflow_name function."""
-
-    def test_returns_name_from_graph(self, compute_descendants) -> None:
-        """Test that workflow name is returned from graph."""
-        result = compute_descendants.get_workflow_name(SAMPLE_GRAPH, "bootstrap")
-        assert result == "Bootstrap"
-
-    def test_returns_key_if_no_name(self, compute_descendants) -> None:
-        """Test that workflow key is returned if no name in graph."""
-        graph: dict[str, Any] = {"test": {"depends_on": []}}
-        result = compute_descendants.get_workflow_name(graph, "test")
-        assert result == "test"
-
-    def test_returns_key_for_unknown_workflow(self, compute_descendants) -> None:
-        """Test that workflow key is returned for unknown workflow."""
-        result = compute_descendants.get_workflow_name(SAMPLE_GRAPH, "unknown")
-        assert result == "unknown"
-
-
 class TestCheckWorkflowCompleted:
     """Tests for check_workflow_completed function."""
 

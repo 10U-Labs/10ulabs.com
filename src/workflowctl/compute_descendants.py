@@ -56,14 +56,8 @@ def find_descendants(graph: dict[str, Any], workflow: str) -> list[str]:
     ]
 
 
-def get_workflow_name(graph: dict[str, Any], workflow_key: str) -> str:
-    """Get the display name for a workflow from the graph."""
-    name: str = graph.get(workflow_key, {}).get("name", workflow_key)
-    return name
-
-
 def check_workflow_completed(
-    workflow_name: str,
+    workflow_key: str,
     repo: str,
     since: datetime
 ) -> bool:
@@ -72,10 +66,9 @@ def check_workflow_completed(
     result = subprocess.run(
         [
             "gh", "api",
-            f"repos/{repo}/actions/runs",
-            "-q", f'.workflow_runs[] | select(.name == "{workflow_name}" and '
-                  f'.conclusion == "success" and .created_at >= "{since_str}") '
-                  f'| .id',
+            f"repos/{repo}/actions/workflows/{workflow_key}.yml/runs"
+            f"?status=success&created=%3E%3D{since_str}",
+            "-q", ".workflow_runs[0].id",
         ],
         capture_output=True,
         text=True,
@@ -109,8 +102,7 @@ def get_dependency_status(
     if other_deps:
         since = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
         for dep in other_deps:
-            dep_name = get_workflow_name(graph, dep)
-            if check_workflow_completed(dep_name, repo, since):
+            if check_workflow_completed(dep, repo, since):
                 satisfied.append(dep)
             else:
                 missing.append(dep)
