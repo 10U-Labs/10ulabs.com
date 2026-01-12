@@ -2,9 +2,9 @@
 
 
 def test_terraform_version_constraint(api_common_docker_repository_dir):
-    """Test that Terraform version constraint is >= 1.10."""
+    """Test that Terraform version constraint is >= 1.14."""
     content = (api_common_docker_repository_dir / "providers.tf").read_text()
-    assert 'required_version = ">= 1.10"' in content
+    assert 'required_version = ">= 1.14"' in content
 
 
 def test_aws_provider_source(api_common_docker_repository_dir):
