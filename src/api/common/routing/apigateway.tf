@@ -1,19 +1,24 @@
 locals {
   # Lambda function names - sourced from shared module for consistency
   lambda_function_names = {
-    catchall              = module.common.lambda_handler_names.catchall
-    circuit_breaker_reset = "${module.common.resource_prefix}CircuitBreakerReset"
-    contact               = module.common.lambda_handler_names.contact
-    ec2_runner            = module.common.lambda_handler_names.ec2_runner
-    ecs_runner            = module.common.lambda_handler_names.ecs_runner
-    echo                  = module.common.lambda_handler_names.echo
-    health                = module.common.lambda_handler_names.health
-    image_for_ec2_runners = module.common.lambda_handler_names.image_for_ec2_runners
-    image_for_ecs_runners = module.common.lambda_handler_names.image_for_ecs_runners
-    rack_configurations   = module.common.lambda_handler_names.rack_configurations
-    sessions              = module.common.lambda_handler_names.sessions
-    simulation_soc        = module.common.lambda_handler_names.simulation_soc
-    webhook               = module.common.lambda_handler_names.webhook
+    catchall                 = module.common.lambda_handler_names.catchall
+    circuit_opens            = module.common.lambda_handler_names.circuit_opens
+    contact                  = module.common.lambda_handler_names.contact
+    drift_recoveries         = module.common.lambda_handler_names.drift_recoveries
+    ec2_runner               = module.common.lambda_handler_names.ec2_runner
+    ec2_spot_interruptions   = module.common.lambda_handler_names.ec2_spot_interruptions
+    ecs_runner               = module.common.lambda_handler_names.ecs_runner
+    ecs_task_stops           = module.common.lambda_handler_names.ecs_task_stops
+    echo                     = module.common.lambda_handler_names.echo
+    github_workflows_retries = module.common.lambda_handler_names.github_workflows_retries
+    health                   = module.common.lambda_handler_names.health
+    image_for_ec2_runners    = module.common.lambda_handler_names.image_for_ec2_runners
+    image_for_ecs_runners    = module.common.lambda_handler_names.image_for_ecs_runners
+    rack_configurations      = module.common.lambda_handler_names.rack_configurations
+    runners_cleanup          = module.common.lambda_handler_names.runners_cleanup
+    sessions                 = module.common.lambda_handler_names.sessions
+    simulation_soc           = module.common.lambda_handler_names.simulation_soc
+    webhook                  = module.common.lambda_handler_names.webhook
   }
 
   # Helper to construct Lambda ARN from function name
@@ -23,18 +28,23 @@ locals {
   apigw_integration_prefix = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions"
 
   # Construct all integration ARNs directly from function names
-  catchall_integration_arn  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.catchall}/invocations"
-  circuit_breaker_reset_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.circuit_breaker_reset}/invocations"
-  contact_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.contact}/invocations"
-  ec2_runner_arn            = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ec2_runner}/invocations"
-  ecs_runner_arn            = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ecs_runner}/invocations"
-  echo_arn                  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.echo}/invocations"
-  health_arn                = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.health}/invocations"
-  image_for_ec2_runners_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ec2_runners}/invocations"
-  image_for_ecs_runners_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ecs_runners}/invocations"
-  rack_configurations_arn   = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_configurations}/invocations"
-  sessions_arn              = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.sessions}/invocations"
-  simulation_soc_arn        = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
+  catchall_integration_arn     = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.catchall}/invocations"
+  circuit_opens_arn            = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.circuit_opens}/invocations"
+  contact_arn                  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.contact}/invocations"
+  drift_recoveries_arn         = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.drift_recoveries}/invocations"
+  ec2_runner_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ec2_runner}/invocations"
+  ec2_spot_interruptions_arn   = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ec2_spot_interruptions}/invocations"
+  ecs_runner_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ecs_runner}/invocations"
+  ecs_task_stops_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ecs_task_stops}/invocations"
+  echo_arn                     = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.echo}/invocations"
+  github_workflows_retries_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.github_workflows_retries}/invocations"
+  health_arn                   = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.health}/invocations"
+  image_for_ec2_runners_arn    = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ec2_runners}/invocations"
+  image_for_ecs_runners_arn    = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ecs_runners}/invocations"
+  rack_configurations_arn      = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_configurations}/invocations"
+  runners_cleanup_arn          = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.runners_cleanup}/invocations"
+  sessions_arn                 = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.sessions}/invocations"
+  simulation_soc_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
 
   # SQS integration for /v1/github-workflows/webhooks (API Gateway → SQS direct, no Lambda in hot path)
   # Construct queue name from shared module (avoid dependency on github_workflows remote state)
@@ -46,18 +56,23 @@ locals {
   runners_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.runners_queue_name}"
 
   openapi_spec = templatefile("${path.module}/../../../www/api/openapi.json", {
-    CatchAllHandlerArn           = local.catchall_integration_arn
-    CircuitBreakerResetArn       = local.circuit_breaker_reset_arn
-    ContactHandlerArn            = local.contact_arn
-    EcsRunnerHandlerArn          = local.ecs_runner_arn
-    EC2RunnerHandlerArn          = local.ec2_runner_arn
-    EchoHandlerArn               = local.echo_arn
-    HealthHandlerArn             = local.health_arn
-    ImageForEcsRunnersHandlerArn = local.image_for_ecs_runners_arn
-    ImageForEC2RunnersHandlerArn = local.image_for_ec2_runners_arn
-    RackConfigurationsHandlerArn = local.rack_configurations_arn
-    SessionsHandlerArn           = local.sessions_arn
-    SimulationSocHandlerArn      = local.simulation_soc_arn
+    CatchAllHandlerArn               = local.catchall_integration_arn
+    CircuitOpensHandlerArn           = local.circuit_opens_arn
+    ContactHandlerArn                = local.contact_arn
+    DriftRecoveriesHandlerArn        = local.drift_recoveries_arn
+    EC2RunnerHandlerArn              = local.ec2_runner_arn
+    Ec2SpotInterruptionsHandlerArn   = local.ec2_spot_interruptions_arn
+    EcsRunnerHandlerArn              = local.ecs_runner_arn
+    EcsTaskStopsHandlerArn           = local.ecs_task_stops_arn
+    EchoHandlerArn                   = local.echo_arn
+    GithubWorkflowsRetriesHandlerArn = local.github_workflows_retries_arn
+    HealthHandlerArn                 = local.health_arn
+    ImageForEC2RunnersHandlerArn     = local.image_for_ec2_runners_arn
+    ImageForEcsRunnersHandlerArn     = local.image_for_ecs_runners_arn
+    RackConfigurationsHandlerArn     = local.rack_configurations_arn
+    RunnersCleanupHandlerArn         = local.runners_cleanup_arn
+    SessionsHandlerArn               = local.sessions_arn
+    SimulationSocHandlerArn          = local.simulation_soc_arn
     # SQS direct integration for /v1/github-workflows/webhooks webhook ingress
     WebhookIngressSqsUri = local.webhook_ingress_sqs_uri
     ApiGatewaySqsRoleArn = aws_iam_role.api_gateway_sqs.arn

@@ -1,13 +1,13 @@
-resource "aws_cloudwatch_event_rule" "circuit_breaker_remediation" {
-  name        = "${local.resource_prefix}-circuit-breaker-remediation"
-  description = "Triggers circuit breaker remediation when alarm state changes"
+resource "aws_cloudwatch_event_rule" "circuit_open_remediations" {
+  name        = "${local.resource_prefix}-circuit-open-remediation"
+  description = "Triggers circuit open remediation when alarm state changes"
 
   event_pattern = jsonencode({
     source      = ["aws.cloudwatch"]
     detail-type = ["CloudWatch Alarm State Change"]
     detail = {
       alarmName = [
-        aws_cloudwatch_metric_alarm.circuit_breaker_open.alarm_name,
+        aws_cloudwatch_metric_alarm.circuit_open_open.alarm_name,
         aws_cloudwatch_metric_alarm.webhook_handler_errors.alarm_name
       ]
       state = {
@@ -17,22 +17,22 @@ resource "aws_cloudwatch_event_rule" "circuit_breaker_remediation" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-circuit-breaker-remediation"
+    Name = "${local.resource_prefix}-circuit-open-remediation"
   })
 }
 
-resource "aws_cloudwatch_event_target" "circuit_breaker_remediation" {
-  rule      = aws_cloudwatch_event_rule.circuit_breaker_remediation.name
-  target_id = "CircuitBreakerRemediationLambda"
-  arn       = aws_lambda_function.circuit_breaker_remediation.arn
+resource "aws_cloudwatch_event_target" "circuit_open_remediations" {
+  rule      = aws_cloudwatch_event_rule.circuit_open_remediations.name
+  target_id = "CircuitOpenRemediationsLambda"
+  arn       = aws_lambda_function.circuit_open_remediations.arn
 }
 
-resource "aws_lambda_permission" "circuit_breaker_remediation_eventbridge" {
+resource "aws_lambda_permission" "circuit_open_remediations_eventbridge" {
   statement_id  = "AllowEventBridgeInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.circuit_breaker_remediation.function_name
+  function_name = aws_lambda_function.circuit_open_remediations.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.circuit_breaker_remediation.arn
+  source_arn    = aws_cloudwatch_event_rule.circuit_open_remediations.arn
 }
 
 resource "aws_cloudwatch_event_rule" "dlq_reprocessor" {
@@ -59,28 +59,28 @@ resource "aws_lambda_permission" "dlq_reprocessor_eventbridge" {
   source_arn    = aws_cloudwatch_event_rule.dlq_reprocessor.arn
 }
 
-resource "aws_cloudwatch_event_rule" "circuit_breaker_recovery" {
-  name                = "${local.resource_prefix}-circuit-breaker-recovery"
-  description         = "Attempts automatic recovery of circuit breaker every 5 minutes"
+resource "aws_cloudwatch_event_rule" "circuit_open_recoveries" {
+  name                = "${local.resource_prefix}-circuit-open-recovery"
+  description         = "Attempts automatic recovery of circuit open every 5 minutes"
   schedule_expression = "rate(5 minutes)"
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-circuit-breaker-recovery"
+    Name = "${local.resource_prefix}-circuit-open-recovery"
   })
 }
 
-resource "aws_cloudwatch_event_target" "circuit_breaker_recovery" {
-  rule      = aws_cloudwatch_event_rule.circuit_breaker_recovery.name
-  target_id = "CircuitBreakerRecoveryLambda"
-  arn       = aws_lambda_function.circuit_breaker_recovery.arn
+resource "aws_cloudwatch_event_target" "circuit_open_recoveries" {
+  rule      = aws_cloudwatch_event_rule.circuit_open_recoveries.name
+  target_id = "CircuitOpenRecoveriesLambda"
+  arn       = aws_lambda_function.circuit_open_recoveries.arn
 }
 
-resource "aws_lambda_permission" "circuit_breaker_recovery_eventbridge" {
+resource "aws_lambda_permission" "circuit_open_recoveries_eventbridge" {
   statement_id  = "AllowEventBridgeInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.circuit_breaker_recovery.function_name
+  function_name = aws_lambda_function.circuit_open_recoveries.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.circuit_breaker_recovery.arn
+  source_arn    = aws_cloudwatch_event_rule.circuit_open_recoveries.arn
 }
 
 # Note: ECS task stopped and EC2 spot interruption EventBridge rules removed

@@ -1,8 +1,8 @@
-resource "aws_cloudwatch_metric_alarm" "circuit_breaker_open" {
-  alarm_name          = "${local.resource_prefix}-circuit-breaker-open"
+resource "aws_cloudwatch_metric_alarm" "circuit_open_open" {
+  alarm_name          = "${local.resource_prefix}-circuit-open-triggered"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 2
-  metric_name         = "CircuitBreakerState"
+  metric_name         = "CircuitOpenState"
   namespace           = "WebhookRouter"
   period              = 60
   statistic           = "Maximum"
@@ -10,19 +10,19 @@ resource "aws_cloudwatch_metric_alarm" "circuit_breaker_open" {
   datapoints_to_alarm = 2
   treat_missing_data  = "notBreaching"
 
-  alarm_description = "Circuit breaker has entered OPEN state - webhook processing is failing"
-  alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
+  alarm_description = "Circuit open has entered OPEN state - webhook processing is failing"
+  alarm_actions     = [aws_sns_topic.circuit_open_alerts.arn]
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-circuit-breaker-open"
+    Name = "${local.resource_prefix}-circuit-open-triggered"
   })
 }
 
-resource "aws_cloudwatch_metric_alarm" "circuit_breaker_high_failures" {
-  alarm_name          = "${local.resource_prefix}-circuit-breaker-high-failures"
+resource "aws_cloudwatch_metric_alarm" "circuit_open_high_failures" {
+  alarm_name          = "${local.resource_prefix}-circuit-open-high-failures"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 3
-  metric_name         = "CircuitBreakerState"
+  metric_name         = "CircuitOpenState"
   namespace           = "WebhookRouter"
   period              = 60
   statistic           = "Average"
@@ -30,11 +30,11 @@ resource "aws_cloudwatch_metric_alarm" "circuit_breaker_high_failures" {
   datapoints_to_alarm = 2
   treat_missing_data  = "notBreaching"
 
-  alarm_description = "Circuit breaker failure rate is elevated"
-  alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
+  alarm_description = "Circuit open failure rate is elevated"
+  alarm_actions     = [aws_sns_topic.circuit_open_alerts.arn]
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-circuit-breaker-high-failures"
+    Name = "${local.resource_prefix}-circuit-open-high-failures"
   })
 }
 
@@ -80,7 +80,7 @@ resource "aws_cloudwatch_metric_alarm" "webhook_handler_errors" {
   datapoints_to_alarm = 2
   treat_missing_data  = "notBreaching"
   alarm_description   = "Webhook handler Lambda error rate exceeds 5%"
-  alarm_actions       = [aws_sns_topic.circuit_breaker_alerts.arn]
+  alarm_actions       = [aws_sns_topic.circuit_open_alerts.arn]
 
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-webhook-handler-errors"
@@ -104,7 +104,7 @@ resource "aws_cloudwatch_metric_alarm" "runners_dlq_messages" {
   }
 
   alarm_description = "Runners router DLQ has messages - runner requests are failing"
-  alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
+  alarm_actions     = [aws_sns_topic.circuit_open_alerts.arn]
 
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-runners-dlq-messages"

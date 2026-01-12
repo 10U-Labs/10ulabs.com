@@ -9,11 +9,11 @@ import re
 class TestSNSTopicsExist:
     """Test that expected SNS topics are defined."""
 
-    def test_circuit_breaker_alerts_topic_exists(self, sns_tf_content):
-        """Verify circuit_breaker_alerts SNS topic is defined."""
-        pattern = r'resource\s+"aws_sns_topic"\s+"circuit_breaker_alerts"'
+    def test_circuit_open_alerts_topic_exists(self, sns_tf_content):
+        """Verify circuit_open_alerts SNS topic is defined."""
+        pattern = r'resource\s+"aws_sns_topic"\s+"circuit_open_alerts"'
         assert re.search(pattern, sns_tf_content), (
-            "SNS topic 'circuit_breaker_alerts' not found in sns.tf"
+            "SNS topic 'circuit_open_alerts' not found in sns.tf"
         )
 
     def test_topic_count_is_at_least_one(self, sns_tf_content):
@@ -45,9 +45,9 @@ class TestSNSSubscriptions:
 
     def test_email_subscription_exists(self, sns_tf_content):
         """Verify email subscription is defined."""
-        pattern = r'resource\s+"aws_sns_topic_subscription"\s+"circuit_breaker_email"'
+        pattern = r'resource\s+"aws_sns_topic_subscription"\s+"circuit_open_email"'
         assert re.search(pattern, sns_tf_content), (
-            "Email subscription 'circuit_breaker_email' not found in sns.tf"
+            "Email subscription 'circuit_open_email' not found in sns.tf"
         )
 
     def test_email_subscription_uses_email_protocol(self, sns_tf_content):
@@ -58,9 +58,9 @@ class TestSNSSubscriptions:
 
     def test_email_subscription_references_topic(self, sns_tf_content):
         """Verify email subscription references the alerts topic."""
-        pattern = r'topic_arn\s*=\s*aws_sns_topic\.circuit_breaker_alerts\.arn'
+        pattern = r'topic_arn\s*=\s*aws_sns_topic\.circuit_open_alerts\.arn'
         assert re.search(pattern, sns_tf_content), (
-            "Email subscription should reference circuit_breaker_alerts topic"
+            "Email subscription should reference circuit_open_alerts topic"
         )
 
     def test_email_endpoint_uses_local_variable(self, sns_tf_content):

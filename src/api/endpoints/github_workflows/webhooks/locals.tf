@@ -28,13 +28,13 @@ locals {
   ssm_parameter_name_for_webhook_secret = "/api/webhook-secret"
 
   # Alerting
-  circuit_breaker_alert_email = "jdrowne@10ulabs.com"
+  circuit_open_alert_email = "jdrowne@10ulabs.com"
 
   # Lambda function names (single source of truth)
-  circuit_breaker_reset_function_name       = "${module.common.resource_prefix}CircuitBreakerReset"
-  circuit_breaker_remediation_function_name = "${module.common.resource_prefix}CircuitBreakerRemediation"
-  dlq_reprocessor_function_name             = "${module.common.resource_prefix}DLQReprocessor"
-  circuit_breaker_recovery_function_name    = "${module.common.resource_prefix}CircuitBreakerRecovery"
+  circuit_opens_function_name             = module.common.lambda_handler_names.circuit_opens
+  circuit_open_remediations_function_name = module.common.lambda_handler_names.circuit_open_remediations
+  circuit_open_recoveries_function_name   = module.common.lambda_handler_names.circuit_open_recoveries
+  dlq_reprocessor_function_name           = "${module.common.resource_prefix}DLQReprocessor"
   # Note: drift_recovery removed - migrated to /v1/drift-recoveries endpoint
   # Note: spot_interruption_handler removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
   # Note: stale_runner_cleanup removed - migrated to /v1/runners/cleanups endpoint
@@ -43,11 +43,11 @@ locals {
   ignored_events_archiver_function_name = "${module.common.resource_prefix}IgnoredEventsArchiver"
 
   # IAM role names (single source of truth)
-  lambda_runners_handler_role_name      = "${module.common.lambda_handler_names.webhook}ServiceRole"
-  circuit_breaker_reset_role_name       = "${module.common.resource_prefix}CircuitBreakerResetRole"
-  circuit_breaker_remediation_role_name = "${module.common.resource_prefix}CircuitBreakerRemediationRole"
-  dlq_reprocessor_role_name             = "${module.common.resource_prefix}DLQReprocessorRole"
-  circuit_breaker_recovery_role_name    = "${module.common.resource_prefix}CircuitBreakerRecoveryRole"
+  lambda_runners_handler_role_name    = "${module.common.lambda_handler_names.webhook}ServiceRole"
+  circuit_opens_role_name             = "${module.common.lambda_handler_names.circuit_opens}Role"
+  circuit_open_remediations_role_name = "${module.common.lambda_handler_names.circuit_open_remediations}Role"
+  circuit_open_recoveries_role_name   = "${module.common.lambda_handler_names.circuit_open_recoveries}Role"
+  dlq_reprocessor_role_name           = "${module.common.resource_prefix}DLQReprocessorRole"
   # Note: drift_recovery_role removed - migrated to /v1/drift-recoveries endpoint
   # Note: spot_interruption_handler_role removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
   # Note: stale_runner_cleanup_role removed - migrated to /v1/runners/cleanups endpoint

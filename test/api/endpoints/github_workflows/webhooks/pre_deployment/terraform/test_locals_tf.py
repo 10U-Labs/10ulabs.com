@@ -120,26 +120,26 @@ class TestTableNameLocals:
             "idempotency_table_name local not found"
         )
 
-    def test_circuit_breaker_table_name_defined(self, locals_tf_content):
-        """Verify circuit_breaker_state_table_name is defined."""
-        assert 'circuit_breaker' in locals_tf_content, (
-            "circuit_breaker table name local not found"
+    def test_circuit_open_table_name_defined(self, locals_tf_content):
+        """Verify circuit_open_state_table_name is defined."""
+        assert 'circuit_open' in locals_tf_content, (
+            "circuit_open table name local not found"
         )
 
 
 class TestFunctionNameLocals:
     """Test Lambda function name locals."""
 
-    def test_circuit_breaker_reset_function_name_defined(self, locals_tf_content):
-        """Verify circuit_breaker_reset_function_name is defined."""
-        assert 'circuit_breaker_reset_function_name' in locals_tf_content, (
-            "circuit_breaker_reset_function_name local not found"
+    def test_circuit_opens_function_name_defined(self, locals_tf_content):
+        """Verify circuit_opens_function_name is defined."""
+        assert 'circuit_opens_function_name' in locals_tf_content, (
+            "circuit_opens_function_name local not found"
         )
 
-    def test_circuit_breaker_remediation_function_name_defined(self, locals_tf_content):
-        """Verify circuit_breaker_remediation_function_name is defined."""
-        assert 'circuit_breaker_remediation_function_name' in locals_tf_content, (
-            "circuit_breaker_remediation_function_name local not found"
+    def test_circuit_open_remediations_function_name_defined(self, locals_tf_content):
+        """Verify circuit_open_remediations_function_name is defined."""
+        assert 'circuit_open_remediations_function_name' in locals_tf_content, (
+            "circuit_open_remediations_function_name local not found"
         )
 
     def test_dlq_reprocessor_function_name_defined(self, locals_tf_content):
@@ -148,10 +148,10 @@ class TestFunctionNameLocals:
             "dlq_reprocessor_function_name local not found"
         )
 
-    def test_circuit_breaker_recovery_function_name_defined(self, locals_tf_content):
-        """Verify circuit_breaker_recovery_function_name is defined."""
-        assert 'circuit_breaker_recovery_function_name' in locals_tf_content, (
-            "circuit_breaker_recovery_function_name local not found"
+    def test_circuit_open_recoveries_function_name_defined(self, locals_tf_content):
+        """Verify circuit_open_recoveries_function_name is defined."""
+        assert 'circuit_open_recoveries_function_name' in locals_tf_content, (
+            "circuit_open_recoveries_function_name local not found"
         )
 
     def test_drift_recovery_function_name_defined(self, locals_tf_content):
@@ -190,10 +190,10 @@ class TestRoleNameLocals:
             "lambda_runners_handler_role_name local not found"
         )
 
-    def test_circuit_breaker_reset_role_name_defined(self, locals_tf_content):
-        """Verify circuit_breaker_reset_role_name is defined."""
-        assert 'circuit_breaker_reset_role_name' in locals_tf_content, (
-            "circuit_breaker_reset_role_name local not found"
+    def test_circuit_opens_role_name_defined(self, locals_tf_content):
+        """Verify circuit_opens_role_name is defined."""
+        assert 'circuit_opens_role_name' in locals_tf_content, (
+            "circuit_opens_role_name local not found"
         )
 
 
@@ -255,10 +255,10 @@ class TestSSMParameterLocals:
 class TestAlertingLocals:
     """Test alerting configuration locals."""
 
-    def test_circuit_breaker_alert_email_defined(self, locals_tf_content):
-        """Verify circuit_breaker_alert_email is defined."""
-        assert 'circuit_breaker_alert_email' in locals_tf_content, (
-            "circuit_breaker_alert_email local not found"
+    def test_circuit_open_alert_email_defined(self, locals_tf_content):
+        """Verify circuit_open_alert_email is defined."""
+        assert 'circuit_open_alert_email' in locals_tf_content, (
+            "circuit_open_alert_email local not found"
         )
 
     def test_alert_email_uses_variable_or_local(self, locals_tf_content):

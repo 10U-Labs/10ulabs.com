@@ -22,13 +22,13 @@ LAMBDA_FUNCTIONS = [
         "description_contains": "archive",
     },
     {
-        "resource_name": "circuit_breaker_reset",
-        "handler": "circuit_breaker_reset.lambda_handler",
+        "resource_name": "circuit_opens",
+        "handler": "circuit_opens.lambda_handler",
         "description_contains": "reset",
     },
     {
-        "resource_name": "circuit_breaker_remediation",
-        "handler": "circuit_breaker_remediation.lambda_handler",
+        "resource_name": "circuit_open_remediations",
+        "handler": "circuit_open_remediations.lambda_handler",
         "description_contains": "remediation",
     },
     {
@@ -37,8 +37,8 @@ LAMBDA_FUNCTIONS = [
         "description_contains": "reprocess",
     },
     {
-        "resource_name": "circuit_breaker_recovery",
-        "handler": "circuit_breaker_recovery.lambda_handler",
+        "resource_name": "circuit_open_recoveries",
+        "handler": "circuit_open_recoveries.lambda_handler",
         "description_contains": "recovery",
     },
     # Note: drift_recovery removed - migrated to /v1/drift-recoveries endpoint
@@ -234,7 +234,7 @@ class TestLambdaEnvironmentVariables:
             "API_BASE_URL",
             "API_KEY_PARAMETER_NAME",
             # Note: CANCELLATION_QUEUE_URL removed - runners are ephemeral
-            "CIRCUIT_BREAKER_TABLE_NAME",
+            "CIRCUIT_OPEN_TABLE_NAME",
             "GITHUB_REPO",
             "GITHUB_TOKEN_SECRET_NAME",
             "IDEMPOTENCY_TABLE_NAME",

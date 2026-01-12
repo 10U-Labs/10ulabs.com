@@ -30,10 +30,10 @@ LAMBDA_DEFINITIONS = [
     ("runners_handler", "webhook_router.py", "lambda_handler"),
     # Note: runner_terminator removed - runners are ephemeral and self-terminate
     ("ignored_events_archiver", "ignored_events_archiver.py", "lambda_handler"),
-    ("circuit_breaker_reset", "circuit_breaker_reset.py", "lambda_handler"),
-    ("circuit_breaker_remediation", "circuit_breaker_remediation.py", "lambda_handler"),
+    ("circuit_opens", "circuit_opens.py", "lambda_handler"),
+    ("circuit_open_remediations", "circuit_open_remediations.py", "lambda_handler"),
     ("dlq_reprocessor", "dlq_reprocessor.py", "handler"),
-    ("circuit_breaker_recovery", "circuit_breaker_recovery.py", "lambda_handler"),
+    ("circuit_open_recoveries", "circuit_open_recoveries.py", "lambda_handler"),
     # Note: drift_recovery, spot_interruption_handler, stale_runner_cleanup removed
     # - Migrated to separate endpoints per API restructuring plan
 ]
@@ -42,7 +42,7 @@ LAMBDA_DEFINITIONS = [
 COMMON_MODULES = [
     "common/__init__.py",
     "common/aws_clients.py",
-    "common/circuit_breaker_utils.py",
+    "common/circuit_open_utils.py",
     "common/cloudwatch.py",
     "common/ec2_utils.py",
     "common/ecs_utils.py",

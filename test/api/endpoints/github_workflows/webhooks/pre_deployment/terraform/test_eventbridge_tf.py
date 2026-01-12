@@ -10,9 +10,9 @@ import pytest
 # Expected EventBridge rules (rule_name -> target_name)
 # Most rules have matching target names, but some don't
 EVENTBRIDGE_RULES = [
-    "circuit_breaker_remediation",
+    "circuit_open_remediations",
     "dlq_reprocessor",
-    "circuit_breaker_recovery",
+    "circuit_open_recoveries",
     "ecs_task_stopped",
     "ec2_spot_interruption",
     "stale_runner_cleanup_schedule",
@@ -26,13 +26,13 @@ RULE_TO_TARGET_NAME = {
 # Rules that use schedule expressions
 SCHEDULED_RULES = [
     "dlq_reprocessor",
-    "circuit_breaker_recovery",
+    "circuit_open_recoveries",
     "stale_runner_cleanup_schedule",
 ]
 
 # Rules that use event patterns
 EVENT_PATTERN_RULES = [
-    "circuit_breaker_remediation",
+    "circuit_open_remediations",
     "ecs_task_stopped",
     "ec2_spot_interruption",
 ]
@@ -135,10 +135,10 @@ class TestScheduledRules:
             "DLQ reprocessor should run every 15 minutes"
         )
 
-    def test_circuit_breaker_recovery_runs_periodically(self, eventbridge_tf_content):
-        """Verify circuit breaker recovery runs on a schedule."""
+    def test_circuit_open_recoveries_runs_periodically(self, eventbridge_tf_content):
+        """Verify circuit open recovery runs on a schedule."""
         assert 'rate(5 minutes)' in eventbridge_tf_content, (
-            "Circuit breaker recovery should run periodically"
+            "Circuit open recovery should run periodically"
         )
 
 
@@ -162,8 +162,8 @@ class TestEventPatternRules:
 
         assert match and 'event_pattern' in block
 
-    def test_circuit_breaker_remediation_listens_to_cloudwatch(self, eventbridge_tf_content):
-        """Verify circuit breaker remediation listens to CloudWatch alarm changes."""
+    def test_circuit_open_remediations_listens_to_cloudwatch(self, eventbridge_tf_content):
+        """Verify circuit open remediation listens to CloudWatch alarm changes."""
         has_cw = '"aws.cloudwatch"' in eventbridge_tf_content
         has_alarm = '"CloudWatch Alarm State Change"' in eventbridge_tf_content
         assert has_cw and has_alarm

@@ -248,8 +248,8 @@ resource "aws_iam_role_policy" "ignored_events_archiver_kms" {
   })
 }
 
-resource "aws_iam_role" "circuit_breaker_reset" {
-  name = local.circuit_breaker_reset_role_name
+resource "aws_iam_role" "circuit_opens" {
+  name = local.circuit_opens_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -263,18 +263,18 @@ resource "aws_iam_role" "circuit_breaker_reset" {
   })
 
   tags = merge(local.common_tags, {
-    Name = local.circuit_breaker_reset_role_name
+    Name = local.circuit_opens_role_name
   })
 }
 
-resource "aws_iam_role_policy_attachment" "circuit_breaker_reset_basic" {
-  role       = aws_iam_role.circuit_breaker_reset.name
+resource "aws_iam_role_policy_attachment" "circuit_opens_basic" {
+  role       = aws_iam_role.circuit_opens.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy" "circuit_breaker_reset_permissions" {
+resource "aws_iam_role_policy" "circuit_opens_permissions" {
   name = "ResetPermissions"
-  role = aws_iam_role.circuit_breaker_reset.id
+  role = aws_iam_role.circuit_opens.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -302,15 +302,15 @@ resource "aws_iam_role_policy" "circuit_breaker_reset_permissions" {
           "dynamodb:PutItem",
           "dynamodb:GetItem"
         ]
-        Resource = [aws_dynamodb_table.circuit_breaker_state.arn]
+        Resource = [aws_dynamodb_table.circuit_open_state.arn]
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy" "circuit_breaker_reset_kms" {
+resource "aws_iam_role_policy" "circuit_opens_kms" {
   name = "KMSDecrypt"
-  role = aws_iam_role.circuit_breaker_reset.id
+  role = aws_iam_role.circuit_opens.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -325,8 +325,8 @@ resource "aws_iam_role_policy" "circuit_breaker_reset_kms" {
   })
 }
 
-resource "aws_iam_role" "circuit_breaker_remediation" {
-  name = local.circuit_breaker_remediation_role_name
+resource "aws_iam_role" "circuit_open_remediations" {
+  name = local.circuit_open_remediations_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -340,18 +340,18 @@ resource "aws_iam_role" "circuit_breaker_remediation" {
   })
 
   tags = merge(local.common_tags, {
-    Name = local.circuit_breaker_remediation_role_name
+    Name = local.circuit_open_remediations_role_name
   })
 }
 
-resource "aws_iam_role_policy_attachment" "circuit_breaker_remediation_basic" {
-  role       = aws_iam_role.circuit_breaker_remediation.name
+resource "aws_iam_role_policy_attachment" "circuit_open_remediations_basic" {
+  role       = aws_iam_role.circuit_open_remediations.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy" "circuit_breaker_remediation_permissions" {
+resource "aws_iam_role_policy" "circuit_open_remediations_permissions" {
   name = "RemediationPermissions"
-  role = aws_iam_role.circuit_breaker_remediation.id
+  role = aws_iam_role.circuit_open_remediations.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -380,7 +380,7 @@ resource "aws_iam_role_policy" "circuit_breaker_remediation_permissions" {
         Action = [
           "sns:Publish"
         ]
-        Resource = [aws_sns_topic.circuit_breaker_alerts.arn]
+        Resource = [aws_sns_topic.circuit_open_alerts.arn]
       },
       {
         Effect = "Allow"
@@ -390,16 +390,16 @@ resource "aws_iam_role_policy" "circuit_breaker_remediation_permissions" {
         ]
         Resource = [
           aws_dynamodb_table.incidents.arn,
-          aws_dynamodb_table.circuit_breaker_state.arn
+          aws_dynamodb_table.circuit_open_state.arn
         ]
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy" "circuit_breaker_remediation_kms" {
+resource "aws_iam_role_policy" "circuit_open_remediations_kms" {
   name = "KMSDecrypt"
-  role = aws_iam_role.circuit_breaker_remediation.id
+  role = aws_iam_role.circuit_open_remediations.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -463,7 +463,7 @@ resource "aws_iam_role_policy" "dlq_reprocessor_permissions" {
         Action = [
           "sns:Publish"
         ]
-        Resource = [aws_sns_topic.circuit_breaker_alerts.arn]
+        Resource = [aws_sns_topic.circuit_open_alerts.arn]
       },
       {
         Effect = "Allow"
@@ -493,8 +493,8 @@ resource "aws_iam_role_policy" "dlq_reprocessor_kms" {
   })
 }
 
-resource "aws_iam_role" "circuit_breaker_recovery" {
-  name = local.circuit_breaker_recovery_role_name
+resource "aws_iam_role" "circuit_open_recoveries" {
+  name = local.circuit_open_recoveries_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -508,18 +508,18 @@ resource "aws_iam_role" "circuit_breaker_recovery" {
   })
 
   tags = merge(local.common_tags, {
-    Name = local.circuit_breaker_recovery_role_name
+    Name = local.circuit_open_recoveries_role_name
   })
 }
 
-resource "aws_iam_role_policy_attachment" "circuit_breaker_recovery_basic" {
-  role       = aws_iam_role.circuit_breaker_recovery.name
+resource "aws_iam_role_policy_attachment" "circuit_open_recoveries_basic" {
+  role       = aws_iam_role.circuit_open_recoveries.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy" "circuit_breaker_recovery_permissions" {
+resource "aws_iam_role_policy" "circuit_open_recoveries_permissions" {
   name = "RecoveryPermissions"
-  role = aws_iam_role.circuit_breaker_recovery.id
+  role = aws_iam_role.circuit_open_recoveries.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -548,7 +548,7 @@ resource "aws_iam_role_policy" "circuit_breaker_recovery_permissions" {
         Action = [
           "sns:Publish"
         ]
-        Resource = [aws_sns_topic.circuit_breaker_alerts.arn]
+        Resource = [aws_sns_topic.circuit_open_alerts.arn]
       },
       {
         Effect = "Allow"
@@ -557,15 +557,15 @@ resource "aws_iam_role_policy" "circuit_breaker_recovery_permissions" {
           "dynamodb:GetItem",
           "dynamodb:UpdateItem"
         ]
-        Resource = [aws_dynamodb_table.circuit_breaker_state.arn]
+        Resource = [aws_dynamodb_table.circuit_open_state.arn]
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy" "circuit_breaker_recovery_kms" {
+resource "aws_iam_role_policy" "circuit_open_recoveries_kms" {
   name = "KMSDecrypt"
-  role = aws_iam_role.circuit_breaker_recovery.id
+  role = aws_iam_role.circuit_open_recoveries.id
 
   policy = jsonencode({
     Version = "2012-10-17"

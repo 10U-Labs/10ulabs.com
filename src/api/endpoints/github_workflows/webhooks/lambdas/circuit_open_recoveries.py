@@ -1,4 +1,4 @@
-"""Lambda for automatic circuit breaker recovery and health monitoring."""
+"""Lambda for automatic circuit open recovery and health monitoring."""
 import json
 import logging
 import os
@@ -7,17 +7,17 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
-from common.circuit_breaker_utils import (
+from common.circuit_open_utils import (
     enable_event_source_mappings,
-    update_circuit_breaker_state as shared_update_circuit_breaker_state,
+    update_circuit_open_state as shared_update_circuit_open_state,
 )
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def get_circuit_breaker_state(table_name: str) -> dict:
-    """Get current circuit breaker state from DynamoDB."""
+def get_circuit_open_state(table_name: str) -> dict:
+    """Get current circuit open state from DynamoDB."""
     dynamodb = boto3.client('dynamodb')
     result = {
         'state': 'unknown',
@@ -46,15 +46,15 @@ def get_circuit_breaker_state(table_name: str) -> dict:
                 'last_failure_time': int(item.get('last_failure_time', {}).get('N', '0'))
             }
     except ClientError as e:
-        logger.error("Failed to get circuit breaker state: %s", e)
+        logger.error("Failed to get circuit open state: %s", e)
     return result
 
 
-def update_circuit_breaker_state(
+def update_circuit_open_state(
     table_name: str, state: str, recovery_attempts: int
 ) -> dict:
-    """Update circuit breaker state in DynamoDB."""
-    return shared_update_circuit_breaker_state(table_name, state, recovery_attempts)
+    """Update circuit open state in DynamoDB."""
+    return shared_update_circuit_open_state(table_name, state, recovery_attempts)
 
 
 def calculate_backoff_seconds(recovery_attempts: int) -> int:
@@ -83,7 +83,7 @@ def check_health(function_name: str) -> dict:
         status_code = payload.get('statusCode', 500)
         if status_code == 200:
             body = json.loads(payload.get('body', '{}'))
-            circuit_state = body.get('circuit_breaker', 'unknown')
+            circuit_state = body.get('circuit_open', 'unknown')
             logger.info("Health check passed. Circuit state: %s", circuit_state)
             result = {'healthy': True, 'circuit_state': circuit_state}
         else:
@@ -123,7 +123,7 @@ def send_recovery_notification(
     sns_client = boto3.client('sns')
     result: dict = {'success': False, 'error': 'Unknown error'}
     try:
-        message = f"""Circuit Breaker Auto-Recovery
+        message = f"""Circuit Open Auto-Recovery
 
 State Transition: {state}
 Recovery Attempts: {recovery_attempts}
@@ -135,7 +135,7 @@ The system is attempting to self-heal.
 """
         response = sns_client.publish(
             TopicArn=topic_arn,
-            Subject=f"Circuit Breaker Recovery: {state}",
+            Subject=f"Circuit Open Recovery: {state}",
             Message=message
         )
         logger.info("Sent recovery notification: %s", response.get('MessageId'))
@@ -157,7 +157,7 @@ def _perform_successful_recovery(state_table: str, webhook_function: str, sns_to
     if enable_result['success']:
         count = enable_result['enabled_count']
         result['actions_taken'].append(f"Enabled {count} event source mappings")
-    update_circuit_breaker_state(state_table, 'half-open', recovery_attempts + 1)
+    update_circuit_open_state(state_table, 'half-open', recovery_attempts + 1)
     result['new_state'] = 'half-open'
     result['recovery_attempts'] = recovery_attempts + 1
     result['concurrency_level'] = concurrency_level
@@ -183,7 +183,7 @@ def _handle_half_open_circuit(config: dict, result: dict):
         concurrency_result = set_lambda_reserved_concurrency(webhook_function, 0)
         if concurrency_result['success']:
             result['actions_taken'].append('Removed concurrency limit (disabled function)')
-        update_circuit_breaker_state(state_table, 'open', 0)
+        update_circuit_open_state(state_table, 'open', 0)
         result['new_state'] = 'open'
         result['message'] = f"Health check failed: {health_check.get('reason')} - reopening circuit"
         if sns_topic:
@@ -194,12 +194,12 @@ def _handle_half_open_circuit(config: dict, result: dict):
         concurrency_result = set_lambda_reserved_concurrency(webhook_function, 0)
         if concurrency_result['success']:
             result['actions_taken'].append('Removed reserved concurrency limit')
-        update_circuit_breaker_state(state_table, 'closed', 0)
+        update_circuit_open_state(state_table, 'closed', 0)
         result['new_state'] = 'closed'
-        result['message'] = 'Circuit breaker fully closed'
+        result['message'] = 'Circuit open fully closed'
         if sns_topic:
             send_recovery_notification(sns_topic, 'CLOSED', 0, result['actions_taken'])
-        logger.info("Circuit breaker fully closed - concurrency limit removed")
+        logger.info("Circuit open fully closed - concurrency limit removed")
 
 
 def _handle_open_circuit(config: dict, state: dict, result: dict):
@@ -234,7 +234,7 @@ def _handle_open_circuit(config: dict, state: dict, result: dict):
         health_check = check_health(webhook_function)
         if not health_check.get('healthy'):
             logger.warning("Health check failed: %s", health_check.get('reason'))
-            update_circuit_breaker_state(state_table, 'open', recovery_attempts + 1)
+            update_circuit_open_state(state_table, 'open', recovery_attempts + 1)
             result['message'] = f"Health check failed: {health_check.get('reason')}"
             result['recovery_attempts'] = recovery_attempts + 1
         else:
@@ -244,7 +244,7 @@ def _handle_open_circuit(config: dict, state: dict, result: dict):
 
 
 def attempt_recovery() -> dict:
-    """Attempt to recover the circuit breaker based on current state."""
+    """Attempt to recover the circuit open based on current state."""
     state_table = os.environ.get('STATE_TABLE_NAME')
     webhook_function = os.environ.get('WEBHOOK_FUNCTION_NAME')
     sns_topic = os.environ.get('SNS_TOPIC_ARN')
@@ -256,7 +256,7 @@ def attempt_recovery() -> dict:
     if not state_table or not webhook_function:
         logger.error("Missing required environment variables")
     else:
-        current_state = get_circuit_breaker_state(state_table)
+        current_state = get_circuit_open_state(state_table)
         recovery_attempts = current_state['recovery_attempts']
         last_recovery = current_state['last_recovery_attempt']
         result = {
@@ -276,14 +276,14 @@ def attempt_recovery() -> dict:
         elif current_state['state'] == 'half-open':
             _handle_half_open_circuit(config, result)
         else:
-            logger.info("Circuit breaker in closed state, no recovery needed")
-            result['message'] = 'Circuit breaker already closed'
+            logger.info("Circuit open in closed state, no recovery needed")
+            result['message'] = 'Circuit open already closed'
     return result
 
 
 def lambda_handler(_event, _context):
     """Main Lambda entry point for scheduled recovery checks."""
-    logger.info("Starting circuit breaker recovery check")
+    logger.info("Starting circuit open recovery check")
 
     result = attempt_recovery()
 

@@ -10,7 +10,7 @@ import pytest
 # Expected DynamoDB tables
 DYNAMODB_TABLES = [
     "idempotency",
-    "circuit_breaker_state",
+    "circuit_open_state",
     "incidents",
 ]
 

@@ -71,31 +71,31 @@ def test_incidents_table_has_pitr_enabled(dynamodb_client, config):
     assert pitr["PointInTimeRecoveryStatus"] == "ENABLED"
 
 
-def test_circuit_breaker_state_table_has_ttl_enabled(dynamodb_client, config):
-    """Verify circuit breaker state table has TTL enabled."""
-    table_name = f"{config['resource_prefix']}-circuit-breaker-state"
+def test_circuit_open_state_table_has_ttl_enabled(dynamodb_client, config):
+    """Verify circuit open state table has TTL enabled."""
+    table_name = f"{config['resource_prefix']}-circuit-open-state"
     response = dynamodb_client.describe_time_to_live(TableName=table_name)
     assert response["TimeToLiveDescription"]["TimeToLiveStatus"] == "ENABLED"
 
 
-def test_circuit_breaker_state_table_has_pay_per_request_billing(dynamodb_client, config):
-    """Verify circuit breaker state table uses PAY_PER_REQUEST billing mode."""
-    table_name = f"{config['resource_prefix']}-circuit-breaker-state"
+def test_circuit_open_state_table_has_pay_per_request_billing(dynamodb_client, config):
+    """Verify circuit open state table uses PAY_PER_REQUEST billing mode."""
+    table_name = f"{config['resource_prefix']}-circuit-open-state"
     response = dynamodb_client.describe_table(TableName=table_name)
     assert response["Table"]["BillingModeSummary"]["BillingMode"] == "PAY_PER_REQUEST"
 
 
-def test_circuit_breaker_state_table_has_state_id_key(dynamodb_client, config):
-    """Verify circuit breaker state table has state_id as partition key."""
-    table_name = f"{config['resource_prefix']}-circuit-breaker-state"
+def test_circuit_open_state_table_has_state_id_key(dynamodb_client, config):
+    """Verify circuit open state table has state_id as partition key."""
+    table_name = f"{config['resource_prefix']}-circuit-open-state"
     response = dynamodb_client.describe_table(TableName=table_name)
     key_schema = response["Table"]["KeySchema"]
     assert key_schema[0]["AttributeName"] == "state_id"
 
 
-def test_circuit_breaker_state_table_has_pitr_enabled(dynamodb_client, config):
-    """Verify circuit breaker state table has point-in-time recovery enabled."""
-    table_name = f"{config['resource_prefix']}-circuit-breaker-state"
+def test_circuit_open_state_table_has_pitr_enabled(dynamodb_client, config):
+    """Verify circuit open state table has point-in-time recovery enabled."""
+    table_name = f"{config['resource_prefix']}-circuit-open-state"
     response = dynamodb_client.describe_continuous_backups(TableName=table_name)
     pitr = response["ContinuousBackupsDescription"]["PointInTimeRecoveryDescription"]
     assert pitr["PointInTimeRecoveryStatus"] == "ENABLED"
@@ -159,39 +159,39 @@ def test_drift_recovery_queue_has_content_deduplication(sqs_client, config):
 # === EventBridge Rule Configuration ===
 
 
-def test_circuit_breaker_remediation_rule_enabled(events_client, config):
-    """Verify circuit breaker remediation rule is enabled."""
-    rule_name = f"{config['resource_prefix']}-circuit-breaker-remediation"
+def test_circuit_open_remediations_rule_enabled(events_client, config):
+    """Verify circuit open remediation rule is enabled."""
+    rule_name = f"{config['resource_prefix']}-circuit-open-remediation"
     response = events_client.describe_rule(Name=rule_name)
     assert response["State"] == "ENABLED"
 
 
-def test_circuit_breaker_remediation_rule_has_cloudwatch_source(events_client, config):
-    """Verify circuit breaker remediation rule filters CloudWatch events."""
-    rule_name = f"{config['resource_prefix']}-circuit-breaker-remediation"
+def test_circuit_open_remediations_rule_has_cloudwatch_source(events_client, config):
+    """Verify circuit open remediation rule filters CloudWatch events."""
+    rule_name = f"{config['resource_prefix']}-circuit-open-remediation"
     response = events_client.describe_rule(Name=rule_name)
     event_pattern = json.loads(response["EventPattern"])
     assert event_pattern["source"] == ["aws.cloudwatch"]
 
 
-def test_circuit_breaker_remediation_rule_filters_alarm_name(events_client, config):
-    """Verify circuit breaker remediation rule filters by alarm name."""
-    rule_name = f"{config['resource_prefix']}-circuit-breaker-remediation"
+def test_circuit_open_remediations_rule_filters_alarm_name(events_client, config):
+    """Verify circuit open remediation rule filters by alarm name."""
+    rule_name = f"{config['resource_prefix']}-circuit-open-remediation"
     response = events_client.describe_rule(Name=rule_name)
     event_pattern = json.loads(response["EventPattern"])
     assert "alarmName" in event_pattern["detail"]
 
 
-def test_circuit_breaker_recovery_rule_enabled(events_client, config):
-    """Verify circuit breaker recovery rule is enabled."""
-    rule_name = f"{config['resource_prefix']}-circuit-breaker-recovery"
+def test_circuit_open_recoveries_rule_enabled(events_client, config):
+    """Verify circuit open recovery rule is enabled."""
+    rule_name = f"{config['resource_prefix']}-circuit-open-recovery"
     response = events_client.describe_rule(Name=rule_name)
     assert response["State"] == "ENABLED"
 
 
-def test_circuit_breaker_recovery_rule_has_5_minute_schedule(events_client, config):
-    """Verify circuit breaker recovery rule runs every 5 minutes."""
-    rule_name = f"{config['resource_prefix']}-circuit-breaker-recovery"
+def test_circuit_open_recoveries_rule_has_5_minute_schedule(events_client, config):
+    """Verify circuit open recovery rule runs every 5 minutes."""
+    rule_name = f"{config['resource_prefix']}-circuit-open-recovery"
     response = events_client.describe_rule(Name=rule_name)
     assert response["ScheduleExpression"] == "rate(5 minutes)"
 
@@ -229,44 +229,44 @@ def test_webhook_handler_name_is_pascalcase(lambda_client, config):
 # === CloudWatch Log Group Configuration ===
 
 
-def test_circuit_breaker_recovery_log_group_has_retention(
-    circuit_breaker_recovery_log_group
+def test_circuit_open_recoveries_log_group_has_retention(
+    circuit_open_recoveries_log_group
 ):
-    """Verify circuit breaker recovery log group has retention configured."""
-    assert circuit_breaker_recovery_log_group["retention"] is not None, (
-        f"Log group '{circuit_breaker_recovery_log_group['name']}' "
+    """Verify circuit open recovery log group has retention configured."""
+    assert circuit_open_recoveries_log_group["retention"] is not None, (
+        f"Log group '{circuit_open_recoveries_log_group['name']}' "
         "has no retention policy"
     )
 
 
-def test_circuit_breaker_recovery_log_group_retention_is_7_days(
-    circuit_breaker_recovery_log_group
+def test_circuit_open_recoveries_log_group_retention_is_7_days(
+    circuit_open_recoveries_log_group
 ):
-    """Verify circuit breaker recovery log group retention is 7 days."""
-    retention = circuit_breaker_recovery_log_group["retention"]
+    """Verify circuit open recovery log group retention is 7 days."""
+    retention = circuit_open_recoveries_log_group["retention"]
     assert retention == 7, (
-        f"Log group '{circuit_breaker_recovery_log_group['name']}' "
+        f"Log group '{circuit_open_recoveries_log_group['name']}' "
         f"retention is {retention} days, expected 7"
     )
 
 
-def test_circuit_breaker_remediation_log_group_has_retention(
-    circuit_breaker_remediation_log_group
+def test_circuit_open_remediations_log_group_has_retention(
+    circuit_open_remediations_log_group
 ):
-    """Verify circuit breaker remediation log group has retention configured."""
-    assert circuit_breaker_remediation_log_group["retention"] is not None, (
-        f"Log group '{circuit_breaker_remediation_log_group['name']}' "
+    """Verify circuit open remediation log group has retention configured."""
+    assert circuit_open_remediations_log_group["retention"] is not None, (
+        f"Log group '{circuit_open_remediations_log_group['name']}' "
         "has no retention policy"
     )
 
 
-def test_circuit_breaker_remediation_log_group_retention_is_7_days(
-    circuit_breaker_remediation_log_group
+def test_circuit_open_remediations_log_group_retention_is_7_days(
+    circuit_open_remediations_log_group
 ):
-    """Verify circuit breaker remediation log group retention is 7 days."""
-    retention = circuit_breaker_remediation_log_group["retention"]
+    """Verify circuit open remediation log group retention is 7 days."""
+    retention = circuit_open_remediations_log_group["retention"]
     assert retention == 7, (
-        f"Log group '{circuit_breaker_remediation_log_group['name']}' "
+        f"Log group '{circuit_open_remediations_log_group['name']}' "
         f"retention is {retention} days, expected 7"
     )
 
@@ -309,45 +309,45 @@ def test_runners_handler_subscription_filter_uses_empty_pattern(
             assert sub_filter["filterPattern"] == ""
 
 
-def test_circuit_breaker_recovery_subscription_filter_name(
-    logs_client, circuit_breaker_recovery_log_group
+def test_circuit_open_recoveries_subscription_filter_name(
+    logs_client, circuit_open_recoveries_log_group
 ):
-    """Verify circuit breaker recovery subscription filter has correct name."""
-    log_group = circuit_breaker_recovery_log_group["name"]
+    """Verify circuit open recovery subscription filter has correct name."""
+    log_group = circuit_open_recoveries_log_group["name"]
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     filter_names = [f["filterName"] for f in response["subscriptionFilters"]]
-    assert "circuit-breaker-recovery-to-firehose" in filter_names
+    assert "circuit-open-recovery-to-firehose" in filter_names
 
 
-def test_circuit_breaker_recovery_subscription_filter_uses_empty_pattern(
-    logs_client, circuit_breaker_recovery_log_group
+def test_circuit_open_recoveries_subscription_filter_uses_empty_pattern(
+    logs_client, circuit_open_recoveries_log_group
 ):
-    """Verify circuit breaker recovery subscription filter captures all logs."""
-    log_group = circuit_breaker_recovery_log_group["name"]
+    """Verify circuit open recovery subscription filter captures all logs."""
+    log_group = circuit_open_recoveries_log_group["name"]
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     for sub_filter in response["subscriptionFilters"]:
-        if sub_filter["filterName"] == "circuit-breaker-recovery-to-firehose":
+        if sub_filter["filterName"] == "circuit-open-recovery-to-firehose":
             assert sub_filter["filterPattern"] == ""
 
 
-def test_circuit_breaker_remediation_subscription_filter_name(
-    logs_client, circuit_breaker_remediation_log_group
+def test_circuit_open_remediations_subscription_filter_name(
+    logs_client, circuit_open_remediations_log_group
 ):
-    """Verify circuit breaker remediation subscription filter has correct name."""
-    log_group = circuit_breaker_remediation_log_group["name"]
+    """Verify circuit open remediation subscription filter has correct name."""
+    log_group = circuit_open_remediations_log_group["name"]
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     filter_names = [f["filterName"] for f in response["subscriptionFilters"]]
-    assert "circuit-breaker-remediation-to-firehose" in filter_names
+    assert "circuit-open-remediation-to-firehose" in filter_names
 
 
-def test_circuit_breaker_remediation_subscription_filter_uses_empty_pattern(
-    logs_client, circuit_breaker_remediation_log_group
+def test_circuit_open_remediations_subscription_filter_uses_empty_pattern(
+    logs_client, circuit_open_remediations_log_group
 ):
-    """Verify circuit breaker remediation subscription filter captures all logs."""
-    log_group = circuit_breaker_remediation_log_group["name"]
+    """Verify circuit open remediation subscription filter captures all logs."""
+    log_group = circuit_open_remediations_log_group["name"]
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     for sub_filter in response["subscriptionFilters"]:
-        if sub_filter["filterName"] == "circuit-breaker-remediation-to-firehose":
+        if sub_filter["filterName"] == "circuit-open-remediation-to-firehose":
             assert sub_filter["filterPattern"] == ""
 
 

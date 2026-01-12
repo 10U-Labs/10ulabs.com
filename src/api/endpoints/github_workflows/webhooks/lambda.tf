@@ -15,8 +15,8 @@ data "archive_file" "runners_handler" {
     filename = "common/aws_clients.py"
   }
   source {
-    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
-    filename = "common/circuit_breaker_utils.py"
+    content  = file("${path.module}/lambdas/common/circuit_open_utils.py")
+    filename = "common/circuit_open_utils.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
@@ -69,7 +69,7 @@ resource "aws_lambda_function" "runners_handler" {
     variables = {
       API_BASE_URL               = "https://${local.api_fqdn}"
       API_KEY_PARAMETER_NAME     = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
-      CIRCUIT_BREAKER_TABLE_NAME = aws_dynamodb_table.circuit_breaker_state.name
+      CIRCUIT_OPEN_TABLE_NAME = aws_dynamodb_table.circuit_open_state.name
       GITHUB_REPO                = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME   = module.common.ssm_github_pat_name
       IDEMPOTENCY_TABLE_NAME     = aws_dynamodb_table.idempotency.name
@@ -150,8 +150,8 @@ data "archive_file" "ignored_events_archiver" {
     filename = "common/aws_clients.py"
   }
   source {
-    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
-    filename = "common/circuit_breaker_utils.py"
+    content  = file("${path.module}/lambdas/common/circuit_open_utils.py")
+    filename = "common/circuit_open_utils.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
@@ -248,13 +248,13 @@ resource "aws_lambda_event_source_mapping" "ignored_events_archiver_sqs" {
   maximum_batching_window_in_seconds = 60
 }
 
-data "archive_file" "circuit_breaker_reset" {
+data "archive_file" "circuit_opens" {
   type        = "zip"
-  output_path = "${path.module}/.terraform/lambda_packages/circuit_breaker_reset.zip"
+  output_path = "${path.module}/.terraform/lambda_packages/circuit_opens.zip"
 
   source {
-    content  = file("${path.module}/lambdas/circuit_breaker_reset.py")
-    filename = "circuit_breaker_reset.py"
+    content  = file("${path.module}/lambdas/circuit_opens.py")
+    filename = "circuit_opens.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/__init__.py")
@@ -265,8 +265,8 @@ data "archive_file" "circuit_breaker_reset" {
     filename = "common/aws_clients.py"
   }
   source {
-    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
-    filename = "common/circuit_breaker_utils.py"
+    content  = file("${path.module}/lambdas/common/circuit_open_utils.py")
+    filename = "common/circuit_open_utils.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
@@ -302,70 +302,70 @@ data "archive_file" "circuit_breaker_reset" {
   }
 }
 
-resource "aws_lambda_function" "circuit_breaker_reset" {
-  filename         = data.archive_file.circuit_breaker_reset.output_path
-  function_name    = local.circuit_breaker_reset_function_name
-  role             = aws_iam_role.circuit_breaker_reset.arn
-  handler          = "circuit_breaker_reset.lambda_handler"
-  source_code_hash = data.archive_file.circuit_breaker_reset.output_base64sha256
+resource "aws_lambda_function" "circuit_opens" {
+  filename         = data.archive_file.circuit_opens.output_path
+  function_name    = local.circuit_opens_function_name
+  role             = aws_iam_role.circuit_opens.arn
+  handler          = "circuit_opens.lambda_handler"
+  source_code_hash = data.archive_file.circuit_opens.output_base64sha256
   runtime          = "python3.13"
   architectures    = ["arm64"]
   timeout          = 60
   memory_size      = 256
-  description      = "Manual reset endpoint for circuit breaker"
+  description      = "Manual reset endpoint for circuit open"
 
 
   environment {
     variables = {
       WEBHOOK_FUNCTION_NAME = aws_lambda_function.runners_handler.function_name
-      STATE_TABLE_NAME      = aws_dynamodb_table.circuit_breaker_state.name
+      STATE_TABLE_NAME      = aws_dynamodb_table.circuit_open_state.name
     }
   }
 
   logging_config {
     log_format = "Text"
-    log_group  = aws_cloudwatch_log_group.circuit_breaker_reset.name
+    log_group  = aws_cloudwatch_log_group.circuit_opens.name
   }
 
   tags = merge(local.common_tags, {
-    Name = local.circuit_breaker_reset_function_name
+    Name = local.circuit_opens_function_name
   })
 
   depends_on = [
-    aws_iam_role_policy.circuit_breaker_reset_permissions,
-    aws_iam_role_policy_attachment.circuit_breaker_reset_basic,
+    aws_iam_role_policy.circuit_opens_permissions,
+    aws_iam_role_policy_attachment.circuit_opens_basic,
   ]
 
   # Force Lambda replacement when IAM role is recreated to refresh KMS grant
   lifecycle {
-    replace_triggered_by = [aws_iam_role.circuit_breaker_reset.id]
+    replace_triggered_by = [aws_iam_role.circuit_opens.id]
   }
 }
 
-resource "aws_cloudwatch_log_group" "circuit_breaker_reset" {
-  name              = "/aws/lambda/${local.circuit_breaker_reset_function_name}"
+resource "aws_cloudwatch_log_group" "circuit_opens" {
+  name              = "/aws/lambda/${local.circuit_opens_function_name}"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.circuit_breaker_reset_function_name}Logs"
+    Name = "${local.circuit_opens_function_name}Logs"
   })
 }
 
-resource "aws_lambda_permission" "circuit_breaker_reset_api_gateway" {
+resource "aws_lambda_permission" "circuit_opens_api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.circuit_breaker_reset.function_name
+  function_name = aws_lambda_function.circuit_opens.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api.outputs.api_gateway_id}/*"
 }
 
-data "archive_file" "circuit_breaker_remediation" {
+data "archive_file" "circuit_open_remediations" {
   type        = "zip"
-  output_path = "${path.module}/.terraform/lambda_packages/circuit_breaker_remediation.zip"
+  output_path = "${path.module}/.terraform/lambda_packages/circuit_open_remediations.zip"
 
   source {
-    content  = file("${path.module}/lambdas/circuit_breaker_remediation.py")
-    filename = "circuit_breaker_remediation.py"
+    content  = file("${path.module}/lambdas/circuit_open_remediations.py")
+    filename = "circuit_open_remediations.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/__init__.py")
@@ -376,8 +376,8 @@ data "archive_file" "circuit_breaker_remediation" {
     filename = "common/aws_clients.py"
   }
   source {
-    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
-    filename = "common/circuit_breaker_utils.py"
+    content  = file("${path.module}/lambdas/common/circuit_open_utils.py")
+    filename = "common/circuit_open_utils.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
@@ -413,54 +413,54 @@ data "archive_file" "circuit_breaker_remediation" {
   }
 }
 
-resource "aws_lambda_function" "circuit_breaker_remediation" {
-  filename         = data.archive_file.circuit_breaker_remediation.output_path
-  function_name    = local.circuit_breaker_remediation_function_name
-  role             = aws_iam_role.circuit_breaker_remediation.arn
-  handler          = "circuit_breaker_remediation.lambda_handler"
-  source_code_hash = data.archive_file.circuit_breaker_remediation.output_base64sha256
+resource "aws_lambda_function" "circuit_open_remediations" {
+  filename         = data.archive_file.circuit_open_remediations.output_path
+  function_name    = local.circuit_open_remediations_function_name
+  role             = aws_iam_role.circuit_open_remediations.arn
+  handler          = "circuit_open_remediations.lambda_handler"
+  source_code_hash = data.archive_file.circuit_open_remediations.output_base64sha256
   runtime          = "python3.13"
   architectures    = ["arm64"]
   timeout          = 60
   memory_size      = 256
-  description      = "Automatic remediation for circuit breaker alarms"
+  description      = "Automatic remediation for circuit open alarms"
 
 
   environment {
     variables = {
       WEBHOOK_FUNCTION_NAME = aws_lambda_function.runners_handler.function_name
-      SNS_TOPIC_ARN         = aws_sns_topic.circuit_breaker_alerts.arn
+      SNS_TOPIC_ARN         = aws_sns_topic.circuit_open_alerts.arn
       INCIDENT_TABLE_NAME   = aws_dynamodb_table.incidents.name
-      STATE_TABLE_NAME      = aws_dynamodb_table.circuit_breaker_state.name
+      STATE_TABLE_NAME      = aws_dynamodb_table.circuit_open_state.name
     }
   }
 
   logging_config {
     log_format = "Text"
-    log_group  = aws_cloudwatch_log_group.circuit_breaker_remediation.name
+    log_group  = aws_cloudwatch_log_group.circuit_open_remediations.name
   }
 
   tags = merge(local.common_tags, {
-    Name = local.circuit_breaker_remediation_function_name
+    Name = local.circuit_open_remediations_function_name
   })
 
   depends_on = [
-    aws_iam_role_policy.circuit_breaker_remediation_permissions,
-    aws_iam_role_policy_attachment.circuit_breaker_remediation_basic,
+    aws_iam_role_policy.circuit_open_remediations_permissions,
+    aws_iam_role_policy_attachment.circuit_open_remediations_basic,
   ]
 
   # Force Lambda replacement when IAM role is recreated to refresh KMS grant
   lifecycle {
-    replace_triggered_by = [aws_iam_role.circuit_breaker_remediation.id]
+    replace_triggered_by = [aws_iam_role.circuit_open_remediations.id]
   }
 }
 
-resource "aws_cloudwatch_log_group" "circuit_breaker_remediation" {
-  name              = "/aws/lambda/${local.circuit_breaker_remediation_function_name}"
+resource "aws_cloudwatch_log_group" "circuit_open_remediations" {
+  name              = "/aws/lambda/${local.circuit_open_remediations_function_name}"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.circuit_breaker_remediation_function_name}Logs"
+    Name = "${local.circuit_open_remediations_function_name}Logs"
   })
 }
 
@@ -487,7 +487,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
     variables = {
       WEBHOOK_DLQ_URL = aws_sqs_queue.webhook_dlq.url
       # Note: JOB_DLQ_URL and JOB_QUEUE_URL removed - routing logic moved to /v1/runners
-      SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
+      SNS_TOPIC_ARN               = aws_sns_topic.circuit_open_alerts.arn
       GITHUB_TOKEN_PARAMETER_NAME = module.common.ssm_github_pat_name
     }
   }
@@ -521,13 +521,13 @@ resource "aws_cloudwatch_log_group" "dlq_reprocessor" {
   })
 }
 
-data "archive_file" "circuit_breaker_recovery" {
+data "archive_file" "circuit_open_recoveries" {
   type        = "zip"
-  output_path = "${path.module}/.terraform/lambda_packages/circuit_breaker_recovery.zip"
+  output_path = "${path.module}/.terraform/lambda_packages/circuit_open_recoveries.zip"
 
   source {
-    content  = file("${path.module}/lambdas/circuit_breaker_recovery.py")
-    filename = "circuit_breaker_recovery.py"
+    content  = file("${path.module}/lambdas/circuit_open_recoveries.py")
+    filename = "circuit_open_recoveries.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/__init__.py")
@@ -538,8 +538,8 @@ data "archive_file" "circuit_breaker_recovery" {
     filename = "common/aws_clients.py"
   }
   source {
-    content  = file("${path.module}/lambdas/common/circuit_breaker_utils.py")
-    filename = "common/circuit_breaker_utils.py"
+    content  = file("${path.module}/lambdas/common/circuit_open_utils.py")
+    filename = "common/circuit_open_utils.py"
   }
   source {
     content  = file("${path.module}/lambdas/common/cloudwatch.py")
@@ -575,54 +575,54 @@ data "archive_file" "circuit_breaker_recovery" {
   }
 }
 
-resource "aws_lambda_function" "circuit_breaker_recovery" {
-  filename         = data.archive_file.circuit_breaker_recovery.output_path
-  function_name    = local.circuit_breaker_recovery_function_name
-  role             = aws_iam_role.circuit_breaker_recovery.arn
-  handler          = "circuit_breaker_recovery.lambda_handler"
-  source_code_hash = data.archive_file.circuit_breaker_recovery.output_base64sha256
+resource "aws_lambda_function" "circuit_open_recoveries" {
+  filename         = data.archive_file.circuit_open_recoveries.output_path
+  function_name    = local.circuit_open_recoveries_function_name
+  role             = aws_iam_role.circuit_open_recoveries.arn
+  handler          = "circuit_open_recoveries.lambda_handler"
+  source_code_hash = data.archive_file.circuit_open_recoveries.output_base64sha256
   runtime          = "python3.13"
   architectures    = ["arm64"]
   timeout          = 60
   memory_size      = 256
-  description      = "Automatic self-healing recovery for circuit breaker"
+  description      = "Automatic self-healing recovery for circuit open"
 
 
   environment {
     variables = {
       WEBHOOK_FUNCTION_NAME = aws_lambda_function.runners_handler.function_name
-      STATE_TABLE_NAME      = aws_dynamodb_table.circuit_breaker_state.name
-      SNS_TOPIC_ARN         = aws_sns_topic.circuit_breaker_alerts.arn
+      STATE_TABLE_NAME      = aws_dynamodb_table.circuit_open_state.name
+      SNS_TOPIC_ARN         = aws_sns_topic.circuit_open_alerts.arn
       MAX_RECOVERY_ATTEMPTS = "5"
     }
   }
 
   logging_config {
     log_format = "Text"
-    log_group  = aws_cloudwatch_log_group.circuit_breaker_recovery.name
+    log_group  = aws_cloudwatch_log_group.circuit_open_recoveries.name
   }
 
   tags = merge(local.common_tags, {
-    Name = local.circuit_breaker_recovery_function_name
+    Name = local.circuit_open_recoveries_function_name
   })
 
   depends_on = [
-    aws_iam_role_policy.circuit_breaker_recovery_permissions,
-    aws_iam_role_policy_attachment.circuit_breaker_recovery_basic,
+    aws_iam_role_policy.circuit_open_recoveries_permissions,
+    aws_iam_role_policy_attachment.circuit_open_recoveries_basic,
   ]
 
   # Force Lambda replacement when IAM role is recreated to refresh KMS grant
   lifecycle {
-    replace_triggered_by = [aws_iam_role.circuit_breaker_recovery.id]
+    replace_triggered_by = [aws_iam_role.circuit_open_recoveries.id]
   }
 }
 
-resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
-  name              = "/aws/lambda/${local.circuit_breaker_recovery_function_name}"
+resource "aws_cloudwatch_log_group" "circuit_open_recoveries" {
+  name              = "/aws/lambda/${local.circuit_open_recoveries_function_name}"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.circuit_breaker_recovery_function_name}Logs"
+    Name = "${local.circuit_open_recoveries_function_name}Logs"
   })
 }
 

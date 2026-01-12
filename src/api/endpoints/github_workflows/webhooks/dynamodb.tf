@@ -46,8 +46,8 @@ resource "aws_dynamodb_table" "incidents" {
   })
 }
 
-resource "aws_dynamodb_table" "circuit_breaker_state" {
-  name             = "${local.resource_prefix}-circuit-breaker-state"
+resource "aws_dynamodb_table" "circuit_open_state" {
+  name             = "${local.resource_prefix}-circuit-open-state"
   billing_mode     = "PAY_PER_REQUEST"
   hash_key         = "state_id"
   stream_enabled   = true
@@ -68,7 +68,7 @@ resource "aws_dynamodb_table" "circuit_breaker_state" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-circuit-breaker-state"
+    Name = "${local.resource_prefix}-circuit-open-state"
   })
 }
 

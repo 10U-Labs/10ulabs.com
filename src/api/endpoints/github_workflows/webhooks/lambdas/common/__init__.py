@@ -9,10 +9,10 @@ from common.aws_clients import (
     get_sqs_client,
     get_ssm_client,
 )
-from common.circuit_breaker_utils import (
+from common.circuit_open_utils import (
     enable_event_source_mappings,
     disable_event_source_mappings,
-    update_circuit_breaker_state,
+    update_circuit_open_state,
 )
 from common.cloudwatch import publish_metric
 from common.ec2_utils import (
@@ -97,10 +97,10 @@ __all__ = [
     "extract_task_tags",
     "stop_ecs_task",
     "get_cluster_from_env",
-    # circuit_breaker_utils
+    # circuit_open_utils
     "enable_event_source_mappings",
     "disable_event_source_mappings",
-    "update_circuit_breaker_state",
+    "update_circuit_open_state",
     # lambda_utils
     "get_sqs_records",
     "empty_records_response",

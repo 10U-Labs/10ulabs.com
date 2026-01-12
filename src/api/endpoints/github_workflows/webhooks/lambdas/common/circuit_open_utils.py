@@ -1,4 +1,4 @@
-"""Circuit breaker utilities for Lambda handlers."""
+"""Circuit open utilities for Lambda handlers."""
 
 import logging
 import time
@@ -86,10 +86,10 @@ def disable_event_source_mappings(function_name: str) -> dict[str, Any]:
     return update_event_source_mappings(function_name, enable=False)
 
 
-def _build_circuit_breaker_item(
+def _build_circuit_open_item(
     state: str, recovery_attempts: int, timestamps: dict[str, int]
 ) -> dict[str, dict[str, str]]:
-    """Build DynamoDB item for circuit breaker state."""
+    """Build DynamoDB item for circuit open state."""
     return {
         "state_id": {"S": "current"},
         "state": {"S": state},
@@ -99,14 +99,14 @@ def _build_circuit_breaker_item(
     }
 
 
-def write_circuit_breaker_state(
+def write_circuit_open_state(
     table_name: str, state: str, recovery_attempts: int = 0, *, clear_history: bool = False
 ) -> dict[str, Any]:
-    """Write circuit breaker state to DynamoDB.
+    """Write circuit open state to DynamoDB.
 
     Args:
         table_name: DynamoDB table name
-        state: Circuit breaker state (open, half-open, closed)
+        state: Circuit open state (open, half-open, closed)
         recovery_attempts: Number of recovery attempts
         clear_history: If True, set timestamps to 0 and omit TTL (for reset)
 
@@ -119,7 +119,7 @@ def write_circuit_breaker_state(
     timestamps = {"failure": 0, "recovery": 0} if clear_history else {
         "failure": current_time, "recovery": current_time
     }
-    item = _build_circuit_breaker_item(state, recovery_attempts, timestamps)
+    item = _build_circuit_open_item(state, recovery_attempts, timestamps)
 
     # Add TTL unless clearing history (reset)
     if not clear_history:
@@ -127,33 +127,33 @@ def write_circuit_breaker_state(
 
     try:
         dynamodb.put_item(TableName=table_name, Item=item)
-        logger.info("Wrote circuit breaker state: %s", state)
+        logger.info("Wrote circuit open state: %s", state)
         return {"success": True}
     except ClientError as err:
-        logger.error("Failed to write circuit breaker state: %s", err)
+        logger.error("Failed to write circuit open state: %s", err)
         return {"success": False, "error": str(err)}
 
 
-def update_circuit_breaker_state(
+def update_circuit_open_state(
     table_name: str,
     state: str,
     recovery_attempts: int = 0,
 ) -> dict[str, Any]:
-    """Update circuit breaker state in DynamoDB with current timestamps.
+    """Update circuit open state in DynamoDB with current timestamps.
 
     Args:
         table_name: DynamoDB table name
-        state: Circuit breaker state (open, half-open, closed)
+        state: Circuit open state (open, half-open, closed)
         recovery_attempts: Number of recovery attempts
 
     Returns:
         Result dictionary with success status
     """
-    return write_circuit_breaker_state(table_name, state, recovery_attempts)
+    return write_circuit_open_state(table_name, state, recovery_attempts)
 
 
-def reset_circuit_breaker_state(table_name: str) -> dict[str, Any]:
-    """Reset circuit breaker state to closed in DynamoDB.
+def reset_circuit_open_state(table_name: str) -> dict[str, Any]:
+    """Reset circuit open state to closed in DynamoDB.
 
     Clears all history by setting timestamps to 0 and omitting TTL.
 
@@ -163,7 +163,7 @@ def reset_circuit_breaker_state(table_name: str) -> dict[str, Any]:
     Returns:
         Result dictionary with success status
     """
-    result = write_circuit_breaker_state(table_name, "closed", 0, clear_history=True)
+    result = write_circuit_open_state(table_name, "closed", 0, clear_history=True)
     if result.get("success"):
-        result["message"] = "Circuit breaker state reset to closed"
+        result["message"] = "Circuit open state reset to closed"
     return result

@@ -472,6 +472,11 @@
               }
             }
           }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${DriftRecoveriesHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
         }
       }
     },
@@ -544,7 +549,12 @@
             },
             "description": "Maximum number of records to return"
           }
-        ]
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": "${DriftRecoveriesHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
       }
     },
     "/v1/ec2-spot-interruptions": {
@@ -606,6 +616,11 @@
               }
             }
           }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${Ec2SpotInterruptionsHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
         }
       }
     },
@@ -681,7 +696,12 @@
             },
             "description": "Maximum number of records to return"
           }
-        ]
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": "${Ec2SpotInterruptionsHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
       }
     },
     "/v1/ecs-task-stops": {
@@ -743,6 +763,11 @@
               }
             }
           }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${EcsTaskStopsHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
         }
       }
     },
@@ -818,7 +843,12 @@
             },
             "description": "Maximum number of records to return"
           }
-        ]
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": "${EcsTaskStopsHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
       }
     },
     "/v1/github-workflows/retries": {
@@ -880,6 +910,11 @@
               }
             }
           }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${GithubWorkflowsRetriesHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
         }
       }
     },
@@ -955,7 +990,12 @@
             },
             "description": "Maximum number of records to return"
           }
-        ]
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": "${GithubWorkflowsRetriesHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
       }
     },
     "/v1/github-workflows/webhooks": {
@@ -1182,7 +1222,7 @@
           }
         },
         "x-amazon-apigateway-integration": {
-          "uri": "${CircuitBreakerResetArn}",
+          "uri": "${CircuitOpensHandlerArn}",
           "httpMethod": "POST",
           "type": "aws_proxy"
         }
@@ -1296,7 +1336,7 @@
           }
         },
         "x-amazon-apigateway-integration": {
-          "uri": "${CircuitBreakerResetArn}",
+          "uri": "${CircuitOpensHandlerArn}",
           "httpMethod": "POST",
           "type": "aws_proxy"
         }
@@ -1371,7 +1411,7 @@
           }
         },
         "x-amazon-apigateway-integration": {
-          "uri": "${CircuitBreakerResetArn}",
+          "uri": "${CircuitOpensHandlerArn}",
           "httpMethod": "POST",
           "type": "aws_proxy"
         }
@@ -1924,6 +1964,11 @@
               }
             }
           }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${RunnersCleanupHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
         }
       }
     },
@@ -1996,7 +2041,12 @@
             },
             "description": "Maximum number of records to return"
           }
-        ]
+        ],
+        "x-amazon-apigateway-integration": {
+          "uri": "${RunnersCleanupHandlerArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
       }
     },
     "/v1/runners/ec2": {

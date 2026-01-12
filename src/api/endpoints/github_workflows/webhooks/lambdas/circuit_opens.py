@@ -1,4 +1,4 @@
-"""Lambda handler for circuit breaker status and reset."""
+"""Lambda handler for circuit open status and reset."""
 
 import json
 import logging
@@ -7,21 +7,21 @@ from typing import Any
 
 from botocore.exceptions import ClientError
 
-from common.circuit_breaker_utils import (
+from common.circuit_open_utils import (
     enable_event_source_mappings,
     get_dynamodb_client,
     get_lambda_client,
-    reset_circuit_breaker_state,
+    reset_circuit_open_state,
 )
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def get_circuit_breaker_status(
+def get_circuit_open_status(
     webhook_function_name: str, state_table_name: str
 ) -> dict[str, Any]:
-    """Get current circuit breaker status."""
+    """Get current circuit open status."""
     dynamodb = get_dynamodb_client()
     lambda_client = get_lambda_client()
 
@@ -97,10 +97,10 @@ def remove_lambda_reserved_concurrency(function_name: str) -> dict[str, Any]:
 
 
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
-    """Handle circuit breaker API requests.
+    """Handle circuit open API requests.
 
-    GET  /v1/runners/circuit-breaker - Get status
-    POST /v1/runners/circuit-breaker - Reset circuit breaker
+    GET  /v1/runners/circuit-open - Get status
+    POST /v1/runners/circuit-open - Reset circuit open
     """
     webhook_function_name = os.environ["WEBHOOK_FUNCTION_NAME"]
     state_table_name = os.environ["STATE_TABLE_NAME"]
@@ -108,8 +108,8 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     http_method = event.get("httpMethod", "GET")
 
     if http_method == "GET":
-        logger.info("Getting circuit breaker status")
-        status = get_circuit_breaker_status(webhook_function_name, state_table_name)
+        logger.info("Getting circuit open status")
+        status = get_circuit_open_status(webhook_function_name, state_table_name)
         return {
             "statusCode": 200 if status["healthy"] else 503,
             "headers": {
@@ -120,10 +120,10 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         }
 
     if http_method == "POST":
-        logger.info("Resetting circuit breaker for %s", webhook_function_name)
+        logger.info("Resetting circuit open for %s", webhook_function_name)
 
         results = {
-            "state_reset": reset_circuit_breaker_state(state_table_name),
+            "state_reset": reset_circuit_open_state(state_table_name),
             "concurrency_removed": remove_lambda_reserved_concurrency(
                 webhook_function_name
             ),
@@ -134,7 +134,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
         response_body = {
             "success": all_success,
-            "message": "Circuit breaker reset" if all_success else "Partial failure",
+            "message": "Circuit open reset" if all_success else "Partial failure",
             "details": results,
         }
 

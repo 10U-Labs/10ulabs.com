@@ -45,7 +45,7 @@ def config(shared_config):
         'resource_prefix': prefix,
         'aws_region': shared_config['aws_region'],
         'idempotency_table_name': resource_names['idempotency_table'],
-        'circuit_breaker_state_table_name': resource_names['circuit_breaker_state_table'],
+        'circuit_open_state_table_name': resource_names['circuit_open_state_table'],
         'incidents_table_name': resource_names['incidents_table'],
         'webhook_dlq_name': resource_names['webhook_dlq'],
         'drift_recovery_queue_name': resource_names['drift_recovery_queue'],

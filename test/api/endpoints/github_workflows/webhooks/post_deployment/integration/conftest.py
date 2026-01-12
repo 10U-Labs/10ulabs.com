@@ -20,18 +20,18 @@ def runners_handler_log_group_fixture(logs_client, config):
     return get_log_group_info(logs_client, log_group_name)
 
 
-@pytest.fixture(name="circuit_breaker_recovery_log_group", scope="module")
-def circuit_breaker_recovery_log_group_fixture(logs_client, config):
-    """Get the circuit breaker recovery log group info."""
-    function_name = config["circuit_breaker_recovery_function_name"]
+@pytest.fixture(name="circuit_open_recoveries_log_group", scope="module")
+def circuit_open_recoveries_log_group_fixture(logs_client, config):
+    """Get the circuit open recovery log group info."""
+    function_name = config["circuit_open_recoveries_function_name"]
     log_group_name = f"/aws/lambda/{function_name}"
     return get_log_group_info(logs_client, log_group_name)
 
 
-@pytest.fixture(name="circuit_breaker_remediation_log_group", scope="module")
-def circuit_breaker_remediation_log_group_fixture(logs_client, config):
-    """Get the circuit breaker remediation log group info."""
-    function_name = config["circuit_breaker_remediation_function_name"]
+@pytest.fixture(name="circuit_open_remediations_log_group", scope="module")
+def circuit_open_remediations_log_group_fixture(logs_client, config):
+    """Get the circuit open remediation log group info."""
+    function_name = config["circuit_open_remediations_function_name"]
     log_group_name = f"/aws/lambda/{function_name}"
     return get_log_group_info(logs_client, log_group_name)
 

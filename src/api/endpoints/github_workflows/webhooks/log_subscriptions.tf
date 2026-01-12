@@ -21,28 +21,28 @@ resource "aws_cloudwatch_log_subscription_filter" "runners_handler" {
 
 # Note: runner_terminator log subscription removed - runners are ephemeral and self-terminate
 
-resource "aws_cloudwatch_log_subscription_filter" "circuit_breaker_recovery" {
+resource "aws_cloudwatch_log_subscription_filter" "circuit_open_recoveries" {
   count           = local.create_subscriptions ? 1 : 0
-  name            = "circuit-breaker-recovery-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.circuit_breaker_recovery.name
+  name            = "circuit-open-recovery-to-firehose"
+  log_group_name  = aws_cloudwatch_log_group.circuit_open_recoveries.name
   filter_pattern  = ""
   destination_arn = local.firehose_arn
   role_arn        = local.firehose_role_arn
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "circuit_breaker_remediation" {
+resource "aws_cloudwatch_log_subscription_filter" "circuit_open_remediations" {
   count           = local.create_subscriptions ? 1 : 0
-  name            = "circuit-breaker-remediation-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.circuit_breaker_remediation.name
+  name            = "circuit-open-remediation-to-firehose"
+  log_group_name  = aws_cloudwatch_log_group.circuit_open_remediations.name
   filter_pattern  = ""
   destination_arn = local.firehose_arn
   role_arn        = local.firehose_role_arn
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "circuit_breaker_reset" {
+resource "aws_cloudwatch_log_subscription_filter" "circuit_opens" {
   count           = local.create_subscriptions ? 1 : 0
-  name            = "circuit-breaker-reset-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.circuit_breaker_reset.name
+  name            = "circuit-open-reset-to-firehose"
+  log_group_name  = aws_cloudwatch_log_group.circuit_opens.name
   filter_pattern  = ""
   destination_arn = local.firehose_arn
   role_arn        = local.firehose_role_arn

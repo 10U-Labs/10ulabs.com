@@ -15,16 +15,16 @@ import json
 # === EventBridge Rule Targets ===
 
 
-def test_circuit_breaker_remediation_rule_has_target(events_client, config):
-    """Verify circuit breaker remediation rule has a Lambda target."""
-    rule_name = f"{config['resource_prefix']}-circuit-breaker-remediation"
+def test_circuit_open_remediations_rule_has_target(events_client, config):
+    """Verify circuit open remediation rule has a Lambda target."""
+    rule_name = f"{config['resource_prefix']}-circuit-open-remediation"
     targets = events_client.list_targets_by_rule(Rule=rule_name)
     assert len(targets["Targets"]) == 1
 
 
-def test_circuit_breaker_recovery_rule_has_target(events_client, config):
-    """Verify circuit breaker recovery rule has a Lambda target."""
-    rule_name = f"{config['resource_prefix']}-circuit-breaker-recovery"
+def test_circuit_open_recoveries_rule_has_target(events_client, config):
+    """Verify circuit open recovery rule has a Lambda target."""
+    rule_name = f"{config['resource_prefix']}-circuit-open-recovery"
     targets = events_client.list_targets_by_rule(Rule=rule_name)
     assert len(targets["Targets"]) == 1
 
@@ -160,22 +160,22 @@ def test_runners_handler_subscription_filter_destinations_firehose(
         assert "firehose" in destination_arn
 
 
-def test_circuit_breaker_recovery_subscription_filter_destinations_firehose(
-    logs_client, circuit_breaker_recovery_log_group
+def test_circuit_open_recoveries_subscription_filter_destinations_firehose(
+    logs_client, circuit_open_recoveries_log_group
 ):
-    """Verify circuit breaker recovery subscription routes to Firehose."""
-    log_group = circuit_breaker_recovery_log_group["name"]
+    """Verify circuit open recovery subscription routes to Firehose."""
+    log_group = circuit_open_recoveries_log_group["name"]
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     if response["subscriptionFilters"]:
         destination_arn = response["subscriptionFilters"][0]["destinationArn"]
         assert "firehose" in destination_arn
 
 
-def test_circuit_breaker_remediation_subscription_filter_destinations_firehose(
-    logs_client, circuit_breaker_remediation_log_group
+def test_circuit_open_remediations_subscription_filter_destinations_firehose(
+    logs_client, circuit_open_remediations_log_group
 ):
-    """Verify circuit breaker remediation subscription routes to Firehose."""
-    log_group = circuit_breaker_remediation_log_group["name"]
+    """Verify circuit open remediation subscription routes to Firehose."""
+    log_group = circuit_open_remediations_log_group["name"]
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     if response["subscriptionFilters"]:
         destination_arn = response["subscriptionFilters"][0]["destinationArn"]

@@ -13,10 +13,10 @@ LAMBDA_IAM_ROLES = [
     "lambda_runners_handler",
     # Note: runner_terminator removed - runners are ephemeral and self-terminate
     "ignored_events_archiver",
-    "circuit_breaker_reset",
-    "circuit_breaker_remediation",
+    "circuit_opens",
+    "circuit_open_remediations",
     "dlq_reprocessor",
-    "circuit_breaker_recovery",
+    "circuit_open_recoveries",
     "drift_recovery",
     "spot_interruption_handler",
     "stale_runner_cleanup",

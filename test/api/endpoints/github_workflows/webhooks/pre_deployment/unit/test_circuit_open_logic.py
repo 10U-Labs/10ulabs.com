@@ -1,4 +1,4 @@
-"""Unit tests for DLQ reprocessor and circuit breaker Python lambdas."""
+"""Unit tests for DLQ reprocessor and circuit open Python lambdas."""
 import json
 from contextlib import contextmanager
 from unittest.mock import patch, MagicMock
@@ -298,9 +298,9 @@ def test_no_hardcoded_defaults_in_dlq_reprocessor():
 
 
 
-def test_no_hardcoded_defaults_in_circuit_breaker_remediation():
-    """Test no hardcoded defaults in circuit breaker remediation."""
-    assert_no_hardcoded_env_defaults(get_lambda_path("circuit_breaker_remediation.py"))
+def test_no_hardcoded_defaults_in_circuit_open_remediations():
+    """Test no hardcoded defaults in circuit open remediation."""
+    assert_no_hardcoded_env_defaults(get_lambda_path("circuit_open_remediations.py"))
     assert True  # Explicit pass
 
 

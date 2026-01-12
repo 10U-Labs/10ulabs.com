@@ -16,16 +16,16 @@ def test_webhook_handler_lambda_exists(lambda_client, config):
     assert response["Configuration"]["FunctionName"] == function_name
 
 
-def test_circuit_breaker_remediation_lambda_exists(lambda_client, config):
-    """Verify CircuitBreakerRemediation Lambda exists."""
-    function_name = config["circuit_breaker_remediation_function_name"]
+def test_circuit_open_remediations_lambda_exists(lambda_client, config):
+    """Verify CircuitOpenRemediations Lambda exists."""
+    function_name = config["circuit_open_remediations_function_name"]
     response = lambda_client.get_function(FunctionName=function_name)
     assert response["Configuration"]["FunctionName"] == function_name
 
 
-def test_circuit_breaker_recovery_lambda_exists(lambda_client, config):
-    """Verify CircuitBreakerRecovery Lambda exists."""
-    function_name = config["circuit_breaker_recovery_function_name"]
+def test_circuit_open_recoveries_lambda_exists(lambda_client, config):
+    """Verify CircuitOpenRecoveries Lambda exists."""
+    function_name = config["circuit_open_recoveries_function_name"]
     response = lambda_client.get_function(FunctionName=function_name)
     assert response["Configuration"]["FunctionName"] == function_name
 
@@ -54,9 +54,9 @@ def test_incidents_table_exists(dynamodb_client, config):
     assert response["Table"]["TableName"] == table_name
 
 
-def test_circuit_breaker_state_table_exists(dynamodb_client, config):
-    """Verify circuit breaker state DynamoDB table exists."""
-    table_name = f"{config['resource_prefix']}-circuit-breaker-state"
+def test_circuit_open_state_table_exists(dynamodb_client, config):
+    """Verify circuit open state DynamoDB table exists."""
+    table_name = f"{config['resource_prefix']}-circuit-open-state"
     response = dynamodb_client.describe_table(TableName=table_name)
     assert response["Table"]["TableName"] == table_name
 
@@ -109,16 +109,16 @@ def test_drift_recovery_queue_exists(sqs_client, config):
 # === EventBridge Rules ===
 
 
-def test_circuit_breaker_remediation_rule_exists(events_client, config):
-    """Verify circuit breaker remediation EventBridge rule exists."""
-    rule_name = f"{config['resource_prefix']}-circuit-breaker-remediation"
+def test_circuit_open_remediations_rule_exists(events_client, config):
+    """Verify circuit open remediation EventBridge rule exists."""
+    rule_name = f"{config['resource_prefix']}-circuit-open-remediation"
     response = events_client.describe_rule(Name=rule_name)
     assert response["Name"] == rule_name
 
 
-def test_circuit_breaker_recovery_rule_exists(events_client, config):
-    """Verify circuit breaker recovery EventBridge rule exists."""
-    rule_name = f"{config['resource_prefix']}-circuit-breaker-recovery"
+def test_circuit_open_recoveries_rule_exists(events_client, config):
+    """Verify circuit open recovery EventBridge rule exists."""
+    rule_name = f"{config['resource_prefix']}-circuit-open-recovery"
     response = events_client.describe_rule(Name=rule_name)
     assert response["Name"] == rule_name
 
@@ -133,9 +133,9 @@ def test_dlq_reprocessor_rule_exists(events_client, config):
 # === CloudWatch Alarms ===
 
 
-def test_circuit_breaker_open_alarm_exists(cloudwatch_client, config):
-    """Verify circuit breaker open CloudWatch alarm exists."""
-    alarm_name = f"{config['resource_prefix']}-circuit-breaker-open"
+def test_circuit_open_open_alarm_exists(cloudwatch_client, config):
+    """Verify circuit open open CloudWatch alarm exists."""
+    alarm_name = f"{config['resource_prefix']}-circuit-open-triggered"
     alarms = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
     assert len(alarms["MetricAlarms"]) == 1
 
@@ -157,9 +157,9 @@ def test_runners_dlq_messages_alarm_exists(cloudwatch_client, config):
 # === SNS Topics ===
 
 
-def test_circuit_breaker_alerts_topic_exists(sns_client, config):
-    """Verify circuit breaker alerts SNS topic exists."""
-    topic_name = f"{config['resource_prefix']}-circuit-breaker-alerts"
+def test_circuit_open_alerts_topic_exists(sns_client, config):
+    """Verify circuit open alerts SNS topic exists."""
+    topic_name = f"{config['resource_prefix']}-circuit-open-alerts"
     matching_topics = find_sns_topic_arns(sns_client, topic_name)
     assert len(matching_topics) == 1
 
@@ -167,9 +167,9 @@ def test_circuit_breaker_alerts_topic_exists(sns_client, config):
 # === CloudWatch Log Groups ===
 
 
-def test_circuit_breaker_recovery_log_group_exists(logs_client, config):
-    """Verify CircuitBreakerRecovery Lambda log group exists."""
-    function_name = config["circuit_breaker_recovery_function_name"]
+def test_circuit_open_recoveries_log_group_exists(logs_client, config):
+    """Verify CircuitOpenRecoveries Lambda log group exists."""
+    function_name = config["circuit_open_recoveries_function_name"]
     log_group_name = f"/aws/lambda/{function_name}"
     response = logs_client.describe_log_groups(logGroupNamePrefix=log_group_name)
     log_groups = [
@@ -178,9 +178,9 @@ def test_circuit_breaker_recovery_log_group_exists(logs_client, config):
     assert len(log_groups) == 1
 
 
-def test_circuit_breaker_remediation_log_group_exists(logs_client, config):
-    """Verify CircuitBreakerRemediation Lambda log group exists."""
-    function_name = config["circuit_breaker_remediation_function_name"]
+def test_circuit_open_remediations_log_group_exists(logs_client, config):
+    """Verify CircuitOpenRemediations Lambda log group exists."""
+    function_name = config["circuit_open_remediations_function_name"]
     log_group_name = f"/aws/lambda/{function_name}"
     response = logs_client.describe_log_groups(logGroupNamePrefix=log_group_name)
     log_groups = [
@@ -212,20 +212,20 @@ def test_runners_handler_subscription_filter_exists(
     assert len(response["subscriptionFilters"]) > 0
 
 
-def test_circuit_breaker_recovery_subscription_filter_exists(
-    logs_client, circuit_breaker_recovery_log_group
+def test_circuit_open_recoveries_subscription_filter_exists(
+    logs_client, circuit_open_recoveries_log_group
 ):
-    """Verify CircuitBreakerRecovery log group has subscription filter."""
-    log_group = circuit_breaker_recovery_log_group["name"]
+    """Verify CircuitOpenRecoveries log group has subscription filter."""
+    log_group = circuit_open_recoveries_log_group["name"]
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     assert len(response["subscriptionFilters"]) > 0
 
 
-def test_circuit_breaker_remediation_subscription_filter_exists(
-    logs_client, circuit_breaker_remediation_log_group
+def test_circuit_open_remediations_subscription_filter_exists(
+    logs_client, circuit_open_remediations_log_group
 ):
-    """Verify CircuitBreakerRemediation log group has subscription filter."""
-    log_group = circuit_breaker_remediation_log_group["name"]
+    """Verify CircuitOpenRemediations log group has subscription filter."""
+    log_group = circuit_open_remediations_log_group["name"]
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     assert len(response["subscriptionFilters"]) > 0
 

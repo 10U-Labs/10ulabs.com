@@ -1,4 +1,4 @@
-"""Lambda handler for circuit breaker remediation actions."""
+"""Lambda handler for circuit open remediation actions."""
 import json
 import logging
 import os
@@ -6,10 +6,10 @@ import time
 import boto3
 from botocore.exceptions import ClientError
 
-from common.circuit_breaker_utils import (
+from common.circuit_open_utils import (
     enable_event_source_mappings,
     disable_event_source_mappings,
-    update_circuit_breaker_state as shared_update_circuit_breaker_state,
+    update_circuit_open_state as shared_update_circuit_open_state,
 )
 
 logger = logging.getLogger()
@@ -91,9 +91,9 @@ def record_incident(table_name: str, alarm_name: str, alarm_reason: str) -> dict
         return {'success': False, 'error': str(e)}
 
 
-def update_circuit_breaker_state(table_name: str, state: str) -> dict:
-    """Update the circuit breaker state in DynamoDB."""
-    return shared_update_circuit_breaker_state(table_name, state, recovery_attempts=0)
+def update_circuit_open_state(table_name: str, state: str) -> dict:
+    """Update the circuit open state in DynamoDB."""
+    return shared_update_circuit_open_state(table_name, state, recovery_attempts=0)
 
 
 def handle_alarm_ok_state(
@@ -104,7 +104,7 @@ def handle_alarm_ok_state(
     alarm_name: str
 ) -> dict:
     """Handle CloudWatch alarm returning to OK state."""
-    logger.info("Alarm returned to OK state, resetting circuit breaker")
+    logger.info("Alarm returned to OK state, resetting circuit open")
 
     enable_result = enable_event_source_mappings(webhook_function_name)
     if enable_result['success']:
@@ -116,12 +116,12 @@ def handle_alarm_ok_state(
         result['actions_taken'].append('Removed Lambda reserved concurrency limit')
 
     if state_table_name:
-        state_result = update_circuit_breaker_state(state_table_name, 'closed')
+        state_result = update_circuit_open_state(state_table_name, 'closed')
         if state_result['success']:
-            result['actions_taken'].append('Reset circuit breaker state to CLOSED')
+            result['actions_taken'].append('Reset circuit open state to CLOSED')
 
     if sns_topic_arn:
-        notification_message = f"""Circuit Breaker Auto-Recovery Complete
+        notification_message = f"""Circuit Open Auto-Recovery Complete
 
 Alarm: {alarm_name}
 State: OK
@@ -133,13 +133,13 @@ The system has automatically recovered.
 """
         sns_result = send_sns_notification(
             sns_topic_arn,
-            f"Circuit Breaker Recovered: {alarm_name}",
+            f"Circuit Open Recovered: {alarm_name}",
             notification_message
         )
         if sns_result['success']:
             result['actions_taken'].append('Sent recovery notification')
 
-    result['message'] = 'Circuit breaker reset to closed state'
+    result['message'] = 'Circuit open reset to closed state'
     logger.info("Recovery complete. Actions taken: %s", result['actions_taken'])
     return result
 
@@ -178,7 +178,7 @@ def handle_cloudwatch_alarm_event(event: dict) -> dict:
 def _execute_remediation_actions(
     result: dict, webhook_function_name: str, alarm_name: str, detail: dict
 ):
-    """Execute remediation actions when circuit breaker triggers."""
+    """Execute remediation actions when circuit open triggers."""
     alarm_reason = detail.get('state', {}).get('reason', 'No reason provided')
     new_state_value = detail.get('state', {}).get('value', 'UNKNOWN')
 
@@ -192,7 +192,7 @@ def _execute_remediation_actions(
 
     sns_topic_arn = os.environ.get('SNS_TOPIC_ARN')
     if sns_topic_arn:
-        notification_message = f"""Circuit Breaker Remediation Triggered
+        notification_message = f"""Circuit Open Remediation Triggered
 
 Alarm: {alarm_name}
 State: {new_state_value}
@@ -203,7 +203,7 @@ Actions Taken:
 
 Manual intervention may be required to restore service.
 """
-        subject = f"Circuit Breaker Alert: {alarm_name}"
+        subject = f"Circuit Open Alert: {alarm_name}"
         sns_result = send_sns_notification(sns_topic_arn, subject, notification_message)
         if sns_result['success']:
             result['actions_taken'].append('Sent SNS notification')
@@ -216,13 +216,13 @@ Manual intervention may be required to restore service.
 
     state_table_name = os.environ.get('STATE_TABLE_NAME')
     if state_table_name:
-        if update_circuit_breaker_state(state_table_name, 'open')['success']:
-            result['actions_taken'].append('Set circuit breaker state to OPEN')
+        if update_circuit_open_state(state_table_name, 'open')['success']:
+            result['actions_taken'].append('Set circuit open state to OPEN')
             result['actions_taken'].append('Auto-recovery will attempt after cooldown period')
 
 
 def lambda_handler(event, _context):
-    """Main Lambda handler for circuit breaker remediation."""
+    """Main Lambda handler for circuit open remediation."""
     logger.info("Received event: %s", json.dumps(event))
 
     is_cloudwatch = event.get('source') == 'aws.cloudwatch'

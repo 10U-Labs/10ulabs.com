@@ -67,7 +67,7 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     )
     prefix = result['resource_prefix']
     lambda_fn = result.get('webhook_handler_function_name', '')
-    result['circuit_breaker_state_table_name'] = f"{prefix}-circuit-breaker-state"
+    result['circuit_open_state_table_name'] = f"{prefix}-circuit-open-state"
     result['lambda_runners_role_name'] = f"{lambda_fn}ServiceRole"
     result['webhook_handler_service_role_name'] = f"{lambda_fn}ServiceRole"
     # SQS queue names (PascalCase naming convention, single source of truth: terraform_config)
@@ -79,7 +79,7 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     result['ignored_events_queue_name'] = f"{lambda_fn}IgnoredEvents"
     result['ignored_events_dlq_name'] = f"{lambda_fn}IgnoredEventsDlq"
     # Log group names derived from Lambda function names (single source of truth: locals.tf)
-    for key in ['circuit_breaker_remediation', 'dlq_reprocessor', 'circuit_breaker_recovery']:
+    for key in ['circuit_open_remediations', 'dlq_reprocessor', 'circuit_open_recoveries']:
         fn_name = result.get(f'{key}_function_name', '')
         result[f'{key}_log_group_name'] = f"/aws/lambda/{fn_name}"
     result.update(get_runner_labels())

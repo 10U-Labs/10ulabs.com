@@ -13,7 +13,7 @@ from repo_utils import REPO_ROOT
 
 # Re-exports for test files
 __all__ = [
-    'circuit_breaker_utils',
+    'circuit_open_utils',
     'create_closed_state_item',
     'get_lambda_path',
     'load_lambda_module',
@@ -32,7 +32,7 @@ def run_async(coro):
 
 
 def create_closed_state_item(include_recovery_fields: bool = False) -> dict:
-    """Create DynamoDB item for a closed circuit breaker state.
+    """Create DynamoDB item for a closed circuit open state.
 
     Args:
         include_recovery_fields: If True, include last_recovery_attempt field.
@@ -58,10 +58,10 @@ def create_mock_dynamodb_for_reset():
     return mock_db_client
 
 
-def create_circuit_breaker_status_mocks(
+def create_circuit_open_status_mocks(
     db_state='closed', sqs_state='Enabled', concurrency=None
 ):
-    """Create mocks for circuit breaker status checks."""
+    """Create mocks for circuit open status checks."""
     mock_db = MagicMock()
     mock_db.get_item.return_value = {
         'Item': {
@@ -85,8 +85,8 @@ def create_circuit_breaker_status_mocks(
 
 @pytest.fixture
 def cb_status_mock_factory():
-    """Factory fixture for creating circuit breaker status check mocks."""
-    return create_circuit_breaker_status_mocks
+    """Factory fixture for creating circuit open status check mocks."""
+    return create_circuit_open_status_mocks
 
 
 @pytest.fixture
@@ -136,32 +136,32 @@ def load_common_module(filename: str, module_name: str) -> ModuleType:
 
 
 # Pre-loaded common modules for test imports
-circuit_breaker_utils = load_common_module(
-    "circuit_breaker_utils.py", "circuit_breaker_utils"
+circuit_open_utils = load_common_module(
+    "circuit_open_utils.py", "circuit_open_utils"
 )
 
 
 @pytest.fixture
-def circuit_breaker_remediation(config):
-    """Provide circuit breaker remediation module."""
+def circuit_open_remediations(config):
+    """Provide circuit open remediation module."""
     env_vars = {
         'AWS_REGION': config['aws_region']
     }
     with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("circuit_breaker_remediation.py", "circuit_breaker_remediation")
+        module = load_lambda_module("circuit_open_remediations.py", "circuit_open_remediations")
         yield module
 
 
 @pytest.fixture
-def circuit_breaker_reset(config):
-    """Provide circuit breaker reset module."""
+def circuit_opens(config):
+    """Provide circuit open reset module."""
     env_vars = {
         'AWS_REGION': config['aws_region'],
         'WEBHOOK_FUNCTION_NAME': 'test-webhook-function',
         'STATE_TABLE_NAME': 'test-state-table'
     }
     with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("circuit_breaker_reset.py", "circuit_breaker_reset")
+        module = load_lambda_module("circuit_opens.py", "circuit_opens")
         yield module
 
 
@@ -177,13 +177,13 @@ def dlq_reprocessor(config):
 
 
 @pytest.fixture
-def circuit_breaker_recovery(config):
-    """Provide circuit breaker recovery module."""
+def circuit_open_recoveries(config):
+    """Provide circuit open recovery module."""
     env_vars = {
         'AWS_REGION': config['aws_region']
     }
     with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("circuit_breaker_recovery.py", "circuit_breaker_recovery")
+        module = load_lambda_module("circuit_open_recoveries.py", "circuit_open_recoveries")
         yield module
 
 

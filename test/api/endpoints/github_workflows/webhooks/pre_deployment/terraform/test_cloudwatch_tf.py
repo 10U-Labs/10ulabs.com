@@ -9,8 +9,8 @@ import pytest
 
 # Expected CloudWatch alarms
 CLOUDWATCH_ALARMS = [
-    "circuit_breaker_open",
-    "circuit_breaker_high_failures",
+    "circuit_open_open",
+    "circuit_open_high_failures",
     "webhook_handler_errors",
     "runners_dlq_messages",
 ]
@@ -86,9 +86,9 @@ class TestCloudWatchAlarmActions:
 
     def test_alarms_reference_sns_topic(self, cloudwatch_tf_content):
         """Verify alarms send notifications to SNS topic."""
-        pattern = r'aws_sns_topic\.circuit_breaker_alerts\.arn'
+        pattern = r'aws_sns_topic\.circuit_open_alerts\.arn'
         assert re.search(pattern, cloudwatch_tf_content), (
-            "Alarms should reference circuit_breaker_alerts SNS topic"
+            "Alarms should reference circuit_open_alerts SNS topic"
         )
 
 
@@ -153,12 +153,12 @@ class TestCloudWatchAlarmTags:
         )
 
 
-class TestCircuitBreakerAlarms:
-    """Test circuit breaker specific alarm configurations."""
+class TestCircuitOpenAlarms:
+    """Test circuit open specific alarm configurations."""
 
-    def test_circuit_breaker_open_alarm_configuration(self, cloudwatch_tf_content):
-        """Verify circuit breaker open alarm has correct metric configuration."""
-        has_state = '"CircuitBreakerState"' in cloudwatch_tf_content
+    def test_circuit_open_open_alarm_configuration(self, cloudwatch_tf_content):
+        """Verify circuit open open alarm has correct metric configuration."""
+        has_state = '"CircuitOpenState"' in cloudwatch_tf_content
         has_router = '"WebhookRouter"' in cloudwatch_tf_content
         assert has_state and has_router
 

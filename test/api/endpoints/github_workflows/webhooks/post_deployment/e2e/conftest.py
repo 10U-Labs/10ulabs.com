@@ -21,11 +21,11 @@ def github_pat_fixture(ssm_client, config):
     return result
 
 
-def assert_circuit_breaker_state_in_response(response):
-    """Assert that the response contains circuit breaker state.
+def assert_circuit_open_state_in_response(response):
+    """Assert that the response contains circuit open state.
 
-    Used by circuit breaker tests - checks for 'state' field in the response
-    from GET /v1/github-workflows/webhooks/circuit-breaker endpoint.
+    Used by circuit open tests - checks for 'state' field in the response
+    from GET /v1/github-workflows/webhooks/circuit-open endpoint.
     """
     data = response.json()
     assert "state" in data
