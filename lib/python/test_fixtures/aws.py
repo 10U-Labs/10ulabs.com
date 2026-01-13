@@ -254,8 +254,10 @@ def api_gateway_info(request):
     try:
         response = client.get_rest_api(restApiId=api_id)
         endpoint_config = response.get("endpointConfiguration", {})
-        resources_response = client.get_resources(restApiId=api_id)
-        paths = [r.get("path", "") for r in resources_response.get("items", [])]
+        paginator = client.get_paginator("get_resources")
+        paths = []
+        for page in paginator.paginate(restApiId=api_id):
+            paths.extend([r.get("path", "") for r in page.get("items", [])])
         return {
             "id": api_id,
             "exists": True,
