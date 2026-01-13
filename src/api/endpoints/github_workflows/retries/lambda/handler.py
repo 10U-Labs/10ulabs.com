@@ -12,13 +12,15 @@ import urllib.error
 import urllib.request
 from typing import Any
 
+import boto3
+from botocore.exceptions import ClientError
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
 def _get_github_token() -> str:
     """Get GitHub token from SSM parameter."""
-    import boto3
     ssm = boto3.client("ssm")
     param_name = os.environ.get("GITHUB_TOKEN_SECRET_NAME", "")
     if not param_name:
@@ -27,7 +29,7 @@ def _get_github_token() -> str:
     try:
         response = ssm.get_parameter(Name=param_name, WithDecryption=True)
         return response["Parameter"]["Value"]
-    except Exception as err:
+    except ClientError as err:
         logger.error("Failed to get GitHub token: %s", str(err))
         return ""
 
@@ -229,10 +231,12 @@ def _process_retry_request(body: dict) -> dict[str, Any]:
     _wait_for_workflow_completion(token, github_repo, run_id)
 
     # Re-dispatch the workflow
-    dispatch_reason = f"Auto-retry: {reason} ({resource_type}:{resource_id})"
-    if _dispatch_workflow(token, github_repo, workflow_id, head_branch, dispatch_reason):
+    if _dispatch_workflow(
+        token, github_repo, workflow_id, head_branch,
+        f"Auto-retry: {reason} ({resource_type}:{resource_id})"
+    ):
         logger.info("Successfully dispatched retry workflow for %s", workflow_id)
-        return {
+        result = {
             "statusCode": 200,
             "body": json.dumps({
                 "message": "Workflow retry dispatched",
@@ -240,11 +244,12 @@ def _process_retry_request(body: dict) -> dict[str, Any]:
                 "workflow_id": workflow_id,
             }),
         }
-
-    return {
-        "statusCode": 500,
-        "body": json.dumps({"error": "Failed to dispatch retry workflow"}),
-    }
+    else:
+        result = {
+            "statusCode": 500,
+            "body": json.dumps({"error": "Failed to dispatch retry workflow"}),
+        }
+    return result
 
 
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:

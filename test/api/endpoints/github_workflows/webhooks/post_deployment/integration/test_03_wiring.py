@@ -11,6 +11,8 @@ This includes:
 """
 import json
 
+from test_utils.aws_assertions import role_has_permission
+
 
 # === EventBridge Rule Targets ===
 
@@ -82,68 +84,34 @@ def test_webhook_handler_uses_correct_role(lambda_client, config):
 # === Role Policy Permissions (Cross-Service Wiring) ===
 
 
-def _role_has_permission(iam_client, role_name, permission):
-    """Check if a role has a specific permission in its inline policies."""
-    policies = iam_client.list_role_policies(RoleName=role_name)
-
-    for policy_name in policies["PolicyNames"]:
-        policy = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
-        document = policy["PolicyDocument"]
-
-        for statement in document.get("Statement", []):
-            actions = statement.get("Action", [])
-            if isinstance(actions, str):
-                actions = [actions]
-
-            if permission in actions:
-                return True
-
-    return False
-
-
 def test_webhook_handler_role_has_sqs_get_queue_attributes(iam_client, config):
-    """Verify webhook handler role has GetQueueAttributes permission on job queue.
-
-    The webhook_router.py code calls get_queue_attributes on the job queue
-    to publish queue depth metrics after enqueuing jobs.
-    """
+    """Verify webhook handler role has GetQueueAttributes permission on job queue."""
     role_name = config["webhook_handler_service_role_name"]
-    assert _role_has_permission(iam_client, role_name, "sqs:GetQueueAttributes"), (
-        f"Role {role_name} missing sqs:GetQueueAttributes permission - "
-        "webhook_router.py needs this to publish queue depth metrics"
-    )
+    assert role_has_permission(iam_client, role_name, "sqs:GetQueueAttributes")
 
 
 def test_webhook_handler_role_has_sqs_send_message(iam_client, config):
     """Verify webhook handler role has SendMessage permission."""
     role_name = config["webhook_handler_service_role_name"]
-    assert _role_has_permission(iam_client, role_name, "sqs:SendMessage"), (
-        f"Role {role_name} missing sqs:SendMessage permission"
-    )
+    assert role_has_permission(iam_client, role_name, "sqs:SendMessage")
 
 
 def test_webhook_handler_role_has_dynamodb_access(iam_client, config):
     """Verify webhook handler role has DynamoDB access for idempotency."""
     role_name = config["webhook_handler_service_role_name"]
-    assert _role_has_permission(iam_client, role_name, "dynamodb:PutItem"), (
-        f"Role {role_name} missing dynamodb:PutItem permission"
-    )
+    assert role_has_permission(iam_client, role_name, "dynamodb:PutItem")
 
 
 def test_webhook_handler_role_has_ssm_access(iam_client, config):
     """Verify webhook handler role has SSM access for secrets."""
     role_name = config["webhook_handler_service_role_name"]
-    assert _role_has_permission(iam_client, role_name, "ssm:GetParameter"), (
-        f"Role {role_name} missing ssm:GetParameter permission"
-    )
+    assert role_has_permission(iam_client, role_name, "ssm:GetParameter")
 
 
 def test_webhook_handler_role_has_cloudwatch_metrics(iam_client, config):
     """Verify webhook handler role has CloudWatch metrics permission."""
     role_name = config["webhook_handler_service_role_name"]
-    assert _role_has_permission(iam_client, role_name, "cloudwatch:PutMetricData"), (
-        f"Role {role_name} missing cloudwatch:PutMetricData permission"
-    )
+    assert role_has_permission(iam_client, role_name, "cloudwatch:PutMetricData")
 
 
 # === CloudWatch Logs Subscription Filters → Firehose Wiring ===

@@ -1,3 +1,3 @@
 module "common" {
-  source = "../../../../lib/terraform/common"
+  source = "../../../../../lib/terraform/common"
 }
