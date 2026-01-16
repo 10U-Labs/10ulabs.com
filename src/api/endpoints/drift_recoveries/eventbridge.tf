@@ -18,14 +18,11 @@ resource "aws_cloudwatch_event_rule" "config_compliance_change" {
   })
 }
 
-resource "aws_cloudwatch_event_target" "drift_recovery" {
+# EventBridge invokes Lambda directly (no SQS queue)
+resource "aws_cloudwatch_event_target" "lambda" {
   rule      = aws_cloudwatch_event_rule.config_compliance_change.name
-  target_id = "drift-recovery-sqs"
-  arn       = aws_sqs_queue.handler.arn
-
-  sqs_target {
-    message_group_id = "drift-recovery"
-  }
+  target_id = "InvokeLambda"
+  arn       = aws_lambda_function.handler.arn
 
   input_transformer {
     input_paths = {
@@ -44,4 +41,12 @@ resource "aws_cloudwatch_event_target" "drift_recovery" {
 }
 EOF
   }
+}
+
+resource "aws_lambda_permission" "eventbridge" {
+  statement_id  = "AllowEventBridgeInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.handler.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.config_compliance_change.arn
 }

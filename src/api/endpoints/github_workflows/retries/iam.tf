@@ -60,20 +60,4 @@ resource "aws_iam_role_policy" "kms_access" {
   })
 }
 
-resource "aws_iam_role_policy" "sqs_access" {
-  name = "SQSAccess"
-  role = aws_iam_role.lambda.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "sqs:ReceiveMessage",
-        "sqs:DeleteMessage",
-        "sqs:GetQueueAttributes"
-      ]
-      Resource = [aws_sqs_queue.main.arn]
-    }]
-  })
-}
+# Note: SQS access policy removed - retry logic now inlined in ec2/ecs handlers

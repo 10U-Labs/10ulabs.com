@@ -27,24 +27,7 @@ resource "aws_iam_role_policy_attachment" "lambda_xray" {
   policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }
 
-# SQS access - receive from main queue
-resource "aws_iam_role_policy" "sqs_access" {
-  name = "SQSAccess"
-  role = aws_iam_role.lambda.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "sqs:ReceiveMessage",
-        "sqs:DeleteMessage",
-        "sqs:GetQueueAttributes"
-      ]
-      Resource = [aws_sqs_queue.main.arn]
-    }]
-  })
-}
+# Note: SQS access policy removed - API Gateway now invokes Lambda directly (AWS_PROXY)
 
 # SSM access for API key
 resource "aws_iam_role_policy" "ssm_access" {

@@ -69,11 +69,11 @@ resource "aws_lambda_function" "runners_handler" {
     variables = {
       API_BASE_URL               = "https://${local.api_fqdn}"
       API_KEY_PARAMETER_NAME     = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
-      CIRCUIT_OPEN_TABLE_NAME = aws_dynamodb_table.circuit_open_state.name
+      ARCHIVE_BUCKET_NAME        = aws_s3_bucket.ignored_events_archive.bucket
+      CIRCUIT_OPEN_TABLE_NAME    = aws_dynamodb_table.circuit_open_state.name
       GITHUB_REPO                = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME   = module.common.ssm_github_pat_name
       IDEMPOTENCY_TABLE_NAME     = aws_dynamodb_table.idempotency.name
-      IGNORED_EVENTS_QUEUE_URL   = aws_sqs_queue.ignored_events.url
       WEBHOOK_SECRET_NAME        = aws_ssm_parameter.webhook_secret.name
     }
   }
@@ -99,6 +99,7 @@ resource "aws_lambda_function" "runners_handler" {
     aws_iam_role_policy.lambda_runners_handler_ssm,
     aws_iam_role_policy.lambda_runners_handler_cloudwatch,
     aws_iam_role_policy.lambda_runners_handler_sqs,
+    aws_iam_role_policy.lambda_runners_handler_s3,
     aws_iam_role_policy.lambda_runners_handler_dynamodb,
     aws_iam_role_policy.lambda_runners_handler_ssm_github_pat,
     aws_iam_role_policy_attachment.lambda_runners_handler_basic,
@@ -120,133 +121,10 @@ resource "aws_cloudwatch_log_group" "runners_handler" {
   })
 }
 
-# Event source mapping for webhook ingress queue (API Gateway → SQS → Lambda)
-# This is the entry point for GitHub webhooks after removing Lambda from the API Gateway hot path
-resource "aws_lambda_event_source_mapping" "runners_handler_webhook_ingress" {
-  event_source_arn                   = aws_sqs_queue.webhook_ingress.arn
-  function_name                      = aws_lambda_function.runners_handler.arn
-  batch_size                         = 1
-  maximum_batching_window_in_seconds = 0
-}
-
+# Note: SQS event source mapping removed - API Gateway now invokes Lambda directly (AWS_PROXY)
 # Note: runner_starter Lambda removed - routing logic moved to /v1/runners endpoint
 # Note: runner_terminator Lambda removed - runners are ephemeral and self-terminate
-
-# Ignored Events Archiver Lambda - archives ignored events to S3
-data "archive_file" "ignored_events_archiver" {
-  type        = "zip"
-  output_path = "${path.module}/.terraform/lambda_packages/ignored_events_archiver.zip"
-
-  source {
-    content  = file("${path.module}/lambdas/ignored_events_archiver.py")
-    filename = "ignored_events_archiver.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/__init__.py")
-    filename = "common/__init__.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/aws_clients.py")
-    filename = "common/aws_clients.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/circuit_open_utils.py")
-    filename = "common/circuit_open_utils.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/cloudwatch.py")
-    filename = "common/cloudwatch.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/ec2_utils.py")
-    filename = "common/ec2_utils.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/ecs_utils.py")
-    filename = "common/ecs_utils.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/github_api.py")
-    filename = "common/github_api.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/lambda_utils.py")
-    filename = "common/lambda_utils.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
-    filename = "common/webhook_ingress.py"
-  }
-  source {
-    content  = file("${path.module}/../../../../../lib/python/runner_labels/__init__.py")
-    filename = "runner_labels.py"
-  }
-  source {
-    content  = file("${local.etc_dir}/runners.json")
-    filename = "etc/runners.json"
-  }
-}
-
-resource "aws_lambda_function" "ignored_events_archiver" {
-  filename                       = data.archive_file.ignored_events_archiver.output_path
-  function_name                  = local.ignored_events_archiver_function_name
-  role                           = aws_iam_role.ignored_events_archiver.arn
-  handler                        = "ignored_events_archiver.lambda_handler"
-  source_code_hash               = data.archive_file.ignored_events_archiver.output_base64sha256
-  runtime                        = "python3.13"
-  architectures                  = ["arm64"]
-  timeout                        = 60
-  memory_size                    = 256
-  reserved_concurrent_executions = -1
-  description                    = "Archives ignored webhook events to S3 for long-term storage"
-
-  environment {
-    variables = {
-      ARCHIVE_BUCKET_NAME = aws_s3_bucket.ignored_events_archive.bucket
-    }
-  }
-
-  tracing_config {
-    mode = "Active"
-  }
-
-  logging_config {
-    log_format = "Text"
-    log_group  = aws_cloudwatch_log_group.ignored_events_archiver.name
-  }
-
-  tags = merge(local.common_tags, {
-    Name = local.ignored_events_archiver_function_name
-  })
-
-  depends_on = [
-    aws_iam_role_policy.ignored_events_archiver_cloudwatch,
-    aws_iam_role_policy.ignored_events_archiver_sqs,
-    aws_iam_role_policy.ignored_events_archiver_s3,
-    aws_iam_role_policy_attachment.ignored_events_archiver_basic,
-    aws_iam_role_policy_attachment.ignored_events_archiver_xray,
-  ]
-
-  lifecycle {
-    replace_triggered_by = [aws_iam_role.ignored_events_archiver.id]
-  }
-}
-
-resource "aws_cloudwatch_log_group" "ignored_events_archiver" {
-  name              = "/aws/lambda/${local.ignored_events_archiver_function_name}"
-  retention_in_days = 7
-
-  tags = merge(local.common_tags, {
-    Name = "${local.ignored_events_archiver_function_name}Logs"
-  })
-}
-
-resource "aws_lambda_event_source_mapping" "ignored_events_archiver_sqs" {
-  event_source_arn                   = aws_sqs_queue.ignored_events.arn
-  function_name                      = aws_lambda_function.ignored_events_archiver.arn
-  batch_size                         = 10
-  maximum_batching_window_in_seconds = 60
-}
+# Note: ignored_events_archiver Lambda removed - archive logic merged into webhook_router
 
 data "archive_file" "circuit_opens" {
   type        = "zip"

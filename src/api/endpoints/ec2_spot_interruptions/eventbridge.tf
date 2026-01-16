@@ -14,8 +14,17 @@ resource "aws_cloudwatch_event_rule" "spot_interruption" {
   })
 }
 
-resource "aws_cloudwatch_event_target" "sqs" {
+# EventBridge invokes Lambda directly (no SQS queue)
+resource "aws_cloudwatch_event_target" "lambda" {
   rule      = aws_cloudwatch_event_rule.spot_interruption.name
-  target_id = "SendToSQS"
-  arn       = aws_sqs_queue.main.arn
+  target_id = "InvokeLambda"
+  arn       = aws_lambda_function.handler.arn
+}
+
+resource "aws_lambda_permission" "eventbridge" {
+  statement_id  = "AllowEventBridgeInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.handler.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.spot_interruption.arn
 }

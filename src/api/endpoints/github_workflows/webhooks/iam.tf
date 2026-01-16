@@ -64,32 +64,32 @@ resource "aws_iam_role_policy" "lambda_runners_handler_sqs" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "sqs:SendMessage",
-          "sqs:GetQueueAttributes"
-        ]
-        Resource = [
-          # Note: job_queue removed - routing logic moved to /v1/runners
-          # Note: cancellation queue removed - runners are ephemeral and self-terminate
-          aws_sqs_queue.webhook_dlq.arn,
-          aws_sqs_queue.ignored_events.arn,
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "sqs:ReceiveMessage",
-          "sqs:DeleteMessage",
-          "sqs:GetQueueAttributes"
-        ]
-        Resource = [
-          aws_sqs_queue.webhook_ingress.arn,
-        ]
-      }
-    ]
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:SendMessage",
+        "sqs:GetQueueAttributes"
+      ]
+      Resource = [
+        aws_sqs_queue.webhook_dlq.arn,
+      ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_runners_handler_s3" {
+  name = "S3ArchiveAccess"
+  role = aws_iam_role.lambda_runners_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:PutObject"
+      ]
+      Resource = ["${aws_s3_bucket.ignored_events_archive.arn}/*"]
+    }]
   })
 }
 
@@ -152,101 +152,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_kms" {
 
 # Note: runner_starter IAM removed - routing logic moved to /v1/runners endpoint
 # Note: runner_terminator IAM removed - runners are ephemeral and self-terminate
-
-# Ignored Events Archiver IAM
-resource "aws_iam_role" "ignored_events_archiver" {
-  name = local.ignored_events_archiver_role_name
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Service = "lambda.amazonaws.com"
-      }
-      Action = "sts:AssumeRole"
-    }]
-  })
-
-  tags = merge(local.common_tags, {
-    Name = local.ignored_events_archiver_role_name
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ignored_events_archiver_basic" {
-  role       = aws_iam_role.ignored_events_archiver.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-resource "aws_iam_role_policy_attachment" "ignored_events_archiver_xray" {
-  role       = aws_iam_role.ignored_events_archiver.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-}
-
-resource "aws_iam_role_policy" "ignored_events_archiver_cloudwatch" {
-  name = "CloudWatchMetrics"
-  role = aws_iam_role.ignored_events_archiver.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["cloudwatch:PutMetricData"]
-      Resource = ["*"]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "ignored_events_archiver_sqs" {
-  name = "SQSAccess"
-  role = aws_iam_role.ignored_events_archiver.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "sqs:ReceiveMessage",
-        "sqs:DeleteMessage",
-        "sqs:GetQueueAttributes"
-      ]
-      Resource = [aws_sqs_queue.ignored_events.arn]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "ignored_events_archiver_s3" {
-  name = "S3Access"
-  role = aws_iam_role.ignored_events_archiver.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "s3:PutObject"
-      ]
-      Resource = ["${aws_s3_bucket.ignored_events_archive.arn}/*"]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "ignored_events_archiver_kms" {
-  name = "KMSDecrypt"
-  role = aws_iam_role.ignored_events_archiver.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "kms:Decrypt",
-        "kms:DescribeKey"
-      ]
-      Resource = ["*"]
-    }]
-  })
-}
+# Note: ignored_events_archiver IAM removed - archive logic merged into webhook_router
 
 resource "aws_iam_role" "circuit_opens" {
   name = local.circuit_opens_role_name

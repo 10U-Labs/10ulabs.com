@@ -43,8 +43,8 @@ resource "aws_iam_role_policy" "ec2_describe" {
   })
 }
 
-resource "aws_iam_role_policy" "sqs_receive" {
-  name = "SQSReceive"
+resource "aws_iam_role_policy" "ssm_access" {
+  name = "SSMAccess"
   role = aws_iam_role.lambda.id
 
   policy = jsonencode({
@@ -52,17 +52,15 @@ resource "aws_iam_role_policy" "sqs_receive" {
     Statement = [{
       Effect = "Allow"
       Action = [
-        "sqs:ReceiveMessage",
-        "sqs:DeleteMessage",
-        "sqs:GetQueueAttributes"
+        "ssm:GetParameter"
       ]
-      Resource = [aws_sqs_queue.main.arn]
+      Resource = [module.common.ssm_github_pat_arn]
     }]
   })
 }
 
-resource "aws_iam_role_policy" "sqs_send_retries" {
-  name = "SQSSendToRetries"
+resource "aws_iam_role_policy" "kms_access" {
+  name = "KMSDecrypt"
   role = aws_iam_role.lambda.id
 
   policy = jsonencode({
@@ -70,9 +68,10 @@ resource "aws_iam_role_policy" "sqs_send_retries" {
     Statement = [{
       Effect = "Allow"
       Action = [
-        "sqs:SendMessage"
+        "kms:Decrypt",
+        "kms:DescribeKey"
       ]
-      Resource = [data.terraform_remote_state.github_workflows_retries.outputs.sqs_queue_arn]
+      Resource = ["*"]
     }]
   })
 }

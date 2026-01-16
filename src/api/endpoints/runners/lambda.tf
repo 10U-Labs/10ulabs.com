@@ -48,7 +48,6 @@ resource "aws_lambda_function" "handler" {
   })
 
   depends_on = [
-    aws_iam_role_policy.sqs_access,
     aws_iam_role_policy.ssm_access,
     aws_iam_role_policy.kms_access,
     aws_iam_role_policy_attachment.lambda_basic,
@@ -70,15 +69,9 @@ resource "aws_cloudwatch_log_group" "handler" {
   })
 }
 
-# Event source mapping for SQS queue
-resource "aws_lambda_event_source_mapping" "sqs" {
-  event_source_arn                   = aws_sqs_queue.main.arn
-  function_name                      = aws_lambda_function.handler.arn
-  batch_size                         = 1
-  maximum_batching_window_in_seconds = 0
-}
+# Note: SQS event source mapping removed - API Gateway now invokes Lambda directly (AWS_PROXY)
 
-# Allow API Gateway to invoke Lambda (for direct invocation if needed)
+# Allow API Gateway to invoke Lambda
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"

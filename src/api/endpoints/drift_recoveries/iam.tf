@@ -22,25 +22,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy" "lambda_sqs" {
-  name = "SQSAccess"
-  role = aws_iam_role.lambda.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "sqs:ReceiveMessage",
-        "sqs:DeleteMessage",
-        "sqs:GetQueueAttributes"
-      ]
-      Resource = [
-        aws_sqs_queue.handler.arn
-      ]
-    }]
-  })
-}
+# Note: SQS access policy removed - EventBridge now invokes Lambda directly
 
 resource "aws_iam_role_policy" "lambda_ssm" {
   name = "SSMAccess"

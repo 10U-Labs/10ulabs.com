@@ -47,10 +47,4 @@ resource "aws_lambda_permission" "api_gateway" {
   source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api_common_routing.outputs.api_gateway_id}/*"
 }
 
-# SQS event source mapping for requests from /v1/runners endpoint
-resource "aws_lambda_event_source_mapping" "sqs" {
-  event_source_arn                   = aws_sqs_queue.main.arn
-  function_name                      = aws_lambda_function.handler.arn
-  batch_size                         = 1
-  maximum_batching_window_in_seconds = 0
-}
+# Note: SQS event source mapping removed - /v1/runners now routes via HTTP to /v1/runners/ecs

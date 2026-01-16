@@ -29,12 +29,7 @@ resource "aws_lambda_function" "handler" {
   })
 }
 
-resource "aws_lambda_event_source_mapping" "sqs" {
-  event_source_arn = aws_sqs_queue.handler.arn
-  function_name    = aws_lambda_function.handler.arn
-  batch_size       = 1
-  enabled          = true
-}
+# Note: SQS event source mapping removed - EventBridge now invokes Lambda directly
 
 resource "aws_cloudwatch_log_group" "handler" {
   name              = "/aws/lambda/${local.function_name}"

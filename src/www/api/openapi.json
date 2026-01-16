@@ -1001,7 +1001,7 @@
     "/v1/github-workflows/webhooks": {
       "post": {
         "summary": "GitHub Workflow Job Webhook",
-        "description": "Receives GitHub workflow_job webhook events and queues them for processing (API Gateway \u2192 SQS direct integration, no Lambda in hot path)",
+        "description": "Receives GitHub workflow_job webhook events for processing",
         "operationId": "receiveWorkflowJob",
         "tags": [
           "/v1/github-workflows"
@@ -1021,24 +1021,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Webhook accepted and queued for processing",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "accepted"
-                    },
-                    "messageId": {
-                      "type": "string",
-                      "description": "SQS message ID for tracking"
-                    }
-                  }
-                }
-              }
-            }
+            "description": "Webhook processed successfully"
           },
           "400": {
             "description": "Missing required x-github-event header",
@@ -1058,24 +1041,9 @@
           }
         },
         "x-amazon-apigateway-integration": {
-          "type": "aws",
+          "uri": "${WebhookRouterHandlerArn}",
           "httpMethod": "POST",
-          "uri": "${WebhookIngressSqsUri}",
-          "credentials": "${ApiGatewaySqsRoleArn}",
-          "requestParameters": {
-            "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
-          },
-          "requestTemplates": {
-            "application/json": "Action=SendMessage&MessageBody=$util.urlEncode($input.body)&MessageAttribute.1.Name=x-github-event&MessageAttribute.1.Value.DataType=String&MessageAttribute.1.Value.StringValue=$util.urlEncode($input.params().header.get('x-github-event'))&MessageAttribute.2.Name=x-hub-signature-256&MessageAttribute.2.Value.DataType=String&MessageAttribute.2.Value.StringValue=$util.urlEncode($input.params().header.get('x-hub-signature-256'))&MessageAttribute.3.Name=x-github-delivery&MessageAttribute.3.Value.DataType=String&MessageAttribute.3.Value.StringValue=$util.urlEncode($input.params().header.get('x-github-delivery'))"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseTemplates": {
-                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.path('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
-              }
-            }
-          }
+          "type": "aws_proxy"
         }
       },
       "options": {
@@ -1771,7 +1739,7 @@
     "/v1/runners": {
       "post": {
         "summary": "Route Runner Request",
-        "description": "Routes runner requests to the appropriate endpoint (/v1/runners/ec2 or /v1/runners/ecs) based on job labels. Uses API Gateway -> SQS direct integration.",
+        "description": "Routes runner requests to the appropriate endpoint (/v1/runners/ec2 or /v1/runners/ecs) based on job labels.",
         "operationId": "routeRunnerRequest",
         "tags": [
           "/v1/runners"
@@ -1820,45 +1788,13 @@
         },
         "responses": {
           "200": {
-            "description": "Runner request accepted and queued for routing",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "accepted"
-                    },
-                    "messageId": {
-                      "type": "string",
-                      "description": "SQS message ID for tracking"
-                    }
-                  }
-                }
-              }
-            }
+            "description": "Runner request processed successfully"
           }
         },
         "x-amazon-apigateway-integration": {
-          "type": "aws",
+          "uri": "${RunnersRouterHandlerArn}",
           "httpMethod": "POST",
-          "uri": "${RunnersSqsUri}",
-          "credentials": "${ApiGatewaySqsRoleArn}",
-          "requestParameters": {
-            "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
-          },
-          "requestTemplates": {
-            "application/json": "Action=SendMessage&MessageBody=$util.urlEncode($input.body)"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseTemplates": {
-                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.path('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
-              }
-            }
-          }
+          "type": "aws_proxy"
         }
       },
       "options": {

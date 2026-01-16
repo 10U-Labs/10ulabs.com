@@ -15,6 +15,7 @@ locals {
     image_for_ec2_runners    = module.common.lambda_handler_names.image_for_ec2_runners
     image_for_ecs_runners    = module.common.lambda_handler_names.image_for_ecs_runners
     rack_configurations      = module.common.lambda_handler_names.rack_configurations
+    runners                  = module.common.lambda_handler_names.runners
     runners_cleanup          = module.common.lambda_handler_names.runners_cleanup
     sessions                 = module.common.lambda_handler_names.sessions
     simulation_soc           = module.common.lambda_handler_names.simulation_soc
@@ -42,18 +43,11 @@ locals {
   image_for_ec2_runners_arn    = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ec2_runners}/invocations"
   image_for_ecs_runners_arn    = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.image_for_ecs_runners}/invocations"
   rack_configurations_arn      = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_configurations}/invocations"
+  runners_router_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.runners}/invocations"
   runners_cleanup_arn          = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.runners_cleanup}/invocations"
   sessions_arn                 = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.sessions}/invocations"
   simulation_soc_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
-
-  # SQS integration for /v1/github-workflows/webhooks (API Gateway → SQS direct, no Lambda in hot path)
-  # Construct queue name from shared module (avoid dependency on github_workflows remote state)
-  webhook_ingress_queue_name = "${local.lambda_function_names.webhook}Ingress"
-  webhook_ingress_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.webhook_ingress_queue_name}"
-
-  # SQS integration for /v1/runners (API Gateway → SQS direct)
-  runners_queue_name = module.common.lambda_handler_names.runners
-  runners_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.runners_queue_name}"
+  webhook_router_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.webhook}/invocations"
 
   openapi_spec = templatefile("${path.module}/../../../www/api/openapi.json", {
     CatchAllHandlerArn               = local.catchall_integration_arn
@@ -71,13 +65,10 @@ locals {
     ImageForEcsRunnersHandlerArn     = local.image_for_ecs_runners_arn
     RackConfigurationsHandlerArn     = local.rack_configurations_arn
     RunnersCleanupHandlerArn         = local.runners_cleanup_arn
+    RunnersRouterHandlerArn          = local.runners_router_arn
     SessionsHandlerArn               = local.sessions_arn
     SimulationSocHandlerArn          = local.simulation_soc_arn
-    # SQS direct integration for /v1/github-workflows/webhooks webhook ingress
-    WebhookIngressSqsUri = local.webhook_ingress_sqs_uri
-    ApiGatewaySqsRoleArn = aws_iam_role.api_gateway_sqs.arn
-    # SQS direct integration for /v1/runners
-    RunnersSqsUri = local.runners_sqs_uri
+    WebhookRouterHandlerArn          = local.webhook_router_arn
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)
 }

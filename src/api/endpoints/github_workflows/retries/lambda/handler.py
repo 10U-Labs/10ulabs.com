@@ -253,25 +253,14 @@ def _process_retry_request(body: dict) -> dict[str, Any]:
 
 
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
-    """Lambda handler for workflow retry requests.
+    """Lambda handler for workflow retry requests via API Gateway.
 
-    Handles both direct invocations and SQS-triggered events.
+    Handles direct API Gateway invocations for manual retry requests.
+    Note: Automatic retries from EC2/ECS handlers now call retry logic directly.
     """
     logger.info("Received event: %s", json.dumps(event))
 
-    # Handle SQS event
-    if "Records" in event:
-        results = []
-        for record in event["Records"]:
-            body = json.loads(record["body"])
-            result = _process_retry_request(body)
-            results.append(result)
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"results": results}),
-        }
-
-    # Handle direct invocation or API Gateway event
+    # Handle API Gateway event
     if "body" in event:
         body = json.loads(event["body"]) if isinstance(event["body"], str) else event["body"]
     else:

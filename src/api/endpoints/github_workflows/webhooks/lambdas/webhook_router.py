@@ -23,7 +23,7 @@ from urllib.parse import unquote
 
 from botocore.exceptions import ClientError
 
-from common.aws_clients import get_dynamodb_client, get_sqs_client, get_ssm_client
+from common.aws_clients import get_dynamodb_client, get_s3_client, get_sqs_client, get_ssm_client
 from common.cloudwatch import publish_metric as common_publish_metric
 from common.webhook_ingress import IngressHandler
 
@@ -178,36 +178,52 @@ async def enqueue_job(job_data: dict[str, Any]) -> dict[str, Any]:
         return {"success": False, "error": str(err)}
 
 
-def enqueue_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str, Any]:
-    """Enqueue an ignored event to the ignored events queue.
+def archive_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str, Any]:
+    """Archive an ignored event directly to S3.
 
     Returns:
         Result dictionary with success status
     """
-    queue_url = os.environ.get("IGNORED_EVENTS_QUEUE_URL")
-    if not queue_url:
+    bucket_name = os.environ.get("ARCHIVE_BUCKET_NAME")
+    if not bucket_name:
         logger.warning(
-            "IGNORED_EVENTS_QUEUE_URL not set, skipping ignored event enqueue"
+            "ARCHIVE_BUCKET_NAME not set, skipping ignored event archive"
         )
-        return {"success": False, "error": "Ignored events queue not configured"}
+        return {"success": False, "error": "Archive bucket not configured"}
 
     try:
-        message_body = {
+        now = datetime.now(timezone.utc)
+        # Generate a unique ID based on timestamp
+        event_id = f"{int(now.timestamp() * 1000)}-{hash(json.dumps(event_data, sort_keys=True)) % 10000:04d}"
+
+        archived_event = {
+            "event_id": event_id,
+            "archived_at": now.isoformat(),
             "event_data": event_data,
             "reason": reason,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-        response = get_sqs_client().send_message(
-            QueueUrl=queue_url, MessageBody=json.dumps(message_body)
+
+        # Build S3 key: ignored-events/YYYY/MM/DD/HH/event-id.json
+        s3_key = (
+            f"ignored-events/{now.year}/{now.month:02d}/{now.day:02d}/"
+            f"{now.hour:02d}/{event_id}.json"
         )
+
+        get_s3_client().put_object(
+            Bucket=bucket_name,
+            Key=s3_key,
+            Body=json.dumps(archived_event, indent=2),
+            ContentType="application/json",
+        )
+
         logger.info(
-            "Enqueued ignored event to SQS: %s (reason: %s)",
-            response.get("MessageId"),
+            "Archived ignored event to S3: %s (reason: %s)",
+            s3_key,
             reason,
         )
-        return {"success": True, "message_id": response.get("MessageId")}
+        return {"success": True, "key": s3_key}
     except ClientError as err:
-        logger.error("Failed to enqueue ignored event: %s", str(err))
+        logger.error("Failed to archive ignored event: %s", str(err))
         return {"success": False, "error": str(err)}
 
 
@@ -561,8 +577,8 @@ def get_ingress_handler() -> IngressHandler:
         # Note: enqueue_cancellation removed - runners are ephemeral and self-terminate
 
         def enqueue_ignored(self, payload: dict[str, Any], reason: str) -> None:
-            """Enqueue ignored event to SQS."""
-            enqueue_ignored_event(payload, reason)
+            """Archive ignored event to S3."""
+            archive_ignored_event(payload, reason)
 
     return IngressHandler(IngressDeps())
 

@@ -21,7 +21,7 @@ resource "aws_lambda_function" "handler" {
 
   environment {
     variables = {
-      RETRIES_QUEUE_URL = data.terraform_remote_state.github_workflows_retries.outputs.sqs_queue_url
+      GITHUB_TOKEN_SECRET_NAME = module.common.ssm_github_pat_name
     }
   }
 
@@ -52,10 +52,4 @@ resource "aws_cloudwatch_log_group" "handler" {
   })
 }
 
-# SQS event source mapping
-resource "aws_lambda_event_source_mapping" "sqs" {
-  event_source_arn                   = aws_sqs_queue.main.arn
-  function_name                      = aws_lambda_function.handler.arn
-  batch_size                         = 1
-  maximum_batching_window_in_seconds = 0
-}
+# Note: SQS event source mapping removed - EventBridge now invokes Lambda directly

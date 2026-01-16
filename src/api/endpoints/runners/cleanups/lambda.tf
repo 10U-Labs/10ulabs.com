@@ -55,13 +55,7 @@ resource "aws_cloudwatch_log_group" "handler" {
   })
 }
 
-# SQS event source mapping for API Gateway triggers
-resource "aws_lambda_event_source_mapping" "sqs" {
-  event_source_arn                   = aws_sqs_queue.main.arn
-  function_name                      = aws_lambda_function.handler.arn
-  batch_size                         = 1
-  maximum_batching_window_in_seconds = 0
-}
+# Note: SQS event source mapping removed - cleanups triggered by EventBridge Scheduler
 
 # Permission for EventBridge Scheduler to invoke Lambda
 resource "aws_lambda_permission" "scheduler" {
