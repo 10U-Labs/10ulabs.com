@@ -38,14 +38,26 @@
 #### 6.6.4 Trireg nets (Medium Complexity/Low Usefulness)
 Models capacitors that hold their charge when disconnected. This matters for transistor-level simulation of things like DRAM cells or dynamic logic, but Verilator focuses on RTL simulation where you're working at a higher abstraction level. Most designs never use this.
 
-#### 7.3.2/11.9/12.6.* Tagged unions and pattern matching (High Complexity/Low Usefulness)
-These are elegant features borrowed from functional programming languages like ML and Haskell. They let you create type-safe unions and deconstruct them cleanly. However, the SystemVerilog community never really adopted them—you'll rarely see these in actual verification code. Engineers stick with regular unions and if/case statements.
+#### 7.3.2 Tagged unions (High Complexity/Low Usefulness)
+Defines type-safe unions where a tag tracks which member is currently valid. Borrowed from functional programming languages, but the SystemVerilog community never adopted them. Engineers stick with regular unions.
 
 #### 9.4.5 Intra-assignment timing (Medium Complexity/Low Usefulness)
 Lets you write `a = #5 b` to mean "capture b's value now, but assign it to a after 5 time units." This is an obscure syntax that confuses more than it helps. Modern coding styles avoid it in favor of clearer alternatives.
 
 #### 10.6.1 assign/deassign (Medium Complexity/Low Usefulness)
 An old way to temporarily override a signal's value. The SystemVerilog standard itself marks this as deprecated and recommends using `force/release` instead. Not worth implementing something the industry is moving away from.
+
+#### 11.9 Tagged union expressions (High Complexity/Low Usefulness)
+Syntax for creating and accessing tagged union values with the `tagged` keyword. Requires 7.3.2 (tagged unions) to be useful. Rarely seen in practice since tagged unions themselves aren't widely used.
+
+#### 12.6.1 Pattern matching in case (High Complexity/Low Usefulness)
+Extends case statements with `matches` keyword to deconstruct tagged unions and structures. Elegant but rarely used since it depends on tagged unions, which the community never adopted.
+
+#### 12.6.2 Pattern matching in if (High Complexity/Low Usefulness)
+Extends if statements with pattern matching using the `&&&` operator. Allows conditional logic based on tagged union structure. Same adoption problem as other pattern matching features.
+
+#### 12.6.3 Pattern matching in conditionals (High Complexity/Low Usefulness)
+Extends ternary expressions (`?:`) with pattern matching predicates. The least commonly needed of the pattern matching features since ternaries are already compact.
 
 #### 18.17.7 Randsequence value passing (High Complexity/Low Usefulness)
 Randsequence is a way to generate random sequences of operations, like a grammar for test scenarios. It's a clever feature, but in practice almost nobody uses it. UVM sequences provide a more flexible and widely-adopted approach to the same problem.
@@ -58,8 +70,17 @@ Lets you write code that waits for a complex pattern to occur: "pause here until
 #### 11.4.14.4 Streaming with dynamic sizing (High Complexity/High Usefulness)
 Network protocols and bus transactions often have variable-length payloads—a packet header says "the next N bytes are data." This feature lets you pack and unpack such structures elegantly in one line. Without it, you're writing manual loops to serialize and deserialize data, which is verbose and bug-prone.
 
-#### 16.7/16.9/16.10/16.17 SVA sequences and assertions (High Complexity/High Usefulness)
-SystemVerilog Assertions (SVA) let you write rules like "after request goes high, acknowledge must follow within 5 cycles." The simulator then automatically checks these rules throughout the entire simulation, catching bugs that manual inspection would miss. This is arguably the most powerful verification feature in SystemVerilog—it's like having thousands of automated checkers watching your design. Every professional verification environment relies heavily on assertions.
+#### 16.7 Sequences (High Complexity/High Usefulness)
+The foundation of SystemVerilog Assertions (SVA). Sequences describe temporal patterns like "A followed by B within 5 cycles." Every professional verification environment uses assertions, making this a critical missing feature.
+
+#### 16.9 Sequence operations (High Complexity/High Usefulness)
+Operators for combining sequences: repetition (`[*]`, `[->]`, `[=]`), `throughout`, `within`, `intersect`, `and`, `or`. These build on 16.7 to express complex temporal patterns concisely.
+
+#### 16.10 Local variables (High Complexity/High Usefulness)
+Dynamically created variables within sequences/properties for tracking data across clock cycles. Essential for verifying pipelined designs where you need to compare input data against output appearing many cycles later.
+
+#### 16.17 Expect statement (High Complexity/High Usefulness)
+Procedural blocking statement that waits for a property to succeed or fail. Bridges assertions and procedural code, letting testbenches pause until specific conditions are met.
 
 #### 18.7 Inline constraints (High Complexity/High Usefulness)
 When generating random test data, you often need to add extra rules on the fly: "this time, make the packet size small" or "force an error condition." Inline constraints with `randomize() with {}` let you do this without modifying class definitions. This is used constantly in UVM testbenches to create directed-random tests that target specific scenarios.
