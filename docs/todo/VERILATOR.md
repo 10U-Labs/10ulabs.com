@@ -33,7 +33,7 @@
 
 ## Usefulness
 
-### Low
+### Low Usefulness
 
 #### High Complexity
 
@@ -59,7 +59,7 @@
 
 10.6.1 assign/deassign: An old way to temporarily override a signal's value. The SystemVerilog standard itself marks this as deprecated and recommends using `force/release` instead. Not worth implementing something the industry is moving away from.
 
-### Medium
+### Medium Usefulness
 
 #### High Complexity
 
@@ -83,7 +83,7 @@
 
 11.4.6 Wildcard equality operators: `==?` and `!=?` operators that treat x/z in the right operand as wildcards. Simple operators but less commonly used than regular equality.
 
-### High
+### High Usefulness
 
 #### High Complexity
 
