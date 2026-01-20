@@ -31,7 +31,7 @@
 | 18.17.7 | Randsequence value passing | High | Low |
 | 20.14 | Probabilistic distribution functions | Low | High |
 
-## Complexity
+## ROI
 
 ### High Complexity
 
