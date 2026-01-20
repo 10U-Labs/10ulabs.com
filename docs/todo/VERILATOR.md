@@ -31,11 +31,11 @@
 | 18.17.7 | Randsequence value passing | High | Low |
 | 20.14 | Probabilistic distribution functions | Low | High |
 
-## Usefulness
+## Complexity
 
-### Low Usefulness
+### High Complexity
 
-#### High Complexity
+#### Low Usefulness
 
 7.3.2 Tagged unions: Defines type-safe unions where a tag tracks which member is currently valid. Borrowed from functional programming languages, but the SystemVerilog community never adopted them. Engineers stick with regular unions.
 
@@ -49,43 +49,13 @@
 
 18.17.7 Randsequence value passing: Randsequence is a way to generate random sequences of operations, like a grammar for test scenarios. It's a clever feature, but in practice almost nobody uses it. UVM sequences provide a more flexible and widely-adopted approach to the same problem.
 
-#### Medium Complexity
-
-6.6.4 Trireg nets: Models capacitors that hold their charge when disconnected. This matters for transistor-level simulation of things like DRAM cells or dynamic logic, but Verilator focuses on RTL simulation where you're working at a higher abstraction level. Most designs never use this.
-
-9.4.5 Intra-assignment timing: Lets you write `a = #5 b` to mean "capture b's value now, but assign it to a after 5 time units." This is an obscure syntax that confuses more than it helps. Modern coding styles avoid it in favor of clearer alternatives.
-
-10.3.4 Continuous assignment strengths: Specifying drive strength for continuous assignments. Matters for gate-level simulation but Verilator targets RTL where strength modeling is rarely needed.
-
-10.6.1 assign/deassign: An old way to temporarily override a signal's value. The SystemVerilog standard itself marks this as deprecated and recommends using `force/release` instead. Not worth implementing something the industry is moving away from.
-
-### Medium Usefulness
-
-#### High Complexity
+#### Medium Usefulness
 
 6.6.7 User-defined nettypes: Custom net types with user-defined resolution functions. Useful for mixed-signal simulation where you need custom wire behavior, but this is a niche use case for most digital designs.
 
 6.6.8 Generic interconnect: Typeless nets declared as `interconnect` for abstraction-independent netlists. Useful for EDA tool flows but rarely written by hand in RTL.
 
-#### Medium Complexity
-
-6.5 Nets and variables: Mixed procedural and continuous assignments to different elements of the same aggregate. Occasionally needed but usually easy to work around by restructuring code.
-
-8.26.6.1 Method name conflict resolution: Resolving conflicts when interface classes inherit multiple methods with the same name. Only matters for complex OOP hierarchies in verification code.
-
-8.26.6.2 Parameter/type inheritance conflicts: Resolving name collisions when parameters or types are inherited from multiple interface classes. Same niche as 8.26.6.1.
-
-8.26.6.3 Diamond relationship: Handling multiple inheritance diamond patterns in interface classes. Rare edge case in verification code.
-
-#### Low Complexity
-
-11.4.5 Equality operators: Case equality (`===`/`!==`) with class handles and interface class handles. Basic operators likely have partial support already; this covers edge cases.
-
-11.4.6 Wildcard equality operators: `==?` and `!=?` operators that treat x/z in the right operand as wildcards. Simple operators but less commonly used than regular equality.
-
-### High Usefulness
-
-#### High Complexity
+#### High Usefulness
 
 9.4.2.4 Sequence events: Lets you write code that waits for a complex pattern to occur: "pause here until you see A followed by B followed by C." This bridges the gap between assertions (which check properties) and procedural code (which takes actions). Useful for sophisticated testbenches that need to react to specific protocol sequences.
 
@@ -101,11 +71,41 @@
 
 18.7 Inline constraints: When generating random test data, you often need to add extra rules on the fly: "this time, make the packet size small" or "force an error condition." Inline constraints with `randomize() with {}` let you do this without modifying class definitions. This is used constantly in UVM testbenches to create directed-random tests that target specific scenarios.
 
-#### Medium Complexity
+### Medium Complexity
+
+#### Low Usefulness
+
+6.6.4 Trireg nets: Models capacitors that hold their charge when disconnected. This matters for transistor-level simulation of things like DRAM cells or dynamic logic, but Verilator focuses on RTL simulation where you're working at a higher abstraction level. Most designs never use this.
+
+9.4.5 Intra-assignment timing: Lets you write `a = #5 b` to mean "capture b's value now, but assign it to a after 5 time units." This is an obscure syntax that confuses more than it helps. Modern coding styles avoid it in favor of clearer alternatives.
+
+10.3.4 Continuous assignment strengths: Specifying drive strength for continuous assignments. Matters for gate-level simulation but Verilator targets RTL where strength modeling is rarely needed.
+
+10.6.1 assign/deassign: An old way to temporarily override a signal's value. The SystemVerilog standard itself marks this as deprecated and recommends using `force/release` instead. Not worth implementing something the industry is moving away from.
+
+#### Medium Usefulness
+
+6.5 Nets and variables: Mixed procedural and continuous assignments to different elements of the same aggregate. Occasionally needed but usually easy to work around by restructuring code.
+
+8.26.6.1 Method name conflict resolution: Resolving conflicts when interface classes inherit multiple methods with the same name. Only matters for complex OOP hierarchies in verification code.
+
+8.26.6.2 Parameter/type inheritance conflicts: Resolving name collisions when parameters or types are inherited from multiple interface classes. Same niche as 8.26.6.1.
+
+8.26.6.3 Diamond relationship: Handling multiple inheritance diamond patterns in interface classes. Rare edge case in verification code.
+
+#### High Usefulness
 
 15.5 Named events: Named events let different parts of a testbench signal each other: "I'm done with setup" or "the transaction completed." They're the basic building blocks for coordinating parallel processes in a simulation. UVM testbenches use events constantly to synchronize drivers, monitors, and scoreboards. Without them, you're stuck using clumsy workarounds like polling variables.
 
-#### Low Complexity
+### Low Complexity
+
+#### Medium Usefulness
+
+11.4.5 Equality operators: Case equality (`===`/`!==`) with class handles and interface class handles. Basic operators likely have partial support already; this covers edge cases.
+
+11.4.6 Wildcard equality operators: `==?` and `!=?` operators that treat x/z in the right operand as wildcards. Simple operators but less commonly used than regular equality.
+
+#### High Usefulness
 
 7.2.2 Structure default values: Lets you set sensible defaults when defining a struct type, so you don't have to manually initialize every field every time you create one. This is a basic quality-of-life feature that most programmers expect from any language with structs. Without it, engineers must write boilerplate initialization code everywhere, which is tedious and error-prone.
 
