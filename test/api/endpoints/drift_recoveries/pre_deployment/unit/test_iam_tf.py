@@ -88,5 +88,3 @@ class TestLambdaEC2Policy:
     def test_ec2_policy_has_describe_vpcs_permission(self, iam_tf_content):
         """Verify EC2 policy allows DescribeVpcs."""
         assert '"ec2:DescribeVpcs"' in iam_tf_content
-
-
