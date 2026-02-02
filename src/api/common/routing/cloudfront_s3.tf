@@ -12,25 +12,6 @@ module "docs_bucket" {
   })
 }
 
-# WAF module with enabled=false triggers destruction while maintaining
-# dependency ordering - CloudFront updates before WAF resources are destroyed
-module "api_waf" {
-  source = "../../../../lib/terraform/cloudfront_waf"
-
-  providers = {
-    aws.us-east-1 = aws.us-east-1
-  }
-
-  enabled          = false
-  name             = "ApiWafWebAcl"
-  metric_name      = "ApiWafMetrics"
-  log_group_suffix = "api"
-
-  tags = merge(local.common_tags, {
-    Name = "ApiWafWebAcl"
-  })
-}
-
 resource "aws_s3_object" "index_html" {
   bucket       = module.docs_bucket.bucket_id
   key          = "index.html"
@@ -257,10 +238,7 @@ resource "aws_cloudfront_distribution" "main" {
     Name = "${local.api_fqdn}-distribution"
   })
 
-  # Explicitly clear WAF association - depends_on ensures CloudFront updates before WAF destroys
-  web_acl_id = ""
-
-  depends_on = [aws_acm_certificate_validation.api, module.api_waf]
+  depends_on = [aws_acm_certificate_validation.api]
 }
 
 data "aws_cloudfront_cache_policy" "disabled" {
