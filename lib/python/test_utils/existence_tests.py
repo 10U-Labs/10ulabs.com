@@ -2,7 +2,7 @@
 from test_utils import assert_lambda_exists
 
 
-class AwsResourceExistsTestMixin:
+class AwsResourceExistsTestMixin:  # pylint: disable=too-few-public-methods
     """Test mixin that verifies AWS resources exist."""
 
     def test_lambda_function_exists(self, function_name: str, cfg):
