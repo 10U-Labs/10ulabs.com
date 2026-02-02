@@ -12,8 +12,8 @@ module "website_bucket" {
   })
 }
 
-# WAF module kept temporarily for destroy ordering - CloudFront depends on it
-# so CloudFront updates (clears web_acl_id) before WAF is destroyed
+# WAF module with enabled=false triggers destruction while maintaining
+# dependency ordering - CloudFront updates before WAF resources are destroyed
 module "website_waf" {
   source = "../../../lib/terraform/cloudfront_waf"
 
@@ -21,6 +21,7 @@ module "website_waf" {
     aws.us-east-1 = aws.us-east-1
   }
 
+  enabled          = false
   name             = "${local.resource_prefix}WebsiteWafWebAcl"
   metric_name      = "${local.resource_prefix}WebsiteWafMetrics"
   log_group_suffix = "website"

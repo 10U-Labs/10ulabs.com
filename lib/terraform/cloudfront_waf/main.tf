@@ -6,6 +6,7 @@
 # - Standard visibility config
 
 resource "aws_wafv2_web_acl" "this" {
+  count    = var.enabled ? 1 : 0
   provider = aws.us-east-1
 
   name  = var.name
@@ -25,6 +26,7 @@ resource "aws_wafv2_web_acl" "this" {
 }
 
 resource "aws_cloudwatch_log_group" "waf" {
+  count    = var.enabled ? 1 : 0
   provider = aws.us-east-1
 
   name              = "aws-waf-logs-${var.log_group_suffix}"
@@ -34,8 +36,9 @@ resource "aws_cloudwatch_log_group" "waf" {
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "this" {
+  count    = var.enabled ? 1 : 0
   provider = aws.us-east-1
 
-  log_destination_configs = [aws_cloudwatch_log_group.waf.arn]
-  resource_arn            = aws_wafv2_web_acl.this.arn
+  log_destination_configs = [aws_cloudwatch_log_group.waf[0].arn]
+  resource_arn            = aws_wafv2_web_acl.this[0].arn
 }

@@ -12,8 +12,8 @@ module "docs_bucket" {
   })
 }
 
-# WAF module kept temporarily for destroy ordering - CloudFront depends on it
-# so CloudFront updates (clears web_acl_id) before WAF is destroyed
+# WAF module with enabled=false triggers destruction while maintaining
+# dependency ordering - CloudFront updates before WAF resources are destroyed
 module "api_waf" {
   source = "../../../../lib/terraform/cloudfront_waf"
 
@@ -21,6 +21,7 @@ module "api_waf" {
     aws.us-east-1 = aws.us-east-1
   }
 
+  enabled          = false
   name             = "ApiWafWebAcl"
   metric_name      = "ApiWafMetrics"
   log_group_suffix = "api"

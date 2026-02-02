@@ -1,3 +1,9 @@
+variable "enabled" {
+  description = "Whether to create WAF resources (set false to destroy)"
+  type        = bool
+  default     = true
+}
+
 variable "name" {
   description = "Name of the WAF Web ACL"
   type        = string
