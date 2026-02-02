@@ -1,4 +1,5 @@
 """Unit tests for the ECS task stops handler."""
+# pylint: disable=duplicate-code
 import json
 from unittest.mock import MagicMock, patch
 
