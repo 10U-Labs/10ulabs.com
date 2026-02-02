@@ -238,6 +238,9 @@ resource "aws_cloudfront_distribution" "main" {
     Name = "${local.api_fqdn}-distribution"
   })
 
+  # Explicitly clear WAF association (was module.api_waf)
+  web_acl_id = ""
+
   depends_on = [aws_acm_certificate_validation.api]
 }
 

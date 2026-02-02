@@ -150,6 +150,9 @@ resource "aws_cloudfront_distribution" "website" {
     Name = "${local.www_fqdn}-distribution"
   })
 
+  # Explicitly clear WAF association (was module.website_waf)
+  web_acl_id = ""
+
   depends_on = [aws_acm_certificate_validation.website]
 }
 
