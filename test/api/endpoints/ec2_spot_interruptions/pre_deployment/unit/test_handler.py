@@ -109,7 +109,7 @@ class TestHandleEc2SpotInterruption:
                 result = handle_fn(event)
 
         body = json.loads(result["body"])
-        assert (result["statusCode"], body["handled"]) == (200, True)
+        assert (result["statusCode"], body["retried"]) == (200, True)
 
 
 class TestLambdaHandler:
