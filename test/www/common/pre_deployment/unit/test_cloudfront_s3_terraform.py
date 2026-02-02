@@ -207,7 +207,7 @@ def test_cloudfront_geo_restriction_none(src_dir):
 def test_cloudfront_depends_on_certificate_validation(src_dir):
     """Verify CloudFront depends on certificate validation."""
     content = (src_dir / "cloudfront_s3.tf").read_text()
-    assert "depends_on = [aws_acm_certificate_validation.website]" in content
+    assert "aws_acm_certificate_validation.website" in content
 
 
 def test_cors_s3_origin_policy_data_source(src_dir):

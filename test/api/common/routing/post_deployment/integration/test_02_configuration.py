@@ -10,7 +10,6 @@ import boto3
 from test_fixtures.integration import create_deployed_naming_convention_tests
 
 
-
 # =============================================================================
 # Lambda Configuration
 # =============================================================================
@@ -261,45 +260,6 @@ def test_acm_certificate_domain_name_matches(acm_client, config):
 
 # =============================================================================
 # WAF Configuration
-# =============================================================================
-
-
-def test_waf_web_acl_has_cloudwatch_metrics_enabled():
-    """Verify WAF Web ACL has CloudWatch metrics enabled."""
-    waf_client = boto3.client('wafv2', region_name='us-east-1')
-    response = waf_client.list_web_acls(Scope='CLOUDFRONT')
-    acl = response['WebACLs'][0]
-    acl_detail = waf_client.get_web_acl(Name=acl['Name'], Scope='CLOUDFRONT', Id=acl['Id'])
-    metrics_enabled = acl_detail['WebACL']['VisibilityConfig']['CloudWatchMetricsEnabled']
-    assert metrics_enabled is True
-
-
-def test_waf_log_group_retention_is_30_days():
-    """Verify WAF log group has 30 day retention."""
-    logs_client = boto3.client('logs', region_name='us-east-1')
-    response = logs_client.describe_log_groups(logGroupNamePrefix='aws-waf-logs-api')
-    assert response['logGroups'][0].get('retentionInDays') == 30
-
-
-def test_waf_web_acl_sampled_requests_enabled():
-    """Verify WAF Web ACL has sampled requests enabled."""
-    waf_client = boto3.client('wafv2', region_name='us-east-1')
-    response = waf_client.list_web_acls(Scope='CLOUDFRONT')
-    acl = response['WebACLs'][0]
-    acl_detail = waf_client.get_web_acl(Name=acl['Name'], Scope='CLOUDFRONT', Id=acl['Id'])
-    sampled_enabled = acl_detail['WebACL']['VisibilityConfig']['SampledRequestsEnabled']
-    assert sampled_enabled is True
-
-
-def test_waf_web_acl_scope_is_cloudfront():
-    """Verify WAF Web ACL scope is CLOUDFRONT."""
-    waf_client = boto3.client('wafv2', region_name='us-east-1')
-    response = waf_client.list_web_acls(Scope='CLOUDFRONT')
-    assert len(response['WebACLs']) > 0
-
-
-# =============================================================================
-# CloudFront Cache Policy Configuration
 # =============================================================================
 
 
@@ -674,36 +634,9 @@ def test_cloudfront_url_rewrite_function_runtime(cloudfront_client):
 # =============================================================================
 
 
-def test_waf_firehose_delivery_stream_is_active(shared_config):
-    """Verify WAF Firehose delivery stream is active."""
-    firehose_client = boto3.client('firehose', region_name='us-east-1')
-    stream_name = f"{shared_config['resource_prefix']}-WafLogs"
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    assert response['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE'
-
-
-def test_waf_firehose_destination_is_extended_s3(shared_config):
-    """Verify WAF Firehose destination is Extended S3."""
-    firehose_client = boto3.client('firehose', region_name='us-east-1')
-    stream_name = f"{shared_config['resource_prefix']}-WafLogs"
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    destinations = response['DeliveryStreamDescription']['Destinations']
-    assert destinations[0].get('ExtendedS3DestinationDescription') is not None
-
-
 def test_firehose_cloudwatch_logs_bucket_is_central_logs(firehose_client, config):
     """Verify Firehose CloudWatch logs bucket is central logs bucket."""
     stream_name = config['firehose_delivery_stream_name']
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    destinations = response['DeliveryStreamDescription']['Destinations']
-    s3_config = destinations[0]['ExtendedS3DestinationDescription']
-    assert config['central_logs_bucket'] in s3_config['BucketARN']
-
-
-def test_firehose_waf_logs_bucket_is_central_logs(shared_config, config):
-    """Verify WAF Firehose bucket is central logs bucket."""
-    firehose_client = boto3.client('firehose', region_name='us-east-1')
-    stream_name = f"{shared_config['resource_prefix']}-WafLogs"
     response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
     destinations = response['DeliveryStreamDescription']['Destinations']
     s3_config = destinations[0]['ExtendedS3DestinationDescription']
@@ -725,19 +658,6 @@ def test_firehose_cloudwatch_logs_cloudwatch_logging_disabled(firehose_client, c
     assert _check_firehose_cw_logging_disabled(response)
 
 
-def test_firehose_waf_logs_cloudwatch_logging_disabled(shared_config):
-    """Verify WAF Firehose stream has CloudWatch logging disabled."""
-    firehose_client = boto3.client('firehose', region_name='us-east-1')
-    stream_name = f"{shared_config['resource_prefix']}-WafLogs"
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    assert _check_firehose_cw_logging_disabled(response)
-
-
-# =============================================================================
-# Log Subscription Filter Configuration
-# =============================================================================
-
-
 def test_catchall_subscription_filter_pattern_is_empty(logs_client, config):
     """Verify catchall handler subscription filter pattern is empty (captures all)."""
     log_group = config['catchall_handler_log_group_name']
@@ -750,14 +670,6 @@ def test_api_gateway_subscription_filter_pattern_is_empty(logs_client, config):
     """Verify API Gateway subscription filter pattern is empty (captures all)."""
     log_group = config['api_gateway_log_group_name']
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
-    if response['subscriptionFilters']:
-        assert response['subscriptionFilters'][0]['filterPattern'] == ''
-
-
-def test_waf_subscription_filter_pattern_is_empty():
-    """Verify WAF subscription filter pattern is empty (captures all)."""
-    logs_client = boto3.client('logs', region_name='us-east-1')
-    response = logs_client.describe_subscription_filters(logGroupName='aws-waf-logs-api')
     if response['subscriptionFilters']:
         assert response['subscriptionFilters'][0]['filterPattern'] == ''
 

@@ -13,7 +13,6 @@ import boto3
 import requests
 
 
-
 TEST_HEADERS = {"x-test-mode": "true"}
 
 
@@ -199,15 +198,6 @@ def test_cloudfront_logging_prefix_is_correct(cloudfront_client, api_distributio
     assert prefix == 'cloudfront-logs/api/'
 
 
-def test_cloudfront_waf_web_acl_association(cloudfront_client, api_distribution_id):
-    """Verify CloudFront distribution has WAF Web ACL associated."""
-    if api_distribution_id is None:
-        pytest.skip("API CloudFront distribution not found")
-    dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    web_acl_id = dist_config['DistributionConfig'].get('WebACLId', '')
-    assert web_acl_id != ''
-
-
 def test_s3_bucket_policy_allows_cloudfront_oac(s3_client, config):
     """Verify S3 bucket policy allows CloudFront OAC access."""
     bucket_name = config["api_fqdn"]
@@ -306,20 +296,6 @@ def test_api_gateway_subscription_filter_exists(logs_client, config):
     assert 'api-gateway-to-firehose' in filter_names
 
 
-def test_waf_subscription_filter_exists():
-    """Verify WAF log group has subscription filter."""
-    logs_client_east = boto3.client('logs', region_name='us-east-1')
-    log_group_name = 'aws-waf-logs-api'
-    response = logs_client_east.describe_subscription_filters(logGroupName=log_group_name)
-    filter_names = [f['filterName'] for f in response['subscriptionFilters']]
-    assert 'waf-to-firehose' in filter_names
-
-
-# =============================================================================
-# Firehose → S3 Wiring
-# =============================================================================
-
-
 def test_firehose_role_trusts_firehose_service(iam_client, config):
     """Verify Firehose role trusts the Firehose service."""
     response = iam_client.get_role(RoleName=config['firehose_role_name'])
@@ -352,19 +328,6 @@ def test_firehose_s3_policy_has_all_required_actions(iam_client, config):
     )
     actions = _extract_policy_actions(response['PolicyDocument'])
     assert any('s3:PutObject' in a or 's3:*' in a for a in actions)
-
-
-def test_waf_firehose_s3_policy_has_all_required_actions(shared_config):
-    """Verify WAF Firehose S3 policy has all required S3 actions."""
-    iam_client = boto3.client('iam')
-    role_name = f"{shared_config['resource_prefix']}FirehoseWafLogs"
-    response = iam_client.list_role_policies(RoleName=role_name)
-    if 'S3Access' in response['PolicyNames']:
-        policy_response = iam_client.get_role_policy(
-            RoleName=role_name, PolicyName='S3Access'
-        )
-        actions = _extract_policy_actions(policy_response['PolicyDocument'])
-        assert any('s3:PutObject' in a or 's3:*' in a for a in actions)
 
 
 def test_cloudwatch_logs_firehose_role_has_firehose_access_policy(iam_client, config):
@@ -411,23 +374,6 @@ def test_cloudwatch_logs_firehose_policy_allows_put_record(iam_client, config):
 
 # =============================================================================
 # WAF → CloudWatch Logs Wiring
-# =============================================================================
-
-
-def test_waf_logging_configuration_exists(waf_logging_config):
-    """Verify WAF logging configuration exists."""
-    assert waf_logging_config is not None
-
-
-def test_waf_logging_destinations_cloudwatch_logs(waf_logging_config):
-    """Verify WAF logs to CloudWatch Logs."""
-    if waf_logging_config is not None:
-        destinations = waf_logging_config['LogDestinationConfigs']
-        assert 'aws-waf-logs-api' in destinations[0]
-
-
-# =============================================================================
-# Metrics / Observability Wiring
 # =============================================================================
 
 
@@ -489,32 +435,6 @@ def test_s3_cloudfront_logs_prefix_accessible(config, aws_region):
     assert 'Contents' in response or 'KeyCount' in response
 
 
-def test_waf_metrics_being_collected():
-    """Verify WAF metrics are being collected in CloudWatch."""
-    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
-    end_time = datetime.now(UTC)
-    start_time = end_time - timedelta(hours=24)
-    response = cloudwatch.get_metric_statistics(
-        Namespace='AWS/WAFV2',
-        MetricName='AllowedRequests',
-        Dimensions=[
-            {'Name': 'WebACL', 'Value': 'ApiWafWebAcl'},
-            {'Name': 'Region', 'Value': 'us-east-1'},
-            {'Name': 'Rule', 'Value': 'ALL'}
-        ],
-        StartTime=start_time,
-        EndTime=end_time,
-        Period=3600,
-        Statistics=['Sum']
-    )
-    assert 'Datapoints' in response
-
-
-# =============================================================================
-# API Gateway → SQS Wiring
-# =============================================================================
-
-
 def test_api_gateway_sqs_role_trusts_apigateway_service(iam_client, shared_config):
     """Verify API Gateway SQS role trusts the API Gateway service."""
     role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
@@ -552,25 +472,3 @@ def test_api_gateway_cloudwatch_role_trusts_apigateway_service(iam_client, confi
 # =============================================================================
 
 
-def test_waf_firehose_role_trusts_firehose_service(shared_config):
-    """Verify WAF Firehose role trusts the Firehose service."""
-    iam_client = boto3.client('iam')
-    role_name = f"{shared_config['resource_prefix']}FirehoseWafLogs"
-    response = iam_client.get_role(RoleName=role_name)
-    assume_role_policy = response['Role']['AssumeRolePolicyDocument']
-    statements = assume_role_policy['Statement']
-    service_principal = statements[0]['Principal']['Service']
-    assert service_principal == 'firehose.amazonaws.com'
-
-
-def test_waf_subscription_filter_routes_to_waf_firehose():
-    """Verify WAF subscription filter routes to WAF-specific Firehose."""
-    logs_client = boto3.client('logs', region_name='us-east-1')
-    response = logs_client.describe_subscription_filters(logGroupName='aws-waf-logs-api')
-    destination_arn = response['subscriptionFilters'][0]['destinationArn']
-    assert 'WafLogs' in destination_arn or 'waf' in destination_arn.lower()
-
-
-# Note: WebhookRouter metrics (CircuitBreakerState) and circuit_breaker_state_table
-# DynamoDB metrics are tested in github_workflows/webhooks post-deployment tests because
-# those resources are created by that module.

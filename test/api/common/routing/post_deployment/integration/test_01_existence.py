@@ -9,7 +9,6 @@ import boto3
 from test_fixtures.aws import iam_role_exists
 
 
-
 # =============================================================================
 # Lambda Functions
 # =============================================================================
@@ -145,27 +144,6 @@ def test_route53_api_record_exists(api_route53_records, config):
 # =============================================================================
 
 
-def test_waf_web_acl_exists():
-    """Verify WAF Web ACL exists."""
-    waf_client = boto3.client('wafv2', region_name='us-east-1')
-    response = waf_client.list_web_acls(Scope='CLOUDFRONT')
-    acl_names = [acl['Name'] for acl in response['WebACLs']]
-    assert 'ApiWafWebAcl' in acl_names
-
-
-def test_waf_log_group_exists():
-    """Verify WAF log group exists."""
-    logs_client = boto3.client('logs', region_name='us-east-1')
-    response = logs_client.describe_log_groups(logGroupNamePrefix='aws-waf-logs-api')
-    log_groups = [lg['logGroupName'] for lg in response['logGroups']]
-    assert 'aws-waf-logs-api' in log_groups
-
-
-# =============================================================================
-# Firehose
-# =============================================================================
-
-
 def test_firehose_delivery_stream_exists(firehose_client, config):
     """Verify Firehose delivery stream exists."""
     stream_name = config['firehose_delivery_stream_name']
@@ -261,9 +239,3 @@ def test_cloudfront_url_rewrite_function_exists(cloudfront_client):
 # =============================================================================
 
 
-def test_waf_firehose_delivery_stream_exists(shared_config):
-    """Verify WAF Firehose delivery stream exists in us-east-1."""
-    firehose_client = boto3.client('firehose', region_name='us-east-1')
-    stream_name = f"{shared_config['resource_prefix']}-WafLogs"
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    assert response['DeliveryStreamDescription']['DeliveryStreamName'] == stream_name

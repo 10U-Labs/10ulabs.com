@@ -73,19 +73,6 @@ def firehose_client_fixture(aws_region):
     return boto3.client("firehose", region_name=aws_region)
 
 
-@pytest.fixture(name="waf_logging_config", scope="module")
-def waf_logging_config_fixture():
-    """Get WAF logging configuration for the first CloudFront Web ACL."""
-    waf_client = boto3.client('wafv2', region_name='us-east-1')
-    response = waf_client.list_web_acls(Scope='CLOUDFRONT')
-    if response['WebACLs']:
-        acl = response['WebACLs'][0]
-        acl_arn = acl['ARN']
-        logging_response = waf_client.get_logging_configuration(ResourceArn=acl_arn)
-        return logging_response.get('LoggingConfiguration')
-    return None
-
-
 def get_api_gateway_id_by_name(client, api_name):
     """Get the API Gateway ID by searching for the API name."""
     apis = client.get_rest_apis()
