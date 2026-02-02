@@ -86,38 +86,6 @@ class TestGetEcsTaskTags:
         assert result == {}
 
 
-ECS_TASK_ARN_SAMPLE = "arn:aws:ecs:us-east-2:123456789012:task/cluster/task123"
-
-
-class TestSendRetryRequestEcs:
-    """Tests for _send_retry_request function in ECS context."""
-
-    def test_sqs_send_succeeds_returns_true(self, handler_module):
-        """SQS send_message success returns True."""
-        sqs_mock = MagicMock()
-        sqs_mock.send_message.return_value = {"MessageId": "msg-123"}
-
-        with patch.object(handler_module, '_get_sqs_client', return_value=sqs_mock):
-            fn = getattr(handler_module, '_send_retry_request')
-            success = fn(
-                run_id=12345, github_repo="org/repo", reason="test reason",
-                resource_type="ecs", resource_id=ECS_TASK_ARN_SAMPLE,
-            )
-
-        assert (success, sqs_mock.send_message.call_count) == (True, 1)
-
-    def test_empty_queue_url_returns_false(self, handler_module):
-        """Empty RETRIES_QUEUE_URL environment variable returns False."""
-        with patch.dict('os.environ', {'RETRIES_QUEUE_URL': ''}):
-            fn = getattr(handler_module, '_send_retry_request')
-            success = fn(
-                run_id=12345, github_repo="org/repo", reason="test reason",
-                resource_type="ecs", resource_id=ECS_TASK_ARN_SAMPLE,
-            )
-
-        assert success is False
-
-
 class TestHandleEcsTaskStopped:
     """Tests for _handle_ecs_task_stopped function."""
 
@@ -163,8 +131,8 @@ class TestHandleEcsTaskStopped:
 
         assert (result["statusCode"], json.loads(result["body"])["handled"]) == (200, False)
 
-    def test_handle_ecs_task_stopped_our_runner_sends_retry(self, handler_module):
-        """Sends retry request when task is our runner."""
+    def test_handle_ecs_task_stopped_our_runner_processes_retry(self, handler_module):
+        """Processes retry request when task is our runner."""
         event = {
             "detail": {
                 "taskArn": "arn:aws:ecs:us-east-2:123456789012:task/cluster/task123",
@@ -179,7 +147,7 @@ class TestHandleEcsTaskStopped:
             '_get_ecs_task_tags',
             return_value={"RunId": "12345", "GitHubRepo": "org/repo"}
         ):
-            with patch.object(handler_module, '_send_retry_request', return_value=True):
+            with patch.object(handler_module, '_process_retry_request', return_value=True):
                 handle_fn = getattr(handler_module, '_handle_ecs_task_stopped')
                 result = handle_fn(event)
 
@@ -208,29 +176,6 @@ class TestEcsLambdaHandler:
 
         assert response["statusCode"] == 200
 
-    def test_sqs_wrapped_event_returns_results(self, handler_module, lambda_context):
-        """SQS-wrapped EventBridge events return results array."""
-        sqs_event = {
-            "Records": [{
-                "body": json.dumps({
-                    "source": "aws.ecs",
-                    "detail-type": "ECS Task State Change",
-                    "detail": {
-                        "lastStatus": "STOPPED",
-                        "taskArn": "arn:aws:ecs:us-east-2:123456789012:task/cluster/task123",
-                        "clusterArn": "arn:aws:ecs:us-east-2:123456789012:cluster/cluster",
-                        "stopCode": "TaskCompleted",
-                        "stoppedReason": "Normal exit",
-                    },
-                })
-            }]
-        }
-
-        response = handler_module.lambda_handler(sqs_event, lambda_context)
-        body = json.loads(response["body"])
-
-        assert (response["statusCode"], "results" in body) == (200, True)
-
     def test_non_stopped_task_ignored(self, handler_module, lambda_context):
         """Non-stopped task events are ignored with appropriate message."""
         event = {
@@ -240,6 +185,19 @@ class TestEcsLambdaHandler:
                 "lastStatus": "RUNNING",
                 "taskArn": "arn:aws:ecs:us-east-2:123456789012:task/cluster/task123",
             },
+        }
+
+        response = handler_module.lambda_handler(event, lambda_context)
+        body = json.loads(response["body"])
+
+        assert (response["statusCode"], "ignored" in body["message"].lower()) == (200, True)
+
+    def test_non_ecs_event_ignored(self, handler_module, lambda_context):
+        """Non-ECS events are ignored."""
+        event = {
+            "source": "aws.s3",
+            "detail-type": "Object Created",
+            "detail": {},
         }
 
         response = handler_module.lambda_handler(event, lambda_context)
