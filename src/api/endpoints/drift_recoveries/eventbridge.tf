@@ -1,46 +1,19 @@
-resource "aws_cloudwatch_event_rule" "config_compliance_change" {
-  name        = "${local.resource_prefix}-config-compliance-change"
-  description = "Triggers on AWS Config compliance changes for infrastructure drift detection"
-
-  event_pattern = jsonencode({
-    source      = ["aws.config"]
-    detail-type = ["Config Rules Compliance Change"]
-    detail = {
-      configRuleName = [aws_config_config_rule.required_tags.name]
-      newEvaluationResult = {
-        complianceType = ["NON_COMPLIANT"]
-      }
-    }
-  })
+# EventBridge rule to trigger drift recovery checks on a schedule
+resource "aws_cloudwatch_event_rule" "scheduled_check" {
+  name                = "${local.resource_prefix}-scheduled-check"
+  description         = "Triggers periodic drift recovery checks"
+  schedule_expression = "rate(1 hour)"
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-config-compliance-change"
+    Name = "${local.resource_prefix}-scheduled-check"
   })
 }
 
-# EventBridge invokes Lambda directly (no SQS queue)
+# EventBridge invokes Lambda directly
 resource "aws_cloudwatch_event_target" "lambda" {
-  rule      = aws_cloudwatch_event_rule.config_compliance_change.name
+  rule      = aws_cloudwatch_event_rule.scheduled_check.name
   target_id = "InvokeLambda"
   arn       = aws_lambda_function.handler.arn
-
-  input_transformer {
-    input_paths = {
-      configRuleName = "$.detail.configRuleName"
-      resourceType   = "$.detail.resourceType"
-      resourceId     = "$.detail.resourceId"
-      awsRegion      = "$.detail.awsRegion"
-    }
-    input_template = <<EOF
-{
-  "source": "drift-recovery-trigger",
-  "configRuleName": <configRuleName>,
-  "resourceType": <resourceType>,
-  "resourceId": <resourceId>,
-  "awsRegion": <awsRegion>
-}
-EOF
-  }
 }
 
 resource "aws_lambda_permission" "eventbridge" {
@@ -48,5 +21,5 @@ resource "aws_lambda_permission" "eventbridge" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.handler.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.config_compliance_change.arn
+  source_arn    = aws_cloudwatch_event_rule.scheduled_check.arn
 }

@@ -10,9 +10,9 @@ import re
 class TestEventBridgeRuleResources:
     """Test EventBridge rule resources exist."""
 
-    def test_config_compliance_change_rule_exists(self, eventbridge_tf_content):
-        """Verify config compliance change rule is defined."""
-        pattern = r'resource\s+"aws_cloudwatch_event_rule"\s+"config_compliance_change"'
+    def test_scheduled_check_rule_exists(self, eventbridge_tf_content):
+        """Verify scheduled check rule is defined."""
+        pattern = r'resource\s+"aws_cloudwatch_event_rule"\s+"scheduled_check"'
         assert re.search(pattern, eventbridge_tf_content)
 
     def test_event_target_exists(self, eventbridge_tf_content):
@@ -20,21 +20,24 @@ class TestEventBridgeRuleResources:
         pattern = r'resource\s+"aws_cloudwatch_event_target"\s+"lambda"'
         assert re.search(pattern, eventbridge_tf_content)
 
+    def test_lambda_permission_exists(self, eventbridge_tf_content):
+        """Verify Lambda permission for EventBridge is defined."""
+        pattern = r'resource\s+"aws_lambda_permission"\s+"eventbridge"'
+        assert re.search(pattern, eventbridge_tf_content)
+
 
 class TestEventBridgeRuleConfiguration:
     """Test EventBridge rule configuration."""
 
-    def test_rule_listens_to_aws_config_source(self, eventbridge_tf_content):
-        """Verify rule listens to aws.config source."""
-        assert '"aws.config"' in eventbridge_tf_content
+    def test_rule_has_schedule_expression(self, eventbridge_tf_content):
+        """Verify rule has schedule expression."""
+        pattern = r'schedule_expression\s*='
+        assert re.search(pattern, eventbridge_tf_content)
 
-    def test_rule_listens_to_compliance_change_detail_type(self, eventbridge_tf_content):
-        """Verify rule listens to Config Rules Compliance Change detail type."""
-        assert '"Config Rules Compliance Change"' in eventbridge_tf_content
-
-    def test_rule_filters_for_non_compliant(self, eventbridge_tf_content):
-        """Verify rule filters for NON_COMPLIANT compliance type."""
-        assert '"NON_COMPLIANT"' in eventbridge_tf_content
+    def test_rule_uses_rate_schedule(self, eventbridge_tf_content):
+        """Verify rule uses rate-based schedule."""
+        pattern = r'rate\(1 hour\)'
+        assert re.search(pattern, eventbridge_tf_content)
 
 
 class TestEventBridgeTargetConfiguration:
@@ -45,35 +48,19 @@ class TestEventBridgeTargetConfiguration:
         pattern = r'arn\s*=\s*aws_lambda_function\.handler\.arn'
         assert re.search(pattern, eventbridge_tf_content)
 
-    def test_target_has_input_transformer(self, eventbridge_tf_content):
-        """Verify target has input transformer."""
-        pattern = r'input_transformer\s*\{'
+    def test_target_has_invoke_lambda_id(self, eventbridge_tf_content):
+        """Verify target has InvokeLambda target ID."""
+        pattern = r'target_id\s*=\s*"InvokeLambda"'
         assert re.search(pattern, eventbridge_tf_content)
 
 
-class TestInputTransformerConfiguration:
-    """Test input transformer configuration."""
+class TestLambdaPermissionConfiguration:
+    """Test Lambda permission configuration for EventBridge."""
 
-    def test_input_paths_has_config_rule_name(self, eventbridge_tf_content):
-        """Verify input paths extracts configRuleName."""
-        pattern = r'configRuleName\s*=\s*"\$\.detail\.configRuleName"'
-        assert re.search(pattern, eventbridge_tf_content)
+    def test_permission_allows_invoke(self, eventbridge_tf_content):
+        """Verify permission allows lambda:InvokeFunction."""
+        assert '"lambda:InvokeFunction"' in eventbridge_tf_content
 
-    def test_input_paths_has_resource_type(self, eventbridge_tf_content):
-        """Verify input paths extracts resourceType."""
-        pattern = r'resourceType\s*=\s*"\$\.detail\.resourceType"'
-        assert re.search(pattern, eventbridge_tf_content)
-
-    def test_input_paths_has_resource_id(self, eventbridge_tf_content):
-        """Verify input paths extracts resourceId."""
-        pattern = r'resourceId\s*=\s*"\$\.detail\.resourceId"'
-        assert re.search(pattern, eventbridge_tf_content)
-
-    def test_input_paths_has_aws_region(self, eventbridge_tf_content):
-        """Verify input paths extracts awsRegion."""
-        pattern = r'awsRegion\s*=\s*"\$\.detail\.awsRegion"'
-        assert re.search(pattern, eventbridge_tf_content)
-
-    def test_input_template_has_source(self, eventbridge_tf_content):
-        """Verify input template has drift-recovery-trigger source."""
-        assert '"drift-recovery-trigger"' in eventbridge_tf_content
+    def test_permission_principal_is_events(self, eventbridge_tf_content):
+        """Verify permission principal is events.amazonaws.com."""
+        assert '"events.amazonaws.com"' in eventbridge_tf_content
