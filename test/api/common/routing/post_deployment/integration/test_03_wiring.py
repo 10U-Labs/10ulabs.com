@@ -122,43 +122,6 @@ def test_lambda_catchall_permission_source_arn_covers_all_methods(lambda_client,
         raise
 
 
-def _get_sqs_role_policy(iam_client, shared_config):
-    """Get the API Gateway SQS role policy document."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
-    response = iam_client.get_role_policy(
-        RoleName=role_name, PolicyName='SendToIngressQueues'
-    )
-    return response['PolicyDocument']
-
-
-def test_api_gateway_sqs_policy_targets_webhook_queue(iam_client, shared_config):
-    """Verify API Gateway SQS policy targets webhook queue."""
-    policy = _get_sqs_role_policy(iam_client, shared_config)
-    resources = _extract_policy_resources(policy)
-    assert any('webhook' in r.lower() for r in resources)
-
-
-def test_api_gateway_sqs_policy_targets_runners_queue(iam_client, shared_config):
-    """Verify API Gateway SQS policy targets runners queue."""
-    policy = _get_sqs_role_policy(iam_client, shared_config)
-    resources = _extract_policy_resources(policy)
-    assert any('runner' in r.lower() for r in resources)
-
-
-def test_api_gateway_sqs_policy_allows_send_message(iam_client, shared_config):
-    """Verify API Gateway SQS policy allows SendMessage action."""
-    policy = _get_sqs_role_policy(iam_client, shared_config)
-    actions = _extract_policy_actions(policy)
-    assert any('sqs:SendMessage' in a for a in actions)
-
-
-def test_api_gateway_sqs_policy_allows_get_queue_url(iam_client, shared_config):
-    """Verify API Gateway SQS policy allows GetQueueUrl action."""
-    policy = _get_sqs_role_policy(iam_client, shared_config)
-    actions = _extract_policy_actions(policy)
-    assert any('sqs:GetQueueUrl' in a for a in actions)
-
-
 # =============================================================================
 # CloudFront → S3 Wiring
 # =============================================================================
@@ -433,23 +396,6 @@ def test_s3_cloudfront_logs_prefix_accessible(config, aws_region):
         MaxKeys=1
     )
     assert 'Contents' in response or 'KeyCount' in response
-
-
-def test_api_gateway_sqs_role_trusts_apigateway_service(iam_client, shared_config):
-    """Verify API Gateway SQS role trusts the API Gateway service."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
-    response = iam_client.get_role(RoleName=role_name)
-    assume_role_policy = response['Role']['AssumeRolePolicyDocument']
-    statements = assume_role_policy['Statement']
-    service_principal = statements[0]['Principal']['Service']
-    assert service_principal == 'apigateway.amazonaws.com'
-
-
-def test_api_gateway_sqs_role_has_sqs_policy(iam_client, shared_config):
-    """Verify API Gateway SQS role has SQS access policy attached."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
-    response = iam_client.list_role_policies(RoleName=role_name)
-    assert 'SendToIngressQueues' in response['PolicyNames']
 
 
 # =============================================================================

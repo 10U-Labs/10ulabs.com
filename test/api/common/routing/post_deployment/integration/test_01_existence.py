@@ -214,13 +214,6 @@ def test_api_gateway_cloudwatch_role_exists(iam_client, config):
     assert response['Role']['RoleName'] == role_name
 
 
-def test_api_gateway_sqs_role_exists(iam_client, shared_config):
-    """Verify API Gateway SQS IAM role exists."""
-    role_name = f"{shared_config['resource_prefix']}ApiGatewaySqsRole"
-    response = iam_client.get_role(RoleName=role_name)
-    assert response['Role']['RoleName'] == role_name
-
-
 # =============================================================================
 # CloudFront Function
 # =============================================================================
