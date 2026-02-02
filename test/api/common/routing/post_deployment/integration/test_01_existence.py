@@ -5,7 +5,6 @@ Tests are organized by resource domain for readability.
 """
 import pytest
 
-import boto3
 from test_fixtures.aws import iam_role_exists
 
 
@@ -232,10 +231,3 @@ def test_cloudfront_url_rewrite_function_exists(cloudfront_client):
     response = cloudfront_client.list_functions()
     function_names = [f['Name'] for f in response['FunctionList'].get('Items', [])]
     assert 'RootUrlRewriteFunction' in function_names
-
-
-# =============================================================================
-# WAF Firehose (us-east-1)
-# =============================================================================
-
-

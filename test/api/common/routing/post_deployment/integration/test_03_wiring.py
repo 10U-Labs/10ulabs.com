@@ -465,10 +465,3 @@ def test_api_gateway_cloudwatch_role_trusts_apigateway_service(iam_client, confi
     statements = assume_role_policy['Statement']
     service_principal = statements[0]['Principal']['Service']
     assert service_principal == 'apigateway.amazonaws.com'
-
-
-# =============================================================================
-# WAF Firehose Wiring (us-east-1)
-# =============================================================================
-
-

@@ -5,8 +5,6 @@ Tests assume Layer 1 existence tests have passed.
 """
 import pytest
 
-import boto3
-
 from test_fixtures.integration import create_deployed_naming_convention_tests
 
 
