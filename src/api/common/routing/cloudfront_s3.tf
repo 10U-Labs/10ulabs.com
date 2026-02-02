@@ -255,12 +255,3 @@ data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
 data "aws_cloudfront_origin_request_policy" "cors_s3_origin" {
   name = "Managed-CORS-S3Origin"
 }
-
-# Temporarily prevent WAF destruction until CloudFront updates
-removed {
-  from = module.api_waf
-
-  lifecycle {
-    destroy = false
-  }
-}
