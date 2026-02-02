@@ -1,5 +1,5 @@
 locals {
-  resource_prefix  = module.common.resource_prefix
+  resource_prefix = module.common.resource_prefix
 
   function_name    = "${local.resource_prefix}EcsTaskStops"
   lambda_role_name = "${local.resource_prefix}EcsTaskStopsRole"
