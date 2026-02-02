@@ -23,7 +23,7 @@ output "ecr_repository_name_runners" {
 }
 
 output "github_org" {
-  value = "10U-Labs-LLC"
+  value = "10U-Labs"
 }
 
 output "name_for_central_logs_bucket" {
