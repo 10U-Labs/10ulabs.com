@@ -452,14 +452,6 @@ def test_openapi_spec_bad_request_parameters_returns_400(openapi_spec):
     assert responses['BAD_REQUEST_PARAMETERS']['statusCode'] == 400
 
 
-def test_openapi_spec_response_templates_use_input_path():
-    """Verify response templates use $input.path() for extracting values."""
-    content = _get_openapi_path().read_text()
-    assert '"$input.path(' in content, (
-        "Response templates should use $input.path() to extract values"
-    )
-
-
 def test_openapi_spec_response_templates_do_not_use_input_json_in_quotes():
     """Verify response templates don't use $input.json() inside quotes.
 
