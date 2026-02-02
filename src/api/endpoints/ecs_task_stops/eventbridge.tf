@@ -2,14 +2,13 @@
 
 resource "aws_cloudwatch_event_rule" "task_stopped" {
   name        = local.rule_name
-  description = "Capture ECS task stopped events for runner clusters"
+  description = "Capture ECS task stopped events"
 
   event_pattern = jsonencode({
     source      = ["aws.ecs"]
     detail-type = ["ECS Task State Change"]
     detail = {
       lastStatus = ["STOPPED"]
-      clusterArn = [data.terraform_remote_state.runners_ecs.outputs.cluster_arn]
     }
   })
 
