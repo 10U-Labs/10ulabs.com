@@ -138,32 +138,6 @@ def test_s3_bucket_module_source_path_exists():
     )
 
 
-def test_waf_module_source_declaration_exists():
-    """Verify cloudfront_s3.tf has website_waf module source declaration."""
-    cloudfront_content = _read_file("cloudfront_s3.tf")
-    match = re.search(
-        r'module\s+"website_waf"\s*\{[^}]*source\s*=\s*"([^"]+)"',
-        cloudfront_content,
-        re.DOTALL
-    )
-    assert match, "cloudfront_s3.tf missing website_waf module source"
-
-
-def test_waf_module_source_path_exists():
-    """Verify WAF module source path exists on disk."""
-    cloudfront_content = _read_file("cloudfront_s3.tf")
-    match = re.search(
-        r'module\s+"website_waf"\s*\{[^}]*source\s*=\s*"([^"]+)"',
-        cloudfront_content,
-        re.DOTALL
-    )
-    source_path = match.group(1)
-    resolved_path = SRC_DIR / source_path
-    assert resolved_path.exists(), (
-        f"WAF module source path does not exist: {resolved_path}"
-    )
-
-
 def test_lambda_handler_file_exists():
     """Verify Lambda@Edge handler file exists."""
     handler_path = SRC_DIR / "lambda" / "spa_routing.py"

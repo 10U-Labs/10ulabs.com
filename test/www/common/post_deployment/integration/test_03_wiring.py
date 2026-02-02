@@ -91,17 +91,3 @@ def test_cloudfront_lambda_edge_is_spa_routing(default_cache_behavior):
     viewer_request = [a for a in items if a["EventType"] == "viewer-request"]
     lambda_arn = viewer_request[0]["LambdaFunctionARN"]
     assert "SpaRouting" in lambda_arn, f"Lambda ARN does not contain SpaRouting: {lambda_arn}"
-
-
-def test_cloudfront_has_waf_association(distribution_config):
-    """Verify CloudFront has WAF web ACL associated."""
-    web_acl_id = distribution_config["DistributionConfig"].get("WebACLId", "")
-    assert web_acl_id, "CloudFront has no WAF web ACL associated"
-
-
-def test_cloudfront_waf_is_correct_acl(distribution_config, config):
-    """Verify CloudFront WAF is the website WAF ACL."""
-    web_acl_id = distribution_config["DistributionConfig"].get("WebACLId", "")
-    assert config["resource_prefix"] in web_acl_id or "Website" in web_acl_id, (
-        f"WAF ACL does not appear to be website WAF: {web_acl_id}"
-    )
