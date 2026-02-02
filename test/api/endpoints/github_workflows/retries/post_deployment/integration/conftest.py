@@ -1,5 +1,4 @@
 """Shared fixtures for retries post-deployment integration tests."""
-import boto3
 import pytest
 
 from test_fixtures.aws import get_log_group_info
@@ -12,27 +11,9 @@ def function_name(res_prefix: str) -> str:
 
 
 @pytest.fixture
-def queue_name(res_prefix: str) -> str:
-    """Provide the SQS queue name."""
-    return f"{res_prefix}GitHubWorkflowsRetries"
-
-
-@pytest.fixture
-def dlq_name(res_prefix: str) -> str:
-    """Provide the SQS DLQ name."""
-    return f"{res_prefix}GitHubWorkflowsRetriesDlq"
-
-
-@pytest.fixture
 def lambda_role_name(res_prefix: str) -> str:
     """Provide the Lambda IAM role name."""
     return f"{res_prefix}GitHubWorkflowsRetriesRole"
-
-
-@pytest.fixture(name="sqs_client", scope="session")
-def sqs_client_fixture(aws_region):
-    """Provide an SQS client for the configured region."""
-    return boto3.client("sqs", region_name=aws_region)
 
 
 @pytest.fixture(name="handler_log_group")
@@ -50,7 +31,5 @@ def config_fixture(shared_config, res_prefix):
         "aws_region": shared_config["aws_region"],
         "aws_account_id": shared_config["aws_account_id"],
         "function_name": f"{res_prefix}GitHubWorkflowsRetries",
-        "queue_name": f"{res_prefix}GitHubWorkflowsRetries",
-        "dlq_name": f"{res_prefix}GitHubWorkflowsRetriesDlq",
         "lambda_role_name": f"{res_prefix}GitHubWorkflowsRetriesRole",
     }

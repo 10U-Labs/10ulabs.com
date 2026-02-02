@@ -45,51 +45,6 @@ def test_lambda_has_github_token_env_var(lambda_client, config):
     assert "GITHUB_TOKEN_SECRET_NAME" in env_vars
 
 
-# === SQS Queue Configuration ===
-
-
-def test_main_queue_has_300_second_visibility_timeout(sqs_client, config):
-    """Verify main queue has 300 second visibility timeout."""
-    queue_name = config["queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["VisibilityTimeout"]
-    )
-    assert int(attributes["Attributes"]["VisibilityTimeout"]) == 300
-
-
-def test_main_queue_has_8_hour_retention(sqs_client, config):
-    """Verify main queue has 8 hour message retention."""
-    queue_name = config["queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["MessageRetentionPeriod"]
-    )
-    retention = int(attributes["Attributes"]["MessageRetentionPeriod"])
-    assert retention == 28800  # 8 hours in seconds
-
-
-def test_main_queue_has_redrive_policy(sqs_client, config):
-    """Verify main queue has redrive policy to DLQ."""
-    queue_name = config["queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["RedrivePolicy"]
-    )
-    assert "RedrivePolicy" in attributes["Attributes"]
-
-
-def test_dlq_has_14_day_retention(sqs_client, config):
-    """Verify DLQ has 14 day message retention."""
-    dlq_name = config["dlq_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=dlq_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["MessageRetentionPeriod"]
-    )
-    retention = int(attributes["Attributes"]["MessageRetentionPeriod"])
-    assert retention == 1209600  # 14 days in seconds
-
-
 # === CloudWatch Log Group Configuration ===
 
 
