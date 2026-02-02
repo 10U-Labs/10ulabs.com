@@ -142,12 +142,17 @@ class TestHandleEcsTaskStopped:
             }
         }
 
+        mock_response = {
+            "statusCode": 200,
+            "body": json.dumps({"message": "Workflow retry dispatched", "retried": True}),
+        }
+
         with patch.object(
             handler_module,
             '_get_ecs_task_tags',
             return_value={"RunId": "12345", "GitHubRepo": "org/repo"}
         ):
-            with patch.object(handler_module, '_process_retry_request', return_value=True):
+            with patch.object(handler_module, '_process_retry_request', return_value=mock_response):
                 handle_fn = getattr(handler_module, '_handle_ecs_task_stopped')
                 result = handle_fn(event)
 
