@@ -4,22 +4,17 @@ from pathlib import Path
 from test_utils.terraform_assertions import (
     get_missing_terraform_files,
     lambda_handler_exists,
+    DEFAULT_TERRAFORM_FILES,
 )
 
 
-# Drift recoveries required Terraform files
-DRIFT_RECOVERIES_FILES = [
-    "backend.tf",
-    "providers.tf",
-    "shared.tf",
-    "locals.tf",
-    "lambda.tf",
-    "iam.tf",
+# Drift recoveries requires additional files beyond defaults
+DRIFT_RECOVERIES_EXTRA_FILES = [
     "eventbridge.tf",
     "sns.tf",
     "data.tf",
-    "outputs.tf",
 ]
+DRIFT_RECOVERIES_FILES = DEFAULT_TERRAFORM_FILES + DRIFT_RECOVERIES_EXTRA_FILES
 
 
 class TestDriftRecoveriesTerraformFiles:
