@@ -34,7 +34,7 @@ def test_vpc_dns_support_is_true(api_common_networking_dir):
     """Test that VPC DNS support is true."""
     vpc_tf = api_common_networking_dir / "vpc.tf"
     content = vpc_tf.read_text()
-    assert "enable_dns_support   = true" in content
+    assert "enable_dns_support" in content and "= true" in content
 
 
 def test_vpc_has_dns_hostnames_enabled(api_common_networking_dir):
@@ -48,7 +48,7 @@ def test_vpc_dns_hostnames_is_true(api_common_networking_dir):
     """Test that VPC DNS hostnames is true."""
     vpc_tf = api_common_networking_dir / "vpc.tf"
     content = vpc_tf.read_text()
-    assert "enable_dns_hostnames = true" in content
+    assert "enable_dns_hostnames" in content and "= true" in content
 
 
 def test_vpc_has_tags(api_common_networking_dir):

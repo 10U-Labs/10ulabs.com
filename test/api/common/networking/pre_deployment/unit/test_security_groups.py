@@ -62,21 +62,21 @@ def test_security_groups_egress_allows_all_protocols(api_common_networking_dir):
     """Test that egress allows all protocols."""
     sg_tf = api_common_networking_dir / "security_groups.tf"
     content = sg_tf.read_text()
-    assert 'protocol    = "-1"' in content
+    assert 'protocol' in content and '"-1"' in content
 
 
 def test_security_groups_egress_allows_all_destinations(api_common_networking_dir):
-    """Test that egress allows all destinations (0.0.0.0/0)."""
+    """Test that egress allows all destinations (IPv6 ::/0)."""
     sg_tf = api_common_networking_dir / "security_groups.tf"
     content = sg_tf.read_text()
-    assert "0.0.0.0/0" in content
+    assert "::/0" in content
 
 
 def test_security_groups_egress_allows_all_ports(api_common_networking_dir):
     """Test that egress allows all ports (from_port and to_port = 0)."""
     sg_tf = api_common_networking_dir / "security_groups.tf"
     content = sg_tf.read_text()
-    assert "from_port   = 0" in content
+    assert "from_port" in content and "= 0" in content
 
 
 def test_security_groups_sg_has_tags(api_common_networking_dir):

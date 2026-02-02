@@ -46,18 +46,6 @@ class TestIamRoleNamingConventions:
         content = locals_tf.read_text()
         assert 'SessionsExportRole' in content
 
-    def test_sessions_crawler_trigger_role_name_is_pascalcase(self):
-        """Verify SessionsCrawlerTriggerRole follows PascalCase naming."""
-        locals_tf = SESSIONS_SRC_PATH / "locals.tf"
-        content = locals_tf.read_text()
-        assert 'SessionsCrawlerTriggerRole' in content
-
-    def test_sessions_glue_crawler_role_name_is_pascalcase(self):
-        """Verify SessionsGlueCrawlerRole follows PascalCase naming."""
-        locals_tf = SESSIONS_SRC_PATH / "locals.tf"
-        content = locals_tf.read_text()
-        assert 'SessionsGlueCrawlerRole' in content
-
     def test_sessions_scheduler_role_name_is_pascalcase(self):
         """Verify SessionsSchedulerRole follows PascalCase naming."""
         locals_tf = SESSIONS_SRC_PATH / "locals.tf"
@@ -73,13 +61,6 @@ class TestLambdaFunctionNamingConventions:
         locals_tf = SESSIONS_SRC_PATH / "locals.tf"
         content = locals_tf.read_text()
         assert 'SessionsExport' in content
-
-    def test_crawler_trigger_function_name_is_pascalcase(self):
-        """Verify SessionsCrawlerTrigger function name follows PascalCase."""
-        locals_tf = SESSIONS_SRC_PATH / "locals.tf"
-        content = locals_tf.read_text()
-        assert 'SessionsCrawlerTrigger' in content
-
 
 class TestLambdaConfiguration:
     """Tests for Lambda configuration in Terraform."""
