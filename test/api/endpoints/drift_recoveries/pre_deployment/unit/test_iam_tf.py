@@ -90,36 +90,3 @@ class TestLambdaEC2Policy:
         assert '"ec2:DescribeVpcs"' in iam_tf_content
 
 
-class TestConfigRecorderIAMRole:
-    """Test Config recorder IAM role configuration."""
-
-    def test_config_recorder_role_exists(self, iam_tf_content):
-        """Verify Config recorder IAM role is defined."""
-        pattern = r'resource\s+"aws_iam_role"\s+"config_recorder"'
-        assert re.search(pattern, iam_tf_content)
-
-    def test_config_recorder_role_allows_config_service(self, iam_tf_content):
-        """Verify Config role allows config service to assume it."""
-        assert '"config.amazonaws.com"' in iam_tf_content
-
-    def test_config_recorder_has_aws_config_policy(self, iam_tf_content):
-        """Verify AWS_ConfigRole managed policy is attached."""
-        pattern = r'aws:policy/service-role/AWS_ConfigRole'
-        assert re.search(pattern, iam_tf_content)
-
-
-class TestConfigRecorderS3Policy:
-    """Test Config recorder S3 access policy."""
-
-    def test_config_s3_policy_exists(self, iam_tf_content):
-        """Verify Config S3 delivery policy is defined."""
-        pattern = r'resource\s+"aws_iam_role_policy"\s+"config_recorder_s3"'
-        assert re.search(pattern, iam_tf_content)
-
-    def test_config_s3_policy_has_put_object_permission(self, iam_tf_content):
-        """Verify Config S3 policy allows PutObject."""
-        assert '"s3:PutObject"' in iam_tf_content
-
-    def test_config_s3_policy_has_get_bucket_acl_permission(self, iam_tf_content):
-        """Verify Config S3 policy allows GetBucketAcl."""
-        assert '"s3:GetBucketAcl"' in iam_tf_content

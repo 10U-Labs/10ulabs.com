@@ -121,8 +121,8 @@ class TestRouteTableConfiguration:
                 f"Route table {rt['RouteTableId']} has no default IPv6 route"
             )
 
-    def test_route_table_default_route_targets_eigw(self, ec2_client, runners_vpc_id):
-        """Verify default IPv6 route targets an egress-only internet gateway."""
+    def test_route_table_default_route_targets_igw(self, ec2_client, runners_vpc_id):
+        """Verify default IPv6 route targets an internet gateway."""
         response = ec2_client.describe_route_tables(
             Filters=[
                 {"Name": "vpc-id", "Values": [runners_vpc_id]},
@@ -132,8 +132,8 @@ class TestRouteTableConfiguration:
         for rt in response["RouteTables"]:
             for route in rt.get("Routes", []):
                 if route.get("DestinationIpv6CidrBlock") == "::/0":
-                    gateway_id = route.get("EgressOnlyInternetGatewayId", "")
-                    assert gateway_id.startswith("eigw-"), (
+                    gateway_id = route.get("GatewayId", "")
+                    assert gateway_id.startswith("igw-"), (
                         f"Route table {rt['RouteTableId']} default route does not "
-                        f"target an EIGW, got: {gateway_id}"
+                        f"target an IGW, got: {gateway_id}"
                     )
