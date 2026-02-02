@@ -80,25 +80,6 @@ class TestExportLambdaConfiguration:
         assert "S3_PREFIX" in env_vars
 
 
-class TestCrawlerTriggerLambdaConfiguration:
-    """Tests for crawler trigger Lambda configuration."""
-
-    def test_crawler_trigger_lambda_has_30_second_timeout(self, lambda_client, sessions_config):
-        """Verify crawler trigger Lambda timeout is 30 seconds."""
-        response = lambda_client.get_function_configuration(
-            FunctionName=sessions_config["crawler_trigger_function_name"]
-        )
-        assert response["Timeout"] == 30
-
-    def test_crawler_trigger_lambda_has_crawler_name_env_var(self, lambda_client, sessions_config):
-        """Verify crawler trigger has CRAWLER_NAME environment variable."""
-        response = lambda_client.get_function_configuration(
-            FunctionName=sessions_config["crawler_trigger_function_name"]
-        )
-        env_vars = response.get("Environment", {}).get("Variables", {})
-        assert "CRAWLER_NAME" in env_vars
-
-
 class TestDynamoDbConfiguration:
     """Tests for DynamoDB table configuration."""
 
@@ -223,18 +204,6 @@ class TestCloudWatchLogsConfiguration:
         )
         assert log_group["retentionInDays"] == 7
 
-    def test_crawler_trigger_log_group_has_7_day_retention(self, logs_client, sessions_config):
-        """Verify crawler trigger log group has 7-day retention."""
-        response = logs_client.describe_log_groups(
-            logGroupNamePrefix=sessions_config["crawler_trigger_log_group"]
-        )
-        log_group = next(
-            lg for lg in response["logGroups"]
-            if lg["logGroupName"] == sessions_config["crawler_trigger_log_group"]
-        )
-        assert log_group["retentionInDays"] == 7
-
-
 class TestBackupConfiguration:
     """Tests for AWS Backup configuration."""
 
@@ -248,16 +217,6 @@ class TestBackupConfiguration:
         plan_details = backup_client.get_backup_plan(BackupPlanId=plan["BackupPlanId"])
         rules = plan_details["BackupPlan"]["Rules"]
         assert any(r["Lifecycle"]["DeleteAfterDays"] == 30 for r in rules)
-
-
-class TestGlueConfiguration:
-    """Tests for Glue configuration."""
-
-    def test_glue_crawler_has_daily_schedule(self, glue_client, sessions_config):
-        """Verify Glue crawler has daily schedule at 6 AM UTC."""
-        response = glue_client.get_crawler(Name=sessions_config["glue_crawler_name"])
-        schedule = response["Crawler"].get("Schedule", {}).get("ScheduleExpression", "")
-        assert "cron(0 6" in schedule
 
 
 class TestSchedulerConfiguration:

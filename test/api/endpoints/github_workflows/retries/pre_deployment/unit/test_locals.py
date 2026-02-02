@@ -20,18 +20,6 @@ class TestLocalsConfiguration:
             content = f.read()
         assert "lambda_role_name" in content
 
-    def test_locals_has_queue_name(self, retries_src_path):
-        """Locals defines queue_name."""
-        with open(retries_src_path / "locals.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert "queue_name" in content
-
-    def test_locals_has_dlq_name(self, retries_src_path):
-        """Locals defines dlq_name."""
-        with open(retries_src_path / "locals.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert "dlq_name" in content
-
     def test_locals_has_common_tags(self, retries_src_path):
         """Locals defines common_tags."""
         with open(retries_src_path / "locals.tf", encoding="utf-8") as f:
@@ -50,8 +38,3 @@ class TestLocalsConfiguration:
             content = f.read()
         assert "aws_region" in content
 
-    def test_locals_has_aws_account_id(self, retries_src_path):
-        """Locals defines aws_account_id."""
-        with open(retries_src_path / "locals.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert "aws_account_id" in content

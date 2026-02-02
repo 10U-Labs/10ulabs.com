@@ -74,36 +74,6 @@ class TestIamConfiguration:
             content = f.read()
         assert "kms:DescribeKey" in content
 
-    def test_sqs_access_policy_exists(self, retries_src_path):
-        """SQS access policy exists."""
-        with open(retries_src_path / "iam.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert 'resource "aws_iam_role_policy" "sqs_access"' in content
-
-    def test_sqs_policy_allows_receive_message(self, retries_src_path):
-        """SQS policy allows ReceiveMessage action."""
-        with open(retries_src_path / "iam.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert "sqs:ReceiveMessage" in content
-
-    def test_sqs_policy_allows_delete_message(self, retries_src_path):
-        """SQS policy allows DeleteMessage action."""
-        with open(retries_src_path / "iam.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert "sqs:DeleteMessage" in content
-
-    def test_sqs_policy_allows_get_queue_attributes(self, retries_src_path):
-        """SQS policy allows GetQueueAttributes action."""
-        with open(retries_src_path / "iam.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert "sqs:GetQueueAttributes" in content
-
-    def test_sqs_policy_references_main_queue(self, retries_src_path):
-        """SQS policy references main queue ARN."""
-        with open(retries_src_path / "iam.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert "aws_sqs_queue.main.arn" in content
-
     def test_lambda_role_has_tags(self, retries_src_path):
         """Lambda role has tags."""
         with open(retries_src_path / "iam.tf", encoding="utf-8") as f:

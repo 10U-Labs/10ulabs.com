@@ -17,7 +17,7 @@ class TestEventBridgeRuleResources:
 
     def test_event_target_exists(self, eventbridge_tf_content):
         """Verify event target is defined."""
-        pattern = r'resource\s+"aws_cloudwatch_event_target"\s+"drift_recovery"'
+        pattern = r'resource\s+"aws_cloudwatch_event_target"\s+"lambda"'
         assert re.search(pattern, eventbridge_tf_content)
 
 
@@ -40,14 +40,9 @@ class TestEventBridgeRuleConfiguration:
 class TestEventBridgeTargetConfiguration:
     """Test EventBridge target configuration."""
 
-    def test_target_references_sqs_queue(self, eventbridge_tf_content):
-        """Verify target references SQS queue."""
-        pattern = r'arn\s*=\s*aws_sqs_queue\.handler\.arn'
-        assert re.search(pattern, eventbridge_tf_content)
-
-    def test_target_has_sqs_message_group_id(self, eventbridge_tf_content):
-        """Verify target has SQS message group ID for FIFO queue."""
-        pattern = r'message_group_id\s*=\s*"drift-recovery"'
+    def test_target_references_lambda(self, eventbridge_tf_content):
+        """Verify target references Lambda function."""
+        pattern = r'arn\s*=\s*aws_lambda_function\.handler\.arn'
         assert re.search(pattern, eventbridge_tf_content)
 
     def test_target_has_input_transformer(self, eventbridge_tf_content):

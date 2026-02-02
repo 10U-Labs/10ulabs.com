@@ -22,14 +22,6 @@ class TestLambdaExistence:
         )
         assert response["Configuration"]["FunctionName"] == sessions_config["export_function_name"]
 
-    def test_sessions_crawler_trigger_lambda_exists(self, lambda_client, sessions_config):
-        """Verify sessions crawler trigger Lambda exists."""
-        response = lambda_client.get_function(
-            FunctionName=sessions_config["crawler_trigger_function_name"]
-        )
-        assert response["Configuration"]["FunctionName"] == sessions_config["crawler_trigger_function_name"]
-
-
 class TestDynamoDbExistence:
     """Tests for DynamoDB table existence."""
 
@@ -50,20 +42,6 @@ class TestS3Existence:
         assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
 
 
-class TestGlueExistence:
-    """Tests for Glue resources existence."""
-
-    def test_glue_database_exists(self, glue_client, sessions_config):
-        """Verify Glue catalog database exists."""
-        response = glue_client.get_database(Name=sessions_config["glue_database_name"])
-        assert response["Database"]["Name"] == sessions_config["glue_database_name"]
-
-    def test_glue_crawler_exists(self, glue_client, sessions_config):
-        """Verify Glue crawler exists."""
-        response = glue_client.get_crawler(Name=sessions_config["glue_crawler_name"])
-        assert response["Crawler"]["Name"] == sessions_config["glue_crawler_name"]
-
-
 class TestCloudWatchLogsExistence:
     """Tests for CloudWatch Log Group existence."""
 
@@ -82,15 +60,6 @@ class TestCloudWatchLogsExistence:
         )
         log_groups = [lg["logGroupName"] for lg in response["logGroups"]]
         assert sessions_config["export_log_group"] in log_groups
-
-    def test_crawler_trigger_log_group_exists(self, logs_client, sessions_config):
-        """Verify crawler trigger log group exists."""
-        response = logs_client.describe_log_groups(
-            logGroupNamePrefix=sessions_config["crawler_trigger_log_group"]
-        )
-        log_groups = [lg["logGroupName"] for lg in response["logGroups"]]
-        assert sessions_config["crawler_trigger_log_group"] in log_groups
-
 
 class TestBackupExistence:
     """Tests for AWS Backup resource existence."""
@@ -119,13 +88,6 @@ class TestEventBridgeExistence:
         )
         assert response["Name"] == sessions_config["scheduler_name"]
 
-    def test_eventbridge_export_completed_rule_exists(self, events_client, sessions_config):
-        """Verify EventBridge rule exists."""
-        response = events_client.describe_rule(
-            Name=sessions_config["eventbridge_rule_name"]
-        )
-        assert response["Name"] == sessions_config["eventbridge_rule_name"]
-
 
 class TestIamRoleExistence:
     """Tests for IAM role existence."""
@@ -139,16 +101,6 @@ class TestIamRoleExistence:
         """Verify sessions export IAM role exists."""
         response = iam_client.get_role(RoleName=sessions_config["export_role_name"])
         assert response["Role"]["RoleName"] == sessions_config["export_role_name"]
-
-    def test_sessions_crawler_trigger_iam_role_exists(self, iam_client, sessions_config):
-        """Verify sessions crawler trigger IAM role exists."""
-        response = iam_client.get_role(RoleName=sessions_config["crawler_trigger_role_name"])
-        assert response["Role"]["RoleName"] == sessions_config["crawler_trigger_role_name"]
-
-    def test_glue_crawler_iam_role_exists(self, iam_client, sessions_config):
-        """Verify Glue crawler IAM role exists."""
-        response = iam_client.get_role(RoleName=sessions_config["glue_crawler_role_name"])
-        assert response["Role"]["RoleName"] == sessions_config["glue_crawler_role_name"]
 
     def test_scheduler_iam_role_exists(self, iam_client, sessions_config):
         """Verify scheduler IAM role exists."""

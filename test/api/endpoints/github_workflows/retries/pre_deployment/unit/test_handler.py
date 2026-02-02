@@ -48,13 +48,6 @@ class TestProcessRetryRequest:
 class TestLambdaHandler:
     """Tests for lambda_handler function."""
 
-    def test_lambda_handler_sqs_event_processes_records(self, handler_module, lambda_context):
-        """SQS event with records processes each record."""
-        event = {"Records": [{"body": json.dumps({"run_id": 123, "github_repo": "org/repo"})}]}
-        with patch.object(handler_module, '_get_github_token', return_value=''):
-            result = handler_module.lambda_handler(event, lambda_context)
-        assert result["statusCode"] == 200 and "results" in json.loads(result["body"])
-
     def test_lambda_handler_direct_invocation_processes_body(
         self, handler_module, lambda_context
     ):
@@ -356,22 +349,8 @@ class TestLambdaHandlerAdditional:
     def test_lambda_handler_raw_event_without_body_processes_directly(
         self, handler_module, lambda_context
     ):
-        """When event has no body or Records, processes event directly."""
+        """When event has no body, processes event directly."""
         event = {"run_id": 123, "github_repo": "org/repo"}
         with patch.object(handler_module, '_get_github_token', return_value=''):
             result = handler_module.lambda_handler(event, lambda_context)
         assert result["statusCode"] == 500
-
-    def test_lambda_handler_sqs_multiple_records_processes_all(
-        self, handler_module, lambda_context
-    ):
-        """When SQS event has multiple records, processes all of them."""
-        event = {
-            "Records": [
-                {"body": json.dumps({"run_id": 123, "github_repo": "org/repo"})},
-                {"body": json.dumps({"run_id": 456, "github_repo": "org/repo2"})}
-            ]
-        }
-        with patch.object(handler_module, '_get_github_token', return_value=''):
-            result = handler_module.lambda_handler(event, lambda_context)
-        assert len(json.loads(result["body"])["results"]) == 2

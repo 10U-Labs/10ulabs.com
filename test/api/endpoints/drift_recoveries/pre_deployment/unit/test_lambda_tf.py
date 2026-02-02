@@ -25,12 +25,6 @@ class TestLambdaResourcesExist:
         pattern = r'resource\s+"aws_cloudwatch_log_group"\s+"handler"'
         assert re.search(pattern, lambda_tf_content)
 
-    def test_event_source_mapping_exists(self, lambda_tf_content):
-        """Verify SQS event source mapping is defined."""
-        pattern = r'resource\s+"aws_lambda_event_source_mapping"\s+"sqs"'
-        assert re.search(pattern, lambda_tf_content)
-
-
 class TestLambdaHandlerConfiguration:
     """Test Lambda handler configurations."""
 
@@ -95,25 +89,6 @@ class TestLambdaNamingConventions:
     def test_role_references_iam_role(self, lambda_tf_content):
         """Verify Lambda references IAM role."""
         pattern = r'role\s*=\s*aws_iam_role\.lambda\.arn'
-        assert re.search(pattern, lambda_tf_content)
-
-
-class TestLambdaEventSourceMapping:
-    """Test Lambda SQS event source mapping configuration."""
-
-    def test_event_source_references_sqs_queue(self, lambda_tf_content):
-        """Verify event source mapping references SQS queue."""
-        pattern = r'event_source_arn\s*=\s*aws_sqs_queue\.handler\.arn'
-        assert re.search(pattern, lambda_tf_content)
-
-    def test_batch_size_is_one(self, lambda_tf_content):
-        """Verify batch size is 1 for serial processing."""
-        pattern = r'batch_size\s*=\s*1'
-        assert re.search(pattern, lambda_tf_content)
-
-    def test_mapping_is_enabled(self, lambda_tf_content):
-        """Verify event source mapping is enabled."""
-        pattern = r'enabled\s*=\s*true'
         assert re.search(pattern, lambda_tf_content)
 
 

@@ -62,12 +62,6 @@ class TestLambdaConfiguration:
             content = f.read()
         assert 'resource "aws_cloudwatch_log_group"' in content
 
-    def test_sqs_event_source_mapping_exists(self, retries_src_path):
-        """SQS event source mapping resource is defined."""
-        with open(retries_src_path / "lambda.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert 'resource "aws_lambda_event_source_mapping"' in content
-
     def test_archive_file_data_source_exists(self, retries_src_path):
         """Archive file data source is defined."""
         with open(retries_src_path / "lambda.tf", encoding="utf-8") as f:
