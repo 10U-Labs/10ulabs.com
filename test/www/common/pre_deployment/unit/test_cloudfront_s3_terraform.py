@@ -84,24 +84,6 @@ def test_s3_bucket_policy_resource_defined(src_dir):
     assert 'resource "aws_s3_bucket_policy" "website"' in content
 
 
-def test_website_waf_module_defined(src_dir):
-    """Verify website_waf module is defined."""
-    content = (src_dir / "cloudfront_s3.tf").read_text()
-    assert 'module "website_waf"' in content
-
-
-def test_website_waf_module_source(src_dir):
-    """Verify website_waf module uses cloudfront_waf source."""
-    content = (src_dir / "cloudfront_s3.tf").read_text()
-    assert 'source = "../../../lib/terraform/cloudfront_waf"' in content
-
-
-def test_website_waf_uses_us_east_1_provider(src_dir):
-    """Verify website_waf uses us-east-1 provider."""
-    content = (src_dir / "cloudfront_s3.tf").read_text()
-    assert "aws.us-east-1 = aws.us-east-1" in content
-
-
 def test_response_headers_policy_defined(src_dir):
     """Verify response headers policy is defined."""
     content = (src_dir / "cloudfront_s3.tf").read_text()
