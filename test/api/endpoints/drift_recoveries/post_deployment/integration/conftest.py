@@ -10,32 +10,11 @@ def fixture_function_name(request) -> str:
     return f"{prefix}DriftRecoveries"
 
 
-@pytest.fixture(name="queue_name")
-def fixture_queue_name(request) -> str:
-    """Provide the SQS queue name."""
-    prefix = request.getfixturevalue('res_prefix')
-    return f"{prefix}DriftRecoveries"
-
-
-@pytest.fixture(scope="session")
-def sqs_client(request):
-    """Create an SQS client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("sqs", region_name=region)
-
-
 @pytest.fixture(scope="session")
 def sns_client(request):
     """Create an SNS client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("sns", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def config_client(request):
-    """Create an AWS Config client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("config", region_name=region)
 
 
 @pytest.fixture(name="lambda_role_name")
