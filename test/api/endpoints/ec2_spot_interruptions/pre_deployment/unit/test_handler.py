@@ -1,5 +1,4 @@
 """Unit tests for the EC2 spot interruptions handler."""
-# pylint: disable=duplicate-code
 import json
 from unittest.mock import MagicMock, patch
 
