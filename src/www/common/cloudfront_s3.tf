@@ -12,6 +12,24 @@ module "website_bucket" {
   })
 }
 
+# WAF module kept temporarily for destroy ordering - CloudFront depends on it
+# so CloudFront updates (clears web_acl_id) before WAF is destroyed
+module "website_waf" {
+  source = "../../../lib/terraform/cloudfront_waf"
+
+  providers = {
+    aws.us-east-1 = aws.us-east-1
+  }
+
+  name             = "${local.resource_prefix}WebsiteWafWebAcl"
+  metric_name      = "${local.resource_prefix}WebsiteWafMetrics"
+  log_group_suffix = "website"
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}WebsiteWafWebAcl"
+  })
+}
+
 resource "aws_cloudfront_origin_access_control" "website" {
   name                              = "${local.www_fqdn}-oac"
   origin_access_control_origin_type = "s3"
@@ -150,10 +168,10 @@ resource "aws_cloudfront_distribution" "website" {
     Name = "${local.www_fqdn}-distribution"
   })
 
-  # Explicitly clear WAF association (was module.website_waf)
+  # Explicitly clear WAF association - depends_on ensures CloudFront updates before WAF destroys
   web_acl_id = ""
 
-  depends_on = [aws_acm_certificate_validation.website]
+  depends_on = [aws_acm_certificate_validation.website, module.website_waf]
 }
 
 data "aws_cloudfront_origin_request_policy" "cors_s3_origin" {
