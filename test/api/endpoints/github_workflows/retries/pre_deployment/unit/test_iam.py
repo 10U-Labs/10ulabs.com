@@ -38,18 +38,6 @@ class TestIamConfiguration:
             content = f.read()
         assert "AWSLambdaBasicExecutionRole" in content
 
-    def test_xray_role_attachment_exists(self, retries_src_path):
-        """X-Ray role attachment exists."""
-        with open(retries_src_path / "iam.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert 'resource "aws_iam_role_policy_attachment" "lambda_xray"' in content
-
-    def test_xray_uses_aws_managed_policy(self, retries_src_path):
-        """X-Ray attachment uses AWS managed policy."""
-        with open(retries_src_path / "iam.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert "AWSXRayDaemonWriteAccess" in content
-
     def test_ssm_access_policy_exists(self, retries_src_path):
         """SSM access policy exists."""
         with open(retries_src_path / "iam.tf", encoding="utf-8") as f:

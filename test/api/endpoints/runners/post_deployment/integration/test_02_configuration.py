@@ -79,19 +79,6 @@ class TestLambdaConfiguration:
             "Check lambda.tf architectures value."
         )
 
-    def test_lambda_has_xray_tracing(self, lambda_client, lambda_function_name):
-        """Verify Lambda has X-Ray tracing enabled."""
-        if not lambda_function_name:
-            pytest.skip("lambda_function_name not available")
-        response = lambda_client.get_function_configuration(
-            FunctionName=lambda_function_name
-        )
-        tracing_mode = response.get("TracingConfig", {}).get("Mode", "")
-        assert tracing_mode == "Active", (
-            f"Lambda tracing mode is '{tracing_mode}', expected 'Active'. "
-            "Check lambda.tf tracing_config value."
-        )
-
 
 class TestSQSConfiguration:
     """Verify SQS queue configuration."""

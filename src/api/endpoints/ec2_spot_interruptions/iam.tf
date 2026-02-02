@@ -22,11 +22,6 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_xray" {
-  role       = aws_iam_role.lambda.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-}
-
 resource "aws_iam_role_policy" "ec2_describe" {
   name = "EC2DescribeInstances"
   role = aws_iam_role.lambda.id

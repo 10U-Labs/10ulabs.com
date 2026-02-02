@@ -56,12 +56,6 @@ class TestLambdaConfiguration:
             content = f.read()
         assert "logging_config" in content
 
-    def test_lambda_has_tracing_config(self, retries_src_path):
-        """Lambda has tracing_config for X-Ray."""
-        with open(retries_src_path / "lambda.tf", encoding="utf-8") as f:
-            content = f.read()
-        assert "tracing_config" in content
-
     def test_cloudwatch_log_group_exists(self, retries_src_path):
         """CloudWatch log group resource is defined."""
         with open(retries_src_path / "lambda.tf", encoding="utf-8") as f:

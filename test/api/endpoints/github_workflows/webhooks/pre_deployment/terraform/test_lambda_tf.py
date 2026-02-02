@@ -157,24 +157,6 @@ class TestLambdaLoggingConfiguration:
         )
 
 
-class TestLambdaTracingConfiguration:
-    """Test Lambda X-Ray tracing configurations."""
-
-    def test_lambdas_have_tracing_config(self, lambda_tf_content):
-        """Verify Lambdas have tracing_config for X-Ray."""
-        # Most Lambdas should have tracing enabled (some may not)
-        tracing_pattern = r'tracing_config\s*\{[^}]*mode\s*=\s*"Active"'
-        tracing_count = len(re.findall(tracing_pattern, lambda_tf_content, re.DOTALL))
-        # At minimum, the main webhook handler should have tracing
-        assert tracing_count >= 1, "Expected at least one Lambda with X-Ray tracing enabled"
-
-    def test_tracing_mode_is_active(self, lambda_tf_content):
-        """Verify tracing mode is set to Active (not PassThrough)."""
-        assert '"Active"' in lambda_tf_content, (
-            "Tracing mode should be Active for proper X-Ray integration"
-        )
-
-
 class TestLambdaIAMConfiguration:
     """Test Lambda IAM role references."""
 

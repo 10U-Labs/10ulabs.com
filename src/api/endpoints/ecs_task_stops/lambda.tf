@@ -30,10 +30,6 @@ resource "aws_lambda_function" "handler" {
     log_group  = aws_cloudwatch_log_group.handler.name
   }
 
-  tracing_config {
-    mode = "Active"
-  }
-
   tags = merge(local.common_tags, {
     Name = local.function_name
   })

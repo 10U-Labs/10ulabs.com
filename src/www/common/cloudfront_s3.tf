@@ -50,22 +50,6 @@ resource "aws_s3_bucket_policy" "website" {
   policy = data.aws_iam_policy_document.website_bucket_policy.json
 }
 
-module "website_waf" {
-  source = "../../../lib/terraform/cloudfront_waf"
-
-  providers = {
-    aws.us-east-1 = aws.us-east-1
-  }
-
-  name             = "${local.resource_prefix}WafWebAcl"
-  metric_name      = "${local.resource_prefix}WafMetrics"
-  log_group_suffix = local.resource_prefix
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}WafWebAcl"
-  })
-}
-
 resource "aws_cloudfront_response_headers_policy" "website" {
   name = "${local.resource_prefix}ResponseHeadersPolicy"
 
@@ -107,7 +91,6 @@ resource "aws_cloudfront_distribution" "website" {
   enabled         = true
   is_ipv6_enabled = true
   aliases         = [local.www_fqdn, local.apex_fqdn]
-  web_acl_id      = module.website_waf.web_acl_arn
 
   logging_config {
     include_cookies = false

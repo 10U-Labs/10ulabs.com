@@ -22,11 +22,6 @@ resource "aws_iam_role_policy_attachment" "lambda_runners_handler_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_runners_handler_xray" {
-  role       = aws_iam_role.lambda_runners_handler.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-}
-
 resource "aws_iam_role_policy" "lambda_runners_handler_ssm" {
   name = "SSMParameterAccess"
   role = aws_iam_role.lambda_runners_handler.id

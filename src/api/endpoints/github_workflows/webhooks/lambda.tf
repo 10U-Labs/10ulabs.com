@@ -82,10 +82,6 @@ resource "aws_lambda_function" "runners_handler" {
     target_arn = aws_sqs_queue.webhook_dlq.arn
   }
 
-  tracing_config {
-    mode = "Active"
-  }
-
   logging_config {
     log_format = "Text"
     log_group  = aws_cloudwatch_log_group.runners_handler.name
@@ -103,7 +99,6 @@ resource "aws_lambda_function" "runners_handler" {
     aws_iam_role_policy.lambda_runners_handler_dynamodb,
     aws_iam_role_policy.lambda_runners_handler_ssm_github_pat,
     aws_iam_role_policy_attachment.lambda_runners_handler_basic,
-    aws_iam_role_policy_attachment.lambda_runners_handler_xray,
   ]
 
   # Force Lambda replacement when IAM role is recreated to refresh KMS grant

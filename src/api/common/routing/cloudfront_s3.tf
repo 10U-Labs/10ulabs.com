@@ -74,22 +74,6 @@ resource "aws_s3_bucket_policy" "docs" {
   policy = data.aws_iam_policy_document.s3_bucket_policy.json
 }
 
-module "api_waf" {
-  source = "../../../../lib/terraform/cloudfront_waf"
-
-  providers = {
-    aws.us-east-1 = aws.us-east-1
-  }
-
-  name             = "ApiWafWebAcl"
-  metric_name      = "ApiWafMetrics"
-  log_group_suffix = "api"
-
-  tags = merge(local.common_tags, {
-    Name = "ApiWafWebAcl"
-  })
-}
-
 resource "aws_cloudfront_cache_policy" "docs" {
   name        = "ApiDocsCachePolicy"
   default_ttl = 86400
@@ -134,7 +118,6 @@ resource "aws_cloudfront_distribution" "main" {
   is_ipv6_enabled     = true
   default_root_object = ""
   aliases             = [local.api_fqdn]
-  web_acl_id          = module.api_waf.web_acl_arn
 
   logging_config {
     include_cookies = false

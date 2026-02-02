@@ -22,11 +22,6 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_xray" {
-  role       = aws_iam_role.lambda.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-}
-
 # Note: SQS access policy removed - API Gateway now invokes Lambda directly (AWS_PROXY)
 
 # SSM access for API key

@@ -37,14 +37,6 @@ def test_lambda_has_256_mb_memory(lambda_client, config):
     assert response["Configuration"]["MemorySize"] == 256
 
 
-def test_lambda_has_xray_tracing_enabled(lambda_client, config):
-    """Verify Lambda has X-Ray tracing enabled."""
-    function_name = config["function_name"]
-    response = lambda_client.get_function(FunctionName=function_name)
-    tracing_config = response["Configuration"].get("TracingConfig", {})
-    assert tracing_config.get("Mode") == "Active"
-
-
 def test_lambda_has_github_token_env_var(lambda_client, config):
     """Verify Lambda has GITHUB_TOKEN_SECRET_NAME environment variable."""
     function_name = config["function_name"]

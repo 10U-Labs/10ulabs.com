@@ -81,21 +81,6 @@ class TestIAMBasicExecutionPolicy:
         assert 'arn:aws:iam::aws:policy/service-role' in iam_tf_content
 
 
-class TestIAMXRayPolicy:
-    """Test IAM X-Ray policy attachments."""
-
-    def test_xray_policy_attached(self, iam_tf_content):
-        """Verify AWSXRayDaemonWriteAccess is attached for tracing."""
-        pattern = r'policy_arn\s*=\s*"arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"'
-        assert re.search(pattern, iam_tf_content), (
-            "X-Ray daemon write access policy not found in IAM configuration"
-        )
-
-    def test_xray_policy_uses_managed_arn(self, iam_tf_content):
-        """Verify X-Ray policy uses AWS managed policy."""
-        assert 'AWSXRayDaemonWriteAccess' in iam_tf_content
-
-
 class TestIAMSSMPermissions:
     """Test IAM SSM parameter permissions."""
 

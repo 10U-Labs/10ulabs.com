@@ -34,10 +34,6 @@ resource "aws_lambda_function" "handler" {
     }
   }
 
-  tracing_config {
-    mode = "Active"
-  }
-
   logging_config {
     log_format = "Text"
     log_group  = aws_cloudwatch_log_group.handler.name
@@ -51,7 +47,6 @@ resource "aws_lambda_function" "handler" {
     aws_iam_role_policy.ssm_access,
     aws_iam_role_policy.kms_access,
     aws_iam_role_policy_attachment.lambda_basic,
-    aws_iam_role_policy_attachment.lambda_xray,
   ]
 
   # Force Lambda replacement when IAM role is recreated
