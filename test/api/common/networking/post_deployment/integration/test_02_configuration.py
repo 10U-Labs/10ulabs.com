@@ -41,14 +41,14 @@ class TestDeployedResourcesConfiguration:
         )
 
     def test_security_group_allows_all_egress(self, runners_security_group):
-        """Verify security group allows all outbound traffic."""
+        """Verify security group allows all outbound traffic (IPv6)."""
         egress_rules = runners_security_group.get("IpPermissionsEgress", [])
 
-        # Look for a rule that allows all traffic (0.0.0.0/0)
+        # Look for a rule that allows all traffic (::/0 for IPv6-only)
         has_all_egress = any(
             any(
-                ip_range.get("CidrIp") == "0.0.0.0/0"
-                for ip_range in rule.get("IpRanges", [])
+                ip_range.get("CidrIpv6") == "::/0"
+                for ip_range in rule.get("Ipv6Ranges", [])
             )
             for rule in egress_rules
         )
@@ -72,8 +72,8 @@ class TestDeployedResourcesConfiguration:
 class TestSubnetConfiguration:
     """Layer 2: Verify subnet configuration."""
 
-    def test_subnets_have_public_ip_mapping(self, ec2_client):
-        """Verify subnets assign public IPs to instances."""
+    def test_subnets_have_ipv6_on_creation(self, ec2_client):
+        """Verify subnets assign IPv6 addresses on creation (IPv6-only)."""
         response = ec2_client.describe_subnets(
             Filters=[
                 {"Name": "tag:Purpose", "Values": ["runners"]},
@@ -81,8 +81,8 @@ class TestSubnetConfiguration:
             ]
         )
         for subnet in response["Subnets"]:
-            assert subnet.get("MapPublicIpOnLaunch") is True, (
-                f"Subnet {subnet['SubnetId']} does not assign public IPs"
+            assert subnet.get("AssignIpv6AddressOnCreation") is True, (
+                f"Subnet {subnet['SubnetId']} does not assign IPv6 addresses"
             )
 
     def test_subnets_are_in_different_azs(self, ec2_client):
@@ -105,7 +105,7 @@ class TestRouteTableConfiguration:
     """Layer 2: Verify route table configuration."""
 
     def test_route_table_has_default_route(self, ec2_client, runners_vpc_id):
-        """Verify route table has default route (0.0.0.0/0)."""
+        """Verify route table has default IPv6 route (::/0)."""
         response = ec2_client.describe_route_tables(
             Filters=[
                 {"Name": "vpc-id", "Values": [runners_vpc_id]},
@@ -114,15 +114,15 @@ class TestRouteTableConfiguration:
         )
         for rt in response["RouteTables"]:
             has_default_route = any(
-                route.get("DestinationCidrBlock") == "0.0.0.0/0"
+                route.get("DestinationIpv6CidrBlock") == "::/0"
                 for route in rt.get("Routes", [])
             )
             assert has_default_route, (
-                f"Route table {rt['RouteTableId']} has no default route"
+                f"Route table {rt['RouteTableId']} has no default IPv6 route"
             )
 
-    def test_route_table_default_route_targets_igw(self, ec2_client, runners_vpc_id):
-        """Verify default route targets an internet gateway."""
+    def test_route_table_default_route_targets_eigw(self, ec2_client, runners_vpc_id):
+        """Verify default IPv6 route targets an egress-only internet gateway."""
         response = ec2_client.describe_route_tables(
             Filters=[
                 {"Name": "vpc-id", "Values": [runners_vpc_id]},
@@ -131,9 +131,9 @@ class TestRouteTableConfiguration:
         )
         for rt in response["RouteTables"]:
             for route in rt.get("Routes", []):
-                if route.get("DestinationCidrBlock") == "0.0.0.0/0":
-                    gateway_id = route.get("GatewayId", "")
-                    assert gateway_id.startswith("igw-"), (
+                if route.get("DestinationIpv6CidrBlock") == "::/0":
+                    gateway_id = route.get("EgressOnlyInternetGatewayId", "")
+                    assert gateway_id.startswith("eigw-"), (
                         f"Route table {rt['RouteTableId']} default route does not "
-                        f"target an IGW, got: {gateway_id}"
+                        f"target an EIGW, got: {gateway_id}"
                     )

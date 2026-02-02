@@ -15,6 +15,5 @@ class TestTerraformFilesExist(TerraformFilesExistTestMixin):
         "locals.tf",
         "lambda.tf",
         "iam.tf",
-        "sqs.tf",
         "outputs.tf",
     ]

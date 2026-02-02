@@ -30,27 +30,6 @@ class TestLambdaIAMRole:
         assert re.search(pattern, iam_tf_content)
 
 
-class TestLambdaSQSPolicy:
-    """Test Lambda SQS access policy."""
-
-    def test_sqs_policy_exists(self, iam_tf_content):
-        """Verify SQS access policy is defined."""
-        pattern = r'resource\s+"aws_iam_role_policy"\s+"lambda_sqs"'
-        assert re.search(pattern, iam_tf_content)
-
-    def test_sqs_policy_has_receive_permission(self, iam_tf_content):
-        """Verify SQS policy allows ReceiveMessage."""
-        assert '"sqs:ReceiveMessage"' in iam_tf_content
-
-    def test_sqs_policy_has_delete_permission(self, iam_tf_content):
-        """Verify SQS policy allows DeleteMessage."""
-        assert '"sqs:DeleteMessage"' in iam_tf_content
-
-    def test_sqs_policy_has_get_attributes_permission(self, iam_tf_content):
-        """Verify SQS policy allows GetQueueAttributes."""
-        assert '"sqs:GetQueueAttributes"' in iam_tf_content
-
-
 class TestLambdaSSMPolicy:
     """Test Lambda SSM access policy."""
 
