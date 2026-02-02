@@ -11,8 +11,6 @@ DEFAULT_TERRAFORM_FILES = [
     "locals.tf",
     "lambda.tf",
     "iam.tf",
-    "sqs.tf",
-    "eventbridge.tf",
     "outputs.tf",
 ]
 
