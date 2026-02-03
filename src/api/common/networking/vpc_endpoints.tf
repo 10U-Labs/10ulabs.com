@@ -8,11 +8,13 @@ resource "aws_security_group" "vpc_endpoints" {
   description = "Security group for VPC endpoints"
   vpc_id      = aws_vpc.main.id
 
+  # IPv4 ingress from VPC for endpoint traffic
+  # VPC endpoints use IPv4 private addresses
   ingress {
-    from_port        = 443
-    to_port          = 443
-    protocol         = "tcp"
-    ipv6_cidr_blocks = [aws_vpc.main.ipv6_cidr_block]
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [local.vpc_cidr]
   }
 
   tags = merge(local.common_tags, {

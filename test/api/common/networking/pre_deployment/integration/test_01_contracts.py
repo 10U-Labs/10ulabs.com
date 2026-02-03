@@ -103,6 +103,11 @@ class TestLocalsSecurityGroupContract:
         sg_tf = API_COMMON_NETWORKING_DIR / "security_groups.tf"
         assert "aws_vpc.main.id" in sg_tf.read_text()
 
+    def test_security_group_uses_local_vpc_cidr(self):
+        """Verify security_groups.tf uses local.vpc_cidr for VPC endpoint access."""
+        sg_tf = API_COMMON_NETWORKING_DIR / "security_groups.tf"
+        assert "local.vpc_cidr" in sg_tf.read_text()
+
 
 class TestSharedModuleContract:
     """Verify shared.tf and lib/terraform/common are compatible."""

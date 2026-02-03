@@ -59,3 +59,10 @@ def test_ecr_endpoints_have_private_dns_enabled(api_common_networking_dir):
     vpc_endpoints_tf = api_common_networking_dir / "vpc_endpoints.tf"
     content = vpc_endpoints_tf.read_text()
     assert "private_dns_enabled = true" in content
+
+
+def test_vpc_endpoints_sg_allows_ipv4_from_vpc(api_common_networking_dir):
+    """Test that VPC endpoints security group allows IPv4 from VPC CIDR."""
+    vpc_endpoints_tf = api_common_networking_dir / "vpc_endpoints.tf"
+    content = vpc_endpoints_tf.read_text()
+    assert "local.vpc_cidr" in content
