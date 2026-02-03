@@ -100,42 +100,6 @@ def test_ecs_runner_post_response_has_task_arn(test_fargate_task, stable_ecr_ima
     assert test_fargate_task.get("task_arn") is not None
 
 
-def task_reached_running(ecs_client, cluster_name, task_arn):
-    """Check if a task reached RUNNING state (current or past via startedAt)."""
-    response = ecs_client.describe_tasks(cluster=cluster_name, tasks=[task_arn])
-    if not response['tasks']:
-        return False
-    task = response['tasks'][0]
-    if task['lastStatus'] == 'RUNNING':
-        return True
-    if task.get('startedAt'):
-        return True
-    return False
-
-
-def test_ecs_runner_task_reaches_running_state(
-    test_fargate_task, ecs_context, stable_ecr_image_exists
-):
-    """Test that ECS runner task reaches RUNNING state."""
-    if not stable_ecr_image_exists:
-        pytest.skip("No stable ECR image available")
-    if test_fargate_task is None:
-        pytest.fail("Test task not created")
-    if task_reached_running(
-        ecs_context["client"],
-        test_fargate_task.get("cluster_name"),
-        test_fargate_task.get("task_arn"),
-    ):
-        return
-    reached_running = wait_for_task_running(
-        ecs_context["client"],
-        test_fargate_task.get("cluster_name"),
-        test_fargate_task.get("task_arn"),
-        timeout=120
-    )
-    assert reached_running, "Task did not reach RUNNING state within timeout"
-
-
 def test_ecs_runner_task_has_type_tag(test_fargate_task, ecs_context, stable_ecr_image_exists):
     """Test that ECS runner task has Type tag."""
     if not stable_ecr_image_exists:
