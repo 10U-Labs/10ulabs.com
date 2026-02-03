@@ -108,11 +108,13 @@ def test_ecs_runner_task_reaches_running_state(
         pytest.skip("No stable ECR image available")
     if test_fargate_task is None:
         pytest.fail("Test task not created")
-    response = ecs_context["client"].describe_tasks(
-        cluster=test_fargate_task.get("cluster_name"),
-        tasks=[test_fargate_task.get("task_arn")]
+    reached_running = wait_for_task_running(
+        ecs_context["client"],
+        test_fargate_task.get("cluster_name"),
+        test_fargate_task.get("task_arn"),
+        timeout=120
     )
-    assert response['tasks'][0]['lastStatus'] == 'RUNNING'
+    assert reached_running, "Task did not reach RUNNING state within timeout"
 
 
 def test_ecs_runner_task_has_type_tag(test_fargate_task, ecs_context, stable_ecr_image_exists):
