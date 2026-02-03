@@ -24,19 +24,23 @@ def ecs_context_fixture(ecs_client, cluster_name):
     return {"client": ecs_client, "cluster_name": cluster_name}
 
 
-def wait_for_task_running(ecs_client, cluster_name, task_arn, timeout=120):
-    """Wait for an ECS task to reach RUNNING state."""
-    start_time = time.time()
-    while time.time() - start_time < timeout:
+def wait_for_task_running(ecs_client, cluster_name, task_arn, max_wait=256):
+    """Wait for ECS task to reach RUNNING state."""
+    total_waited = 0
+    interval = 16
+    while total_waited < max_wait:
         response = ecs_client.describe_tasks(cluster=cluster_name, tasks=[task_arn])
         if not response['tasks']:
             return False
-        status = response['tasks'][0]['lastStatus']
-        if status == 'RUNNING':
+        task = response['tasks'][0]
+        if task['lastStatus'] == 'RUNNING':
             return True
-        if status in ('STOPPED', 'DEPROVISIONING'):
+        if task.get('startedAt'):
+            return True
+        if task['lastStatus'] in ('STOPPED', 'DEPROVISIONING'):
             return False
-        time.sleep(5)
+        time.sleep(interval)
+        total_waited += interval
     return False
 
 
@@ -98,6 +102,22 @@ def test_ecs_runner_post_response_has_task_arn(test_fargate_task, stable_ecr_ima
     if test_fargate_task is None:
         pytest.fail("Test task not created")
     assert test_fargate_task.get("task_arn") is not None
+
+
+def test_ecs_runner_task_reaches_running_state(
+    test_fargate_task, ecs_context, stable_ecr_image_exists
+):
+    """Test that ECS runner task reaches RUNNING state."""
+    if not stable_ecr_image_exists:
+        pytest.skip("No stable ECR image available")
+    if test_fargate_task is None:
+        pytest.fail("Test task not created")
+    reached_running = wait_for_task_running(
+        ecs_context["client"],
+        test_fargate_task.get("cluster_name"),
+        test_fargate_task.get("task_arn"),
+    )
+    assert reached_running, "Task did not reach RUNNING state within timeout"
 
 
 def test_ecs_runner_task_has_type_tag(test_fargate_task, ecs_context, stable_ecr_image_exists):
