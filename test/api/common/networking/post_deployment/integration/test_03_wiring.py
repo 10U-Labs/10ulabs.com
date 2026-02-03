@@ -82,3 +82,32 @@ class TestVPCWiring:
             assert has_igw_route, (
                 f"Subnet {subnet['SubnetId']} has no route to IGW {igw_id}"
             )
+
+
+class TestVpcEndpointsWiring:
+    """Layer 3: Verify VPC endpoints are wired correctly."""
+
+    def test_logs_endpoint_in_vpc(self, ec2_client, runners_vpc_id, aws_region):
+        """Verify CloudWatch Logs endpoint is in the runners VPC."""
+        response = ec2_client.describe_vpc_endpoints(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.logs"]},
+            ]
+        )
+        assert len(response["VpcEndpoints"]) >= 1, (
+            f"CloudWatch Logs endpoint not found in VPC {runners_vpc_id}"
+        )
+
+    def test_logs_endpoint_has_subnets(self, ec2_client, runners_vpc_id, aws_region):
+        """Verify CloudWatch Logs endpoint has subnets attached."""
+        response = ec2_client.describe_vpc_endpoints(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.logs"]},
+            ]
+        )
+        endpoint = response["VpcEndpoints"][0]
+        assert len(endpoint.get("SubnetIds", [])) >= 1, (
+            "CloudWatch Logs endpoint has no subnets attached"
+        )

@@ -66,3 +66,11 @@ def test_vpc_endpoints_sg_allows_ipv4_from_vpc(api_common_networking_dir):
     vpc_endpoints_tf = api_common_networking_dir / "vpc_endpoints.tf"
     content = vpc_endpoints_tf.read_text()
     assert "local.vpc_cidr" in content
+
+
+def test_vpc_endpoints_defines_logs_endpoint(api_common_networking_dir):
+    """Test that vpc_endpoints.tf defines CloudWatch Logs endpoint."""
+    vpc_endpoints_tf = api_common_networking_dir / "vpc_endpoints.tf"
+    content = vpc_endpoints_tf.read_text()
+    pattern = r'resource\s+"aws_vpc_endpoint"\s+"logs"'
+    assert re.search(pattern, content) is not None

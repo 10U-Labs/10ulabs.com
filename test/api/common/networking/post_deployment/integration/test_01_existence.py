@@ -104,3 +104,16 @@ class TestVPCResourcesExist:
             "S3 VPC endpoint not found. "
             "Run terraform apply in src/api/common/networking/"
         )
+
+    def test_cloudwatch_logs_vpc_endpoint_exists(self, ec2_client, runners_vpc_id, aws_region):
+        """Verify the CloudWatch Logs VPC endpoint exists."""
+        response = ec2_client.describe_vpc_endpoints(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.logs"]},
+            ]
+        )
+        assert len(response["VpcEndpoints"]) >= 1, (
+            "CloudWatch Logs VPC endpoint not found. "
+            "Run terraform apply in src/api/common/networking/"
+        )

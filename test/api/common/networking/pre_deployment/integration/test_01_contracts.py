@@ -217,3 +217,8 @@ class TestVpcEndpointsContract:
         """Verify vpc_endpoints.tf uses local.vpc_name for naming."""
         vpc_endpoints_tf = API_COMMON_NETWORKING_DIR / "vpc_endpoints.tf"
         assert "local.vpc_name" in vpc_endpoints_tf.read_text()
+
+    def test_vpc_endpoints_references_logs_service(self):
+        """Verify vpc_endpoints.tf references CloudWatch Logs service."""
+        vpc_endpoints_tf = API_COMMON_NETWORKING_DIR / "vpc_endpoints.tf"
+        assert ".logs" in vpc_endpoints_tf.read_text()
