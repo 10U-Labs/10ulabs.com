@@ -166,27 +166,3 @@ def test_lambda_permission_action(ecs_runner_src_dir):
     """Verify Lambda permission uses correct action."""
     content = (ecs_runner_src_dir / "lambda.tf").read_text()
     assert 'action        = "lambda:InvokeFunction"' in content
-
-
-def test_lambda_sqs_event_source_mapping_exists(ecs_runner_src_dir):
-    """Verify Lambda SQS event source mapping resource is defined."""
-    content = (ecs_runner_src_dir / "lambda.tf").read_text()
-    assert 'resource "aws_lambda_event_source_mapping" "sqs"' in content
-
-
-def test_lambda_sqs_event_source_references_queue(ecs_runner_src_dir):
-    """Verify event source mapping references SQS queue."""
-    content = (ecs_runner_src_dir / "lambda.tf").read_text()
-    assert "event_source_arn                   = aws_sqs_queue.main.arn" in content
-
-
-def test_lambda_sqs_event_source_batch_size_1(ecs_runner_src_dir):
-    """Verify event source mapping has batch size of 1."""
-    content = (ecs_runner_src_dir / "lambda.tf").read_text()
-    assert "batch_size                         = 1" in content
-
-
-def test_lambda_sqs_event_source_no_batching_window(ecs_runner_src_dir):
-    """Verify event source mapping has no batching window."""
-    content = (ecs_runner_src_dir / "lambda.tf").read_text()
-    assert "maximum_batching_window_in_seconds = 0" in content

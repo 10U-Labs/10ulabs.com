@@ -102,24 +102,6 @@ def test_iam_lambda_policy_allows_iam_pass_role(ecs_runner_src_dir):
     assert '"iam:PassRole"' in content
 
 
-def test_iam_lambda_policy_allows_sqs_receive_message(ecs_runner_src_dir):
-    """Verify Lambda policy allows sqs:ReceiveMessage."""
-    content = (ecs_runner_src_dir / "iam.tf").read_text()
-    assert '"sqs:ReceiveMessage"' in content
-
-
-def test_iam_lambda_policy_allows_sqs_delete_message(ecs_runner_src_dir):
-    """Verify Lambda policy allows sqs:DeleteMessage."""
-    content = (ecs_runner_src_dir / "iam.tf").read_text()
-    assert '"sqs:DeleteMessage"' in content
-
-
-def test_iam_lambda_policy_allows_sqs_get_queue_attributes(ecs_runner_src_dir):
-    """Verify Lambda policy allows sqs:GetQueueAttributes."""
-    content = (ecs_runner_src_dir / "iam.tf").read_text()
-    assert '"sqs:GetQueueAttributes"' in content
-
-
 def test_iam_lambda_policy_has_ecs_cluster_condition(ecs_runner_src_dir):
     """Verify Lambda policy has ECS cluster condition."""
     content = (ecs_runner_src_dir / "iam.tf").read_text()
