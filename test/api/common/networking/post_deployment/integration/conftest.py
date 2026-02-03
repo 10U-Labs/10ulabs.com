@@ -52,3 +52,17 @@ def runners_security_group_fixture(ec2_client):
     if not response["SecurityGroups"]:
         return None
     return response["SecurityGroups"][0]
+
+
+@pytest.fixture(name="logs_vpc_endpoint", scope="module")
+def logs_vpc_endpoint_fixture(ec2_client, runners_vpc_id, aws_region):
+    """Get the CloudWatch Logs VPC endpoint, or None if it doesn't exist."""
+    response = ec2_client.describe_vpc_endpoints(
+        Filters=[
+            {"Name": "vpc-id", "Values": [runners_vpc_id]},
+            {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.logs"]},
+        ]
+    )
+    if not response["VpcEndpoints"]:
+        return None
+    return response["VpcEndpoints"][0]

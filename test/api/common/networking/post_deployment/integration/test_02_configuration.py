@@ -142,28 +142,15 @@ class TestRouteTableConfiguration:
 class TestVpcEndpointsConfiguration:
     """Layer 2: Verify VPC endpoints are configured correctly."""
 
-    def test_logs_endpoint_has_private_dns_enabled(self, ec2_client, runners_vpc_id, aws_region):
+    def test_logs_endpoint_has_private_dns_enabled(self, logs_vpc_endpoint):
         """Verify CloudWatch Logs endpoint has private DNS enabled."""
-        response = ec2_client.describe_vpc_endpoints(
-            Filters=[
-                {"Name": "vpc-id", "Values": [runners_vpc_id]},
-                {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.logs"]},
-            ]
-        )
-        endpoint = response["VpcEndpoints"][0]
-        assert endpoint.get("PrivateDnsEnabled") is True, (
+        assert logs_vpc_endpoint.get("PrivateDnsEnabled") is True, (
             "CloudWatch Logs endpoint does not have private DNS enabled"
         )
 
-    def test_logs_endpoint_is_interface_type(self, ec2_client, runners_vpc_id, aws_region):
+    def test_logs_endpoint_is_interface_type(self, logs_vpc_endpoint):
         """Verify CloudWatch Logs endpoint is Interface type."""
-        response = ec2_client.describe_vpc_endpoints(
-            Filters=[
-                {"Name": "vpc-id", "Values": [runners_vpc_id]},
-                {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.logs"]},
-            ]
-        )
-        endpoint = response["VpcEndpoints"][0]
-        assert endpoint.get("VpcEndpointType") == "Interface", (
-            f"CloudWatch Logs endpoint type is {endpoint.get('VpcEndpointType')}, expected Interface"
+        endpoint_type = logs_vpc_endpoint.get("VpcEndpointType")
+        assert endpoint_type == "Interface", (
+            f"CloudWatch Logs endpoint type is {endpoint_type}, expected Interface"
         )
