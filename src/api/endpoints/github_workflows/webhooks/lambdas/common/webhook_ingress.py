@@ -56,8 +56,6 @@ class IngressDeps(Protocol):
     async def enqueue_job(self, job_data: dict[str, Any]) -> dict[str, bool]:
         """Enqueue a job for processing."""
 
-    # Note: enqueue_cancellation removed - runners are ephemeral and self-terminate
-
     def enqueue_ignored(self, payload: dict[str, Any], reason: str) -> None:
         """Enqueue an ignored event for archival."""
 

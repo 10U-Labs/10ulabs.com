@@ -54,5 +54,3 @@ resource "aws_iam_role_policy" "kms_access" {
     }]
   })
 }
-
-# Note: SQS access policy removed - retry logic now inlined in ec2/ecs handlers

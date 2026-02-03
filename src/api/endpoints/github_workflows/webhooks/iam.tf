@@ -145,10 +145,6 @@ resource "aws_iam_role_policy" "lambda_runners_handler_kms" {
   })
 }
 
-# Note: runner_starter IAM removed - routing logic moved to /v1/runners endpoint
-# Note: runner_terminator IAM removed - runners are ephemeral and self-terminate
-# Note: ignored_events_archiver IAM removed - archive logic merged into webhook_router
-
 resource "aws_iam_role" "circuit_opens" {
   name = local.circuit_opens_role_name
 
@@ -355,10 +351,8 @@ resource "aws_iam_role_policy" "dlq_reprocessor_permissions" {
         ]
         Resource = [
           aws_sqs_queue.webhook_dlq.arn,
-          # Note: job_queue_dlq removed - routing logic moved to /v1/runners
         ]
       },
-      # Note: job_queue SendMessage removed - routing logic moved to /v1/runners
       {
         Effect = "Allow"
         Action = [
@@ -480,6 +474,3 @@ resource "aws_iam_role_policy" "circuit_open_recoveries_kms" {
     }]
   })
 }
-
-# Note: spot_interruption_handler IAM role removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
-# Note: stale_runner_cleanup IAM role removed - migrated to /v1/runners/cleanups endpoint

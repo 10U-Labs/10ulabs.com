@@ -64,8 +64,6 @@ resource "aws_cloudwatch_log_group" "handler" {
   })
 }
 
-# Note: SQS event source mapping removed - API Gateway now invokes Lambda directly (AWS_PROXY)
-
 # Allow API Gateway to invoke Lambda
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"

@@ -55,8 +55,6 @@ resource "aws_iam_role_policy" "kms_access" {
   })
 }
 
-# Note: SQS access policy removed - cleanups triggered by EventBridge Scheduler
-
 resource "aws_iam_role_policy" "ecs_access" {
   name = "ECSAccess"
   role = aws_iam_role.lambda.id

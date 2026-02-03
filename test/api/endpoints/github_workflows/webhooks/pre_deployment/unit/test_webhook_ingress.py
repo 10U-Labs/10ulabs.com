@@ -311,8 +311,6 @@ class TestIngressHandlerHandle:
         result = run_async(handler.handle(record))
         assert result["success"] is False
 
-    # Note: test_handle_enqueue_cancellation_failure removed - runners are ephemeral
-
     def test_handle_empty_body(self, handler):
         """Test handling an empty body."""
         record = {"body": "", "messageAttributes": _create_message_attrs()}

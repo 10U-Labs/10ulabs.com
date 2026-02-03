@@ -18,11 +18,9 @@ locals {
   idempotency_table_name     = "${module.common.lambda_handler_names.webhook}-idempotency"
   webhook_ingress_queue_name = "${module.common.lambda_handler_names.webhook}Ingress"
   webhook_ingress_dlq_name   = "${module.common.lambda_handler_names.webhook}IngressDlq"
-  # Note: job_queue removed - routing logic moved to /v1/runners endpoint
-  ignored_events_queue_name = "${module.common.lambda_handler_names.webhook}IgnoredEvents"
-  ignored_events_dlq_name   = "${module.common.lambda_handler_names.webhook}IgnoredEventsDlq"
-  # Note: cancellation_queue removed - runners are ephemeral and self-terminate
-  webhook_dlq_name = "${module.common.lambda_handler_names.webhook}Dlq"
+  ignored_events_queue_name  = "${module.common.lambda_handler_names.webhook}IgnoredEvents"
+  ignored_events_dlq_name    = "${module.common.lambda_handler_names.webhook}IgnoredEventsDlq"
+  webhook_dlq_name           = "${module.common.lambda_handler_names.webhook}Dlq"
 
   # SSM parameter names
   ssm_parameter_name_for_webhook_secret = "/api/webhook-secret"
@@ -35,11 +33,7 @@ locals {
   circuit_open_remediations_function_name = module.common.lambda_handler_names.circuit_open_remediations
   circuit_open_recoveries_function_name   = module.common.lambda_handler_names.circuit_open_recoveries
   dlq_reprocessor_function_name           = "${module.common.resource_prefix}DLQReprocessor"
-  # Note: spot_interruption_handler removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
-  # Note: stale_runner_cleanup removed - migrated to /v1/runners/cleanups endpoint
-  # Note: runner_starter removed - routing logic moved to /v1/runners endpoint
-  # Note: runner_terminator removed - runners are ephemeral and self-terminate
-  ignored_events_archiver_function_name = "${module.common.resource_prefix}IgnoredEventsArchiver"
+  ignored_events_archiver_function_name   = "${module.common.resource_prefix}IgnoredEventsArchiver"
 
   # IAM role names (single source of truth)
   lambda_runners_handler_role_name    = "${module.common.lambda_handler_names.webhook}ServiceRole"
@@ -47,11 +41,7 @@ locals {
   circuit_open_remediations_role_name = "${module.common.lambda_handler_names.circuit_open_remediations}Role"
   circuit_open_recoveries_role_name   = "${module.common.lambda_handler_names.circuit_open_recoveries}Role"
   dlq_reprocessor_role_name           = "${module.common.resource_prefix}DLQReprocessorRole"
-  # Note: spot_interruption_handler_role removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
-  # Note: stale_runner_cleanup_role removed - migrated to /v1/runners/cleanups endpoint
-  # Note: runner_starter_role removed - routing logic moved to /v1/runners endpoint
-  # Note: runner_terminator_role removed - runners are ephemeral and self-terminate
-  ignored_events_archiver_role_name = "${module.common.resource_prefix}IgnoredEventsArchiverRole"
+  ignored_events_archiver_role_name   = "${module.common.resource_prefix}IgnoredEventsArchiverRole"
 
   common_tags = {
     ManagedBy = "terraform"

@@ -227,9 +227,6 @@ def archive_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str, 
         return {"success": False, "error": str(err)}
 
 
-# Note: _enqueue_cancellation removed - runners are ephemeral and self-terminate
-
-
 def handle_workflow_run(event_data: dict[str, Any]) -> dict[str, Any]:
     """Handle a workflow_run event."""
     action = event_data.get("action")
@@ -573,8 +570,6 @@ def get_ingress_handler() -> IngressHandler:
             """Forward job to /v1/runners via HTTP POST."""
             result = await post_to_runners(job_data)
             return {"success": result.get("success", False)}
-
-        # Note: enqueue_cancellation removed - runners are ephemeral and self-terminate
 
         def enqueue_ignored(self, payload: dict[str, Any], reason: str) -> None:
             """Archive ignored event to S3."""

@@ -82,10 +82,3 @@ resource "aws_lambda_permission" "circuit_open_recoveries_eventbridge" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.circuit_open_recoveries.arn
 }
-
-# Note: ECS task stopped and EC2 spot interruption EventBridge rules removed
-# - Migrated to /v1/ec2-spot-interruptions endpoint
-# - Migrated to /v1/ecs-task-stops endpoint
-
-# Note: Stale runner cleanup schedule removed
-# - Migrated to /v1/runners/cleanups endpoint

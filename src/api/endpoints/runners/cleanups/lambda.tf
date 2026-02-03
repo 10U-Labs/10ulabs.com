@@ -51,8 +51,6 @@ resource "aws_cloudwatch_log_group" "handler" {
   })
 }
 
-# Note: SQS event source mapping removed - cleanups triggered by EventBridge Scheduler
-
 # Permission for EventBridge Scheduler to invoke Lambda
 resource "aws_lambda_permission" "scheduler" {
   statement_id  = "AllowEventBridgeScheduler"

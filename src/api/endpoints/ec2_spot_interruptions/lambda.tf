@@ -47,5 +47,3 @@ resource "aws_cloudwatch_log_group" "handler" {
     Name = "${local.function_name}Logs"
   })
 }
-
-# Note: SQS event source mapping removed - EventBridge now invokes Lambda directly

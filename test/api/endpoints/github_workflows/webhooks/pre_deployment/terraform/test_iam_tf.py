@@ -11,7 +11,6 @@ import pytest
 # Expected IAM roles for Lambda functions
 LAMBDA_IAM_ROLES = [
     "lambda_runners_handler",
-    # Note: runner_terminator removed - runners are ephemeral and self-terminate
     "ignored_events_archiver",
     "circuit_opens",
     "circuit_open_remediations",

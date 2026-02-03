@@ -226,7 +226,6 @@ def handler(event, context):
     """Main Lambda handler for DLQ reprocessing."""
     del event, context
     webhook_dlq_url = os.environ.get('WEBHOOK_DLQ_URL')
-    # Note: job_queue handling removed - routing logic moved to /v1/runners
 
     results = {}
 

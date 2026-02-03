@@ -47,5 +47,3 @@ resource "aws_cloudwatch_log_group" "handler" {
     Name = "${local.function_name}Logs"
   })
 }
-
-# Note: SQS event source mapping removed - retry logic now inlined in ec2/ecs handlers

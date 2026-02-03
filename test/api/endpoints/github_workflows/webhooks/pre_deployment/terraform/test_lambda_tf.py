@@ -15,7 +15,6 @@ LAMBDA_FUNCTIONS = [
         "handler": "webhook_router.lambda_handler",
         "description_contains": "webhook",
     },
-    # Note: runner_terminator removed - runners are ephemeral and self-terminate
     {
         "resource_name": "ignored_events_archiver",
         "handler": "ignored_events_archiver.lambda_handler",
@@ -41,8 +40,6 @@ LAMBDA_FUNCTIONS = [
         "handler": "circuit_open_recoveries.lambda_handler",
         "description_contains": "recovery",
     },
-    # Note: spot_interruption_handler removed - migrated to /v1/ec2-spot-interruptions
-    # Note: stale_runner_cleanup removed - migrated to /v1/runners/cleanups endpoint
 ]
 
 
@@ -196,8 +193,6 @@ class TestLambdaEventSourceMappings:
             "SQS event source mapping for runners_handler not found"
         )
 
-    # Note: test_runner_terminator_has_sqs_trigger removed - runners are ephemeral
-
     def test_ignored_events_archiver_has_sqs_trigger(self, lambda_tf_content):
         """Verify ignored_events_archiver has SQS event source mapping."""
         pattern = r'resource\s+"aws_lambda_event_source_mapping"\s+"ignored_events_archiver_sqs"'
@@ -214,7 +209,6 @@ class TestLambdaEnvironmentVariables:
         required_vars = [
             "API_BASE_URL",
             "API_KEY_PARAMETER_NAME",
-            # Note: CANCELLATION_QUEUE_URL removed - runners are ephemeral
             "CIRCUIT_OPEN_TABLE_NAME",
             "GITHUB_REPO",
             "GITHUB_TOKEN_SECRET_NAME",

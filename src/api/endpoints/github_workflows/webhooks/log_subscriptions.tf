@@ -19,8 +19,6 @@ resource "aws_cloudwatch_log_subscription_filter" "runners_handler" {
   role_arn        = local.firehose_role_arn
 }
 
-# Note: runner_terminator log subscription removed - runners are ephemeral and self-terminate
-
 resource "aws_cloudwatch_log_subscription_filter" "circuit_open_recoveries" {
   count           = local.create_subscriptions ? 1 : 0
   name            = "circuit-open-recovery-to-firehose"
@@ -65,6 +63,3 @@ resource "aws_cloudwatch_log_subscription_filter" "ignored_events_archiver" {
   destination_arn = local.firehose_arn
   role_arn        = local.firehose_role_arn
 }
-
-# Note: spot_interruption_handler log subscription removed - migrated to /v1/ec2-spot-interruptions
-# Note: stale_runner_cleanup log subscription removed - migrated to /v1/runners/cleanups

@@ -204,5 +204,3 @@ resource "aws_iam_role_policy" "kms_access" {
     }]
   })
 }
-
-# Note: SQS access policy removed - /v1/runners now routes via HTTP to /v1/runners/ec2

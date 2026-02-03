@@ -46,5 +46,3 @@ resource "aws_lambda_permission" "api_gateway" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api_common_routing.outputs.api_gateway_id}/*"
 }
-
-# Note: SQS event source mapping removed - /v1/runners now routes via HTTP to /v1/runners/ecs

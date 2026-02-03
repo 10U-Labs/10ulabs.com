@@ -88,7 +88,6 @@ resource "aws_iam_role_policy" "lambda_execution" {
           aws_iam_role.ecs_task_role.arn
         ]
       },
-      # Note: SQS access removed - /v1/runners now routes via HTTP to /v1/runners/ecs
     ]
   })
 }

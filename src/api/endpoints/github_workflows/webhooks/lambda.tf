@@ -116,11 +116,6 @@ resource "aws_cloudwatch_log_group" "runners_handler" {
   })
 }
 
-# Note: SQS event source mapping removed - API Gateway now invokes Lambda directly (AWS_PROXY)
-# Note: runner_starter Lambda removed - routing logic moved to /v1/runners endpoint
-# Note: runner_terminator Lambda removed - runners are ephemeral and self-terminate
-# Note: ignored_events_archiver Lambda removed - archive logic merged into webhook_router
-
 data "archive_file" "circuit_opens" {
   type        = "zip"
   output_path = "${path.module}/.terraform/lambda_packages/circuit_opens.zip"
@@ -358,8 +353,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
 
   environment {
     variables = {
-      WEBHOOK_DLQ_URL = aws_sqs_queue.webhook_dlq.url
-      # Note: JOB_DLQ_URL and JOB_QUEUE_URL removed - routing logic moved to /v1/runners
+      WEBHOOK_DLQ_URL             = aws_sqs_queue.webhook_dlq.url
       SNS_TOPIC_ARN               = aws_sns_topic.circuit_open_alerts.arn
       GITHUB_TOKEN_PARAMETER_NAME = module.common.ssm_github_pat_name
     }
@@ -498,10 +492,6 @@ resource "aws_cloudwatch_log_group" "circuit_open_recoveries" {
     Name = "${local.circuit_open_recoveries_function_name}Logs"
   })
 }
-
-# Note: spot_interruption_handler Lambda removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
-
-# Note: stale_runner_cleanup Lambda removed - migrated to /v1/runners/cleanups endpoint
 
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"

@@ -64,7 +64,6 @@ def router_module_fixture():
         'IDEMPOTENCY_TABLE_NAME': 'test-idempotency-table',
         'JOB_QUEUE_URL': 'https://sqs.us-east-2.amazonaws.com/123456789/test-queue',
         'IGNORED_EVENTS_QUEUE_URL': 'https://sqs.us-east-2.amazonaws.com/123456789/ignored-queue',
-        # Note: CANCELLATION_QUEUE_URL removed - runners are ephemeral and self-terminate
         'API_BASE_URL': 'https://api.example.com',
         'API_KEY_PARAMETER_NAME': '/test/api-key',
     }
@@ -351,9 +350,6 @@ class TestEnqueueIgnoredEvent:
         with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
             result = router_module.enqueue_ignored_event({"test": "data"}, "reason")
             assert result["success"] is False
-
-
-# Note: TestEnqueueCancellation removed - runners are ephemeral and self-terminate
 
 
 class TestHandleWorkflowRun:
@@ -754,8 +750,6 @@ class TestIngressDeps:
             deps = handler.get_deps()
             result = run_async(deps.enqueue_job({"job": "data"}))
             assert result["success"] is True
-
-    # Note: test_ingress_deps_enqueue_cancellation removed - runners are ephemeral
 
     def test_ingress_deps_enqueue_ignored(self, router_module):
         """Test IngressDeps.enqueue_ignored calls enqueue_ignored_event."""
