@@ -8,7 +8,6 @@ bootstrap
 api_common_routing
     ├─→ api_operational_health
     ├─→ api_operational_diagnostics
-    ├─→ api_endpoint_v1_drift_recoveries
     ├─→ api_endpoint_v1_contact_submissions
     ├─→ api_endpoint_v1_rack_configurations
     ├─→ api_endpoint_v1_sessions

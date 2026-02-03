@@ -499,8 +499,6 @@ resource "aws_cloudwatch_log_group" "circuit_open_recoveries" {
   })
 }
 
-# Note: drift_recovery Lambda removed - migrated to /v1/drift-recoveries endpoint
-
 # Note: spot_interruption_handler Lambda removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
 
 # Note: stale_runner_cleanup Lambda removed - migrated to /v1/runners/cleanups endpoint

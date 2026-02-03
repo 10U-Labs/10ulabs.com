@@ -211,20 +211,6 @@
       "test/lib/python/**"
     ]
   },
-  "api_endpoint_v1_drift_recoveries": {
-    "depends_on": [
-      "api_common_routing"
-    ],
-    "name": "Ensuring the /v1/drift-recoveries API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_drift_recoveries.yml",
-      "lib/python/**",
-      "src/api/endpoints/drift_recoveries/**",
-      "test/api/conftest.py",
-      "test/api/endpoints/drift_recoveries/**",
-      "test/lib/python/**"
-    ]
-  },
   "api_endpoint_v1_runners_cleanups": {
     "depends_on": [
       "api_endpoint_v1_runners_ecs",

@@ -416,147 +416,6 @@
         }
       }
     },
-    "/v1/drift-recoveries": {
-      "get": {
-        "summary": "List Drift Recoveries",
-        "description": "Returns the 10 most recent drift recovery events",
-        "operationId": "listDriftRecoveries",
-        "tags": [
-          "/v1/drift-recoveries"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of recent drift recovery events",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "items"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "timestamp": {
-                            "type": "string"
-                          },
-                          "resource_type": {
-                            "type": "string"
-                          },
-                          "resource_id": {
-                            "type": "string"
-                          },
-                          "status": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    },
-                    "count": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${DriftRecoveriesHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      }
-    },
-    "/v1/drift-recoveries/{limit}": {
-      "get": {
-        "summary": "List Drift Recoveries (Custom Limit)",
-        "description": "Returns the N most recent drift recovery events",
-        "operationId": "listDriftRecoveriesWithLimit",
-        "tags": [
-          "/v1/drift-recoveries"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of recent drift recovery events",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "items"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "timestamp": {
-                            "type": "string"
-                          },
-                          "resource_type": {
-                            "type": "string"
-                          },
-                          "resource_id": {
-                            "type": "string"
-                          },
-                          "status": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    },
-                    "count": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "description": "Maximum number of records to return"
-          }
-        ],
-        "x-amazon-apigateway-integration": {
-          "uri": "${DriftRecoveriesHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      }
-    },
     "/v1/ec2-spot-interruptions": {
       "get": {
         "summary": "List EC2 Spot Interruptions",
@@ -3294,10 +3153,6 @@
       "description": "Contact form submission endpoints"
     },
     {
-      "name": "/v1/drift-recoveries",
-      "description": "Drift recovery endpoints"
-    },
-    {
       "name": "/v1/ec2-spot-interruptions",
       "description": "EC2 Spot interruption handling endpoints"
     },
@@ -3354,7 +3209,6 @@
       "name": "/v1/",
       "tags": [
         "/v1/contact-submissions",
-        "/v1/drift-recoveries",
         "/v1/ec2-spot-interruptions",
         "/v1/ecs-task-stops",
         "/v1/github-workflows",

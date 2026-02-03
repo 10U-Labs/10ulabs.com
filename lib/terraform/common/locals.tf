@@ -26,7 +26,6 @@ locals {
     circuit_open_recoveries   = "${local.resource_prefix}CircuitOpenRecoveriesHandler"
     circuit_open_remediations = "${local.resource_prefix}CircuitOpenRemediationsHandler"
     contact                   = "${local.resource_prefix}ContactHandler"
-    drift_recoveries          = "${local.resource_prefix}DriftRecoveriesHandler"
     ec2_runner                = "${local.resource_prefix}EC2RunnerHandler"
     ec2_spot_interruptions    = "${local.resource_prefix}Ec2SpotInterruptionsHandler"
     ecs_runner                = "${local.resource_prefix}EcsRunnerHandler"

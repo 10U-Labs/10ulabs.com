@@ -35,7 +35,6 @@ locals {
   circuit_open_remediations_function_name = module.common.lambda_handler_names.circuit_open_remediations
   circuit_open_recoveries_function_name   = module.common.lambda_handler_names.circuit_open_recoveries
   dlq_reprocessor_function_name           = "${module.common.resource_prefix}DLQReprocessor"
-  # Note: drift_recovery removed - migrated to /v1/drift-recoveries endpoint
   # Note: spot_interruption_handler removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
   # Note: stale_runner_cleanup removed - migrated to /v1/runners/cleanups endpoint
   # Note: runner_starter removed - routing logic moved to /v1/runners endpoint
@@ -48,13 +47,11 @@ locals {
   circuit_open_remediations_role_name = "${module.common.lambda_handler_names.circuit_open_remediations}Role"
   circuit_open_recoveries_role_name   = "${module.common.lambda_handler_names.circuit_open_recoveries}Role"
   dlq_reprocessor_role_name           = "${module.common.resource_prefix}DLQReprocessorRole"
-  # Note: drift_recovery_role removed - migrated to /v1/drift-recoveries endpoint
   # Note: spot_interruption_handler_role removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
   # Note: stale_runner_cleanup_role removed - migrated to /v1/runners/cleanups endpoint
   # Note: runner_starter_role removed - routing logic moved to /v1/runners endpoint
   # Note: runner_terminator_role removed - runners are ephemeral and self-terminate
   ignored_events_archiver_role_name = "${module.common.resource_prefix}IgnoredEventsArchiverRole"
-  # Note: config_recorder_role removed - migrated to /v1/drift-recoveries endpoint
 
   common_tags = {
     ManagedBy = "terraform"

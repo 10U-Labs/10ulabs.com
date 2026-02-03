@@ -13,4 +13,3 @@ resource "aws_sqs_queue" "webhook_dlq" {
 
 # Note: job_queue and job_queue_dlq removed - routing logic moved to /v1/runners endpoint
 # Note: cancellation_queue removed - runners are ephemeral and self-terminate
-# Note: drift_recovery queue removed - migrated to /v1/drift-recoveries endpoint

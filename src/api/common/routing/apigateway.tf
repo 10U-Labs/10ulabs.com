@@ -4,7 +4,6 @@ locals {
     catchall                 = module.common.lambda_handler_names.catchall
     circuit_opens            = module.common.lambda_handler_names.circuit_opens
     contact                  = module.common.lambda_handler_names.contact
-    drift_recoveries         = module.common.lambda_handler_names.drift_recoveries
     ec2_runner               = module.common.lambda_handler_names.ec2_runner
     ec2_spot_interruptions   = module.common.lambda_handler_names.ec2_spot_interruptions
     ecs_runner               = module.common.lambda_handler_names.ecs_runner
@@ -32,7 +31,6 @@ locals {
   catchall_integration_arn     = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.catchall}/invocations"
   circuit_opens_arn            = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.circuit_opens}/invocations"
   contact_arn                  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.contact}/invocations"
-  drift_recoveries_arn         = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.drift_recoveries}/invocations"
   ec2_runner_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ec2_runner}/invocations"
   ec2_spot_interruptions_arn   = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ec2_spot_interruptions}/invocations"
   ecs_runner_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ecs_runner}/invocations"
@@ -53,7 +51,6 @@ locals {
     CatchAllHandlerArn               = local.catchall_integration_arn
     CircuitOpensHandlerArn           = local.circuit_opens_arn
     ContactHandlerArn                = local.contact_arn
-    DriftRecoveriesHandlerArn        = local.drift_recoveries_arn
     EC2RunnerHandlerArn              = local.ec2_runner_arn
     Ec2SpotInterruptionsHandlerArn   = local.ec2_spot_interruptions_arn
     EcsRunnerHandlerArn              = local.ecs_runner_arn

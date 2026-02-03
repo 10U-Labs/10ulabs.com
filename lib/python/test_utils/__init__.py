@@ -17,7 +17,7 @@ def create_endpoint_handler_loader(endpoint_path: str):
     """Create a handler module loader for a specific endpoint.
 
     Args:
-        endpoint_path: Path relative to src/api/endpoints (e.g., 'drift_recoveries')
+        endpoint_path: Path relative to src/api/endpoints (e.g., 'sessions')
 
     Returns:
         A function that loads handler modules from the endpoint's lambda directory.

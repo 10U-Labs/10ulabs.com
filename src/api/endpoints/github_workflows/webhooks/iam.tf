@@ -481,6 +481,5 @@ resource "aws_iam_role_policy" "circuit_open_recoveries_kms" {
   })
 }
 
-# Note: drift_recovery IAM role removed - migrated to /v1/drift-recoveries endpoint
 # Note: spot_interruption_handler IAM role removed - migrated to /v1/ec2-spot-interruptions and /v1/ecs-task-stops endpoints
 # Note: stale_runner_cleanup IAM role removed - migrated to /v1/runners/cleanups endpoint

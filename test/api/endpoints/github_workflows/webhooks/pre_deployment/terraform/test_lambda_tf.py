@@ -41,7 +41,6 @@ LAMBDA_FUNCTIONS = [
         "handler": "circuit_open_recoveries.lambda_handler",
         "description_contains": "recovery",
     },
-    # Note: drift_recovery removed - migrated to /v1/drift-recoveries endpoint
     # Note: spot_interruption_handler removed - migrated to /v1/ec2-spot-interruptions
     # Note: stale_runner_cleanup removed - migrated to /v1/runners/cleanups endpoint
 ]

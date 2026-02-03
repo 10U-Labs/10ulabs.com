@@ -57,8 +57,6 @@ resource "aws_cloudwatch_log_subscription_filter" "dlq_reprocessor" {
   role_arn        = local.firehose_role_arn
 }
 
-# Note: drift_recovery log subscription removed - migrated to /v1/drift-recoveries endpoint
-
 resource "aws_cloudwatch_log_subscription_filter" "ignored_events_archiver" {
   count           = local.create_subscriptions ? 1 : 0
   name            = "ignored-events-archiver-to-firehose"
