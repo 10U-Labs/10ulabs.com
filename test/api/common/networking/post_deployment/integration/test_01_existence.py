@@ -65,3 +65,42 @@ class TestVPCResourcesExist:
             "Runners route table not found. "
             "Run terraform apply in src/api/common/networking/"
         )
+
+    def test_ecr_api_vpc_endpoint_exists(self, ec2_client, runners_vpc_id, aws_region):
+        """Verify the ECR API VPC endpoint exists."""
+        response = ec2_client.describe_vpc_endpoints(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.ecr.api"]},
+            ]
+        )
+        assert len(response["VpcEndpoints"]) >= 1, (
+            "ECR API VPC endpoint not found. "
+            "Run terraform apply in src/api/common/networking/"
+        )
+
+    def test_ecr_dkr_vpc_endpoint_exists(self, ec2_client, runners_vpc_id, aws_region):
+        """Verify the ECR DKR VPC endpoint exists."""
+        response = ec2_client.describe_vpc_endpoints(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.ecr.dkr"]},
+            ]
+        )
+        assert len(response["VpcEndpoints"]) >= 1, (
+            "ECR DKR VPC endpoint not found. "
+            "Run terraform apply in src/api/common/networking/"
+        )
+
+    def test_s3_vpc_endpoint_exists(self, ec2_client, runners_vpc_id, aws_region):
+        """Verify the S3 VPC endpoint exists."""
+        response = ec2_client.describe_vpc_endpoints(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.s3"]},
+            ]
+        )
+        assert len(response["VpcEndpoints"]) >= 1, (
+            "S3 VPC endpoint not found. "
+            "Run terraform apply in src/api/common/networking/"
+        )
