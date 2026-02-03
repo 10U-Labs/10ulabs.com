@@ -17,12 +17,3 @@ data "terraform_remote_state" "runners_ecs" {
     region = "us-east-2"
   }
 }
-
-data "terraform_remote_state" "runners_ec2" {
-  backend = "s3"
-  config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "runners/ec2/terraform.tfstate"
-    region = "us-east-2"
-  }
-}
