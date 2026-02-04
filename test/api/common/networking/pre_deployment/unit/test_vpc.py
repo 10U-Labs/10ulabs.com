@@ -138,11 +138,11 @@ def test_route_table_has_ipv6_default_route(api_common_networking_dir):
     assert "::/0" in content
 
 
-def test_route_table_has_no_ipv4_route(api_common_networking_dir):
-    """Test that route table has no IPv4 default route (IPv6-only)."""
+def test_route_table_has_ipv4_default_route(api_common_networking_dir):
+    """Test that route table has IPv4 default route for external services."""
     vpc_tf = api_common_networking_dir / "vpc.tf"
     content = vpc_tf.read_text()
-    assert "0.0.0.0/0" not in content
+    assert "0.0.0.0/0" in content
 
 
 def test_route_table_references_igw(api_common_networking_dir):

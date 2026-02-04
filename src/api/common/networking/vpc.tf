@@ -49,6 +49,13 @@ resource "aws_route_table" "public" {
     gateway_id      = aws_internet_gateway.main.id
   }
 
+  # IPv4 route for external services (GitHub, etc.)
+  # ECS tasks get public IPv4 via assignPublicIp: ENABLED
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
+  }
+
   tags = merge(local.common_tags, {
     Name    = "${local.vpc_name}-public-rt"
     Purpose = "runners"

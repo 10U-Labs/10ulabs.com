@@ -75,3 +75,31 @@ resource "aws_vpc_endpoint" "logs" {
     Name = "${local.vpc_name}-logs"
   })
 }
+
+# SSM endpoint (ECS execution role retrieves GitHub token from Parameter Store)
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${local.aws_region}.ssm"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.public[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = merge(local.common_tags, {
+    Name = "${local.vpc_name}-ssm"
+  })
+}
+
+# KMS endpoint (decrypt SSM parameters encrypted with KMS)
+resource "aws_vpc_endpoint" "kms" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${local.aws_region}.kms"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.public[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = merge(local.common_tags, {
+    Name = "${local.vpc_name}-kms"
+  })
+}

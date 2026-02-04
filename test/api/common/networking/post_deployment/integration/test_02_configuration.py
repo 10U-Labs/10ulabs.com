@@ -138,6 +138,23 @@ class TestRouteTableConfiguration:
                         f"target an IGW, got: {gateway_id}"
                     )
 
+    def test_route_table_has_ipv4_default_route(self, ec2_client, runners_vpc_id):
+        """Verify route table has IPv4 default route for external services."""
+        response = ec2_client.describe_route_tables(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "tag:ManagedBy", "Values": ["terraform"]},
+            ]
+        )
+        for rt in response["RouteTables"]:
+            has_ipv4_route = any(
+                route.get("DestinationCidrBlock") == "0.0.0.0/0"
+                for route in rt.get("Routes", [])
+            )
+            assert has_ipv4_route, (
+                f"Route table {rt['RouteTableId']} has no IPv4 default route"
+            )
+
 
 class TestVpcEndpointsConfiguration:
     """Layer 2: Verify VPC endpoints are configured correctly."""

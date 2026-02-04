@@ -117,3 +117,29 @@ class TestVPCResourcesExist:
             "CloudWatch Logs VPC endpoint not found. "
             "Run terraform apply in src/api/common/networking/"
         )
+
+    def test_ssm_vpc_endpoint_exists(self, ec2_client, runners_vpc_id, aws_region):
+        """Verify the SSM VPC endpoint exists."""
+        response = ec2_client.describe_vpc_endpoints(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.ssm"]},
+            ]
+        )
+        assert len(response["VpcEndpoints"]) >= 1, (
+            "SSM VPC endpoint not found. "
+            "Run terraform apply in src/api/common/networking/"
+        )
+
+    def test_kms_vpc_endpoint_exists(self, ec2_client, runners_vpc_id, aws_region):
+        """Verify the KMS VPC endpoint exists."""
+        response = ec2_client.describe_vpc_endpoints(
+            Filters=[
+                {"Name": "vpc-id", "Values": [runners_vpc_id]},
+                {"Name": "service-name", "Values": [f"com.amazonaws.{aws_region}.kms"]},
+            ]
+        )
+        assert len(response["VpcEndpoints"]) >= 1, (
+            "KMS VPC endpoint not found. "
+            "Run terraform apply in src/api/common/networking/"
+        )

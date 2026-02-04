@@ -74,3 +74,19 @@ def test_vpc_endpoints_defines_logs_endpoint(api_common_networking_dir):
     content = vpc_endpoints_tf.read_text()
     pattern = r'resource\s+"aws_vpc_endpoint"\s+"logs"'
     assert re.search(pattern, content) is not None
+
+
+def test_vpc_endpoints_defines_ssm_endpoint(api_common_networking_dir):
+    """Test that vpc_endpoints.tf defines SSM endpoint."""
+    vpc_endpoints_tf = api_common_networking_dir / "vpc_endpoints.tf"
+    content = vpc_endpoints_tf.read_text()
+    pattern = r'resource\s+"aws_vpc_endpoint"\s+"ssm"'
+    assert re.search(pattern, content) is not None
+
+
+def test_vpc_endpoints_defines_kms_endpoint(api_common_networking_dir):
+    """Test that vpc_endpoints.tf defines KMS endpoint."""
+    vpc_endpoints_tf = api_common_networking_dir / "vpc_endpoints.tf"
+    content = vpc_endpoints_tf.read_text()
+    pattern = r'resource\s+"aws_vpc_endpoint"\s+"kms"'
+    assert re.search(pattern, content) is not None
