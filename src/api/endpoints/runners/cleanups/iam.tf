@@ -33,7 +33,7 @@ resource "aws_iam_role_policy" "ssm_access" {
       Action = [
         "ssm:GetParameter"
       ]
-      Resource = [data.terraform_remote_state.bootstrap.outputs.ssm_github_pat_arn]
+      Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
     }]
   })
 }

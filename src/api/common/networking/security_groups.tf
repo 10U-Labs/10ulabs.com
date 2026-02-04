@@ -26,6 +26,15 @@ resource "aws_security_group" "runner" {
     cidr_blocks = [local.vpc_cidr]
   }
 
+  # IPv4 egress to internet for services without IPv6 support
+  # (public.ecr.aws, GitHub API, etc.)
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   tags = merge(local.common_tags, {
     Name    = "self-hosted-runner-sg"
     Purpose = "runners"

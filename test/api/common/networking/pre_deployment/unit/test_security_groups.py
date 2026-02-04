@@ -91,3 +91,10 @@ def test_security_groups_egress_has_vpc_cidr_for_endpoints(api_common_networking
     sg_tf = api_common_networking_dir / "security_groups.tf"
     content = sg_tf.read_text()
     assert "local.vpc_cidr" in content
+
+
+def test_security_groups_egress_allows_ipv4_internet(api_common_networking_dir):
+    """Test that egress allows IPv4 internet access."""
+    sg_tf = api_common_networking_dir / "security_groups.tf"
+    content = sg_tf.read_text()
+    assert "0.0.0.0/0" in content

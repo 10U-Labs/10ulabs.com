@@ -57,6 +57,22 @@ class TestDeployedResourcesConfiguration:
             f"Security group {sg_id} does not allow all egress traffic"
         )
 
+    def test_security_group_allows_ipv4_internet_egress(self, runners_security_group):
+        """Verify security group allows IPv4 internet egress (0.0.0.0/0)."""
+        egress_rules = runners_security_group.get("IpPermissionsEgress", [])
+
+        has_ipv4_egress = any(
+            any(
+                ip_range.get("CidrIp") == "0.0.0.0/0"
+                for ip_range in rule.get("IpRanges", [])
+            )
+            for rule in egress_rules
+        )
+        sg_id = runners_security_group["GroupId"]
+        assert has_ipv4_egress, (
+            f"Security group {sg_id} does not allow IPv4 internet egress"
+        )
+
     def test_internet_gateway_attachment_state_is_available(
         self, ec2_client, runners_vpc_id
     ):
