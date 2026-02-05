@@ -412,7 +412,7 @@ class TestLambdaHandler:
         """Test lambda_handler returns error message for non-SQS events."""
         result = handler_module.lambda_handler({'some': 'data'}, None)
         body = json.loads(result['body'])
-        assert body['error'] == 'Expected SQS event'
+        assert body['error'] == 'Unsupported event format'
 
     def test_lambda_handler_empty_records_returns_400(self, handler_module):
         """Test lambda_handler returns 400 for empty Records."""
@@ -442,4 +442,4 @@ class TestLambdaHandler:
         }
         result = handler_module.lambda_handler(event, None)
         body = json.loads(result['body'])
-        assert body['error'] == 'Expected SQS event'
+        assert body['error'] == 'Unsupported event format'

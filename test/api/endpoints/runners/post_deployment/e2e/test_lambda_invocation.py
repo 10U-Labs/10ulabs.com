@@ -165,14 +165,14 @@ class TestLambdaDirectInvocation:
         _, payload, _, _ = invoke_and_parse(lambda_client, lambda_function_name, event)
         assert payload.get("statusCode") == 400
 
-    def test_lambda_returns_expected_sqs_event_error(self, lambda_client, lambda_function_name):
-        """Verify Lambda returns 'Expected SQS event' error."""
+    def test_lambda_returns_unsupported_event_format_error(self, lambda_client, lambda_function_name):
+        """Verify Lambda returns 'Unsupported event format' error for unknown events."""
         if not lambda_function_name:
             pytest.skip("lambda_function_name not available")
 
         event = {"some": "data"}
         _, _, body, _ = invoke_and_parse(lambda_client, lambda_function_name, event)
-        assert body.get("error") == "Expected SQS event"
+        assert body.get("error") == "Unsupported event format"
 
 
 class TestLabelRouting:
