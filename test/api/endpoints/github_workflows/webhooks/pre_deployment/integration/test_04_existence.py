@@ -293,29 +293,11 @@ class TestSQSTerraformConfigExistence:
             "Expected at least one aws_sqs_queue resource."
         )
 
-    def test_webhook_ingress_queue_defined(self):
-        """Verify webhook_ingress queue is defined in Terraform."""
+    def test_webhook_dlq_defined(self):
+        """Verify webhook_dlq is defined in Terraform."""
         queues = extract_sqs_queue_names(SQS_TF_FILE)
         queue_resources = [name for name, _ in queues]
-        assert "webhook_ingress" in queue_resources, (
-            "webhook_ingress queue not found in sqs.tf. "
-            "Required for API Gateway -> SQS direct integration."
-        )
-
-    def test_webhook_ingress_dlq_defined(self):
-        """Verify webhook_ingress_dlq is defined in Terraform."""
-        queues = extract_sqs_queue_names(SQS_TF_FILE)
-        queue_resources = [name for name, _ in queues]
-        assert "webhook_ingress_dlq" in queue_resources, (
-            "webhook_ingress_dlq not found in sqs.tf. "
-            "Required for failed webhook ingress message handling."
-        )
-
-    def test_ignored_events_queue_defined(self):
-        """Verify ignored_events queue is defined in Terraform."""
-        queues = extract_sqs_queue_names(SQS_TF_FILE)
-        queue_resources = [name for name, _ in queues]
-        assert "ignored_events" in queue_resources, (
-            "ignored_events queue not found in sqs.tf. "
-            "Required for storing unhandled webhook events."
+        assert "webhook_dlq" in queue_resources, (
+            "webhook_dlq not found in sqs.tf. "
+            "Required for failed webhook message handling."
         )

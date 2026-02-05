@@ -115,23 +115,14 @@ def test_github_pat_parameter_is_secure_string(ssm_client, ssm_github_pat_name):
 class TestSQSNamingConventions:
     """Layer 5: Verify SQS queue names follow expected conventions."""
 
-    def test_queue_names_use_handler_prefix(self):
-        """Verify queue names use the webhook handler name as prefix."""
+    def test_webhook_dlq_uses_handler_prefix(self):
+        """Verify webhook_dlq name uses the webhook handler name as prefix."""
         resource_names = get_runners_resource_names()
-        # All queues should have a consistent prefix pattern
-        expected_queues = [
-            resource_names['webhook_dlq'],
-            resource_names['webhook_ingress_queue'],
-            resource_names['webhook_ingress_dlq'],
-            resource_names['ignored_events_queue'],
-            resource_names['ignored_events_dlq'],
-        ]
-        # All should start with TenULabs (or the configured prefix)
-        for queue_name in expected_queues:
-            assert queue_name.startswith('TenULabs'), (
-                f"Queue {queue_name} doesn't follow naming convention. "
-                "Expected to start with resource prefix."
-            )
+        webhook_dlq = resource_names['webhook_dlq']
+        assert webhook_dlq.startswith('TenULabs'), (
+            f"Queue {webhook_dlq} doesn't follow naming convention. "
+            "Expected to start with resource prefix."
+        )
 
     def test_dlq_names_include_dlq_suffix(self):
         """Verify DLQ names include 'Dlq' suffix."""
@@ -143,14 +134,3 @@ class TestSQSNamingConventions:
                 f"DLQ {key}={queue_name} doesn't include 'Dlq' suffix. "
                 "DLQ names should clearly indicate dead letter queue purpose."
             )
-
-    def test_ingress_queue_short_retention_configured(self):
-        """Verify ingress queue is configured with short retention for DDoS protection."""
-        with open(SQS_TF_FILE, encoding='utf-8') as f:
-            content = f.read()
-        # Check for message_retention_seconds = 3600 in webhook_ingress resource
-        assert 'message_retention_seconds  = 3600' in content or \
-               'message_retention_seconds = 3600' in content, (
-            "webhook_ingress queue should have 1-hour retention (3600 seconds) "
-            "for DDoS protection."
-        )
