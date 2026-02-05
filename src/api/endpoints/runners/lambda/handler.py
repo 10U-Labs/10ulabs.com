@@ -13,6 +13,7 @@ import urllib.error
 from typing import Any
 
 import boto3
+from botocore.exceptions import ClientError
 
 # Import runner_labels module (bundled as runner_labels.py)
 import runner_labels
@@ -169,6 +170,12 @@ def _handle_api_gateway_event(event: dict[str, Any]) -> dict[str, Any]:
         return {
             'statusCode': 502,
             'body': json.dumps({'error': f'Failed to route request: {exc.reason}'}),
+        }
+    except ClientError as exc:
+        logger.error("AWS service error: %s", exc)
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': f'AWS service error: {exc}'}),
         }
     except (KeyError, TypeError, ValueError) as exc:
         logger.error("Error processing request: %s", exc)
