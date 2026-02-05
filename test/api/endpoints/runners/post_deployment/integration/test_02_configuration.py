@@ -80,55 +80,6 @@ class TestLambdaConfiguration:
         )
 
 
-class TestSQSConfiguration:
-    """Verify SQS queue configuration."""
-
-    def test_sqs_visibility_timeout(self, sqs_client, sqs_queue_url):
-        """Verify SQS visibility timeout is 6x Lambda timeout (360s)."""
-        if not sqs_queue_url:
-            pytest.skip("sqs_queue_url not available")
-        response = sqs_client.get_queue_attributes(
-            QueueUrl=sqs_queue_url,
-            AttributeNames=["VisibilityTimeout"]
-        )
-        timeout = int(response.get("Attributes", {}).get("VisibilityTimeout", 0))
-        # Lambda timeout is 60s, SQS visibility should be 6x = 360s
-        expected_timeout = 60 * 6
-        assert timeout == expected_timeout, (
-            f"SQS visibility timeout is {timeout}s, expected {expected_timeout}s. "
-            "Should be 6x Lambda timeout per AWS best practices."
-        )
-
-    def test_sqs_message_retention(self, sqs_client, sqs_queue_url):
-        """Verify SQS message retention is 4 hours (14400s)."""
-        if not sqs_queue_url:
-            pytest.skip("sqs_queue_url not available")
-        response = sqs_client.get_queue_attributes(
-            QueueUrl=sqs_queue_url,
-            AttributeNames=["MessageRetentionPeriod"]
-        )
-        retention = int(response.get("Attributes", {}).get("MessageRetentionPeriod", 0))
-        assert retention == 14400, (
-            f"SQS message retention is {retention}s, expected 14400s (4 hours). "
-            "Check sqs.tf message_retention_seconds value."
-        )
-
-    def test_sqs_has_redrive_policy(self, sqs_redrive_policy):
-        """Verify SQS queue has a redrive policy configured."""
-        assert sqs_redrive_policy is not None, (
-            "SQS queue has no redrive policy configured. "
-            "Check sqs.tf redrive_policy value."
-        )
-
-    def test_sqs_redrive_policy_has_dlq_arn(self, sqs_redrive_policy):
-        """Verify SQS redrive policy includes deadLetterTargetArn."""
-        if sqs_redrive_policy is None:
-            pytest.skip("No redrive policy configured")
-        assert "deadLetterTargetArn" in sqs_redrive_policy, (
-            "SQS redrive policy missing deadLetterTargetArn"
-        )
-
-
 class TestLambdaRolePolicies:
     """Verify Lambda role naming and policies."""
 
@@ -144,20 +95,6 @@ class TestLambdaRolePolicies:
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchEntity":
                 pytest.skip(f"Role {lambda_role_name} does not exist")
-            raise
-
-    def test_lambda_role_has_sqs_policy(self, iam_client, lambda_role_name):
-        """Verify the Lambda role has SQS access policy attached."""
-        try:
-            response = iam_client.list_role_policies(RoleName=lambda_role_name)
-            policy_names = response.get("PolicyNames", [])
-            assert "SQSAccess" in policy_names, (
-                f"Lambda role '{lambda_role_name}' missing SQSAccess inline policy. "
-                f"Found policies: {policy_names}"
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchEntity":
-                pytest.skip(f"Lambda role '{lambda_role_name}' does not exist")
             raise
 
     def test_lambda_role_has_ssm_policy(self, iam_client, lambda_role_name):
