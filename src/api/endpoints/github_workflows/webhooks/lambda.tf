@@ -67,14 +67,14 @@ resource "aws_lambda_function" "runners_handler" {
 
   environment {
     variables = {
-      API_BASE_URL               = "https://${local.api_fqdn}"
-      API_KEY_PARAMETER_NAME     = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
-      ARCHIVE_BUCKET_NAME        = aws_s3_bucket.ignored_events_archive.bucket
-      CIRCUIT_OPEN_TABLE_NAME    = aws_dynamodb_table.circuit_open_state.name
-      GITHUB_REPO                = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME   = module.common.ssm_github_pat_name
-      IDEMPOTENCY_TABLE_NAME     = aws_dynamodb_table.idempotency.name
-      WEBHOOK_SECRET_NAME        = aws_ssm_parameter.webhook_secret.name
+      API_BASE_URL             = "https://${local.api_fqdn}"
+      API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
+      ARCHIVE_BUCKET_NAME      = aws_s3_bucket.ignored_events_archive.bucket
+      CIRCUIT_OPEN_TABLE_NAME  = aws_dynamodb_table.circuit_open_state.name
+      GITHUB_REPO              = local.github_repo_full
+      GITHUB_TOKEN_SECRET_NAME = module.common.ssm_github_pat_name
+      IDEMPOTENCY_TABLE_NAME   = aws_dynamodb_table.idempotency.name
+      WEBHOOK_SECRET_NAME      = aws_ssm_parameter.webhook_secret.name
     }
   }
 
