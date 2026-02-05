@@ -66,6 +66,7 @@ def router_module_fixture():
         'IGNORED_EVENTS_QUEUE_URL': 'https://sqs.us-east-2.amazonaws.com/123456789/ignored-queue',
         'API_BASE_URL': 'https://api.example.com',
         'API_KEY_PARAMETER_NAME': '/test/api-key',
+        'ARCHIVE_BUCKET_NAME': 'test-archive-bucket',
     }
     with patch.dict('os.environ', env_vars):
         with patch('common.aws_clients.get_dynamodb_client'):
