@@ -1,6 +1,6 @@
 """Pytest fixtures for runners E2E tests.
 
-These tests verify the runners router Lambda can process SQS messages
+These tests verify the runners router Lambda can process requests
 and route them to the appropriate EC2 or ECS runner endpoints.
 """
 import json
@@ -14,21 +14,13 @@ from terraform_config import TEST_AWS_REGION, get_shared_config
 from ..integration.conftest import (
     runners_initialized,
     lambda_function_name,
-    sqs_queue_url,
-    sqs_dlq_name,
     lambda_client,
-    sqs_client,
-    sqs_redrive_policy,
 )
 
 __all__ = [
     "runners_initialized",
     "lambda_function_name",
-    "sqs_queue_url",
-    "sqs_dlq_name",
     "lambda_client",
-    "sqs_client",
-    "sqs_redrive_policy",
 ]
 
 

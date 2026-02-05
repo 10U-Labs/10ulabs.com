@@ -5,8 +5,6 @@ Post-Deployment Layers:
 - Layer 2: Configuration - Deployed resources configured correctly
 - Layer 3: Wiring - Components connected properly
 """
-import json
-
 import boto3
 import pytest
 
@@ -46,42 +44,6 @@ def lambda_function_arn(request):
     if not initialized:
         pytest.skip("Terraform init failed for runners")
     return terraform_output(RUNNERS_DIR, "lambda_function_arn")
-
-
-@pytest.fixture(scope="session")
-def sqs_queue_url(request):
-    """Get the SQS queue URL from terraform outputs."""
-    initialized = request.getfixturevalue("runners_initialized")
-    if not initialized:
-        pytest.skip("Terraform init failed for runners")
-    return terraform_output(RUNNERS_DIR, "sqs_queue_url")
-
-
-@pytest.fixture(scope="session")
-def sqs_queue_arn(request):
-    """Get the SQS queue ARN from terraform outputs."""
-    initialized = request.getfixturevalue("runners_initialized")
-    if not initialized:
-        pytest.skip("Terraform init failed for runners")
-    return terraform_output(RUNNERS_DIR, "sqs_queue_arn")
-
-
-@pytest.fixture(scope="session")
-def sqs_dlq_name(request):
-    """Get the SQS DLQ name from terraform outputs."""
-    initialized = request.getfixturevalue("runners_initialized")
-    if not initialized:
-        pytest.skip("Terraform init failed for runners")
-    return terraform_output(RUNNERS_DIR, "sqs_dlq_name")
-
-
-@pytest.fixture(scope="session")
-def sqs_dlq_arn(request):
-    """Get the SQS DLQ ARN from terraform outputs."""
-    initialized = request.getfixturevalue("runners_initialized")
-    if not initialized:
-        pytest.skip("Terraform init failed for runners")
-    return terraform_output(RUNNERS_DIR, "sqs_dlq_arn")
 
 
 @pytest.fixture(scope="session")
@@ -135,12 +97,6 @@ def lambda_client():
 
 
 @pytest.fixture(scope="session")
-def sqs_client():
-    """Create an SQS client."""
-    return boto3.client("sqs", region_name=TEST_AWS_REGION)
-
-
-@pytest.fixture(scope="session")
 def logs_client():
     """Create a CloudWatch Logs client."""
     return boto3.client("logs", region_name=TEST_AWS_REGION)
@@ -156,40 +112,3 @@ def kms_client():
 def shared_config():
     """Get shared config."""
     return get_shared_config()
-
-
-@pytest.fixture(scope="session")
-def sqs_redrive_policy(request):
-    """Get the SQS redrive policy as a dict."""
-    client = request.getfixturevalue("sqs_client")
-    queue_url = request.getfixturevalue("sqs_queue_url")
-    if not queue_url:
-        return None
-    response = client.get_queue_attributes(
-        QueueUrl=queue_url,
-        AttributeNames=["RedrivePolicy"]
-    )
-    policy_str = response.get("Attributes", {}).get("RedrivePolicy", "")
-    if not policy_str:
-        return None
-    return json.loads(policy_str)
-
-
-@pytest.fixture(scope="module")
-def sqs_event_source_mapping(request):
-    """Get the first SQS event source mapping for the Lambda."""
-    from botocore.exceptions import ClientError
-    client = request.getfixturevalue("lambda_client")
-    func_name = request.getfixturevalue("lambda_function_name")
-    queue_arn = request.getfixturevalue("sqs_queue_arn")
-    if not func_name or not queue_arn:
-        return None
-    try:
-        response = client.list_event_source_mappings(
-            FunctionName=func_name,
-            EventSourceArn=queue_arn
-        )
-        mappings = response.get("EventSourceMappings", [])
-        return mappings[0] if mappings else None
-    except ClientError:
-        return None
