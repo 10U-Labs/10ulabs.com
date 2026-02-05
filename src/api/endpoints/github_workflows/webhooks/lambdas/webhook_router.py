@@ -6,6 +6,7 @@ This is a "dumb forwarder" that:
 3. Filters for workflow_job events with action=queued
 4. HTTP POSTs to /v1/runners for routing to appropriate runner endpoint
 """
+# pylint: disable=duplicate-code
 
 import asyncio
 import base64
@@ -194,7 +195,9 @@ def archive_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str, 
     try:
         now = datetime.now(timezone.utc)
         # Generate a unique ID based on timestamp
-        event_id = f"{int(now.timestamp() * 1000)}-{hash(json.dumps(event_data, sort_keys=True)) % 10000:04d}"
+        ts_ms = int(now.timestamp() * 1000)
+        hash_suffix = hash(json.dumps(event_data, sort_keys=True)) % 10000
+        event_id = f"{ts_ms}-{hash_suffix:04d}"
 
         archived_event = {
             "event_id": event_id,
