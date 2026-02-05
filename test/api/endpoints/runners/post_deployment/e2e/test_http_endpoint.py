@@ -59,13 +59,11 @@ class TestRunnersPostSuccess:
         response = make_authenticated_post(
             runners_endpoint, api_key, json=payload, timeout=10
         )
-        # Verify routing worked: response should contain job_id from downstream
-        data = response.json()
-        assert "job_id" in data, (
-            f"Request not routed (no job_id in response). Status: {response.status_code}, "
+        # Verify routing worked: response should contain correct job_id
+        assert response.json().get("job_id") == 77777, (
+            f"Request not routed correctly. Status: {response.status_code}, "
             f"Response: {response.text}"
         )
-        assert data["job_id"] == 77777
 
     def test_post_response_has_json_content_type(self, runners_endpoint, api_key):
         """Verify POST response has JSON content type.
@@ -101,13 +99,11 @@ class TestRunnersPostValidation:
         response = make_authenticated_post(
             runners_endpoint, api_key, json=payload, timeout=10
         )
-        # Verify routing worked: response should contain job_id from downstream
-        data = response.json()
-        assert "job_id" in data, (
-            f"Request not routed (no job_id in response). Status: {response.status_code}, "
+        # Verify routing worked: response should contain correct job_id
+        assert response.json().get("job_id") == 66661, (
+            f"Request not routed correctly. Status: {response.status_code}, "
             f"Response: {response.text}"
         )
-        assert data["job_id"] == 66661
 
     def test_post_with_ecs_labels_is_routed(self, runners_endpoint, api_key):
         """Verify POST with ECS labels is routed to ECS endpoint.
@@ -124,13 +120,11 @@ class TestRunnersPostValidation:
         response = make_authenticated_post(
             runners_endpoint, api_key, json=payload, timeout=10
         )
-        # Verify routing worked: response should contain job_id from downstream
-        data = response.json()
-        assert "job_id" in data, (
-            f"Request not routed (no job_id in response). Status: {response.status_code}, "
+        # Verify routing worked: response should contain correct job_id
+        assert response.json().get("job_id") == 66662, (
+            f"Request not routed correctly. Status: {response.status_code}, "
             f"Response: {response.text}"
         )
-        assert data["job_id"] == 66662
 
     def test_post_with_unknown_labels_accepted(self, runners_endpoint, api_key):
         """Verify POST with unknown labels is still accepted by API Gateway.
