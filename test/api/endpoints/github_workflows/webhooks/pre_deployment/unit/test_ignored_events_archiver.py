@@ -10,21 +10,19 @@ from botocore.exceptions import ClientError
 from .conftest import load_lambda_module
 
 
-def _create_capturing_s3_mock() -> tuple:
-    """Create an S3 mock that captures put_object body.
+def _create_capturing_put_json_mock() -> tuple:
+    """Create a mock for put_json_to_s3 that captures the data.
 
     Returns:
-        tuple: (mock_s3, captured list where captured[0] will be the body)
+        tuple: (mock function, captured list where captured[0] will be the data dict)
     """
-    mock_s3 = MagicMock()
-    captured: List[Optional[str]] = [None]
+    captured: List[Optional[dict]] = [None]
 
-    def capture_put_object(**kwargs):
-        captured[0] = kwargs.get('Body')
-        return {}
+    def capture_put_json(bucket, key, data):
+        captured[0] = data
+        return None
 
-    mock_s3.put_object.side_effect = capture_put_object
-    return mock_s3, captured
+    return capture_put_json, captured
 
 
 @contextmanager
@@ -36,13 +34,12 @@ def _mock_archiver_success_context(archiver_module, records: list) -> Iterator[M
         records: List of SQS records to process.
 
     Yields:
-        mock_s3: The mock S3 client.
+        mock_put_json: The mock put_json_to_s3 function.
     """
-    mock_s3 = MagicMock()
-    mock_s3.put_object.return_value = {}
+    mock_put_json = MagicMock()
     with patch.object(archiver_module, 'get_sqs_records', return_value=records):
-        with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
-            yield mock_s3
+        with patch.object(archiver_module, 'put_json_to_s3', mock_put_json):
+            yield mock_put_json
 
 
 @pytest.fixture(name="archiver_module")
@@ -52,7 +49,7 @@ def archiver_module_fixture():
         'ARCHIVE_BUCKET_NAME': 'test-archive-bucket',
     }
     with patch.dict('os.environ', env_vars):
-        with patch('common.aws_clients.get_s3_client'):
+        with patch('common.aws_clients.put_json_to_s3'):
             module = load_lambda_module(
                 "ignored_events_archiver.py", "ignored_events_archiver"
             )
@@ -104,8 +101,6 @@ class TestArchiveEvent:
 
     def test_archives_event_successfully(self, archiver_module):
         """Test that event is archived successfully."""
-        mock_s3 = MagicMock()
-        mock_s3.put_object.return_value = {}
         record = {
             "body": json.dumps({
                 "event_data": {"action": "test"},
@@ -115,21 +110,20 @@ class TestArchiveEvent:
             "messageId": "msg-123",
             "attributes": {"ApproximateReceiveCount": "1"}
         }
-        with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
+        with patch.object(archiver_module, 'put_json_to_s3'):
             result = archiver_module.archive_event(record)
             assert result["success"] is True and "ignored-events/" in result["key"]
 
     def test_includes_archived_at_timestamp(self, archiver_module):
         """Test that archived_at timestamp is included in archived event."""
-        mock_s3, captured = _create_capturing_s3_mock()
+        capture_put_json, captured = _create_capturing_put_json_mock()
         record = {
             "body": json.dumps({"event_data": {}, "timestamp": "2024-01-01T00:00:00Z"}),
             "messageId": "msg-456"
         }
-        with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
+        with patch.object(archiver_module, 'put_json_to_s3', capture_put_json):
             archiver_module.archive_event(record)
-            archived_event = json.loads(captured[0])
-            assert "archived_at" in archived_event
+            assert "archived_at" in captured[0]
 
     def test_returns_error_on_json_decode_error(self, archiver_module):
         """Test that error is returned on JSON decode error."""
@@ -139,43 +133,39 @@ class TestArchiveEvent:
 
     def test_returns_error_on_s3_client_error(self, archiver_module):
         """Test that error is returned on S3 client error."""
-        mock_s3 = MagicMock()
-        mock_s3.put_object.side_effect = ClientError(
-            {"Error": {"Code": "AccessDenied", "Message": "denied"}},
-            "PutObject"
-        )
         record = {
             "body": json.dumps({"event_data": {}, "timestamp": "2024-01-01T00:00:00Z"}),
             "messageId": "msg-error"
         }
-        with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
+        client_error = ClientError(
+            {"Error": {"Code": "AccessDenied", "Message": "denied"}},
+            "PutObject"
+        )
+        with patch.object(archiver_module, 'put_json_to_s3', side_effect=client_error):
             result = archiver_module.archive_event(record)
             assert result["success"] is False
 
     def test_uses_current_time_when_no_timestamp(self, archiver_module):
         """Test that current time is used when no timestamp in body."""
-        mock_s3 = MagicMock()
-        mock_s3.put_object.return_value = {}
         record = {
             "body": json.dumps({"event_data": {}}),
             "messageId": "msg-no-ts"
         }
-        with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
+        with patch.object(archiver_module, 'put_json_to_s3'):
             result = archiver_module.archive_event(record)
             assert result["success"] is True
 
     def test_includes_sqs_attributes_in_archive(self, archiver_module):
         """Test that SQS attributes are included in archived event."""
-        mock_s3, captured = _create_capturing_s3_mock()
+        capture_put_json, captured = _create_capturing_put_json_mock()
         record = {
             "body": json.dumps({"event_data": {}, "timestamp": "2024-01-01T00:00:00Z"}),
             "messageId": "msg-attrs",
             "attributes": {"ApproximateReceiveCount": "3"}
         }
-        with patch.object(archiver_module, 'get_s3_client', return_value=mock_s3):
+        with patch.object(archiver_module, 'put_json_to_s3', capture_put_json):
             archiver_module.archive_event(record)
-            archived_event = json.loads(captured[0])
-            assert archived_event["sqs_attributes"]["ApproximateReceiveCount"] == "3"
+            assert captured[0]["sqs_attributes"]["ApproximateReceiveCount"] == "3"
 
 
 class TestLambdaHandler:

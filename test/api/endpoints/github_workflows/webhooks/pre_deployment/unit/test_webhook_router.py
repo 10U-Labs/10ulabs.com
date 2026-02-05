@@ -327,28 +327,29 @@ class TestEnqueueJob:
             assert result["success"] is False
 
 
-class TestEnqueueIgnoredEvent:
-    """Tests for enqueue_ignored_event function."""
+class TestArchiveIgnoredEvent:
+    """Tests for archive_ignored_event function."""
 
-    def test_returns_success_on_send(self, router_module):
-        """Test that successful send returns success."""
-        mock_sqs = MagicMock()
-        mock_sqs.send_message.return_value = {"MessageId": "ignored-123"}
-        with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
-            result = router_module.enqueue_ignored_event({"test": "data"}, "test reason")
-            assert result["success"] is True and result["message_id"] == "ignored-123"
+    def test_returns_success_on_archive(self, router_module):
+        """Test that successful archive returns success."""
+        with patch.object(router_module, 'put_json_to_s3'):
+            result = router_module.archive_ignored_event({"test": "data"}, "test reason")
+            assert result["success"] is True and "ignored-events/" in result["key"]
 
-    def test_returns_error_when_queue_url_not_set(self, router_module):
-        """Test that missing queue URL returns error."""
-        with patch.dict('os.environ', {'IGNORED_EVENTS_QUEUE_URL': ''}):
-            result = router_module.enqueue_ignored_event({"test": "data"}, "reason")
+    def test_returns_error_when_bucket_not_set(self, router_module):
+        """Test that missing bucket returns error."""
+        with patch.dict('os.environ', {'ARCHIVE_BUCKET_NAME': ''}):
+            result = router_module.archive_ignored_event({"test": "data"}, "reason")
             assert result["success"] is False
 
-    def test_returns_error_on_sqs_failure(self, router_module):
-        """Test that SQS failure returns error."""
-        mock_sqs = _create_mock_sqs_with_error()
-        with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
-            result = router_module.enqueue_ignored_event({"test": "data"}, "reason")
+    def test_returns_error_on_s3_failure(self, router_module):
+        """Test that S3 failure returns error."""
+        s3_error = ClientError(
+            {"Error": {"Code": "AccessDenied", "Message": "denied"}},
+            "PutObject"
+        )
+        with patch.object(router_module, 'put_json_to_s3', side_effect=s3_error):
+            result = router_module.archive_ignored_event({"test": "data"}, "reason")
             assert result["success"] is False
 
 
@@ -752,12 +753,12 @@ class TestIngressDeps:
             assert result["success"] is True
 
     def test_ingress_deps_enqueue_ignored(self, router_module):
-        """Test IngressDeps.enqueue_ignored calls enqueue_ignored_event."""
-        with patch.object(router_module, 'enqueue_ignored_event') as mock_enqueue:
+        """Test IngressDeps.enqueue_ignored calls archive_ignored_event."""
+        with patch.object(router_module, 'archive_ignored_event') as mock_archive:
             handler = router_module.get_ingress_handler()
             deps = handler.get_deps()
             deps.enqueue_ignored({"payload": "data"}, "test reason")
-            assert mock_enqueue.call_count == 1
+            assert mock_archive.call_count == 1
 
 
 class TestLambdaHandler:
