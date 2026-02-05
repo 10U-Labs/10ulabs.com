@@ -68,16 +68,14 @@ def test_circuit_open_auto_recovery_after_timeout(api_url, api_key):
 def test_circuit_open_auto_recovery_second_request_has_state(api_url, api_key):
     """Test circuit open auto recovery second request has state."""
     response1 = _make_circuit_open_request(api_url, api_key)
-    # If circuit is open (503), that's valid - skip the second request check
-    if response1.status_code == 503:
-        assert True  # Circuit is open, which is a valid state
-        return
+    # If circuit is open (503), that's valid - test passes
+    # If status is 200, make second request and verify it succeeds
     response2 = None
     if response1.status_code == 200:
         time.sleep(2)
         response2 = _make_circuit_open_request(api_url, api_key)
-    has_second_response = response2 is not None
-    assert has_second_response
+    # Pass if circuit is open (503) OR if we got a second response
+    assert response1.status_code == 503 or response2 is not None
 
 
 # Circuit Open API Endpoint Tests
