@@ -150,11 +150,25 @@ def _handle_sqs_event(event: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _handle_api_gateway_event(event: dict[str, Any]) -> dict[str, Any]:
+    """Handle API Gateway proxy integration event."""
+    try:
+        body = json.loads(event.get('body', '{}'))
+        result = _process_runner_request(body)
+        return result
+    except json.JSONDecodeError as exc:
+        logger.error("Error parsing request body: %s", exc)
+        return {
+            'statusCode': 400,
+            'body': json.dumps({'error': 'Invalid JSON in request body'}),
+        }
+
+
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """
     Main Lambda handler.
 
-    Handles SQS events from the runners queue.
+    Handles API Gateway proxy events for synchronous routing.
     Routes requests to /v1/runners/ec2 or /v1/runners/ecs based on labels.
     """
     logger.info("Received event: %s", json.dumps(event))
@@ -165,11 +179,19 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         if first_record.get('eventSource') == 'aws:sqs':
             return _handle_sqs_event(event)
 
-    # Direct invocation (for testing)
-    logger.warning("Unexpected event format, expected SQS event")
+    # API Gateway proxy integration event
+    if 'httpMethod' in event or 'requestContext' in event:
+        return _handle_api_gateway_event(event)
+
+    # Direct invocation with body (for testing)
+    if 'job_labels' in event:
+        result = _process_runner_request(event)
+        return result
+
+    logger.warning("Unexpected event format")
     return {
         'statusCode': 400,
         'body': json.dumps({
-            'error': 'Expected SQS event',
+            'error': 'Unsupported event format',
         }),
     }

@@ -1,9 +1,9 @@
 """E2E tests for /v1/runners HTTP endpoint.
 
-User Journey: HTTP POST to /v1/runners → API Gateway → SQS → Lambda routing
+User Journey: HTTP POST to /v1/runners → API Gateway → Lambda routing
 
-Critical Path: HTTP request → API Gateway authentication → SQS queue
-Failure Impact: Runner requests not queued, GitHub Actions jobs not processed.
+Critical Path: HTTP request → API Gateway authentication → Lambda router
+Failure Impact: Runner requests not routed, GitHub Actions jobs not processed.
 """
 import requests
 
@@ -72,21 +72,6 @@ class TestRunnersPostSuccess:
         )
         content_type = response.headers.get("Content-Type", "")
         assert "application/json" in content_type
-
-    def test_post_response_has_message_id(self, runners_endpoint, api_key):
-        """Verify POST response contains SQS message ID.
-
-        User Journey: Verify message was queued
-
-        When: A POST request is sent to /v1/runners
-        Then: The response contains a MessageId indicating SQS accepted the message
-        """
-        payload = create_runner_request("ec2", job_id=77779)
-        response = make_authenticated_post(
-            runners_endpoint, api_key, json=payload, timeout=10
-        )
-        body = response.json()
-        assert "MessageId" in body or "messageId" in body
 
 
 class TestRunnersPostValidation:
