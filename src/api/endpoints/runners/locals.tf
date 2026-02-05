@@ -10,10 +10,6 @@ locals {
   lambda_memory_mb      = 256
   lambda_timeout        = 60
 
-  # SQS queue naming (single queue = endpoint name)
-  queue_name     = module.common.lambda_handler_names.runners
-  queue_dlq_name = "${module.common.lambda_handler_names.runners}Dlq"
-
   # IAM role name
   lambda_role_name = "${module.common.lambda_handler_names.runners}Role"
 
