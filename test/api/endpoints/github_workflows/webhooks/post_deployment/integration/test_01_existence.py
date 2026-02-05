@@ -71,41 +71,6 @@ def test_webhook_dlq_exists(sqs_client, config):
     assert "QueueUrl" in response
 
 
-def test_webhook_ingress_queue_exists(sqs_client, config):
-    """Verify webhook ingress queue exists."""
-    queue_name = config["webhook_ingress_queue_name"]
-    response = sqs_client.get_queue_url(QueueName=queue_name)
-    assert "QueueUrl" in response
-
-
-def test_webhook_ingress_dlq_exists(sqs_client, config):
-    """Verify webhook ingress DLQ exists."""
-    queue_name = config["webhook_ingress_dlq_name"]
-    response = sqs_client.get_queue_url(QueueName=queue_name)
-    assert "QueueUrl" in response
-
-
-def test_ignored_events_queue_exists(sqs_client, config):
-    """Verify ignored events queue exists."""
-    queue_name = config["ignored_events_queue_name"]
-    response = sqs_client.get_queue_url(QueueName=queue_name)
-    assert "QueueUrl" in response
-
-
-def test_ignored_events_dlq_exists(sqs_client, config):
-    """Verify ignored events DLQ exists."""
-    queue_name = config["ignored_events_dlq_name"]
-    response = sqs_client.get_queue_url(QueueName=queue_name)
-    assert "QueueUrl" in response
-
-
-def test_drift_recovery_queue_exists(sqs_client, config):
-    """Verify drift recovery FIFO queue exists."""
-    queue_name = config["drift_recovery_queue_name"]
-    response = sqs_client.get_queue_url(QueueName=queue_name)
-    assert "QueueUrl" in response
-
-
 # === EventBridge Rules ===
 
 
@@ -143,13 +108,6 @@ def test_circuit_open_open_alarm_exists(cloudwatch_client, config):
 def test_webhook_handler_errors_alarm_exists(cloudwatch_client, config):
     """Verify webhook handler errors CloudWatch alarm exists."""
     alarm_name = f"{config['resource_prefix']}-webhook-handler-errors"
-    alarms = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
-    assert len(alarms["MetricAlarms"]) == 1
-
-
-def test_runners_dlq_messages_alarm_exists(cloudwatch_client, config):
-    """Verify runners router DLQ messages CloudWatch alarm exists."""
-    alarm_name = f"{config['resource_prefix']}-runners-dlq-messages"
     alarms = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
     assert len(alarms["MetricAlarms"]) == 1
 

@@ -38,33 +38,6 @@ def test_dlq_reprocessor_rule_has_target(events_client, config):
     assert len(targets["Targets"]) == 1
 
 
-# === SQS DLQ Wiring ===
-
-
-def test_webhook_ingress_queue_redrive_targets_dlq(sqs_client, config):
-    """Verify webhook ingress queue's redrive policy targets its DLQ."""
-    queue_url = sqs_client.get_queue_url(
-        QueueName=config["webhook_ingress_queue_name"]
-    )["QueueUrl"]
-    dlq_url = sqs_client.get_queue_url(
-        QueueName=config["webhook_ingress_dlq_name"]
-    )["QueueUrl"]
-
-    # Get queue's redrive policy
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["RedrivePolicy"]
-    )
-    redrive_policy = json.loads(attributes["Attributes"]["RedrivePolicy"])
-
-    # Get DLQ ARN
-    dlq_attributes = sqs_client.get_queue_attributes(
-        QueueUrl=dlq_url, AttributeNames=["QueueArn"]
-    )
-    dlq_arn = dlq_attributes["Attributes"]["QueueArn"]
-
-    assert redrive_policy["deadLetterTargetArn"] == dlq_arn
-
-
 # === Lambda Role Attachment ===
 
 

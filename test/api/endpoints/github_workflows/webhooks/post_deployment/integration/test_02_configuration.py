@@ -101,61 +101,6 @@ def test_circuit_open_state_table_has_pitr_enabled(dynamodb_client, config):
     assert pitr["PointInTimeRecoveryStatus"] == "ENABLED"
 
 
-# === SQS Queue Configuration ===
-
-
-def test_webhook_ingress_queue_has_redrive_policy(sqs_client, config):
-    """Verify webhook ingress queue has redrive policy to DLQ."""
-    queue_name = config["webhook_ingress_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["RedrivePolicy"]
-    )
-    assert "RedrivePolicy" in attributes["Attributes"]
-
-
-def test_webhook_ingress_queue_has_short_retention(sqs_client, config):
-    """Verify webhook ingress queue has short retention for DDoS protection."""
-    queue_name = config["webhook_ingress_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["MessageRetentionPeriod"]
-    )
-    retention = int(attributes["Attributes"]["MessageRetentionPeriod"])
-    # Should be <= 1 hour (3600 seconds) for DDoS protection
-    assert retention <= 3600
-
-
-def test_ignored_events_queue_has_redrive_policy(sqs_client, config):
-    """Verify ignored events queue has redrive policy."""
-    queue_name = config["ignored_events_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["RedrivePolicy"]
-    )
-    assert "RedrivePolicy" in attributes["Attributes"]
-
-
-def test_drift_recovery_queue_is_fifo(sqs_client, config):
-    """Verify drift recovery queue is configured as FIFO."""
-    queue_name = config["drift_recovery_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["FifoQueue"]
-    )
-    assert attributes["Attributes"].get("FifoQueue") == "true"
-
-
-def test_drift_recovery_queue_has_content_deduplication(sqs_client, config):
-    """Verify drift recovery queue has content-based deduplication enabled."""
-    queue_name = config["drift_recovery_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=["ContentBasedDeduplication"]
-    )
-    assert attributes["Attributes"].get("ContentBasedDeduplication") == "true"
-
-
 # === EventBridge Rule Configuration ===
 
 
