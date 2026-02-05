@@ -56,7 +56,9 @@ class TestRunnersPostSuccess:
         response = make_authenticated_post(
             runners_endpoint, api_key, json=payload, timeout=10
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}. Response: {response.text}"
+        )
 
     def test_post_response_has_json_content_type(self, runners_endpoint, api_key):
         """Verify POST response has JSON content type.
@@ -89,7 +91,9 @@ class TestRunnersPostValidation:
         response = make_authenticated_post(
             runners_endpoint, api_key, json=payload, timeout=10
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}. Response: {response.text}"
+        )
 
     def test_post_with_ecs_labels_accepted(self, runners_endpoint, api_key):
         """Verify POST with ECS labels is accepted.
@@ -103,7 +107,9 @@ class TestRunnersPostValidation:
         response = make_authenticated_post(
             runners_endpoint, api_key, json=payload, timeout=10
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}. Response: {response.text}"
+        )
 
     def test_post_with_unknown_labels_accepted(self, runners_endpoint, api_key):
         """Verify POST with unknown labels is still accepted by API Gateway.
