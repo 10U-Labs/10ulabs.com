@@ -15,12 +15,8 @@ locals {
   lambda_timeout_seconds         = 120
 
   # Resource names derived from webhook handler (PascalCase for SQS queues)
-  idempotency_table_name     = "${module.common.lambda_handler_names.webhook}-idempotency"
-  webhook_ingress_queue_name = "${module.common.lambda_handler_names.webhook}Ingress"
-  webhook_ingress_dlq_name   = "${module.common.lambda_handler_names.webhook}IngressDlq"
-  ignored_events_queue_name  = "${module.common.lambda_handler_names.webhook}IgnoredEvents"
-  ignored_events_dlq_name    = "${module.common.lambda_handler_names.webhook}IgnoredEventsDlq"
-  webhook_dlq_name           = "${module.common.lambda_handler_names.webhook}Dlq"
+  idempotency_table_name = "${module.common.lambda_handler_names.webhook}-idempotency"
+  webhook_dlq_name       = "${module.common.lambda_handler_names.webhook}Dlq"
 
   # SSM parameter names
   ssm_parameter_name_for_webhook_secret = "/api/webhook-secret"
@@ -33,7 +29,6 @@ locals {
   circuit_open_remediations_function_name = module.common.lambda_handler_names.circuit_open_remediations
   circuit_open_recoveries_function_name   = module.common.lambda_handler_names.circuit_open_recoveries
   dlq_reprocessor_function_name           = "${module.common.resource_prefix}DLQReprocessor"
-  ignored_events_archiver_function_name   = "${module.common.resource_prefix}IgnoredEventsArchiver"
 
   # IAM role names (single source of truth)
   lambda_runners_handler_role_name    = "${module.common.lambda_handler_names.webhook}ServiceRole"
@@ -41,7 +36,6 @@ locals {
   circuit_open_remediations_role_name = "${module.common.lambda_handler_names.circuit_open_remediations}Role"
   circuit_open_recoveries_role_name   = "${module.common.lambda_handler_names.circuit_open_recoveries}Role"
   dlq_reprocessor_role_name           = "${module.common.resource_prefix}DLQReprocessorRole"
-  ignored_events_archiver_role_name   = "${module.common.resource_prefix}IgnoredEventsArchiverRole"
 
   common_tags = {
     ManagedBy = "terraform"
