@@ -25,7 +25,7 @@ def assert_circuit_open_state_in_response(response):
     """Assert that the response contains circuit open state.
 
     Used by circuit open tests - checks for 'state' field in the response
-    from GET /v1/github-workflows/webhooks/circuit-open endpoint.
+    from GET /v1/github-workflows/webhooks/circuit-opens endpoint.
     """
     data = response.json()
     assert "state" in data
