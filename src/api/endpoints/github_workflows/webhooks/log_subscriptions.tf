@@ -54,12 +54,3 @@ resource "aws_cloudwatch_log_subscription_filter" "dlq_reprocessor" {
   destination_arn = local.firehose_arn
   role_arn        = local.firehose_role_arn
 }
-
-resource "aws_cloudwatch_log_subscription_filter" "ignored_events_archiver" {
-  count           = local.create_subscriptions ? 1 : 0
-  name            = "ignored-events-archiver-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.ignored_events_archiver.name
-  filter_pattern  = ""
-  destination_arn = local.firehose_arn
-  role_arn        = local.firehose_role_arn
-}

@@ -45,18 +45,3 @@ output "ecr_repository_uri" {
 output "api_endpoint" {
   value = "https://${local.api_fqdn}"
 }
-
-output "webhook_ingress_queue_url" {
-  description = "URL of the webhook ingress queue for API Gateway SQS integration"
-  value       = aws_sqs_queue.webhook_ingress.url
-}
-
-output "webhook_ingress_queue_arn" {
-  description = "ARN of the webhook ingress queue"
-  value       = aws_sqs_queue.webhook_ingress.arn
-}
-
-output "webhook_ingress_queue_name" {
-  description = "Name of the webhook ingress queue"
-  value       = aws_sqs_queue.webhook_ingress.name
-}
