@@ -164,8 +164,14 @@ def _handle_api_gateway_event(event: dict[str, Any]) -> dict[str, Any]:
             'statusCode': 400,
             'body': json.dumps({'error': 'Invalid JSON in request body'}),
         }
-    except Exception as exc:
-        logger.error("Error processing API Gateway event: %s", exc)
+    except urllib.error.URLError as exc:
+        logger.error("Network error routing request: %s", exc)
+        return {
+            'statusCode': 502,
+            'body': json.dumps({'error': f'Failed to route request: {exc.reason}'}),
+        }
+    except (KeyError, TypeError, ValueError) as exc:
+        logger.error("Error processing request: %s", exc)
         return {
             'statusCode': 500,
             'body': json.dumps({'error': str(exc)}),
