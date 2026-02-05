@@ -25,7 +25,6 @@ from botocore.exceptions import ClientError
 
 from common.aws_clients import (
     get_dynamodb_client,
-    get_s3_client,
     get_sqs_client,
     get_ssm_client,
     put_json_to_s3,
