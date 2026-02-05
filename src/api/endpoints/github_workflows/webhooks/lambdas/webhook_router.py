@@ -6,7 +6,6 @@ This is a "dumb forwarder" that:
 3. Filters for workflow_job events with action=queued
 4. HTTP POSTs to /v1/runners for routing to appropriate runner endpoint
 """
-# pylint: disable=duplicate-code
 
 import asyncio
 import base64
@@ -24,7 +23,13 @@ from urllib.parse import unquote
 
 from botocore.exceptions import ClientError
 
-from common.aws_clients import get_dynamodb_client, get_s3_client, get_sqs_client, get_ssm_client
+from common.aws_clients import (
+    get_dynamodb_client,
+    get_s3_client,
+    get_sqs_client,
+    get_ssm_client,
+    put_json_to_s3,
+)
 from common.cloudwatch import publish_metric as common_publish_metric
 from common.webhook_ingress import IngressHandler
 
@@ -212,12 +217,7 @@ def archive_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str, 
             f"{now.hour:02d}/{event_id}.json"
         )
 
-        get_s3_client().put_object(
-            Bucket=bucket_name,
-            Key=s3_key,
-            Body=json.dumps(archived_event, indent=2),
-            ContentType="application/json",
-        )
+        put_json_to_s3(bucket_name, s3_key, archived_event)
 
         logger.info(
             "Archived ignored event to S3: %s (reason: %s)",

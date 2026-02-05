@@ -1,5 +1,6 @@
 """AWS client singletons for Lambda handlers."""
 
+import json
 from typing import Any
 
 import boto3
@@ -62,3 +63,19 @@ def get_ssm_client() -> Any:
     if cache["ssm_client"] is None:
         cache["ssm_client"] = boto3.client("ssm")
     return cache["ssm_client"]
+
+
+def put_json_to_s3(bucket: str, key: str, data: dict) -> None:
+    """Write a JSON object to S3.
+
+    Args:
+        bucket: S3 bucket name
+        key: S3 object key
+        data: Dictionary to serialize as JSON
+    """
+    get_s3_client().put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=json.dumps(data, indent=2),
+        ContentType="application/json",
+    )

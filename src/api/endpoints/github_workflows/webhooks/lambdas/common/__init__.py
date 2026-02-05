@@ -8,6 +8,7 @@ from common.aws_clients import (
     get_sns_client,
     get_sqs_client,
     get_ssm_client,
+    put_json_to_s3,
 )
 from common.circuit_open_utils import (
     enable_event_source_mappings,
@@ -63,6 +64,7 @@ __all__ = [
     "get_sns_client",
     "get_sqs_client",
     "get_ssm_client",
+    "put_json_to_s3",
     # cloudwatch
     "publish_metric",
     # github_api

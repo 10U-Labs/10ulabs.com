@@ -9,7 +9,7 @@ from typing import Any
 
 from botocore.exceptions import ClientError
 
-from common.aws_clients import get_s3_client
+from common.aws_clients import put_json_to_s3
 from common.cloudwatch import publish_metric
 from common.lambda_utils import get_sqs_records, empty_records_response, count_results
 
@@ -72,12 +72,7 @@ def archive_event(record: dict[str, Any]) -> dict[str, Any]:
 
         s3_key = build_s3_key(timestamp, message_id)
 
-        get_s3_client().put_object(
-            Bucket=bucket_name,
-            Key=s3_key,
-            Body=json.dumps(archived_event, indent=2),
-            ContentType="application/json",
-        )
+        put_json_to_s3(bucket_name, s3_key, archived_event)
 
         logger.info("Archived event to S3: %s", s3_key)
         return {"success": True, "key": s3_key}
