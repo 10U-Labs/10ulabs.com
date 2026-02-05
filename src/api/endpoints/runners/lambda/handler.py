@@ -153,7 +153,9 @@ def _handle_sqs_event(event: dict[str, Any]) -> dict[str, Any]:
 def _handle_api_gateway_event(event: dict[str, Any]) -> dict[str, Any]:
     """Handle API Gateway proxy integration event."""
     try:
-        body = json.loads(event.get('body', '{}'))
+        # Handle None body (API Gateway sends null for empty body)
+        body_str = event.get('body') or '{}'
+        body = json.loads(body_str)
         result = _process_runner_request(body)
         return result
     except json.JSONDecodeError as exc:
@@ -161,6 +163,12 @@ def _handle_api_gateway_event(event: dict[str, Any]) -> dict[str, Any]:
         return {
             'statusCode': 400,
             'body': json.dumps({'error': 'Invalid JSON in request body'}),
+        }
+    except Exception as exc:
+        logger.error("Error processing API Gateway event: %s", exc)
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(exc)}),
         }
 
 
