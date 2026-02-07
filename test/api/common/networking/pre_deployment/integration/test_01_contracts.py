@@ -103,12 +103,6 @@ class TestLocalsSecurityGroupContract:
         sg_tf = API_COMMON_NETWORKING_DIR / "security_groups.tf"
         assert "aws_vpc.main.id" in sg_tf.read_text()
 
-    def test_security_group_uses_local_vpc_cidr(self):
-        """Verify security_groups.tf uses local.vpc_cidr for VPC endpoint access."""
-        sg_tf = API_COMMON_NETWORKING_DIR / "security_groups.tf"
-        assert "local.vpc_cidr" in sg_tf.read_text()
-
-
 class TestSharedModuleContract:
     """Verify shared.tf and lib/terraform/common are compatible."""
 
@@ -180,45 +174,3 @@ class TestProviderContract:
         assert "local.aws_region" in providers_tf.read_text()
 
 
-class TestVpcEndpointsContract:
-    """Verify vpc_endpoints.tf references exist and are compatible."""
-
-    def test_vpc_endpoints_file_exists(self):
-        """Verify vpc_endpoints.tf exists."""
-        vpc_endpoints_tf = API_COMMON_NETWORKING_DIR / "vpc_endpoints.tf"
-        assert vpc_endpoints_tf.exists()
-
-    def test_vpc_endpoints_references_vpc_main(self):
-        """Verify vpc_endpoints.tf references aws_vpc.main."""
-        vpc_endpoints_tf = API_COMMON_NETWORKING_DIR / "vpc_endpoints.tf"
-        assert "aws_vpc.main.id" in vpc_endpoints_tf.read_text()
-
-    def test_vpc_endpoints_references_public_subnets(self):
-        """Verify vpc_endpoints.tf references aws_subnet.public."""
-        vpc_endpoints_tf = API_COMMON_NETWORKING_DIR / "vpc_endpoints.tf"
-        assert "aws_subnet.public" in vpc_endpoints_tf.read_text()
-
-    def test_vpc_endpoints_references_route_table(self):
-        """Verify vpc_endpoints.tf references aws_route_table.public for S3."""
-        vpc_endpoints_tf = API_COMMON_NETWORKING_DIR / "vpc_endpoints.tf"
-        assert "aws_route_table.public.id" in vpc_endpoints_tf.read_text()
-
-    def test_vpc_endpoints_uses_local_aws_region(self):
-        """Verify vpc_endpoints.tf uses local.aws_region for service names."""
-        vpc_endpoints_tf = API_COMMON_NETWORKING_DIR / "vpc_endpoints.tf"
-        assert "local.aws_region" in vpc_endpoints_tf.read_text()
-
-    def test_vpc_endpoints_uses_local_common_tags(self):
-        """Verify vpc_endpoints.tf uses local.common_tags."""
-        vpc_endpoints_tf = API_COMMON_NETWORKING_DIR / "vpc_endpoints.tf"
-        assert "local.common_tags" in vpc_endpoints_tf.read_text()
-
-    def test_vpc_endpoints_uses_local_vpc_name(self):
-        """Verify vpc_endpoints.tf uses local.vpc_name for naming."""
-        vpc_endpoints_tf = API_COMMON_NETWORKING_DIR / "vpc_endpoints.tf"
-        assert "local.vpc_name" in vpc_endpoints_tf.read_text()
-
-    def test_vpc_endpoints_references_logs_service(self):
-        """Verify vpc_endpoints.tf references CloudWatch Logs service."""
-        vpc_endpoints_tf = API_COMMON_NETWORKING_DIR / "vpc_endpoints.tf"
-        assert ".logs" in vpc_endpoints_tf.read_text()

@@ -103,18 +103,6 @@ def test_www_dns_record_alias_cloudfront(src_dir):
     assert "aws_cloudfront_distribution.website.domain_name" in content
 
 
-def test_www_ipv6_record_defined(src_dir):
-    """Verify www IPv6 DNS record is defined."""
-    content = (src_dir / "certificate_dns.tf").read_text()
-    assert 'resource "aws_route53_record" "www_ipv6"' in content
-
-
-def test_www_ipv6_record_type_aaaa(src_dir):
-    """Verify www IPv6 DNS record is type AAAA."""
-    content = (src_dir / "certificate_dns.tf").read_text()
-    assert 'type    = "AAAA"' in content
-
-
 def test_apex_dns_record_defined(src_dir):
     """Verify apex DNS A record is defined."""
     content = (src_dir / "certificate_dns.tf").read_text()
@@ -125,12 +113,6 @@ def test_apex_dns_record_name(src_dir):
     """Verify apex DNS record uses local.apex_fqdn."""
     content = (src_dir / "certificate_dns.tf").read_text()
     assert "name    = local.apex_fqdn" in content
-
-
-def test_apex_ipv6_record_defined(src_dir):
-    """Verify apex IPv6 DNS record is defined."""
-    content = (src_dir / "certificate_dns.tf").read_text()
-    assert 'resource "aws_route53_record" "apex_ipv6"' in content
 
 
 def test_dns_records_use_hosted_zone(src_dir):

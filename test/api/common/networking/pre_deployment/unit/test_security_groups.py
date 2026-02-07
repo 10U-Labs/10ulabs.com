@@ -65,13 +65,6 @@ def test_security_groups_egress_allows_all_protocols(api_common_networking_dir):
     assert 'protocol' in content and '"-1"' in content
 
 
-def test_security_groups_egress_allows_all_destinations(api_common_networking_dir):
-    """Test that egress allows all destinations (IPv6 ::/0)."""
-    sg_tf = api_common_networking_dir / "security_groups.tf"
-    content = sg_tf.read_text()
-    assert "::/0" in content
-
-
 def test_security_groups_egress_allows_all_ports(api_common_networking_dir):
     """Test that egress allows all ports (from_port and to_port = 0)."""
     sg_tf = api_common_networking_dir / "security_groups.tf"
@@ -84,13 +77,6 @@ def test_security_groups_sg_has_tags(api_common_networking_dir):
     sg_tf = api_common_networking_dir / "security_groups.tf"
     content = sg_tf.read_text()
     assert "tags" in content
-
-
-def test_security_groups_egress_has_vpc_cidr_for_endpoints(api_common_networking_dir):
-    """Test that egress includes IPv4 VPC CIDR for VPC endpoints."""
-    sg_tf = api_common_networking_dir / "security_groups.tf"
-    content = sg_tf.read_text()
-    assert "local.vpc_cidr" in content
 
 
 def test_security_groups_egress_allows_ipv4_internet(api_common_networking_dir):

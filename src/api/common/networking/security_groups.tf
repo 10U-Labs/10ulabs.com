@@ -9,25 +9,6 @@ resource "aws_security_group" "runner" {
   description = "Security group for GitHub self-hosted runners (ECS/EC2)"
   vpc_id      = aws_vpc.main.id
 
-  # IPv6 egress to internet (GitHub, package repos, etc.)
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    ipv6_cidr_blocks = ["::/0"]
-  }
-
-  # IPv4 egress within VPC for VPC endpoints (ECR, S3)
-  # VPC endpoints use IPv4 private addresses even in IPv6-enabled subnets
-  egress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [local.vpc_cidr]
-  }
-
-  # IPv4 egress to internet for services without IPv6 support
-  # (public.ecr.aws, GitHub API, etc.)
   egress {
     from_port   = 0
     to_port     = 0

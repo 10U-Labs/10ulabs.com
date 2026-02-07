@@ -89,7 +89,7 @@ resource "aws_cloudfront_cache_policy" "website" {
 
 resource "aws_cloudfront_distribution" "website" {
   enabled         = true
-  is_ipv6_enabled = true
+  is_ipv6_enabled = false
   aliases         = [local.www_fqdn, local.apex_fqdn]
 
   logging_config {

@@ -81,31 +81,10 @@ def test_subnets_reference_vpc(api_common_networking_dir):
 
 
 def test_subnets_have_map_public_ip_disabled(api_common_networking_dir):
-    """Test that subnets do NOT map public IPv4 (IPv6-only)."""
+    """Test that subnets do not map public IP on launch."""
     vpc_tf = api_common_networking_dir / "vpc.tf"
     content = vpc_tf.read_text()
-    assert "map_public_ip_on_launch         = false" in content
-
-
-def test_vpc_has_ipv6_cidr_block(api_common_networking_dir):
-    """Test that VPC has IPv6 CIDR block enabled."""
-    vpc_tf = api_common_networking_dir / "vpc.tf"
-    content = vpc_tf.read_text()
-    assert "assign_generated_ipv6_cidr_block = true" in content
-
-
-def test_subnets_have_ipv6_cidr_block(api_common_networking_dir):
-    """Test that subnets have IPv6 CIDR blocks."""
-    vpc_tf = api_common_networking_dir / "vpc.tf"
-    content = vpc_tf.read_text()
-    assert "ipv6_cidr_block" in content
-
-
-def test_subnets_assign_ipv6_on_creation(api_common_networking_dir):
-    """Test that subnets assign IPv6 addresses on creation."""
-    vpc_tf = api_common_networking_dir / "vpc.tf"
-    content = vpc_tf.read_text()
-    assert "assign_ipv6_address_on_creation = true" in content
+    assert "map_public_ip_on_launch = false" in content
 
 
 def test_vpc_defines_internet_gateway(api_common_networking_dir):
@@ -131,15 +110,8 @@ def test_vpc_defines_route_table(api_common_networking_dir):
     assert re.search(pattern, content) is not None
 
 
-def test_route_table_has_ipv6_default_route(api_common_networking_dir):
-    """Test that route table has IPv6 default route."""
-    vpc_tf = api_common_networking_dir / "vpc.tf"
-    content = vpc_tf.read_text()
-    assert "::/0" in content
-
-
 def test_route_table_has_ipv4_default_route(api_common_networking_dir):
-    """Test that route table has IPv4 default route for external services."""
+    """Test that route table has IPv4 default route."""
     vpc_tf = api_common_networking_dir / "vpc.tf"
     content = vpc_tf.read_text()
     assert "0.0.0.0/0" in content

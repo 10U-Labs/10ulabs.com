@@ -144,10 +144,10 @@ def test_cloudfront_distribution_enabled(src_dir):
     assert "enabled         = true" in content
 
 
-def test_cloudfront_ipv6_enabled(src_dir):
-    """Verify CloudFront distribution has IPv6 enabled."""
+def test_cloudfront_ipv6_disabled(src_dir):
+    """Verify CloudFront distribution has IPv6 disabled."""
     content = (src_dir / "cloudfront_s3.tf").read_text()
-    assert "is_ipv6_enabled = true" in content
+    assert "is_ipv6_enabled = false" in content
 
 
 def test_cloudfront_viewer_protocol_redirect_https(src_dir):

@@ -6,9 +6,8 @@
 
 resource "aws_vpc" "main" {
   cidr_block                       = local.vpc_cidr
-  enable_dns_hostnames             = true
-  enable_dns_support               = true
-  assign_generated_ipv6_cidr_block = true
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 
   tags = merge(local.common_tags, {
     Name    = local.vpc_name
@@ -22,9 +21,7 @@ resource "aws_subnet" "public" {
   vpc_id                          = aws_vpc.main.id
   cidr_block                      = cidrsubnet(local.vpc_cidr, local.public_subnet_cidr_mask - tonumber(split("/", local.vpc_cidr)[1]), count.index)
   availability_zone               = local.vpc_azs[count.index]
-  map_public_ip_on_launch         = false
-  ipv6_cidr_block                 = cidrsubnet(aws_vpc.main.ipv6_cidr_block, 8, count.index)
-  assign_ipv6_address_on_creation = true
+  map_public_ip_on_launch = false
 
   tags = merge(local.common_tags, {
     Name    = "${local.vpc_name}-public-${count.index + 1}"
@@ -44,13 +41,6 @@ resource "aws_internet_gateway" "main" {
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
-  route {
-    ipv6_cidr_block = "::/0"
-    gateway_id      = aws_internet_gateway.main.id
-  }
-
-  # IPv4 route for external services (GitHub, etc.)
-  # ECS tasks get public IPv4 via assignPublicIp: ENABLED
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main.id

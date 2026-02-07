@@ -54,18 +54,6 @@ resource "aws_route53_record" "www" {
   }
 }
 
-resource "aws_route53_record" "www_ipv6" {
-  zone_id = data.aws_route53_zone.parent.zone_id
-  name    = local.www_fqdn
-  type    = "AAAA"
-
-  alias {
-    name                   = aws_cloudfront_distribution.website.domain_name
-    zone_id                = aws_cloudfront_distribution.website.hosted_zone_id
-    evaluate_target_health = false
-  }
-}
-
 resource "aws_route53_record" "apex" {
   zone_id = data.aws_route53_zone.parent.zone_id
   name    = local.apex_fqdn
@@ -78,14 +66,3 @@ resource "aws_route53_record" "apex" {
   }
 }
 
-resource "aws_route53_record" "apex_ipv6" {
-  zone_id = data.aws_route53_zone.parent.zone_id
-  name    = local.apex_fqdn
-  type    = "AAAA"
-
-  alias {
-    name                   = aws_cloudfront_distribution.website.domain_name
-    zone_id                = aws_cloudfront_distribution.website.hosted_zone_id
-    evaluate_target_health = false
-  }
-}

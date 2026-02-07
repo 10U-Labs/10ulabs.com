@@ -118,10 +118,10 @@ def test_cloudfront_geo_restriction_is_none(first_cloudfront_dist_config):
         assert geo_restriction.get('RestrictionType') == 'none'
 
 
-def test_cloudfront_distribution_ipv6_enabled(first_cloudfront_dist_config):
-    """Verify CloudFront distribution has IPv6 enabled."""
+def test_cloudfront_distribution_ipv6_disabled(first_cloudfront_dist_config):
+    """Verify CloudFront distribution has IPv6 disabled."""
     if first_cloudfront_dist_config is not None:
-        assert first_cloudfront_dist_config.get('IsIPV6Enabled') is True
+        assert first_cloudfront_dist_config.get('IsIPV6Enabled') is False
 
 
 def test_cloudfront_distribution_http_version_is_http2(first_cloudfront_dist_config):

@@ -115,7 +115,7 @@ EOT
 
 resource "aws_cloudfront_distribution" "main" {
   enabled             = true
-  is_ipv6_enabled     = true
+  is_ipv6_enabled     = false
   default_root_object = ""
   aliases             = [local.api_fqdn]
 
