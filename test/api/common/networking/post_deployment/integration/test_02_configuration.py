@@ -66,10 +66,6 @@ class TestDeployedResourcesConfiguration:
         attachment = igw["Attachments"][0]
         assert attachment["State"] == "available"
 
-
-class TestSubnetConfiguration:
-    """Layer 2: Verify subnet configuration."""
-
     def test_subnets_are_in_different_azs(self, ec2_client):
         """Verify subnets are distributed across availability zones."""
         response = ec2_client.describe_subnets(
@@ -84,10 +80,6 @@ class TestSubnetConfiguration:
             assert len(set(azs)) == len(azs), (
                 f"Subnets are not in different AZs: {azs}"
             )
-
-
-class TestRouteTableConfiguration:
-    """Layer 2: Verify route table configuration."""
 
     def test_route_table_has_ipv4_default_route(self, ec2_client, runners_vpc_id):
         """Verify route table has IPv4 default route for external services."""

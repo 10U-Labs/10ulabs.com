@@ -9,7 +9,6 @@ Three-layer testing model:
 
 
 
-
 class TestVPCWiring:
     """Layer 3: Verify VPC components are connected."""
 
@@ -82,5 +81,3 @@ class TestVPCWiring:
             assert has_igw_route, (
                 f"Subnet {subnet['SubnetId']} has no route to IGW {igw_id}"
             )
-
-

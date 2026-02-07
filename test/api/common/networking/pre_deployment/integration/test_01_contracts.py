@@ -103,6 +103,7 @@ class TestLocalsSecurityGroupContract:
         sg_tf = API_COMMON_NETWORKING_DIR / "security_groups.tf"
         assert "aws_vpc.main.id" in sg_tf.read_text()
 
+
 class TestSharedModuleContract:
     """Verify shared.tf and lib/terraform/common are compatible."""
 
@@ -172,5 +173,3 @@ class TestProviderContract:
         """Verify AWS provider uses local.aws_region."""
         providers_tf = API_COMMON_NETWORKING_DIR / "providers.tf"
         assert "local.aws_region" in providers_tf.read_text()
-
-

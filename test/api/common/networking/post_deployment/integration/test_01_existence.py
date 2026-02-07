@@ -10,7 +10,6 @@ Three-layer testing model:
 
 
 
-
 class TestVPCResourcesExist:
     """Layer 1: Verify VPC and networking resources exist."""
 
@@ -65,4 +64,3 @@ class TestVPCResourcesExist:
             "Runners route table not found. "
             "Run terraform apply in src/api/common/networking/"
         )
-

@@ -52,5 +52,3 @@ def runners_security_group_fixture(ec2_client):
     if not response["SecurityGroups"]:
         return None
     return response["SecurityGroups"][0]
-
-
