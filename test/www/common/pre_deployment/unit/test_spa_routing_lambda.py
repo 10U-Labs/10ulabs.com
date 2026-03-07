@@ -61,7 +61,7 @@ class TestApexRedirect:
 
     def test_www_does_not_redirect(self):
         """Test that www domain does not redirect."""
-        event = make_event(host="www.example.com", uri="/about")
+        event = make_event(host="www.example.com", uri="/about/")
         response = handler(event, None)
         assert "status" not in response
 
@@ -147,14 +147,44 @@ class TestAssetsRewrite:
         assert response["uri"] == "/home/assets/file.js"
 
 
+class TestTrailingSlashRedirect:
+    """Tests for trailing slash redirect behavior."""
+
+    def test_path_without_trailing_slash_returns_301(self):
+        """Test that path without trailing slash returns 301."""
+        event = make_event(host="www.example.com", uri="/rack-designer")
+        response = handler(event, None)
+        assert response["status"] == "301"
+
+    def test_path_without_trailing_slash_redirect_location(self):
+        """Test that path without trailing slash redirects to slashed path."""
+        event = make_event(host="www.example.com", uri="/rack-designer")
+        response = handler(event, None)
+        location = response["headers"]["location"][0]["value"]
+        assert location == "https://www.example.com/rack-designer/"
+
+    def test_nested_path_without_trailing_slash_returns_301(self):
+        """Test that nested path without trailing slash returns 301."""
+        event = make_event(host="www.example.com", uri="/rack-designer/ABCD12345")
+        response = handler(event, None)
+        assert response["status"] == "301"
+
+    def test_nested_path_without_trailing_slash_redirect_location(self):
+        """Test that nested path without trailing slash redirects to slashed path."""
+        event = make_event(host="www.example.com", uri="/rack-designer/ABCD12345")
+        response = handler(event, None)
+        location = response["headers"]["location"][0]["value"]
+        assert location == "https://www.example.com/rack-designer/ABCD12345/"
+
+
 class TestSpaRouting:
     """Tests for SPA routing behavior (paths without extensions)."""
 
-    def test_path_without_extension_gets_index_html(self):
-        """Test that paths without extensions get index.html appended."""
+    def test_path_without_extension_redirects(self):
+        """Test that paths without extensions get 301 redirect."""
         event = make_event(host="www.example.com", uri="/about")
         response = handler(event, None)
-        assert response["uri"] == "/about/index.html"
+        assert response["status"] == "301"
 
     def test_path_with_trailing_slash_gets_index_html(self):
         """Test that paths with trailing slash get index.html appended."""
@@ -162,17 +192,17 @@ class TestSpaRouting:
         response = handler(event, None)
         assert response["uri"] == "/contact/index.html"
 
-    def test_nested_path_without_extension_gets_index_html(self):
-        """Test that nested paths without extensions get index.html appended."""
+    def test_nested_path_without_extension_redirects(self):
+        """Test that nested paths without extensions get 301 redirect."""
         event = make_event(host="www.example.com", uri="/rack-designer/config")
         response = handler(event, None)
-        assert response["uri"] == "/rack-designer/config/index.html"
+        assert response["status"] == "301"
 
-    def test_deeply_nested_path_gets_index_html(self):
-        """Test that deeply nested paths get index.html appended."""
+    def test_deeply_nested_path_redirects(self):
+        """Test that deeply nested paths get 301 redirect."""
         event = make_event(host="www.example.com", uri="/a/b/c/d")
         response = handler(event, None)
-        assert response["uri"] == "/a/b/c/d/index.html"
+        assert response["status"] == "301"
 
 
 class TestEdgeCases:
@@ -253,30 +283,30 @@ class TestEdgeCases:
         response = handler(event, None)
         assert response["uri"] == "/app.bundle.min.js"
 
-    def test_very_long_path_gets_index_html(self):
-        """Test that very long paths without extension get index.html."""
+    def test_very_long_path_redirects(self):
+        """Test that very long paths without extension get 301 redirect."""
         long_path = "/" + "/".join(["segment"] * 50)
         event = make_event(host="www.example.com", uri=long_path)
         response = handler(event, None)
-        assert response["uri"] == f"{long_path}/index.html"
+        assert response["status"] == "301"
 
-    def test_path_with_hyphen_gets_index_html(self):
-        """Test that paths with hyphens get index.html."""
+    def test_path_with_hyphen_redirects(self):
+        """Test that paths with hyphens get 301 redirect."""
         event = make_event(host="www.example.com", uri="/my-page-name")
         response = handler(event, None)
-        assert response["uri"] == "/my-page-name/index.html"
+        assert response["status"] == "301"
 
-    def test_path_with_underscore_gets_index_html(self):
-        """Test that paths with underscores get index.html."""
+    def test_path_with_underscore_redirects(self):
+        """Test that paths with underscores get 301 redirect."""
         event = make_event(host="www.example.com", uri="/my_page_name")
         response = handler(event, None)
-        assert response["uri"] == "/my_page_name/index.html"
+        assert response["status"] == "301"
 
-    def test_path_with_numbers_gets_index_html(self):
-        """Test that paths with numbers get index.html."""
+    def test_path_with_numbers_redirects(self):
+        """Test that paths with numbers get 301 redirect."""
         event = make_event(host="www.example.com", uri="/page123")
         response = handler(event, None)
-        assert response["uri"] == "/page123/index.html"
+        assert response["status"] == "301"
 
     def test_hidden_file_passes_through(self):
         """Test that hidden files (starting with dot) pass through."""

@@ -44,8 +44,16 @@ def handler(event, _context):
         request["uri"] = "/home/index.html"
         return request
 
-    # Ensure trailing slash, then append index.html
+    # Redirect to add trailing slash (fixes relative asset paths)
     if not uri.endswith("/"):
-        uri = uri + "/"
+        return {
+            "status": "301",
+            "statusDescription": "Moved Permanently",
+            "headers": {
+                "location": [{"key": "Location", "value": f"https://{host}{uri}/"}]
+            }
+        }
+
+    # Trailing slash present — serve index.html
     request["uri"] = uri + "index.html"
     return request
