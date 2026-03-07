@@ -10,9 +10,6 @@ locals {
   public_subnet_cidr_mask = 24
   vpc_azs                 = slice(data.aws_availability_zones.available.names, 0, min(length(data.aws_availability_zones.available.names), local.vpc_max_azs))
 
-  # IPv6 toggle for phased removal (subnets first, then VPC)
-  enable_ipv6 = false
-
   # Common tags
   common_tags = {
     Project     = "10ulabs"

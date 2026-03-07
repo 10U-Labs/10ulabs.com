@@ -130,31 +130,3 @@ def test_vpc_defines_route_table_association(api_common_networking_dir):
     content = vpc_tf.read_text()
     pattern = r'resource\s+"aws_route_table_association"\s+"public"'
     assert re.search(pattern, content) is not None
-
-
-def test_vpc_has_ipv6_cidr_block_gated_by_enable_ipv6(api_common_networking_dir):
-    """Test that VPC assign_generated_ipv6_cidr_block uses local.enable_ipv6."""
-    vpc_tf = api_common_networking_dir / "vpc.tf"
-    content = vpc_tf.read_text()
-    assert "assign_generated_ipv6_cidr_block = local.enable_ipv6" in content
-
-
-def test_subnets_have_ipv6_cidr_block(api_common_networking_dir):
-    """Test that subnets define ipv6_cidr_block."""
-    vpc_tf = api_common_networking_dir / "vpc.tf"
-    content = vpc_tf.read_text()
-    assert "ipv6_cidr_block" in content
-
-
-def test_subnets_ipv6_cidr_gated_by_enable_ipv6(api_common_networking_dir):
-    """Test that subnet ipv6_cidr_block is gated by local.enable_ipv6."""
-    vpc_tf = api_common_networking_dir / "vpc.tf"
-    content = vpc_tf.read_text()
-    assert "local.enable_ipv6" in content
-
-
-def test_subnets_ipv6_assignment_gated_by_enable_ipv6(api_common_networking_dir):
-    """Test that assign_ipv6_address_on_creation is gated by local.enable_ipv6."""
-    vpc_tf = api_common_networking_dir / "vpc.tf"
-    content = vpc_tf.read_text()
-    assert "assign_ipv6_address_on_creation = local.enable_ipv6" in content
