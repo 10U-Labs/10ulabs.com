@@ -8,7 +8,7 @@ resource "aws_vpc" "main" {
   cidr_block                       = local.vpc_cidr
   enable_dns_hostnames             = true
   enable_dns_support               = true
-  assign_generated_ipv6_cidr_block = true
+  assign_generated_ipv6_cidr_block = local.enable_ipv6
 
   tags = merge(local.common_tags, {
     Name    = local.vpc_name

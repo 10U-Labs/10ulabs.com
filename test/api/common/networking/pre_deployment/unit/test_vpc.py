@@ -132,11 +132,11 @@ def test_vpc_defines_route_table_association(api_common_networking_dir):
     assert re.search(pattern, content) is not None
 
 
-def test_vpc_has_ipv6_cidr_block_attribute(api_common_networking_dir):
-    """Test that VPC has assign_generated_ipv6_cidr_block attribute."""
+def test_vpc_has_ipv6_cidr_block_gated_by_enable_ipv6(api_common_networking_dir):
+    """Test that VPC assign_generated_ipv6_cidr_block uses local.enable_ipv6."""
     vpc_tf = api_common_networking_dir / "vpc.tf"
     content = vpc_tf.read_text()
-    assert "assign_generated_ipv6_cidr_block" in content
+    assert "assign_generated_ipv6_cidr_block = local.enable_ipv6" in content
 
 
 def test_subnets_have_ipv6_cidr_block(api_common_networking_dir):
