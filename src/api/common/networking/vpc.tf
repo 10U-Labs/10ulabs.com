@@ -5,9 +5,10 @@
 # - EC2 runners
 
 resource "aws_vpc" "main" {
-  cidr_block           = local.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+  cidr_block                       = local.vpc_cidr
+  enable_dns_hostnames             = true
+  enable_dns_support               = true
+  assign_generated_ipv6_cidr_block = true
 
   tags = merge(local.common_tags, {
     Name    = local.vpc_name
@@ -18,10 +19,12 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "public" {
   count = min(length(local.vpc_azs), local.vpc_max_azs)
 
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(local.vpc_cidr, local.public_subnet_cidr_mask - tonumber(split("/", local.vpc_cidr)[1]), count.index)
-  availability_zone       = local.vpc_azs[count.index]
-  map_public_ip_on_launch = false
+  vpc_id                          = aws_vpc.main.id
+  cidr_block                      = cidrsubnet(local.vpc_cidr, local.public_subnet_cidr_mask - tonumber(split("/", local.vpc_cidr)[1]), count.index)
+  availability_zone               = local.vpc_azs[count.index]
+  map_public_ip_on_launch         = false
+  ipv6_cidr_block                 = local.enable_ipv6 ? cidrsubnet(aws_vpc.main.ipv6_cidr_block, 8, count.index) : null
+  assign_ipv6_address_on_creation = local.enable_ipv6
 
   tags = merge(local.common_tags, {
     Name    = "${local.vpc_name}-public-${count.index + 1}"

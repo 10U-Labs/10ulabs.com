@@ -117,3 +117,17 @@ def test_locals_defines_availability_zones_data_source(api_common_networking_dir
     locals_tf = api_common_networking_dir / "locals.tf"
     content = locals_tf.read_text()
     assert 'data "aws_availability_zones"' in content
+
+
+def test_locals_defines_enable_ipv6(api_common_networking_dir):
+    """Test that locals.tf defines enable_ipv6."""
+    locals_tf = api_common_networking_dir / "locals.tf"
+    content = locals_tf.read_text()
+    assert "enable_ipv6" in content
+
+
+def test_locals_enable_ipv6_is_false(api_common_networking_dir):
+    """Test that enable_ipv6 is false."""
+    locals_tf = api_common_networking_dir / "locals.tf"
+    content = locals_tf.read_text()
+    assert "enable_ipv6 = false" in content

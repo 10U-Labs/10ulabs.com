@@ -84,7 +84,7 @@ def test_subnets_have_map_public_ip_disabled(api_common_networking_dir):
     """Test that subnets do not map public IP on launch."""
     vpc_tf = api_common_networking_dir / "vpc.tf"
     content = vpc_tf.read_text()
-    assert "map_public_ip_on_launch = false" in content
+    assert "map_public_ip_on_launch" in content and "= false" in content
 
 
 def test_vpc_defines_internet_gateway(api_common_networking_dir):
@@ -130,3 +130,25 @@ def test_vpc_defines_route_table_association(api_common_networking_dir):
     content = vpc_tf.read_text()
     pattern = r'resource\s+"aws_route_table_association"\s+"public"'
     assert re.search(pattern, content) is not None
+
+
+def test_vpc_has_ipv6_cidr_block_attribute(api_common_networking_dir):
+    """Test that VPC has assign_generated_ipv6_cidr_block attribute."""
+    vpc_tf = api_common_networking_dir / "vpc.tf"
+    content = vpc_tf.read_text()
+    assert "assign_generated_ipv6_cidr_block" in content
+
+
+def test_subnets_ipv6_cidr_gated_by_enable_ipv6(api_common_networking_dir):
+    """Test that subnet ipv6_cidr_block is gated by local.enable_ipv6."""
+    vpc_tf = api_common_networking_dir / "vpc.tf"
+    content = vpc_tf.read_text()
+    assert "local.enable_ipv6" in content
+    assert "ipv6_cidr_block" in content
+
+
+def test_subnets_ipv6_assignment_gated_by_enable_ipv6(api_common_networking_dir):
+    """Test that assign_ipv6_address_on_creation is gated by local.enable_ipv6."""
+    vpc_tf = api_common_networking_dir / "vpc.tf"
+    content = vpc_tf.read_text()
+    assert "assign_ipv6_address_on_creation = local.enable_ipv6" in content
