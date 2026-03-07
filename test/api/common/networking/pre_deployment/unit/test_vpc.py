@@ -139,12 +139,18 @@ def test_vpc_has_ipv6_cidr_block_attribute(api_common_networking_dir):
     assert "assign_generated_ipv6_cidr_block" in content
 
 
+def test_subnets_have_ipv6_cidr_block(api_common_networking_dir):
+    """Test that subnets define ipv6_cidr_block."""
+    vpc_tf = api_common_networking_dir / "vpc.tf"
+    content = vpc_tf.read_text()
+    assert "ipv6_cidr_block" in content
+
+
 def test_subnets_ipv6_cidr_gated_by_enable_ipv6(api_common_networking_dir):
     """Test that subnet ipv6_cidr_block is gated by local.enable_ipv6."""
     vpc_tf = api_common_networking_dir / "vpc.tf"
     content = vpc_tf.read_text()
     assert "local.enable_ipv6" in content
-    assert "ipv6_cidr_block" in content
 
 
 def test_subnets_ipv6_assignment_gated_by_enable_ipv6(api_common_networking_dir):
