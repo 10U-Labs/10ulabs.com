@@ -59,7 +59,7 @@ jobs:
             mypy \
             pylint \
             pytest \
-            python-hcl2 \
+            'python-hcl2<8' \
             pyyaml \
             requests \
             types-PyYAML \
