@@ -146,6 +146,23 @@ resource "aws_cloudfront_distribution" "main" {
     origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
   }
 
+  # The wan-graph-designer product's own API Gateway (separate repo/stack), wired
+  # in via its routing remote state. The /wan-graph-designer/* behavior routes here.
+  origin {
+    domain_name         = data.terraform_remote_state.wan_graph_designer.outputs.api_gateway_execute_domain
+    origin_id           = "wan-graph-designer"
+    origin_path         = "/prod"
+    connection_attempts = 3
+    connection_timeout  = 10
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
   default_cache_behavior {
     target_origin_id       = "api-gateway"
     viewer_protocol_policy = "redirect-to-https"
@@ -213,6 +230,18 @@ resource "aws_cloudfront_distribution" "main" {
   ordered_cache_behavior {
     path_pattern           = "/v1/*"
     target_origin_id       = "api-gateway"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+
+    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/wan-graph-designer/*"
+    target_origin_id       = "wan-graph-designer"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods         = ["GET", "HEAD"]
