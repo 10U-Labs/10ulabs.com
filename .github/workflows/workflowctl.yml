@@ -155,7 +155,7 @@ jobs:
           contains(github.event.head_commit.message, '[force testing]') ||
           steps.detect-changes.outputs.workflowctl_changed == 'true')
         name: Install npm dependencies
-        run: npm install -g jscpd jsonlint
+        run: npm install -g jscpd@4.0.5 jsonlint
       - if: >-
           github.event.inputs.force_testing == 'true' ||
           contains(github.event.head_commit.message, '[force testing]') ||

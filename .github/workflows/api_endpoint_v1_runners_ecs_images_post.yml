@@ -98,7 +98,7 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install npm dependencies
-        run: npm install -g jscpd jsonlint
+        run: npm install -g jscpd@4.0.5 jsonlint
       - name: Linting JSON files
         run: |
           jsonlint -q src/api/endpoints/runners/ecs/images/post/config.json

@@ -109,7 +109,7 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install jscpd
-        run: npm install -g jscpd
+        run: npm install -g jscpd@4.0.5
       - name: Check for duplicate code in source Python files
         run: |
           SRC=src/api/endpoints/contact_submissions
