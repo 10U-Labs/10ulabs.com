@@ -21,7 +21,10 @@ resource "aws_iam_role" "wan_graph_designer_github_actions" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${local.github_org}/wan-graph-designer:*"
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:${local.github_org}/wan-graph-designer:*",
+              "repo:${local.github_org}/wan-graph-synthesizer:*",
+            ]
           }
         }
       }

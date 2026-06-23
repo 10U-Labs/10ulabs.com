@@ -13,7 +13,7 @@ data "terraform_remote_state" "wan_graph_designer" {
 
   config = {
     bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "wan-graph-designer/common/routing/terraform.tfstate"
+    key    = "wan-graph-synthesizer/common/routing/terraform.tfstate"
     region = "us-east-2"
   }
 }

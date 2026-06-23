@@ -146,11 +146,11 @@ resource "aws_cloudfront_distribution" "main" {
     origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
   }
 
-  # The wan-graph-designer product's own API Gateway (separate repo/stack), wired
-  # in via its routing remote state. The /wan-graph-designer/* behavior routes here.
+  # The wan-graph-synthesizer product's own API Gateway (separate repo/stack), wired
+  # in via its routing remote state. The /wan-graph-synthesizer/* behavior routes here.
   origin {
     domain_name         = data.terraform_remote_state.wan_graph_designer.outputs.api_gateway_execute_domain
-    origin_id           = "wan-graph-designer"
+    origin_id           = "wan-graph-synthesizer"
     origin_path         = "/prod"
     connection_attempts = 3
     connection_timeout  = 10
@@ -240,8 +240,8 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/wan-graph-designer/*"
-    target_origin_id       = "wan-graph-designer"
+    path_pattern           = "/wan-graph-synthesizer/*"
+    target_origin_id       = "wan-graph-synthesizer"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods         = ["GET", "HEAD"]
