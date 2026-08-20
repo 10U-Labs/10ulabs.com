@@ -532,12 +532,13 @@ def _trusted_repository_patterns(trust_policy):
 
 
 def test_wan_graph_designer_role_trusts_only_the_synthesizer(iam_client, config):
-    """Test that the AdministratorAccess deploy role trusts one repository."""
+    """Test that the AdministratorAccess deploy role trusts one repository, by both names."""
     role_name = f"{config['resource_prefix']}WanGraphDesignerRole"
-    expected = [f"repo:{config['github_org']}/wan-graph-synthesizer:*"]
+    org = config['github_org']
+    expected = [f"repo:{org}/wan-graph-synthesizer:*", f"repo:{org}/wan-synthesizer:*"]
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']
-    assert _trusted_repository_patterns(trust_policy) == expected
+    assert sorted(_trusted_repository_patterns(trust_policy)) == sorted(expected)
 
 
 def test_github_actions_role_name_is_pascalcase(iam_client, config):
