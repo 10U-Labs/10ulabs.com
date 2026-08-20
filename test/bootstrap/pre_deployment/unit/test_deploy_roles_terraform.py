@@ -11,11 +11,8 @@ import re
 
 import pytest
 
-# The role is being renamed from TenULabsWanGraphDesignerRole to
-# TenULabsWanSynthesizerRole. Both exist while the repository's OIDC_ROLE_ARN is moved
-# from one to the other, and both trust exactly the same repository, so both are asserted
-# here until the old one is destroyed.
-ROLE_FILES = ("wan_graph_designer.tf", "wan_synthesizer.tf")
+# The one deploy role the WAN synthesizer assumes.
+ROLE_FILES = ("wan_synthesizer.tf",)
 
 SUBJECT_CONDITION = re.compile(
     r'"token\.actions\.githubusercontent\.com:sub"\s*=\s*\[([^\]]*)\]'

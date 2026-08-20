@@ -8,7 +8,7 @@ data "terraform_remote_state" "bootstrap" {
   }
 }
 
-data "terraform_remote_state" "wan_graph_designer" {
+data "terraform_remote_state" "wan_synthesizer" {
   backend = "s3"
 
   config = {

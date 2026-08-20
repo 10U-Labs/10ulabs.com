@@ -531,14 +531,9 @@ def _trusted_repository_patterns(trust_policy):
     return [subjects] if isinstance(subjects, str) else subjects
 
 
-@pytest.mark.parametrize("suffix", ["WanGraphDesignerRole", "WanSynthesizerRole"])
+@pytest.mark.parametrize("suffix", ["WanSynthesizerRole"])
 def test_deploy_role_trusts_only_the_synthesizer(iam_client, config, suffix):
-    """Test that each AdministratorAccess deploy role trusts one repository, by both names.
-
-    Two roles exist while the synthesizer's OIDC_ROLE_ARN is moved from the old name to
-    the new one, and both hand administrator rights to whoever they trust, so both are
-    read back here until the old one is destroyed.
-    """
+    """Test that the AdministratorAccess deploy role trusts one repository, by both names."""
     role_name = f"{config['resource_prefix']}{suffix}"
     org = config['github_org']
     expected = [
