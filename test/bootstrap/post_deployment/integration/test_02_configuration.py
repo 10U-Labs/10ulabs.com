@@ -504,6 +504,22 @@ def test_iam_role_has_administrator_access_policy(iam_client, config):
     assert policy_arn == 'arn:aws:iam::aws:policy/AdministratorAccess'
 
 
+def _trusted_repository_patterns(trust_policy):
+    """Read the repository patterns a trust policy lets assume its role."""
+    condition = trust_policy['Statement'][0]['Condition']['StringLike']
+    subjects = condition['token.actions.githubusercontent.com:sub']
+    return [subjects] if isinstance(subjects, str) else subjects
+
+
+def test_wan_graph_designer_role_trusts_only_the_synthesizer(iam_client, config):
+    """Test that the AdministratorAccess deploy role trusts one repository."""
+    role_name = f"{config['resource_prefix']}WanGraphDesignerRole"
+    expected = [f"repo:{config['github_org']}/wan-graph-synthesizer:*"]
+    response = iam_client.get_role(RoleName=role_name)
+    trust_policy = response['Role']['AssumeRolePolicyDocument']
+    assert _trusted_repository_patterns(trust_policy) == expected
+
+
 def test_github_actions_role_name_is_pascalcase(iam_client, config):
     """Verify GitHub Actions IAM role name uses PascalCase."""
     role_name = config.get('name_for_github_actions_role', 'TenULabsGitHubActionsRole')
