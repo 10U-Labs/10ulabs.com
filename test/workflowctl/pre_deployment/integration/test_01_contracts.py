@@ -18,6 +18,11 @@ from repo_utils import REPO_ROOT
 GRAPH_PATH = REPO_ROOT / "etc" / "workflow_dependencies.json"
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
+# Nodes whose paths have been narrowed off the whole of lib/python. Add a key
+# here as its list is cut down to the packages it actually builds from.
+NARROWED_NODES = {"api_endpoint_v1_runners_ec2_images_post"}
+WHOLE_TREE_GLOBS = ("lib/python/**", "test/lib/python/**")
+
 
 @pytest.fixture(scope="module")
 def dependency_graph() -> dict:
@@ -33,6 +38,36 @@ def workflow_files() -> set:
         f.stem for f in WORKFLOWS_DIR.glob("*.yml")
         if not f.stem.startswith(".")
     }
+
+
+def _declared_packages(paths: list, prefix: str) -> list:
+    """List the package names a node declares as '<prefix><name>/**'.
+
+    A node that declares the whole of a directory names no package, so the
+    bare '<prefix>**' is not a package name and is left out.
+    """
+    depth = len(prefix.rstrip("/").split("/"))
+    return [
+        path.split("/")[depth] for path in paths
+        if path.startswith(prefix) and len(path.split("/")) > depth + 1
+    ]
+
+
+def _python_files_under(path_glob: str) -> list:
+    """List the Python files under the literal part of a path glob."""
+    root = REPO_ROOT / Path(path_glob.split("*")[0])
+    return sorted(root.rglob("*.py")) if root.is_dir() else []
+
+
+def _node_imports(paths: list, package: str) -> bool:
+    """Say whether a node's own source imports a lib/python package."""
+    forms = (f"import {package}\n", f"from {package} import", f"from {package}.")
+    for path_glob in [p for p in paths if p.startswith("src/")]:
+        for source in _python_files_under(path_glob):
+            content = source.read_text(encoding="utf-8")
+            if any(form in content for form in forms):
+                return True
+    return False
 
 
 class TestGraphKeysMatchWorkflowFiles:
@@ -75,6 +110,67 @@ class TestGraphPathsMatchWorkflowFiles:
 
         assert not violations, (
             "Workflow path violations:\n  " + "\n  ".join(violations)
+        )
+
+
+class TestGraphPathsAreNoWiderThanDependencies:
+    """Tests that a node's paths name what it is built from, and no more."""
+
+    def test_narrowed_nodes_keep_no_whole_tree_globs(
+        self, dependency_graph: dict
+    ) -> None:
+        """Verify narrowed nodes name packages instead of a whole directory."""
+        violations = [
+            f"{key}: declares '{glob}', which dispatches it on any edit under it"
+            for key in sorted(NARROWED_NODES)
+            for glob in WHOLE_TREE_GLOBS
+            if glob in dependency_graph.get(key, {}).get("paths", [])
+        ]
+
+        assert not violations, (
+            "Paths wider than the node's dependencies:\n  " + "\n  ".join(violations)
+        )
+
+    def test_declared_packages_are_imported_by_node_source(
+        self, dependency_graph: dict
+    ) -> None:
+        """Verify each lib/python package a node declares is imported by its source."""
+        unimported = []
+
+        for key, config in dependency_graph.items():
+            paths = config.get("paths", [])
+            for package in _declared_packages(paths, "lib/python/"):
+                if not _node_imports(paths, package):
+                    unimported.append(
+                        f"{key}: declares lib/python/{package}/** but no Python "
+                        f"under its own src paths imports it"
+                    )
+
+        assert not unimported, (
+            "Packages declared but not imported:\n  " + "\n  ".join(unimported)
+        )
+
+    def test_declared_test_packages_are_run_by_the_workflow(
+        self, dependency_graph: dict
+    ) -> None:
+        """Verify each test/lib/python package a node declares is named in its workflow."""
+        unrun = []
+
+        for key, config in dependency_graph.items():
+            workflow_file = WORKFLOWS_DIR / f"{key}.yml"
+            if not workflow_file.exists():
+                continue  # Covered by other test
+
+            content = workflow_file.read_text(encoding="utf-8")
+            for package in _declared_packages(config.get("paths", []), "test/lib/python/"):
+                if f"test/lib/python/{package}" not in content:
+                    unrun.append(
+                        f"{key}: declares test/lib/python/{package}/** but "
+                        f"{key}.yml runs no test under it"
+                    )
+
+        assert not unrun, (
+            "Test directories declared but never run:\n  " + "\n  ".join(unrun)
         )
 
 
