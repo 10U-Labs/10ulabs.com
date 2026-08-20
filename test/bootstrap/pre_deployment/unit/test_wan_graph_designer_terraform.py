@@ -24,13 +24,15 @@ def _trusted_repository_patterns(bootstrap_dir):
 def test_trust_policy_names_only_the_synthesizer_under_both_its_names(bootstrap_dir):
     """Test that the repositories trusted are the synthesizer's old and new names.
 
-    The repository is being renamed from wan-graph-synthesizer to wan-synthesizer, and
-    GitHub puts its current name in the OIDC token's sub claim. Both are allowed across
-    the rename so that a rename which has to be undone leaves the deploys working either
-    way; the old name goes once the rename has held.
+    The repository was renamed from wan-graph-synthesizer to wan-synthesizer. GitHub puts
+    its current name in the OIDC token's sub claim, and after a rename it qualifies that
+    name with the organisation's id and the repository's, which is the third pattern and
+    the only one tokens actually match now. The two plain names stay while the rename
+    settles, so a rename that has to be undone leaves the deploys working either way.
     """
     expected = [
         "repo:${local.github_org}/wan-graph-synthesizer:*",
         "repo:${local.github_org}/wan-synthesizer:*",
+        "repo:${local.github_org}@240548037/wan-synthesizer@1262350676:*",
     ]
     assert _trusted_repository_patterns(bootstrap_dir) == expected

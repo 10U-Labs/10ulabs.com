@@ -535,7 +535,11 @@ def test_wan_graph_designer_role_trusts_only_the_synthesizer(iam_client, config)
     """Test that the AdministratorAccess deploy role trusts one repository, by both names."""
     role_name = f"{config['resource_prefix']}WanGraphDesignerRole"
     org = config['github_org']
-    expected = [f"repo:{org}/wan-graph-synthesizer:*", f"repo:{org}/wan-synthesizer:*"]
+    expected = [
+        f"repo:{org}/wan-graph-synthesizer:*",
+        f"repo:{org}/wan-synthesizer:*",
+        f"repo:{org}@240548037/wan-synthesizer@1262350676:*",
+    ]
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']
     assert sorted(_trusted_repository_patterns(trust_policy)) == sorted(expected)
