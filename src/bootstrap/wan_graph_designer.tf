@@ -22,10 +22,9 @@ resource "aws_iam_role" "wan_graph_designer_github_actions" {
           }
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
-              "repo:${local.github_org}/wan-graph-synthesizer:*",
               "repo:${local.github_org}/wan-synthesizer:*",
               # Renaming a repository makes GitHub qualify its subject claim with ids a
-              # rename cannot change, so neither plain name above matches any more. The
+              # rename cannot change, so the plain name above matches nothing today. The
               # numbers are the organisation's id and the repository's, read back with
               # "gh api repos/10U-Labs/wan-synthesizer/actions/oidc/customization/sub".
               # They are written out rather than wildcarded: "@*" would also admit a

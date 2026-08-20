@@ -32,17 +32,15 @@ def _trusted_repository_patterns(bootstrap_dir):
     return re.findall(r'"([^"]+)"', "\n".join(entries))
 
 
-def test_trust_policy_names_only_the_synthesizer_under_both_its_names(bootstrap_dir):
-    """Test that the repositories trusted are the synthesizer's old and new names.
+def test_trust_policy_names_only_the_synthesizer(bootstrap_dir):
+    """Test that the only repository trusted is wan-synthesizer, by both its subjects.
 
-    The repository was renamed from wan-graph-synthesizer to wan-synthesizer. GitHub puts
-    its current name in the OIDC token's sub claim, and after a rename it qualifies that
-    name with the organisation's id and the repository's, which is the third pattern and
-    the only one tokens actually match now. The two plain names stay while the rename
-    settles, so a rename that has to be undone leaves the deploys working either way.
+    GitHub puts the repository's name in the OIDC token's sub claim, and after a rename it
+    qualifies that name with the organisation's id and the repository's. The qualified
+    form is the one tokens match; the plain one is kept because it is what GitHub would
+    issue if the qualification were ever lifted, and it names the same repository.
     """
     expected = [
-        "repo:${local.github_org}/wan-graph-synthesizer:*",
         "repo:${local.github_org}/wan-synthesizer:*",
         "repo:${local.github_org}@240548037/wan-synthesizer@1262350676:*",
     ]

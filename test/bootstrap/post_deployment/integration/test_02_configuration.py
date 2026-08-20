@@ -536,7 +536,6 @@ def test_wan_graph_designer_role_trusts_only_the_synthesizer(iam_client, config)
     role_name = f"{config['resource_prefix']}WanGraphDesignerRole"
     org = config['github_org']
     expected = [
-        f"repo:{org}/wan-graph-synthesizer:*",
         f"repo:{org}/wan-synthesizer:*",
         f"repo:{org}@240548037/wan-synthesizer@1262350676:*",
     ]
