@@ -18,6 +18,19 @@ def _find_resource(tf_config, resource_type, resource_name):
     return None
 
 
+def _find_lifecycle_rule(tf_config, rule_id):
+    """Find a lifecycle rule of the state bucket by its id, or an empty rule."""
+    lifecycle = _find_resource(
+        tf_config,
+        'aws_s3_bucket_lifecycle_configuration',
+        'terraform_state'
+    ) or {}
+    for rule in lifecycle.get('rule', []):
+        if rule['id'] == rule_id:
+            return rule
+    return {}
+
+
 def test_terraform_state_bucket_exists_in_state_tf(bootstrap_dir):
     """Test that terraform state bucket resource exists in state.tf."""
     tf_config = _load_state_tf(bootstrap_dir)
@@ -100,3 +113,31 @@ def test_terraform_state_bucket_encryption_uses_aes256(bootstrap_dir):
     rule = config['rule'][0]
     default = rule['apply_server_side_encryption_by_default'][0]
     assert default['sse_algorithm'] == 'AES256'
+
+
+def test_terraform_state_bucket_expires_delete_markers(bootstrap_dir):
+    """Test that the state bucket has a rule that removes delete markers."""
+    tf_config = _load_state_tf(bootstrap_dir)
+    rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
+    expiration = (rule.get('expiration') or [{}])[0]
+    assert expiration.get('expired_object_delete_marker') is True
+
+
+def test_terraform_state_bucket_delete_marker_rule_sets_no_age(bootstrap_dir):
+    """Test that the delete marker rule carries nothing but the marker argument.
+
+    S3 rejects an expiration that sets ExpiredObjectDeleteMarker alongside
+    Days or Date.
+    """
+    tf_config = _load_state_tf(bootstrap_dir)
+    rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
+    expiration = (rule.get('expiration') or [{}])[0]
+    assert set(expiration) == {'expired_object_delete_marker'}
+
+
+def test_terraform_state_bucket_delete_marker_rule_covers_every_key(bootstrap_dir):
+    """Test that the delete marker rule filters on nothing, so it covers all keys."""
+    tf_config = _load_state_tf(bootstrap_dir)
+    rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
+    filter_blocks = rule.get('filter')
+    assert filter_blocks is not None and len(filter_blocks) == 1 and not filter_blocks[0]

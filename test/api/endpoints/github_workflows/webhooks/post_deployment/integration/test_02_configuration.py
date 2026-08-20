@@ -6,6 +6,8 @@ These tests run after existence tests pass.
 import json
 import re
 
+from test_fixtures.aws import find_lifecycle_rule, stale_delete_markers
+
 
 # === DynamoDB Table Configuration ===
 
@@ -323,3 +325,20 @@ def test_ignored_events_archive_versioning_is_suspended(s3_client, config):
     bucket_name = f"{config['resource_prefix'].lower()}-ignored-events-archive"
     versioning = s3_client.get_bucket_versioning(Bucket=bucket_name)
     assert versioning.get("Status") == "Suspended"
+
+
+def test_ignored_events_archive_expires_delete_markers(s3_client, config):
+    """Verify the archive has a rule that removes delete markers.
+
+    The 365-day expiry writes a delete marker over each key it expires rather
+    than removing the key, and only this rule takes the marker away again.
+    """
+    bucket_name = f"{config['resource_prefix'].lower()}-ignored-events-archive"
+    rule = find_lifecycle_rule(s3_client, bucket_name, "expire-delete-markers") or {}
+    assert rule.get("Expiration", {}).get("ExpiredObjectDeleteMarker") is True
+
+
+def test_ignored_events_archive_keeps_no_stale_delete_markers(s3_client, config):
+    """Verify no delete marker outlives the rule that is meant to remove it."""
+    bucket_name = f"{config['resource_prefix'].lower()}-ignored-events-archive"
+    assert stale_delete_markers(s3_client, bucket_name) == []

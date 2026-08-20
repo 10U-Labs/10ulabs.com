@@ -16,6 +16,14 @@ def find_resource(tf_content, resource_type, resource_name):
     return None
 
 
+def find_lifecycle_rule(lifecycle, rule_id):
+    """Find a lifecycle rule by its id, since AWS does not promise rule order."""
+    for rule in (lifecycle or {}).get('rule', []):
+        if rule['id'] == rule_id:
+            return rule
+    return {}
+
+
 class TestS3BucketsExist:
     """Test that expected S3 buckets are defined."""
 
@@ -150,6 +158,17 @@ class TestS3LifecycleConfiguration:
         pattern = r'noncurrent_version_expiration\s*\{'
         assert re.search(pattern, s3_tf_content), (
             "Lifecycle should have noncurrent_version_expiration configured"
+        )
+
+    def test_delete_markers_are_expired(self, s3_tf_content):
+        """Verify a rule removes the delete marker an expiry leaves behind."""
+        lifecycle = find_resource(
+            s3_tf_content, 'aws_s3_bucket_lifecycle_configuration', 'ignored_events_archive'
+        )
+        rule = find_lifecycle_rule(lifecycle, 'expire-delete-markers')
+        expiration = (rule.get('expiration') or [{}])[0]
+        assert expiration.get('expired_object_delete_marker') is True, (
+            "Lifecycle needs an 'expire-delete-markers' rule that expires delete markers"
         )
 
 

@@ -59,4 +59,19 @@ resource "aws_s3_bucket_lifecycle_configuration" "ignored_events_archive" {
       noncurrent_days = 30
     }
   }
+
+  # Expiring the current version of a key writes a delete marker rather than
+  # removing the key. This rule takes the marker away once nothing is left
+  # underneath it. It has to be a rule of its own: S3 rejects an expiration
+  # that sets expired_object_delete_marker together with days or date.
+  rule {
+    id     = "expire-delete-markers"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      expired_object_delete_marker = true
+    }
+  }
 }

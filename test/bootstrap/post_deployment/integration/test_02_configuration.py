@@ -7,6 +7,7 @@ import json
 import pytest
 
 from naming_conventions import validate_name
+from test_fixtures.aws import find_lifecycle_rule, stale_delete_markers
 from test_fixtures.integration import assert_iam_role_name_is_pascalcase
 
 
@@ -228,6 +229,24 @@ def test_central_logs_bucket_force_destroy_in_tfstate(central_logs_bucket_attrs)
 def test_terraform_state_bucket_force_destroy_in_tfstate(terraform_state_bucket_attrs):
     """Test that terraform state bucket has force_destroy enabled."""
     assert terraform_state_bucket_attrs['force_destroy'] is True
+
+
+def test_terraform_state_bucket_expires_delete_markers(s3_client, config):
+    """Test that the live state bucket has a rule that removes delete markers."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    rule = find_lifecycle_rule(s3_client, bucket_name, 'expire-delete-markers') or {}
+    assert rule.get('Expiration', {}).get('ExpiredObjectDeleteMarker') is True
+
+
+def test_terraform_state_bucket_keeps_no_stale_delete_markers(s3_client, config):
+    """Test that no delete marker outlives the rule that is meant to remove it.
+
+    Every apply releases a state lock, and the delete of that lock writes a
+    marker, so fresh markers are expected. A marker older than the rule's
+    daily run is one nothing is going to take away.
+    """
+    bucket_name = config['name_for_terraform_state_bucket']
+    assert stale_delete_markers(s3_client, bucket_name) == []
 
 
 # =============================================================================

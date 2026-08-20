@@ -3,6 +3,9 @@
 Use by adding to conftest.py:
     pytest_plugins = ['test_fixtures.aws']
 """
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
 import boto3
 from botocore.exceptions import ClientError
 import pytest
@@ -123,6 +126,48 @@ def get_log_group_info(client, log_group_name: str) -> dict:
         "exists": len(matching) > 0,
         "retention": matching[0].get("retentionInDays") if matching else None
     }
+
+
+def find_lifecycle_rule(client, bucket_name: str, rule_id: str) -> Optional[dict]:
+    """Get a bucket's lifecycle rule by its id.
+
+    Args:
+        client: S3 boto3 client
+        bucket_name: Bucket to read the lifecycle configuration of
+        rule_id: The Id of the wanted rule
+
+    Returns the rule, or None when the bucket declares no such rule. Reach a
+    rule by id rather than by position: AWS does not promise the order it
+    returns rules in.
+    """
+    lifecycle = client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
+    for rule in lifecycle["Rules"]:
+        if rule.get("ID") == rule_id:
+            return rule
+    return None
+
+
+def stale_delete_markers(client, bucket_name: str, older_than_days: int = 7) -> list:
+    """List delete markers a bucket has kept for longer than the lifecycle rule needs.
+
+    Args:
+        client: S3 boto3 client
+        bucket_name: Bucket to list the versions of
+        older_than_days: Age past which a marker counts as left behind
+
+    A delete of a key that names no version id writes a delete marker, so a
+    marker minutes old is the ordinary trace of a delete that just happened.
+    One that outlives the expire-delete-markers lifecycle rule -- which S3
+    runs once a day -- is a marker nothing is going to take away.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+    stale = []
+    paginator = client.get_paginator("list_object_versions")
+    for page in paginator.paginate(Bucket=bucket_name):
+        for marker in page.get("DeleteMarkers", []):
+            if marker["LastModified"] < cutoff:
+                stale.append(marker["Key"])
+    return stale
 
 
 @pytest.fixture(scope="session")
