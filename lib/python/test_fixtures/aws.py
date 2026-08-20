@@ -161,7 +161,7 @@ def stale_delete_markers(client, bucket_name: str, older_than_days: int = 7) -> 
     runs once a day -- is a marker nothing is going to take away.
     """
     cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
-    stale = []
+    stale: list = []
     paginator = client.get_paginator("list_object_versions")
     for page in paginator.paginate(Bucket=bucket_name):
         for marker in page.get("DeleteMarkers", []):

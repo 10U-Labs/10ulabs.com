@@ -246,7 +246,8 @@ def test_terraform_state_bucket_keeps_no_stale_delete_markers(s3_client, config)
     daily run is one nothing is going to take away.
     """
     bucket_name = config['name_for_terraform_state_bucket']
-    assert stale_delete_markers(s3_client, bucket_name) == []
+    markers = stale_delete_markers(s3_client, bucket_name)
+    assert not markers, f"delete markers nothing will remove: {markers}"
 
 
 # =============================================================================

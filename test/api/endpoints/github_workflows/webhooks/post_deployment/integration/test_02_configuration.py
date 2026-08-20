@@ -341,4 +341,5 @@ def test_ignored_events_archive_expires_delete_markers(s3_client, config):
 def test_ignored_events_archive_keeps_no_stale_delete_markers(s3_client, config):
     """Verify no delete marker outlives the rule that is meant to remove it."""
     bucket_name = f"{config['resource_prefix'].lower()}-ignored-events-archive"
-    assert stale_delete_markers(s3_client, bucket_name) == []
+    markers = stale_delete_markers(s3_client, bucket_name)
+    assert not markers, f"delete markers nothing will remove: {markers}"
