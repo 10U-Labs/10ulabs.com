@@ -11,7 +11,7 @@ resource "aws_s3_bucket_versioning" "ignored_events_archive" {
   bucket = aws_s3_bucket.ignored_events_archive.id
 
   versioning_configuration {
-    status = "Enabled"
+    status = "Suspended"
   }
 }
 

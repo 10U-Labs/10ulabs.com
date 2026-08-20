@@ -11,6 +11,7 @@ Tests verify Terraform configuration correctness without deploying:
 - Backup configuration (vault, plan, retention, selection)
 - Output definitions (function name/arn, table name/arn)
 """
+import hcl2
 from repo_utils import REPO_ROOT
 from test_fixtures.lambda_lifecycle import create_lambda_lifecycle_tests
 from test_fixtures.terraform_tests import create_remote_state_config_tests
@@ -88,6 +89,22 @@ class TestLambdaConfiguration:
         analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
         content = analytics_tf.read_text()
         assert 'python3.13' in content
+
+
+class TestAnalyticsBucketConfiguration:
+    """Tests for the analytics S3 bucket configuration."""
+
+    def test_analytics_bucket_versioning_is_disabled(self):
+        """Verify the analytics bucket declares versioning as disabled."""
+        analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
+        with open(analytics_tf, encoding='utf-8') as f:
+            tf_config = hcl2.load(f)
+        versioning = next(
+            r['aws_s3_bucket_versioning']['analytics']
+            for r in tf_config['resource']
+            if 'analytics' in r.get('aws_s3_bucket_versioning', {})
+        )
+        assert versioning['versioning_configuration'][0]['status'] == 'Disabled'
 
 
 class TestBackendConfiguration:

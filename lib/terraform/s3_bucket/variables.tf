@@ -9,12 +9,6 @@ variable "force_destroy" {
   default     = false
 }
 
-variable "versioning_enabled" {
-  description = "Enable versioning on the bucket"
-  type        = bool
-  default     = false
-}
-
 variable "central_logs_bucket" {
   description = "Name of the central logs bucket for access logging (null to disable logging)"
   type        = string

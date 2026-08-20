@@ -313,3 +313,13 @@ def test_dlq_reprocessor_subscription_filter_uses_empty_pattern(
     for sub_filter in response["subscriptionFilters"]:
         if sub_filter["filterName"] == "dlq-reprocessor-to-firehose":
             assert sub_filter["filterPattern"] == ""
+
+
+# === S3 Archive Bucket Configuration ===
+
+
+def test_ignored_events_archive_versioning_is_suspended(s3_client, config):
+    """Verify the ignored events archive keeps one copy of each key."""
+    bucket_name = f"{config['resource_prefix'].lower()}-ignored-events-archive"
+    versioning = s3_client.get_bucket_versioning(Bucket=bucket_name)
+    assert versioning.get("Status") == "Suspended"

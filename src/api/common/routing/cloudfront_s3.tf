@@ -3,7 +3,6 @@ module "docs_bucket" {
 
   bucket_name         = local.api_fqdn
   force_destroy       = true
-  versioning_enabled  = false
   central_logs_bucket = local.name_for_central_logs
   log_prefix          = "s3-access/api-docs/"
 

@@ -3,7 +3,6 @@ module "website_bucket" {
 
   bucket_name         = local.website_bucket_name
   force_destroy       = false
-  versioning_enabled  = false
   central_logs_bucket = local.name_for_central_logs
   log_prefix          = "s3-access/website/"
 

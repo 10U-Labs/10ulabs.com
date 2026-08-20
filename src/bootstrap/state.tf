@@ -3,6 +3,14 @@ resource "aws_s3_bucket" "terraform_state" {
   force_destroy = true
 }
 
+resource "aws_s3_bucket_versioning" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  versioning_configuration {
+    status = "Suspended"
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 

@@ -30,10 +30,10 @@ def test_website_bucket_force_destroy_disabled(src_dir):
     assert "force_destroy       = false" in content
 
 
-def test_website_bucket_versioning_disabled(src_dir):
-    """Verify website_bucket has versioning disabled."""
+def test_website_bucket_does_not_configure_versioning(src_dir):
+    """Verify website_bucket leaves versioning to the module, which disables it."""
     content = (src_dir / "cloudfront_s3.tf").read_text()
-    assert "versioning_enabled  = false" in content
+    assert "versioning" not in content
 
 
 def test_cloudfront_origin_access_control_defined(src_dir):

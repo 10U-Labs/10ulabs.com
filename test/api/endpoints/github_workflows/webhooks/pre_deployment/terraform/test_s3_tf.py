@@ -5,6 +5,16 @@ These tests verify S3 bucket configurations for security and compliance.
 
 import re
 
+import hcl2
+
+
+def find_resource(tf_content, resource_type, resource_name):
+    """Find a parsed resource block by type and name."""
+    for resource in hcl2.loads(tf_content).get('resource', []):
+        if resource_name in resource.get(resource_type, {}):
+            return resource[resource_type][resource_name]
+    return None
+
 
 class TestS3BucketsExist:
     """Test that expected S3 buckets are defined."""
@@ -33,10 +43,14 @@ class TestS3BucketVersioning:
             "Versioning resource not found in s3.tf"
         )
 
-    def test_versioning_is_enabled(self, s3_tf_content):
-        """Verify versioning is enabled."""
-        assert 'status = "Enabled"' in s3_tf_content, (
-            "Bucket versioning should be enabled"
+    def test_versioning_is_suspended(self, s3_tf_content):
+        """Verify versioning is suspended so no second copy of a key is kept."""
+        versioning = find_resource(
+            s3_tf_content, 'aws_s3_bucket_versioning', 'ignored_events_archive'
+        )
+        status = versioning['versioning_configuration'][0]['status']
+        assert status == "Suspended", (
+            f"Bucket versioning should be Suspended, got {status}"
         )
 
 

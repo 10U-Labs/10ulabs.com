@@ -25,6 +25,13 @@ def test_terraform_state_bucket_exists_in_state_tf(bootstrap_dir):
     assert bucket is not None
 
 
+def test_terraform_state_bucket_versioning_is_suspended(bootstrap_dir):
+    """Test that terraform state bucket versioning is declared as suspended."""
+    tf_config = _load_state_tf(bootstrap_dir)
+    versioning = _find_resource(tf_config, 'aws_s3_bucket_versioning', 'terraform_state')
+    assert versioning['versioning_configuration'][0]['status'] == 'Suspended'
+
+
 def test_terraform_state_bucket_encryption_resource_exists(bootstrap_dir):
     """Test that terraform state bucket encryption resource exists."""
     tf_config = _load_state_tf(bootstrap_dir)

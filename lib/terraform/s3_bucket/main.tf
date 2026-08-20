@@ -1,7 +1,7 @@
 # Reusable S3 Bucket Module
 #
 # Creates an S3 bucket with standard security configurations:
-# - Versioning disabled (configurable)
+# - Versioning disabled
 # - Public access blocked
 # - AES256 server-side encryption
 # - Access logging to central logs bucket (optional)
@@ -19,7 +19,7 @@ resource "aws_s3_bucket_versioning" "this" {
   bucket = aws_s3_bucket.this.id
 
   versioning_configuration {
-    status = var.versioning_enabled ? "Enabled" : "Disabled"
+    status = "Disabled"
   }
 }
 

@@ -6,6 +6,14 @@ resource "aws_s3_bucket" "analytics" {
   })
 }
 
+resource "aws_s3_bucket_versioning" "analytics" {
+  bucket = aws_s3_bucket.analytics.id
+
+  versioning_configuration {
+    status = "Disabled"
+  }
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "analytics" {
   bucket = aws_s3_bucket.analytics.id
 

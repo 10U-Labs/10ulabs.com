@@ -626,6 +626,13 @@ def test_github_app_private_key_parameter_has_value(ssm_client, config):
 # =============================================================================
 
 
+def test_terraform_state_bucket_versioning_is_suspended(s3_client, config):
+    """Test that terraform state bucket versioning is suspended."""
+    bucket_name = config['name_for_terraform_state_bucket']
+    versioning = s3_client.get_bucket_versioning(Bucket=bucket_name)
+    assert versioning.get('Status') == 'Suspended'
+
+
 def test_terraform_state_bucket_has_encryption(s3_client, config):
     """Test that terraform state bucket has encryption enabled."""
     bucket_name = config['name_for_terraform_state_bucket']

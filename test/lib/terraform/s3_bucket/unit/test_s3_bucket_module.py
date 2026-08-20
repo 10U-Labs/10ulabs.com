@@ -16,9 +16,9 @@ def test_s3_bucket_versioning_resource_exists(main_tf_content):
     assert 'resource "aws_s3_bucket_versioning"' in main_tf_content
 
 
-def test_s3_bucket_versioning_configurable(main_tf_content):
-    """Test that S3 bucket versioning status is configurable."""
-    assert 'var.versioning_enabled' in main_tf_content and '"Enabled"' in main_tf_content and '"Disabled"' in main_tf_content
+def test_s3_bucket_versioning_is_disabled(main_tf_content):
+    """Test that S3 bucket versioning status is the literal Disabled."""
+    assert 'status = "Disabled"' in main_tf_content
 
 
 def test_s3_bucket_public_access_block_exists(main_tf_content):
@@ -50,11 +50,6 @@ def test_s3_bucket_logging_resource_exists(main_tf_content):
 def test_s3_bucket_logging_is_optional(main_tf_content):
     """Test that S3 bucket logging is optional via count."""
     assert 'count = var.central_logs_bucket != null' in main_tf_content
-
-
-def test_versioning_enabled_variable_exists(variables_tf_content):
-    """Test that versioning_enabled variable exists."""
-    assert 'variable "versioning_enabled"' in variables_tf_content
 
 
 def test_bucket_name_variable_exists(variables_tf_content):
