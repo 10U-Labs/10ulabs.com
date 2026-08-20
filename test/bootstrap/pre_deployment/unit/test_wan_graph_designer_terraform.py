@@ -15,10 +15,21 @@ SUBJECT_CONDITION = re.compile(
 
 
 def _trusted_repository_patterns(bootstrap_dir):
-    """Read the repository patterns the trust policy lets assume the role."""
+    """Read the repository patterns the trust policy lets assume the role.
+
+    Comment lines inside the list are dropped before the patterns are read off it. A
+    comment is free to quote a command or a name, and a quoted word in one is not a
+    repository the role trusts.
+    """
     with open(bootstrap_dir / "wan_graph_designer.tf", encoding='utf-8') as f:
         match = SUBJECT_CONDITION.search(f.read())
-    return re.findall(r'"([^"]+)"', match.group(1)) if match else []
+    if match is None:
+        return []
+    entries = [
+        line for line in match.group(1).splitlines()
+        if not line.lstrip().startswith("#")
+    ]
+    return re.findall(r'"([^"]+)"', "\n".join(entries))
 
 
 def test_trust_policy_names_only_the_synthesizer_under_both_its_names(bootstrap_dir):
