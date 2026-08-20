@@ -128,9 +128,24 @@
       "test/lib/python/**"
     ]
   },
-  "api_endpoint_v1_runners_ec2_images": {
+  "api_endpoint_v1_runners_ec2_images_post": {
     "depends_on": [
       "api_common_networking"
+    ],
+    "name": "Building AMI for EC2 self-hosted runners",
+    "paths": [
+      ".github/workflows/api_endpoint_v1_runners_ec2_images_post.yml",
+      "etc/runners.json",
+      "lib/python/**",
+      "src/api/endpoints/runners/ec2/images/post/**",
+      "test/api/endpoints/runners/ec2/images/post/**",
+      "test/lib/python/**"
+    ]
+  },
+  "api_endpoint_v1_runners_ec2_images": {
+    "depends_on": [
+      "api_common_networking",
+      "api_endpoint_v1_runners_ec2_images_post"
     ],
     "name": "Ensuring the /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [

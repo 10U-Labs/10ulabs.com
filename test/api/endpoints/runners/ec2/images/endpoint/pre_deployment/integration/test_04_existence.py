@@ -21,7 +21,8 @@ class TestStableAMIExistence:
         assert len(images) >= 1, (
             f"No stable AMI found with Purpose={ami_purpose_value} "
             f"and {ami_stable_tag}=true. "
-            "Run the Packer build workflow to create an AMI."
+            "Run the api_endpoint_v1_runners_ec2_images_post.yml "
+            "workflow to build and promote an AMI."
         )
 
     def test_stable_ami_is_available(

@@ -80,11 +80,16 @@ def test_subnets_reference_vpc(api_common_networking_dir):
     assert "aws_vpc.main.id" in content
 
 
-def test_subnets_have_map_public_ip_disabled(api_common_networking_dir):
-    """Test that subnets do not map public IP on launch."""
+def test_subnets_have_map_public_ip_enabled(api_common_networking_dir):
+    """Test that subnets map public IP on launch.
+
+    Runner instances reach the internet via the internet gateway using an
+    auto-assigned public IPv4 address; there is no NAT gateway. Without this
+    the AMI build cannot be reached over SSH and runners cannot register.
+    """
     vpc_tf = api_common_networking_dir / "vpc.tf"
     content = vpc_tf.read_text()
-    assert "map_public_ip_on_launch" in content and "= false" in content
+    assert "map_public_ip_on_launch = true" in content
 
 
 def test_vpc_defines_internet_gateway(api_common_networking_dir):
