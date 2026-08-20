@@ -250,6 +250,21 @@ resource "aws_cloudfront_distribution" "main" {
     origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
   }
 
+  # The same origin under the prefix the WAN synthesizer is moving its routes to. Both
+  # prefixes reach the gateway while that repository rewrites its 38 paths; the old
+  # behaviour above goes once it has.
+  ordered_cache_behavior {
+    path_pattern           = "/wan-synthesizer/*"
+    target_origin_id       = "wan-graph-synthesizer"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+
+    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
+  }
+
   viewer_certificate {
     acm_certificate_arn      = aws_acm_certificate.api.arn
     ssl_support_method       = "sni-only"
