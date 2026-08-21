@@ -76,8 +76,13 @@ def cancel_run(repo: str, run_id: int) -> bool:
         check=False
     )
     if result.returncode != 0:
-        # Run may have already completed - this is not an error
-        if "cannot be cancelled" in result.stderr.lower():
+        # Run may have already completed - this is not an error.
+        # GitHub words this "Cannot cancel a workflow run that is completed"
+        # (and "... that is queued"); older phrasings used "cannot be
+        # cancelled". Neither substring matches a real failure such as
+        # "Permission denied".
+        stderr = result.stderr.lower()
+        if "cannot cancel" in stderr or "cannot be cancelled" in stderr:
             return True
         print(f"Failed to cancel run {run_id}: {result.stderr.strip()}",
               file=sys.stderr)

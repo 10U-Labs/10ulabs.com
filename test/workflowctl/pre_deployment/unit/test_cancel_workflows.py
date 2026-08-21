@@ -128,11 +128,29 @@ class TestCancelRun:
         assert result is True
 
     @patch("cancel.subprocess.run")
-    def test_already_completed_is_success(self, mock_run: MagicMock, cancel) -> None:
-        """Test already completed run is treated as success."""
+    def test_completed_run_is_success(self, mock_run: MagicMock, cancel) -> None:
+        """Test a run that completed before the cancel is treated as success.
+
+        The stderr is quoted verbatim from `gh run cancel` against a run that
+        has already finished, which is the race this guard exists to absorb.
+        """
         mock_run.return_value = MagicMock(
             returncode=1,
-            stderr="Cannot be cancelled: run is not in progress"
+            stderr="Cannot cancel a workflow run that is completed"
+        )
+        result = cancel.cancel_run("owner/repo", 123)
+        assert result is True
+
+    @patch("cancel.subprocess.run")
+    def test_queued_run_is_success(self, mock_run: MagicMock, cancel) -> None:
+        """Test a run GitHub reports as queued is treated as success.
+
+        The stderr is quoted verbatim from `gh run cancel`; a queued run that
+        starts and finishes is the same race, worded differently.
+        """
+        mock_run.return_value = MagicMock(
+            returncode=1,
+            stderr="Cannot cancel a workflow run that is queued"
         )
         result = cancel.cancel_run("owner/repo", 123)
         assert result is True
@@ -193,4 +211,33 @@ class TestMainEdgeCases:
                         return_value=[]
                     ):
                         result = cancel.main()
+        assert result == 0
+
+    @patch("cancel.subprocess.run")
+    @patch("cancel.get_cancelable_runs")
+    def test_returns_0_when_the_only_failure_is_a_completed_run(
+        self, mock_get_runs: MagicMock, mock_subprocess: MagicMock, cancel
+    ) -> None:
+        """Test returns 0 when every cancellation that failed had already finished.
+
+        The step's exit code is what gates the dispatch of the root workflows,
+        so a run that finished mid-cancel must not stop the whole push.
+        """
+        graph = {"www_common": {"name": "WWW Common", "depends_on": []}}
+        mock_get_runs.side_effect = [
+            [{"id": 123, "name": "WWW Common", "run_number": 1}], []
+        ]
+        mock_subprocess.return_value = MagicMock(
+            returncode=1,
+            stderr="Cannot cancel a workflow run that is completed"
+        )
+        argv = [
+            "prog", "--running", '["www_common"]',
+            "--graph", "g.json", "--repo", "o/r", "--changed-files", ""
+        ]
+        with patch.object(sys, "argv", argv), patch(
+            "cancel.load_graph_and_compute_roots",
+            return_value=(graph, ["www_common"], None)
+        ), patch("cancel.compute_merge_roots", return_value=["www_common"]):
+            result = cancel.main()
         assert result == 0
