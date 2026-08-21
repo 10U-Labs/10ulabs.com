@@ -22,8 +22,6 @@ The argument is the sub-command, `start` or `stop`. Neither takes anything else 
 
 `CronCreate`, `CronList` and `CronDelete` are deferred tools: the session is told their names but not their schemas, so a call made before the schema is fetched fails with `InputValidationError` and creates nothing. Fetch them first with `ToolSearch`, query `select:CronCreate,CronList,CronDelete`.
 
-Why this file is shaped the way it is, and what an edit to it costs, is in `NOTES.md` beside it. Nothing here depends on reading that first.
-
 ## Sub-Commands
 
 ### Start
