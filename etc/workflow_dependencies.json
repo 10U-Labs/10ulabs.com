@@ -45,27 +45,6 @@
       "test/api/endpoints/contact_submissions/**"
     ]
   },
-  "api_endpoint_v1_runners_ec2": {
-    "depends_on": [
-      "bootstrap",
-      "api_common_networking",
-      "api_common_routing"
-    ],
-    "name": "Ensuring the /v1/runners/ec2 API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_runners_ec2.yml",
-      "lib/python/aws_clients/**",
-      "lib/python/ec2_fleet/**",
-      "lib/python/github_runner_api/**",
-      "lib/python/infra_validation/**",
-      "lib/python/lambda_http/**",
-      "lib/python/runner_labels/**",
-      "lib/terraform/common/**",
-      "src/api/endpoints/runners/ec2/**",
-      "test/api/conftest.py",
-      "test/api/endpoints/runners/ec2/**"
-    ]
-  },
   "api_operational_diagnostics": {
     "depends_on": [
       "api_common_routing"
