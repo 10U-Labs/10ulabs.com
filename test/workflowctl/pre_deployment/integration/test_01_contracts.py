@@ -35,11 +35,7 @@ EXTERNAL_STATE_KEYS = {"wan-synthesizer/common/routing/terraform.tfstate"}
 # Orderings that exist for a reason Terraform does not express, and the reason.
 # Every other entry in a node's depends_on has to correspond to a
 # terraform_remote_state read under that node's own src paths.
-ORDERINGS_WITHOUT_STATE_READS = {
-    ("www_simulations_soc", "www_common"):
-        "www_simulations_soc.yml reads 'terraform -chdir=src/www/common output "
-        "-raw bucket_name' and syncs its built site into that bucket",
-}
+ORDERINGS_WITHOUT_STATE_READS: dict = {}
 
 REMOTE_STATE_BLOCK = re.compile(r'data\s+"terraform_remote_state"\s+"[^"]+"\s*\{')
 STATE_KEY = re.compile(r'key\s*=\s*"([^"]+)"')

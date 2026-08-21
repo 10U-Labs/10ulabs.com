@@ -51,15 +51,5 @@
       "test/lib/terraform/write_ahead_queue/**",
       "test/www/common/**"
     ]
-  },
-  "www_simulations_soc": {
-    "depends_on": [
-      "www_common"
-    ],
-    "name": "Ensuring www simulations/soc frontend exists and is properly configured",
-    "paths": [
-      ".github/workflows/www_simulations_soc.yml",
-      "src/www/paths/simulations/soc/**"
-    ]
   }
 }
