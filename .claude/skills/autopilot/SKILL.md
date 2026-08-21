@@ -5,17 +5,42 @@ description: Start or stop the standing reminders that keep an autonomous issue-
 
 # Autopilot
 
-Eight recurring reminders, one per standing rule, that fire back into this session while it works through the open issues on `10U-Labs/10ulabs.com` on its own. Each rule gets its own reminder so that no rule can be quietly dropped from a merged block of text, and the fire times are staggered across the ten-minute period so they arrive spread out rather than as a wall.
+Eight recurring reminders, one per standing rule, that fire back into this session while it works through the open issues on `10U-Labs/10ulabs.com` on its own. One reminder per rule, so no rule can be quietly dropped from a merged block of text; staggered across a ten-minute period so they arrive spread out rather than as a wall.
 
-The argument is the sub-command: `start` or `stop`. Neither takes anything else — `start` reads the scope out of the repository rather than being told it.
+The argument is the sub-command, `start` or `stop`. Neither takes anything else — `start` reads its scope out of the repository.
 
-`CronCreate`, `CronList` and `CronDelete` are deferred tools: the session is told their names but not their schemas, so a call made before the schema is fetched fails with `InputValidationError` and creates nothing. Fetch them first with `ToolSearch`, query `select:CronCreate,CronList,CronDelete`: `start` calls `CronCreate`, `stop` calls `CronList` and `CronDelete`.
+`CronCreate`, `CronList` and `CronDelete` are deferred tools: the session is told their names but not their schemas, so a call made before the schema is fetched fails with `InputValidationError` and creates nothing. Fetch them first with `ToolSearch`, query `select:CronCreate,CronList,CronDelete`.
+
+## Contents
+
+- [Start](#start)
+  - [Scope](#scope)
+  - [Create the reminders](#create-the-reminders)
+  - [Start working](#start-working)
+  - [Place a filed issue](#place-a-filed-issue)
+- [Stop](#stop)
+- [Notes](#notes)
+  - [The standing rules live in CLAUDE.md](#the-standing-rules-live-in-claudemd)
+  - [The :03 and :06 reminders pull against each other](#the-03-and-06-reminders-pull-against-each-other)
+  - [Starting autopilot begins the work](#starting-autopilot-begins-the-work)
+  - [The fire times drift](#the-fire-times-drift)
+  - [Jobs fire only while the session is idle](#jobs-fire-only-while-the-session-is-idle)
+  - [The :05 reminder exists only here](#the-05-reminder-exists-only-here)
+  - [The :09 reminder carries both issue forms](#the-09-reminder-carries-both-issue-forms)
+  - [Where the owed tests go](#where-the-owed-tests-go)
+  - [The placement cases are settled by fact](#the-placement-cases-are-settled-by-fact)
+  - [Editing this file does not reach a running session](#editing-this-file-does-not-reach-a-running-session)
+  - [Naming a reminder and naming a line](#naming-a-reminder-and-naming-a-line)
 
 ## Start
 
-Every open issue in this repository is in scope, and so is every open issue reached by following a dependency out of that set, whatever its number and whatever repository it lives in. `1e45d1f9` closed an issue in another repository for exactly that reason. `start` takes no issue number: a number can only be a floor, a floor only excludes issues by age, and an issue's number says nothing about whether it has to be done — least of all across repositories, where the numbering is unrelated. If the user names a number anyway, they are asking to start rather than to narrow; say the whole open set is in scope and start.
+### Scope
 
-Create eight jobs with `CronCreate`, exactly as listed below. Use `recurring: true` (the default). Take the eight prompts verbatim; none of them has anything to substitute. Each `cron` field is a distinct offset within the same ten-minute period, so the reminders arrive spread out rather than as a wall of eight:
+Every open issue in this repository is in scope, and so is every open issue reached by following a dependency out of that set, whatever its number and whatever repository it lives in — `1e45d1f9` closed an issue in another repository for exactly that reason. `start` takes no issue number: a number can only be a floor, a floor only excludes issues by age, and an issue's number says nothing about whether it has to be done, least of all across repositories where the numbering is unrelated. If the user names a number anyway, they are asking to start rather than to narrow; say the whole open set is in scope and start.
+
+### Create the reminders
+
+Create eight jobs with `CronCreate`, exactly as listed. Use `recurring: true` (the default), and take the prompts verbatim; none of them has anything to substitute. Each `cron` field is a distinct offset within the same ten-minute period.
 
 | Offset | Cron | Prompt |
 | --- | --- | --- |
@@ -30,13 +55,23 @@ Create eight jobs with `CronCreate`, exactly as listed below. Use `recurring: tr
 
 Then tell the user that eight reminders are running, how many open issues are in scope, and the two limits that come with them: the jobs live in this session only and are gone when it ends, and recurring jobs auto-expire after seven days.
 
-Then start working, in the same turn that created the jobs. Read the open issues with `gh issue list`, then read `gh api repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by` for each of them; every entry names the repository its blocker lives in. Follow those entries, and the entries of the issues they reach, until nothing new comes back, and add every open issue found this way to the set. Then take the lowest-numbered issue in the set that no open issue blocks, preferring this repository when two are equally unblocked, and begin solving it under the standing rules the reminders carry — committing in whichever repository its `Proposed Solution` names, and reading that repository's CI to confirm it. Running this skill is starting the work; the eight jobs only keep it on the rails once it is going.
+### Start working
 
-An issue filed during a run goes into the sequence before the session goes back to work. A `blocked_by` edge points from the issue that waits to the issue it waits on, and which issue gets the edge follows from three cases that between them cover everything. If the issue in hand cannot be finished until the new one is, the issue in hand gets the new one as a `blocked_by`, which puts the new issue immediately in front of it — and in front of the whole sequence when the issue in hand is its head. If some other issue in the set cannot be finished until the new one is, that issue gets the new one as a `blocked_by`. If neither is true, the new issue gets an edge to the tail of the sequence, the one open issue in the set that no other open issue is blocked by. There is no fourth case and nothing to choose between: an issue is either needed before something already in the sequence or it is not.
+Start in the same turn that created the jobs. Running this skill is starting the work; the eight jobs only keep it on the rails once it is going.
 
-The tail is read rather than remembered, because this repository files issues in batches and the tail moves with them — #518 through #522 were all filed within five seconds of each other. `gh issue view <n>` prints a `blocked-by` and a `blocking` line, which is enough to place a new issue without walking the API twice: #522 shows `blocking: #517, #513, #519` and an empty `blocked-by`, so it is a head of the set rather than its tail.
+Read the open issues with `gh issue list`, then read `gh api repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by` for each of them; every entry names the repository its blocker lives in. Follow those entries, and the entries of the issues they reach, until nothing new comes back, and add every open issue found this way to the set. Then take the lowest-numbered issue in the set that no open issue blocks, preferring this repository when two are equally unblocked, and solve it under the standing rules the reminders carry — committing in whichever repository its `Proposed Solution` names, and reading that repository's CI to confirm it.
 
-A filed issue is never left without an edge. An issue with no edge in this repository is worked last whatever it is about, because it always carries the highest number and the tie-break above takes the lowest; an issue with no edge in another repository is not reached at all, because the traversal gets there only by following an edge into it.
+### Place a filed issue
+
+An issue filed during a run goes into the sequence before the session goes back to work. A `blocked_by` edge points from the issue that waits to the issue it waits on, and three cases cover everything:
+
+- The issue in hand cannot be finished until the new one is: the issue in hand gets the new one as a `blocked_by`, which puts the new issue immediately in front of it, and in front of the whole sequence when the issue in hand is its head.
+- Some other issue in the set cannot be finished until the new one is: that issue gets the new one as a `blocked_by`.
+- Neither: the new issue gets an edge to the tail of the sequence, the one open issue in the set that no other open issue is blocked by.
+
+There is no fourth case and nothing to choose between — an issue is either needed before something already in the sequence or it is not. Never leave a filed issue without an edge: with no edge it is worked last in this repository, because it carries the highest number and the tie-break above takes the lowest, and in another repository it is never reached at all, because the traversal gets there only by following an edge into it.
+
+Read the tail rather than remembering it, because issues are filed here in batches and the tail moves with them. `gh issue view <n>` prints a `blocked-by` and a `blocking` line, which is enough to place a new issue without walking the API twice.
 
 Add the edge with `gh api repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by -F issue_id=<id>`, where `{number}` is the issue that waits and `<id>` is the numeric id of the blocker, read from `gh api repos/{owner}/{repo}/issues/{n} --jq .id`. It has to be that numeric id: `gh issue view <n> --json id` returns the GraphQL node id, which this endpoint rejects. And it has to be sent with `-F` rather than `-f`, because `-f` sends the number as a string and the API answers `HTTP 422: Invalid property /issue_id: "5199031511" is not of type integer`.
 
@@ -48,26 +83,46 @@ Call `CronList`, then call `CronDelete` once per job it returns — all of them,
 
 ## Notes
 
-The standing rules are in `CLAUDE.md` at the root of the repository, which a session reads at the start of every turn: verifying in CI and finding the run by its full hash, committing straight to `main` with the `Closes #<n>` line that drains the queue, the test tiers, and the six-section and two-section issue forms. This file does not restate them, because a rule kept in two places drifts with nothing to signal it. What the reminders carry is the part `CLAUDE.md` cannot do anything about: a rule read at the start of a turn is not read again forty minutes into one, and a session that has stopped is not reading anything at all.
+### The standing rules live in CLAUDE.md
 
-The `:03` and `:06` reminders pull against each other on purpose. One commit per issue means the work is not spread across pushes; indivisible tasks means it is planned as steps that each finish or do not. An issue that cannot be done in one commit is two issues, and filing the second is what the `:08` and `:09` reminders are for.
+`CLAUDE.md` at the root of the repository carries verification in CI, committing straight to `main`, the test tiers and the two issue forms, and is read at the start of every turn. This file does not restate them — a rule kept in two places drifts with nothing to signal it. The reminders exist for the part `CLAUDE.md` cannot reach: a rule read at the start of a turn is not read again forty minutes into one, and a session that has stopped is not reading anything at all.
 
-Starting autopilot begins the work in the same turn. Arming the reminders and doing the work look like separate things, and separating them produces a session sitting idle after `/autopilot start`: a cron job fires only when the session is idle and the first one is up to eleven minutes out once the drift below is counted, so the skill looks like it has not worked at all. A start at eight minutes past gets going in a minute and looks fine; a start at ten minutes past sits silent for the whole period, and that is the same skill on the same rules.
+### The :03 and :06 reminders pull against each other
 
-The three cron tools are deferred, which is why `Start` and `Stop` both open by fetching their schemas. A deferred tool is listed to the session by name only, so the first `CronCreate` call is rejected as invalid input and no job is created — a failure that reads like the tool is missing rather than like a step was skipped.
+On purpose. One commit per issue keeps the work off multiple pushes; indivisible tasks keep it planned as steps that each finish or do not. An issue that cannot be done in one commit is two issues, which is what `:08` and `:09` are for.
 
-The fire times drift, so the stagger is a spread rather than a timetable. A recurring job fires up to a tenth of its period late, which over a ten-minute period is up to a minute, and every offset from `:03` on is a minute from its neighbour — so a jittered `:03` reminder can arrive in the same minute as the `:04` one. What the stagger still buys is that all eight cannot pile up at once. A pair landing together is the tool working as documented, not a job created wrong, and it is not worth re-spacing the table over.
+### Starting autopilot begins the work
 
-Cron jobs fire only while the session is idle, never mid-turn, because a turn cannot be preempted. That limit is the reason this skill does not try to correct drift in the middle of a task: what it can do is restart a loop that has stalled, which is the failure it is there to catch. It is also why the `:07` reminder is worth its slot — a session waiting on a run is idle, so that is exactly when a reminder lands, and the answer to it is to keep waiting.
+Arming the reminders and doing the work look separate, and separating them leaves the session idle after `/autopilot start`. A job fires only when the session is idle, and the first is up to eleven minutes out once drift is counted — so a start at eight minutes past looks fine and a start at ten minutes past looks broken, on the same skill and the same rules.
 
-The `:05` reminder is the one rule here that `CLAUDE.md` does not carry, and this table is the only place it is written down — delete this reminder and the rule leaves the repository with it. It is the writing already in the log, said in advance. `31f0066f` opens by saying an AMI build was launching for files the runner never sees and that it cost twenty minutes a time, and only then names `etc/workflow_dependencies.json` and the glob it narrowed. A reminder that named only structure would be read as though structure were the whole of it, which is why this one names the order and the cut as well, and why it says "every paragraph" rather than "every issue".
+### The fire times drift
 
-The `:09` reminder carries the two-section form as well as the six, because a reminder that names only one case is read as though the case were the whole rule. Most of the open queue here is workflow and config work — #518 through #522 are all triggers in `.github/workflows/` — and a defect in a `paths` list arriving beside a standing instruction to name the regression tests that would prevent it makes the session argue at length that none are owed. The split is by directory so there is nothing to weigh: `src/`, `lib/python/`, `lib/terraform/` and `scripts/` owe tests, `etc/`, `.github/`, `docs/` and `products/` do not.
+A recurring job fires up to a tenth of its period late, a minute here, and the offsets from `:03` on are a minute apart — so `:03` can arrive in the same minute as `:04`. The stagger is a spread, not a timetable; what it still buys is that all eight cannot pile up at once. A pair landing together is not a job created wrong.
 
-Where the tests that are owed go is the `## Tests` section of `CLAUDE.md`, and the trap it names is worth knowing before an issue is filed rather than after: `lib/python/` and `lib/terraform/` are two of the four directories that owe tests, and neither has the `pre_deployment` / `post_deployment` split the deploying subsystems have. A regression section that promises `test/lib/python/pre_deployment/unit/` promises a directory that exists nowhere in the tree.
+### Jobs fire only while the session is idle
 
-The three placement cases in `## Start` are settled by fact rather than by taste, so a session filing an issue has nothing to weigh and nothing to ask about. Asking it to append, prepend or interpose as it judges best hands the decision to whoever is least able to make it: the session filing the issue knows what the issue is, which is exactly what the three cases read, and does not know what the sequence is for. The rule needs a reminder of its own because it is not read at invocation and then held.
+Never mid-turn, because a turn cannot be preempted. This skill cannot correct drift inside a task; what it can do is restart a loop that has stalled, which is the failure it is there to catch. It is also why `:07` earns its slot — a session waiting on a run is idle, so that is exactly when a reminder lands, and the answer to it is to keep waiting.
 
-The skill body is read when the skill is invoked, so editing this file does not reach a session already running under it. Whoever lands a change here has to `/autopilot stop` and `/autopilot start` again before it takes effect: a session that solved the issue which changed this file and then carried on is still working from the scope it was started with, and it will report that it has run out of issues rather than that it is reading the wrong set of them.
+### The :05 reminder exists only here
 
-A reminder in this file is named by the minute it fires — the `:01` reminder, the `:09` reminder — and a line in it is written out in full, as "line 22". The rest of the repository writes `path/to/file.yml:115` for a line and then a bare `:120` for another line in the same file, the way #522 does, and that shorthand collides here: line 22 is the `:01` reminder, so "the reminder at `:22`" sends a reader looking for a reminder that fires at minute 22, and there is none.
+It is the one rule `CLAUDE.md` does not carry, and the table above is the only place it is written down: delete the reminder and the rule leaves the repository with it. It names the order and the cut as well as the structure, and says "every paragraph" rather than "every issue", because a reminder that named only structure would be read as though structure were the whole of it.
+
+### The :09 reminder carries both issue forms
+
+A reminder that names only one case is read as though that case were the whole rule, and most of the open queue here is workflow and config work. The split is by directory, so there is nothing to weigh: `src/`, `lib/python/`, `lib/terraform/` and `scripts/` owe tests; `etc/`, `.github/`, `docs/` and `products/` do not.
+
+### Where the owed tests go
+
+The `## Tests` section of `CLAUDE.md`, and one trap there is worth knowing before an issue is filed rather than after: `lib/python/` and `lib/terraform/` owe tests but have no `pre_deployment` / `post_deployment` split, so a regression section promising `test/lib/python/pre_deployment/unit/` promises a directory that exists nowhere in the tree.
+
+### The placement cases are settled by fact
+
+A session filing an issue knows what the issue is, which is exactly what the three cases read, and does not know what the sequence is for. Asking it to append, prepend or interpose as it judges best hands the decision to whoever is least able to make it.
+
+### Editing this file does not reach a running session
+
+The body is read when the skill is invoked, so a change here needs `/autopilot stop` and `/autopilot start` before it takes effect. A session that solved the issue which changed this file and carried on is still working from the scope it started with, and will report that it has run out of issues rather than that it is reading the wrong set.
+
+### Naming a reminder and naming a line
+
+A reminder is named by the minute it fires — the `:01` reminder — and a line is written out in full, as "line 47". The repository's usual shorthand, `path/to/file.yml:115` and then a bare `:120`, collides here: line 47 holds the `:01` reminder, but `:47` reads as the reminder that fires at minute 47, which is the `:07` one.
