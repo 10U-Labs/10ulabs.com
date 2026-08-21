@@ -155,17 +155,6 @@
       "test/api/endpoints/ec2_spot_interruptions/**"
     ]
   },
-  "api_endpoint_v1_ecs_task_stops": {
-    "depends_on": [],
-    "name": "Ensuring ECS task stops handler exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_ecs_task_stops.yml",
-      "lib/terraform/common/**",
-      "src/api/endpoints/ecs_task_stops/**",
-      "test/api/conftest.py",
-      "test/api/endpoints/ecs_task_stops/**"
-    ]
-  },
   "api_endpoint_v1_github_workflows_retries": {
     "depends_on": [
       "bootstrap"

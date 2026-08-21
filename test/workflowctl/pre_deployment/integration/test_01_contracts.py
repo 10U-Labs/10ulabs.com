@@ -52,6 +52,8 @@ STATE_KEY = re.compile(r'key\s*=\s*"([^"]+)"')
 DEFAULTS_ATTRIBUTE = re.compile(r"^\s*defaults\s*=", re.MULTILINE)
 WORKING_DIRECTORY = re.compile(r"^\s*cd\s+(\S+)", re.MULTILINE)
 DOCKERFILE_PATH = re.compile(r"^\s*\w+=(\S+/Dockerfile)$", re.MULTILINE)
+TEST_ASSIGNMENT = re.compile(r"^\s*(\w+)=(test/[\w./-]+)\s*$", re.MULTILINE)
+TEST_ARGUMENT = re.compile(r"(?<![=\w])test/[\w./-]+")
 
 # The controller itself, which is started by every push and names no paths.
 CONTROLLER = "workflowctl"
@@ -254,6 +256,26 @@ def _glob_matches(glob: str, path: str) -> bool:
     """
     pattern = re.escape(glob).replace(r"\*\*", "\x00").replace(r"\*", "[^/]*")
     return re.fullmatch(pattern.replace("\x00", ".*"), path) is not None
+
+
+def _test_directories(name: str) -> list:
+    """List the test directories a workflow hands to pytest.
+
+    A step names them through a shell variable set in the same block, so the
+    assignment is substituted back in before the arguments are read out.
+    """
+    source = (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
+    found: set = set()
+    for job in (yaml.safe_load(source).get("jobs") or {}).values():
+        for step in job.get("steps") or []:
+            block = step.get("run")
+            if not isinstance(block, str):
+                continue
+            for variable, value in TEST_ASSIGNMENT.findall(block):
+                block = block.replace(f"${{{variable}}}", value)
+                block = block.replace(f"${variable}", value)
+            found |= {argument.rstrip("/") for argument in TEST_ARGUMENT.findall(block)}
+    return sorted(found)
 
 
 def _push_triggered_workflows() -> dict:
@@ -595,7 +617,6 @@ class TestPushTriggeredWorkflows:
             "Reads of stacks nothing deploys:\n  " + "\n  ".join(undeployed)
         )
 
-
     def test_a_push_triggered_workflow_is_not_also_a_graph_node(
         self, dependency_graph: dict
     ) -> None:
@@ -630,6 +651,27 @@ class TestPushTriggeredWorkflows:
 
         assert not crossed, (
             "Push triggers that reach another stack:\n  " + "\n  ".join(crossed)
+        )
+
+    def test_a_push_triggered_workflow_names_the_tests_it_runs(self) -> None:
+        """Verify every test file such a workflow runs is named in its paths.
+
+        The graph node used to tie a workflow to the tests it runs. With the
+        node gone the paths list is the only record of which tests belong to
+        it, and one it misses is a test whose edits never run it.
+        """
+        unnamed = []
+
+        for name, paths in sorted(_push_triggered_workflows().items()):
+            for directory in _test_directories(name):
+                below = (REPO_ROOT / directory).rglob("*")
+                for test in sorted(entry for entry in below if entry.is_file()):
+                    path = _repo_relative(test)
+                    if not any(_glob_matches(glob, path) for glob in paths):
+                        unnamed.append(f"{name}: runs {path}, which its paths do not name")
+
+        assert not unnamed, (
+            "Push triggers that miss a test they run:\n  " + "\n  ".join(unnamed)
         )
 
     def test_a_push_triggered_workflow_names_no_whole_tree_glob(self) -> None:
