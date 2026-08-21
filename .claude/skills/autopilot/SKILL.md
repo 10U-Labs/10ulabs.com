@@ -14,10 +14,10 @@ description: Start or stop the standing reminders that keep an autonomous issue-
     - [Place a filed issue](#place-a-filed-issue)
   - [Stop](#stop)
 - [Notes](#notes)
-  - [The standing rules live in CLAUDE.md](#the-standing-rules-live-in-claudemd)
+  - [Editing this file does not reach a running session](#editing-this-file-does-not-reach-a-running-session)
   - [How the reminders fire](#how-the-reminders-fire)
   - [The :05 and :09 reminders are written down nowhere else](#the-05-and-09-reminders-are-written-down-nowhere-else)
-  - [Editing this file does not reach a running session](#editing-this-file-does-not-reach-a-running-session)
+  - [The standing rules live in CLAUDE.md](#the-standing-rules-live-in-claudemd)
 
 ## Overview
 
@@ -80,10 +80,9 @@ Call `CronList`, then call `CronDelete` once per job it returns — all of them,
 
 ## Notes
 
-### The standing rules live in CLAUDE.md
+### Editing this file does not reach a running session
 
-`CLAUDE.md` at the root of the repository carries verification in CI, committing straight to `main`, the test tiers and the two issue forms, and is read at the start of every turn. This file does not restate any of it — a rule kept in two places drifts with nothing to signal it. The reminders exist for the part `CLAUDE.md` cannot reach: a rule read at the start of a turn is not read again forty minutes into one, and a session that has stopped is not reading anything at all.
-
+The body is read when the skill is invoked, so a change here needs `/autopilot stop` and `/autopilot start` before it takes effect. A session that solved the issue which changed this file and then carried on is still working from the scope it started with, and will report that it has run out of issues rather than that it is reading the wrong set.
 ### How the reminders fire
 
 A job fires only while the session is idle, never mid-turn, because a turn cannot be preempted. So this skill cannot correct drift inside a task; what it can do is restart a loop that has stalled, which is the failure it is there to catch. It is also why `:07` earns its slot — a session waiting on a run is idle, so that is exactly when a reminder lands, and the answer to it is to keep waiting.
@@ -96,6 +95,7 @@ Both together are why `start` does the work rather than only arming the jobs: th
 
 `:05` is the one rule `CLAUDE.md` does not carry, and the table above is the only copy of it: delete the reminder and the rule leaves the repository with it. `:09` carries the two-section issue form as well as the six-section one, because a reminder that names only one case is read as though that case were the whole rule, and most of the open queue here is workflow and config work. Neither prompt is longer than it needs to be.
 
-### Editing this file does not reach a running session
+### The standing rules live in CLAUDE.md
 
-The body is read when the skill is invoked, so a change here needs `/autopilot stop` and `/autopilot start` before it takes effect. A session that solved the issue which changed this file and then carried on is still working from the scope it started with, and will report that it has run out of issues rather than that it is reading the wrong set.
+`CLAUDE.md` at the root of the repository carries verification in CI, committing straight to `main`, the test tiers and the two issue forms, and is read at the start of every turn. This file does not restate any of it — a rule kept in two places drifts with nothing to signal it. The reminders exist for the part `CLAUDE.md` cannot reach: a rule read at the start of a turn is not read again forty minutes into one, and a session that has stopped is not reading anything at all.
+
