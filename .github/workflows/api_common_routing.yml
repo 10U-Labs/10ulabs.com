@@ -7,7 +7,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Deploy API common routing
     permissions:
-      actions: write
       contents: read
       id-token: write
     runs-on: >-
@@ -189,38 +188,17 @@ jobs:
         run: |
           cd src/api/common/routing && \
             terraform apply -auto-approve
-      - id: check_files
-        name: Check if static files changed
-        run: |
-          set -e
-          set -o pipefail
-          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
-            BASE_COMMIT="${{ github.event.before }}"
-          else
-            BASE_COMMIT="HEAD^"
-          fi
-          API_PATTERN='src/www/api/(index\.html|openapi\.json|404\.html)'
-          git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE "$API_PATTERN"; then
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "changed=false" >> $GITHUB_OUTPUT
-            fi
       - if: >-
-          github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message,
-            '[invalidate cloudfront]') ||
-          steps.check_files.outputs.changed == 'true'
+          github.event_name == 'push' ||
+          github.event.inputs.invalidate_cloudfront == 'true'
         name: Get API domain from Terraform output
         run: |
           API_FQDN=$(cd src/api/common/routing && \
             terraform output -raw api_fqdn)
           echo "API_FQDN=$API_FQDN" >> "$GITHUB_ENV"
       - if: >-
-          github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message,
-            '[invalidate cloudfront]') ||
-          steps.check_files.outputs.changed == 'true'
+          github.event_name == 'push' ||
+          github.event.inputs.invalidate_cloudfront == 'true'
         name: Invalidate CloudFront cache
         run: |
           python3 scripts/invalidate_cloudfront.py \
@@ -239,45 +217,18 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $BASE/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        id: descendants
-        if: >-
-          github.event_name == 'workflow_dispatch' &&
-          (
-          github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message,
-           '[trigger descendants]'))
-        name: Compute descendants
-        run: |
-          python3 src/workflowctl/workflowctl.py compute-descendants \
-            --workflow api_common_routing \
-            --repo ${{ github.repository }}
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: >-
-          steps.descendants.outputs.ready != '[]' &&
-          github.event_name == 'workflow_dispatch' &&
-          (
-          github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message,
-           '[trigger descendants]'))
-        name: Dispatch ready descendants
-        run: |
-          TRIGGER="${{ github.event.inputs.trigger_descendants }}"
-          INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
-          READY='${{ steps.descendants.outputs.ready }}'
-          for workflow in $(echo "$READY" | jq -r '.[]'); do
-            FLAGS="-f trigger_descendants=${TRIGGER:-false}"
-            if [ "$INVALIDATE" = "true" ]; then
-              FLAGS="$FLAGS -f invalidate_cloudfront=true"
-            fi
-            gh workflow run "${workflow}.yml" \
-              --repo ${{ github.repository }} \
-              $FLAGS
-          done
 name: Ensuring API common routing exists and is properly configured
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/api_common_routing.yml
+      - lib/terraform/common/**
+      - src/api/common/routing/**
+      - src/www/api/**
+      - test/api/common/routing/**
+      - test/api/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:
@@ -288,15 +239,6 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
-      spot_recovery_reason:
-        description: Spot recovery trigger reason
-        required: false
-        type: string
-      trigger_descendants:
-        default: true
-        description: Trigger descendant workflows after this workflow completes
-        type: boolean
 permissions:
-  actions: write
   contents: read
   id-token: write

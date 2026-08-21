@@ -45,6 +45,8 @@ DOCKERFILE_PATH = re.compile(r"^\s*\w+=(\S+/Dockerfile)$", re.MULTILINE)
 NPM_PREFIX = re.compile(r"--prefix\s+(src/\S+)")
 S3_SYNC = re.compile(r"aws s3 sync\s+(src/\S+)")
 CHANGED_FILE_EVENT = re.compile(r"github\.event\.(?:before|commits)")
+INVALIDATION_INPUT = "github.event.inputs.invalidate_cloudfront"
+PUSH_EVENT = "github.event_name == 'push'"
 STEP_OUTPUT = re.compile(r"steps\.([A-Za-z0-9_-]+)\.outputs\.")
 TEST_ASSIGNMENT = re.compile(r"^\s*(\w+)=(test/[\w./-]+)\s*$", re.MULTILINE)
 TEST_ARGUMENT = re.compile(r"(?<![=\w])test/[\w./-]+")
@@ -753,6 +755,34 @@ class TestPushTriggeredWorkflows:
 
         assert not rederived, (
             "Push triggers recomputed inside the run:\n  " + "\n  ".join(rederived)
+        )
+
+    def test_a_push_triggered_workflow_clears_its_cache_on_every_push(self) -> None:
+        """Verify a run started by a push is a run that clears the CDN cache.
+
+        The push already matched this workflow's paths, so the deploy it starts
+        is a deploy of the files the cache is holding. A condition that leaves
+        the push out clears the cache only when somebody presses the button,
+        and visitors keep being served the copies the deploy replaced.
+        """
+        stale = []
+
+        for name in sorted(_push_triggered_workflows()):
+            document = yaml.safe_load(
+                (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
+            )
+            for job, definition in sorted((document.get("jobs") or {}).items()):
+                for step in definition.get("steps") or []:
+                    condition = step.get("if") or ""
+                    if INVALIDATION_INPUT in condition and PUSH_EVENT not in condition:
+                        stale.append(
+                            f"{name}: job '{job}' step "
+                            f"'{step.get('name', step.get('id'))}' asks for the "
+                            "input and not for the push"
+                        )
+
+        assert not stale, (
+            "Invalidations a push does not reach:\n  " + "\n  ".join(stale)
         )
 
     def test_a_push_triggered_workflow_names_the_tests_it_runs(self) -> None:

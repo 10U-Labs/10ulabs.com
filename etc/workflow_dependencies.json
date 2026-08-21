@@ -1,18 +1,4 @@
 {
-  "api_common_routing": {
-    "depends_on": [
-      "bootstrap"
-    ],
-    "name": "Ensuring API common routing exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_common_routing.yml",
-      "lib/terraform/common/**",
-      "src/api/common/routing/**",
-      "src/www/api/**",
-      "test/api/common/routing/**",
-      "test/api/conftest.py"
-    ]
-  },
   "bootstrap": {
     "depends_on": [],
     "name": "Ensuring bootstrap infrastructure exists and is properly configured",
