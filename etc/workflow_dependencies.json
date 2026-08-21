@@ -15,9 +15,7 @@
     ]
   },
   "api_common_docker_repository": {
-    "depends_on": [
-      "api_common_routing"
-    ],
+    "depends_on": [],
     "name": "Ensuring API common Docker repository exists and is properly configured",
     "paths": [
       ".github/workflows/api_common_docker_repository.yml",
@@ -28,9 +26,7 @@
     ]
   },
   "api_common_networking": {
-    "depends_on": [
-      "api_common_routing"
-    ],
+    "depends_on": [],
     "name": "Ensuring API common networking infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/api_common_networking.yml",
@@ -67,8 +63,9 @@
   },
   "api_endpoint_v1_runners_ec2": {
     "depends_on": [
-      "api_endpoint_v1_ec2_spot_interruptions",
-      "api_endpoint_v1_runners_ec2_images"
+      "bootstrap",
+      "api_common_networking",
+      "api_common_routing"
     ],
     "name": "Ensuring the /v1/runners/ec2 API endpoint exists and is properly configured",
     "paths": [
@@ -82,7 +79,7 @@
   },
   "api_endpoint_v1_runners": {
     "depends_on": [
-      "api_endpoint_v1_runners_cleanups"
+      "api_common_routing"
     ],
     "name": "Ensuring /v1/runners API endpoint exists and is properly configured",
     "paths": [
@@ -111,8 +108,10 @@
   },
   "api_endpoint_v1_runners_ecs": {
     "depends_on": [
-      "api_endpoint_v1_ecs_task_stops",
-      "api_endpoint_v1_runners_ecs_images"
+      "bootstrap",
+      "api_common_networking",
+      "api_common_docker_repository",
+      "api_common_routing"
     ],
     "name": "Ensuring the /v1/runners/ecs API endpoint exists and is properly configured",
     "paths": [
@@ -141,7 +140,8 @@
   },
   "api_endpoint_v1_runners_ec2_images": {
     "depends_on": [
-      "api_common_networking"
+      "api_common_networking",
+      "api_common_routing"
     ],
     "name": "Ensuring the /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [
@@ -156,7 +156,7 @@
   "api_endpoint_v1_runners_ecs_images": {
     "depends_on": [
       "api_common_docker_repository",
-      "api_endpoint_v1_runners_ec2"
+      "api_common_routing"
     ],
     "name": "Ensuring /v1/runners/ecs/images API endpoint exists and is properly configured",
     "paths": [
@@ -195,9 +195,7 @@
     ]
   },
   "api_endpoint_v1_ec2_spot_interruptions": {
-    "depends_on": [
-      "api_endpoint_v1_github_workflows_retries"
-    ],
+    "depends_on": [],
     "name": "Ensuring EC2 spot interruption handler exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_ec2_spot_interruptions.yml",
@@ -209,9 +207,7 @@
     ]
   },
   "api_endpoint_v1_ecs_task_stops": {
-    "depends_on": [
-      "api_endpoint_v1_github_workflows_retries"
-    ],
+    "depends_on": [],
     "name": "Ensuring ECS task stops handler exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_ecs_task_stops.yml",
@@ -224,8 +220,8 @@
   },
   "api_endpoint_v1_runners_cleanups": {
     "depends_on": [
-      "api_endpoint_v1_runners_ecs",
-      "api_endpoint_v1_runners_ec2"
+      "bootstrap",
+      "api_endpoint_v1_runners_ecs"
     ],
     "name": "Ensuring runners cleanup handler exists and is properly configured",
     "paths": [
@@ -239,7 +235,7 @@
   },
   "api_endpoint_v1_github_workflows_retries": {
     "depends_on": [
-      "api_common_routing"
+      "bootstrap"
     ],
     "name": "Ensuring the /v1/github-workflows/retries API endpoint exists and is properly configured",
     "paths": [
@@ -253,7 +249,9 @@
   },
   "api_endpoint_v1_github_workflows_webhooks": {
     "depends_on": [
-      "api_endpoint_v1_runners"
+      "api_common_networking",
+      "api_common_docker_repository",
+      "api_common_routing"
     ],
     "name": "Ensuring the /v1/github-workflows/webhooks API endpoint exists and is properly configured",
     "paths": [
@@ -301,7 +299,6 @@
   },
   "www_home": {
     "depends_on": [
-      "api_endpoint_v1_contact_submissions",
       "www_common"
     ],
     "name": "Ensuring www home page exists and is properly configured",
@@ -314,9 +311,7 @@
     ]
   },
   "www_common": {
-    "depends_on": [
-      "bootstrap"
-    ],
+    "depends_on": [],
     "name": "Ensuring www common infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/www_common.yml",
@@ -335,8 +330,6 @@
   },
   "www_rack_designer": {
     "depends_on": [
-      "api_endpoint_v1_rack_configurations",
-      "api_endpoint_v1_sessions",
       "www_common"
     ],
     "name": "Ensuring www rack-designer frontend exists and is properly configured",
@@ -347,7 +340,6 @@
   },
   "www_simulations_soc": {
     "depends_on": [
-      "api_endpoint_v1_soc_simulations",
       "www_common"
     ],
     "name": "Ensuring www simulations/soc frontend exists and is properly configured",

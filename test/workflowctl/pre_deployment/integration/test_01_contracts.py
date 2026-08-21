@@ -7,6 +7,7 @@ Layer 1 contract tests validate cross-file compatibility without making AWS call
 
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -17,11 +18,36 @@ from repo_utils import REPO_ROOT
 
 GRAPH_PATH = REPO_ROOT / "etc" / "workflow_dependencies.json"
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
+TERRAFORM_ROOT = REPO_ROOT / "src"
 
 # Nodes whose paths have been narrowed off the whole of lib/python. Add a key
 # here as its list is cut down to the packages it actually builds from.
 NARROWED_NODES = {"api_endpoint_v1_runners_ec2_images_post"}
 WHOLE_TREE_GLOBS = ("lib/python/**", "test/lib/python/**")
+
+# State keys owned by another repository's Terraform. This controller only
+# orders workflows in this repository, so a read of one of these implies no
+# edge. Anything not listed here must resolve to a node in the graph.
+EXTERNAL_STATE_KEYS = {"wan-synthesizer/common/routing/terraform.tfstate"}
+
+# Orderings that exist for a reason Terraform does not express, and the reason.
+# Every other entry in a node's depends_on has to correspond to a
+# terraform_remote_state read under that node's own src paths.
+ORDERINGS_WITHOUT_STATE_READS = {
+    ("www_home", "www_common"):
+        "www_home.yml reads 'terraform -chdir=src/www/common output -raw "
+        "bucket_name' and syncs its built site into that bucket",
+    ("www_rack_designer", "www_common"):
+        "www_rack_designer.yml reads 'terraform -chdir=src/www/common output "
+        "-raw bucket_name' and syncs its built site into that bucket",
+    ("www_simulations_soc", "www_common"):
+        "www_simulations_soc.yml reads 'terraform -chdir=src/www/common output "
+        "-raw bucket_name' and syncs its built site into that bucket",
+}
+
+REMOTE_STATE_BLOCK = re.compile(r'data\s+"terraform_remote_state"\s+"[^"]+"\s*\{')
+STATE_KEY = re.compile(r'key\s*=\s*"([^"]+)"')
+DEFAULTS_ATTRIBUTE = re.compile(r"^\s*defaults\s*=", re.MULTILINE)
 
 
 @pytest.fixture(scope="module")
@@ -68,6 +94,81 @@ def _node_imports(paths: list, package: str) -> bool:
             if any(form in content for form in forms):
                 return True
     return False
+
+
+def _matches_glob(glob: str, path: str) -> bool:
+    """Say whether a repository-relative path is matched by a graph path glob.
+
+    '**' spans directories and '*' stops at one, which is how GitHub reads the
+    same globs in a workflow's paths filter.
+    """
+    pattern = re.escape(glob).replace(r"\*\*", ".*").replace(r"\*", "[^/]*")
+    return re.fullmatch(pattern, path) is not None
+
+
+def _owning_node(graph: dict, path: str) -> str:
+    """Name the node a file under src/ belongs to.
+
+    Node paths nest — 'src/api/endpoints/runners/ec2/**' contains the images
+    node — so the owner is the one whose matching glob is most specific.
+    """
+    owner, longest = "", -1
+    for key, config in graph.items():
+        for glob in config.get("paths", []):
+            if not glob.startswith("src/") or not _matches_glob(glob, path):
+                continue
+            literal = len(glob.split("*")[0])
+            if literal > longest:
+                owner, longest = key, literal
+    return owner
+
+
+def _block_body(text: str, brace: int) -> str:
+    """Return the body of the HCL block whose opening brace is at an index."""
+    depth = 0
+    for index in range(brace, len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[brace + 1:index]
+    return text[brace:]
+
+
+def _repo_relative(path: Path) -> str:
+    """Return a path relative to the repository root, with forward slashes."""
+    return path.relative_to(REPO_ROOT).as_posix()
+
+
+def _state_key_owners(graph: dict) -> dict:
+    """Map each Terraform state key to the node whose backend declares it."""
+    owners: dict = {}
+    for backend in sorted(TERRAFORM_ROOT.rglob("backend.tf")):
+        key = STATE_KEY.search(backend.read_text(encoding="utf-8"))
+        if key is not None:
+            owners[key.group(1)] = _owning_node(graph, _repo_relative(backend))
+    return owners
+
+
+def _state_reads(graph: dict, hard_only: bool) -> dict:
+    """Map each node to the state keys its own Terraform reads.
+
+    A read carrying a 'defaults' block applies before the stack it reads has
+    ever been applied, so it asks for no ordering and is left out when
+    hard_only is set.
+    """
+    reads: dict = {}
+    for source in sorted(TERRAFORM_ROOT.rglob("*.tf")):
+        text = source.read_text(encoding="utf-8")
+        node = _owning_node(graph, _repo_relative(source))
+        for match in REMOTE_STATE_BLOCK.finditer(text):
+            body = _block_body(text, match.end() - 1)
+            key = STATE_KEY.search(body)
+            if key is None or (hard_only and DEFAULTS_ATTRIBUTE.search(body)):
+                continue
+            reads.setdefault(node, set()).add(key.group(1))
+    return reads
 
 
 class TestGraphKeysMatchWorkflowFiles:
@@ -189,6 +290,56 @@ class TestGraphDependenciesExist:
 
         assert not invalid_deps, (
             "Invalid dependencies:\n  " + "\n  ".join(invalid_deps)
+        )
+
+
+class TestGraphDependenciesMatchTerraformReads:
+    """Tests that depends_on records what Terraform reads, and nothing else."""
+
+    def test_every_state_a_node_reads_is_a_dependency(
+        self, dependency_graph: dict
+    ) -> None:
+        """Verify each stack a node reads state from is one of its dependencies."""
+        owners = _state_key_owners(dependency_graph)
+        unrecorded = []
+
+        for key, state_keys in sorted(_state_reads(dependency_graph, True).items()):
+            declared = set(dependency_graph.get(key, {}).get("depends_on", []))
+            for state_key in sorted(state_keys):
+                owner = owners.get(state_key)
+                if owner is None and state_key not in EXTERNAL_STATE_KEYS:
+                    unrecorded.append(
+                        f"{key}: reads '{state_key}', which no node in the graph owns"
+                    )
+                elif owner not in (None, key) and owner not in declared:
+                    unrecorded.append(
+                        f"{key}: reads {owner}'s state but does not depend on it"
+                    )
+
+        assert not unrecorded, (
+            "State read without a dependency:\n  " + "\n  ".join(unrecorded)
+        )
+
+    def test_every_dependency_is_a_state_a_node_reads(
+        self, dependency_graph: dict
+    ) -> None:
+        """Verify each entry in depends_on corresponds to a read or a stated reason."""
+        owners = _state_key_owners(dependency_graph)
+        reads = _state_reads(dependency_graph, False)
+        invented = []
+
+        for key, config in sorted(dependency_graph.items()):
+            read_nodes = {owners.get(state) for state in reads.get(key, set())}
+            for dep in config.get("depends_on", []):
+                if dep in read_nodes or (key, dep) in ORDERINGS_WITHOUT_STATE_READS:
+                    continue
+                invented.append(
+                    f"{key}: depends on {dep} but reads no state of it. Drop the "
+                    "edge, or give the reason in ORDERINGS_WITHOUT_STATE_READS"
+                )
+
+        assert not invented, (
+            "Dependencies describing no relationship:\n  " + "\n  ".join(invented)
         )
 
 
