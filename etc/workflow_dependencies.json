@@ -6,12 +6,10 @@
     "name": "Ensuring API common routing exists and is properly configured",
     "paths": [
       ".github/workflows/api_common_routing.yml",
-      "lib/python/**",
       "src/api/common/routing/**",
       "src/www/api/**",
-      "test/api/conftest.py",
       "test/api/common/routing/**",
-      "test/lib/python/**"
+      "test/api/conftest.py"
     ]
   },
   "api_common_docker_repository": {
@@ -19,10 +17,8 @@
     "name": "Ensuring API common Docker repository exists and is properly configured",
     "paths": [
       ".github/workflows/api_common_docker_repository.yml",
-      "lib/python/**",
       "src/api/common/docker_repository/**",
-      "test/api/common/docker_repository/**",
-      "test/lib/python/**"
+      "test/api/common/docker_repository/**"
     ]
   },
   "api_common_networking": {
@@ -30,10 +26,8 @@
     "name": "Ensuring API common networking infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/api_common_networking.yml",
-      "lib/python/**",
       "src/api/common/networking/**",
-      "test/api/common/networking/**",
-      "test/lib/python/**"
+      "test/api/common/networking/**"
     ]
   },
   "bootstrap": {
@@ -41,11 +35,9 @@
     "name": "Ensuring bootstrap infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/bootstrap.yml",
-      "lib/python/**",
       "lib/terraform/common/**",
       "src/bootstrap/**",
-      "test/bootstrap/**",
-      "test/lib/python/**"
+      "test/bootstrap/**"
     ]
   },
   "api_endpoint_v1_contact_submissions": {
@@ -55,10 +47,8 @@
     "name": "Ensuring the /v1/contact-submissions API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_contact_submissions.yml",
-      "lib/python/**",
       "src/api/endpoints/contact_submissions/**",
-      "test/api/endpoints/contact_submissions/**",
-      "test/lib/python/**"
+      "test/api/endpoints/contact_submissions/**"
     ]
   },
   "api_endpoint_v1_runners_ec2": {
@@ -70,11 +60,15 @@
     "name": "Ensuring the /v1/runners/ec2 API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2.yml",
-      "lib/python/**",
+      "lib/python/aws_clients/**",
+      "lib/python/ec2_fleet/**",
+      "lib/python/github_runner_api/**",
+      "lib/python/infra_validation/**",
+      "lib/python/lambda_http/**",
+      "lib/python/runner_labels/**",
       "src/api/endpoints/runners/ec2/**",
       "test/api/conftest.py",
-      "test/api/endpoints/runners/ec2/**",
-      "test/lib/python/**"
+      "test/api/endpoints/runners/ec2/**"
     ]
   },
   "api_endpoint_v1_runners": {
@@ -85,12 +79,11 @@
     "paths": [
       ".github/workflows/api_endpoint_v1_runners.yml",
       "etc/runners.json",
-      "lib/python/**",
+      "lib/python/runner_labels/**",
       "src/api/endpoints/runners/*.tf",
       "src/api/endpoints/runners/lambda/**",
       "test/api/endpoints/runners/post_deployment/**",
-      "test/api/endpoints/runners/pre_deployment/**",
-      "test/lib/python/**"
+      "test/api/endpoints/runners/pre_deployment/**"
     ]
   },
   "api_operational_diagnostics": {
@@ -100,10 +93,9 @@
     "name": "Ensuring the /diagnostics/echo API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_operational_diagnostics.yml",
-      "lib/python/**",
+      "lib/python/lambda_http/**",
       "src/api/operational/diagnostics/**",
-      "test/api/operational/diagnostics/**",
-      "test/lib/python/**"
+      "test/api/operational/diagnostics/**"
     ]
   },
   "api_endpoint_v1_runners_ecs": {
@@ -116,15 +108,18 @@
     "name": "Ensuring the /v1/runners/ecs API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs.yml",
-      "lib/python/**",
+      "lib/python/aws_clients/**",
+      "lib/python/github_runner_api/**",
+      "lib/python/infra_validation/**",
+      "lib/python/lambda_http/**",
+      "lib/python/runner_labels/**",
       "src/api/endpoints/runners/ecs/*.tf",
       "src/api/endpoints/runners/ecs/lambda/**",
       "test/api/conftest.py",
-      "test/api/endpoints/runners/ecs/conftest.py",
       "test/api/endpoints/runners/ecs/__init__.py",
-      "test/api/endpoints/runners/ecs/pre_deployment/**",
+      "test/api/endpoints/runners/ecs/conftest.py",
       "test/api/endpoints/runners/ecs/post_deployment/**",
-      "test/lib/python/**"
+      "test/api/endpoints/runners/ecs/pre_deployment/**"
     ]
   },
   "api_endpoint_v1_runners_ec2_images_post": {
@@ -146,11 +141,11 @@
     "name": "Ensuring the /v1/runners/ec2/images API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2_images.yml",
-      "lib/python/**",
+      "lib/python/lambda_http/**",
       "src/api/endpoints/runners/ec2/images/*.tf",
       "src/api/endpoints/runners/ec2/images/lambda/**",
       "test/api/endpoints/runners/ec2/images/endpoint/**",
-      "test/lib/python/**"
+      "test/lib/python/test_lambda_http/**"
     ]
   },
   "api_endpoint_v1_runners_ecs_images": {
@@ -161,11 +156,10 @@
     "name": "Ensuring /v1/runners/ecs/images API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs_images.yml",
-      "lib/python/**",
+      "lib/python/lambda_http/**",
       "src/api/endpoints/runners/ecs/images/*.tf",
       "src/api/endpoints/runners/ecs/images/lambda/**",
-      "test/api/endpoints/runners/ecs/images/endpoint/**",
-      "test/lib/python/**"
+      "test/api/endpoints/runners/ecs/images/endpoint/**"
     ]
   },
   "api_endpoint_v1_rack_configurations": {
@@ -175,10 +169,8 @@
     "name": "Ensuring /v1/rack-configurations API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_rack_configurations.yml",
-      "lib/python/**",
       "src/api/endpoints/rack_configurations/**",
-      "test/api/endpoints/rack_configurations/**",
-      "test/lib/python/**"
+      "test/api/endpoints/rack_configurations/**"
     ]
   },
   "api_endpoint_v1_sessions": {
@@ -188,10 +180,8 @@
     "name": "Ensuring the /v1/sessions API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_sessions.yml",
-      "lib/python/**",
       "src/api/endpoints/sessions/**",
-      "test/api/endpoints/sessions/**",
-      "test/lib/python/**"
+      "test/api/endpoints/sessions/**"
     ]
   },
   "api_endpoint_v1_ec2_spot_interruptions": {
@@ -199,11 +189,9 @@
     "name": "Ensuring EC2 spot interruption handler exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_ec2_spot_interruptions.yml",
-      "lib/python/**",
       "src/api/endpoints/ec2_spot_interruptions/**",
       "test/api/conftest.py",
-      "test/api/endpoints/ec2_spot_interruptions/**",
-      "test/lib/python/**"
+      "test/api/endpoints/ec2_spot_interruptions/**"
     ]
   },
   "api_endpoint_v1_ecs_task_stops": {
@@ -211,11 +199,9 @@
     "name": "Ensuring ECS task stops handler exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_ecs_task_stops.yml",
-      "lib/python/**",
       "src/api/endpoints/ecs_task_stops/**",
       "test/api/conftest.py",
-      "test/api/endpoints/ecs_task_stops/**",
-      "test/lib/python/**"
+      "test/api/endpoints/ecs_task_stops/**"
     ]
   },
   "api_endpoint_v1_runners_cleanups": {
@@ -226,11 +212,9 @@
     "name": "Ensuring runners cleanup handler exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_cleanups.yml",
-      "lib/python/**",
       "src/api/endpoints/runners/cleanups/**",
       "test/api/conftest.py",
-      "test/api/endpoints/runners/cleanups/**",
-      "test/lib/python/**"
+      "test/api/endpoints/runners/cleanups/**"
     ]
   },
   "api_endpoint_v1_github_workflows_retries": {
@@ -240,11 +224,9 @@
     "name": "Ensuring the /v1/github-workflows/retries API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_github_workflows_retries.yml",
-      "lib/python/**",
       "src/api/endpoints/github_workflows/retries/**",
       "test/api/conftest.py",
-      "test/api/endpoints/github_workflows/retries/**",
-      "test/lib/python/**"
+      "test/api/endpoints/github_workflows/retries/**"
     ]
   },
   "api_endpoint_v1_github_workflows_webhooks": {
@@ -256,11 +238,10 @@
     "name": "Ensuring the /v1/github-workflows/webhooks API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_github_workflows_webhooks.yml",
-      "lib/python/**",
+      "lib/python/runner_labels/**",
       "src/api/endpoints/github_workflows/webhooks/**",
       "test/api/conftest.py",
-      "test/api/endpoints/github_workflows/webhooks/**",
-      "test/lib/python/**"
+      "test/api/endpoints/github_workflows/webhooks/**"
     ]
   },
   "api_endpoint_v1_soc_simulations": {
@@ -270,10 +251,9 @@
     "name": "Ensuring the /v1/soc-simulations API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_soc_simulations.yml",
-      "lib/python/**",
+      "lib/python/lambda_http/**",
       "src/api/endpoints/soc_simulations/**",
-      "test/api/endpoints/soc_simulations/**",
-      "test/lib/python/**"
+      "test/api/endpoints/soc_simulations/**"
     ]
   },
   "api_operational_health": {
@@ -283,10 +263,8 @@
     "name": "Ensuring the /health API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_operational_health.yml",
-      "lib/python/**",
       "src/api/operational/health/**",
-      "test/api/operational/health/**",
-      "test/lib/python/**"
+      "test/api/operational/health/**"
     ]
   },
   "rtl_verilator": {
@@ -304,9 +282,7 @@
     "name": "Ensuring www home page exists and is properly configured",
     "paths": [
       ".github/workflows/www_home.yml",
-      "lib/python/**",
       "src/www/paths/home/**",
-      "test/lib/python/**",
       "test/www/paths/home/**"
     ]
   },
@@ -315,12 +291,10 @@
     "name": "Ensuring www common infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/www_common.yml",
-      "lib/python/**",
       "lib/terraform/common/**",
       "lib/terraform/s3_bucket/**",
       "lib/terraform/write_ahead_queue/**",
       "src/www/common/**",
-      "test/lib/python/**",
       "test/lib/terraform/common/**",
       "test/lib/terraform/conftest.py",
       "test/lib/terraform/s3_bucket/**",

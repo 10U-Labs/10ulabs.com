@@ -19,10 +19,12 @@ from repo_utils import REPO_ROOT
 GRAPH_PATH = REPO_ROOT / "etc" / "workflow_dependencies.json"
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 TERRAFORM_ROOT = REPO_ROOT / "src"
+LIB_PYTHON_ROOT = REPO_ROOT / "lib" / "python"
 
-# Nodes whose paths have been narrowed off the whole of lib/python. Add a key
-# here as its list is cut down to the packages it actually builds from.
-NARROWED_NODES = {"api_endpoint_v1_runners_ec2_images_post"}
+# Nodes still allowed to deploy on any edit anywhere under lib/python. Narrow
+# a node to the packages it builds from rather than adding a key here; the
+# list is meant to stay empty.
+WHOLE_TREE_GLOB_NODES: set = set()
 WHOLE_TREE_GLOBS = ("lib/python/**", "test/lib/python/**")
 
 # State keys owned by another repository's Terraform. This controller only
@@ -80,9 +82,19 @@ def _declared_packages(paths: list, prefix: str) -> list:
 
 
 def _python_files_under(path_glob: str) -> list:
-    """List the Python files under the literal part of a path glob."""
+    """List the Python files a path glob matches.
+
+    The literal part only says where to start looking: 'src/.../runners/*.tf'
+    reaches no Python at all, and 'src/.../runners/ec2/**' reaches the images
+    node nested inside it. Matching the whole glob is what tells them apart.
+    """
     root = REPO_ROOT / Path(path_glob.split("*")[0])
-    return sorted(root.rglob("*.py")) if root.is_dir() else []
+    if not root.is_dir():
+        return []
+    return sorted(
+        path for path in root.rglob("*.py")
+        if _matches_glob(path_glob, _repo_relative(path))
+    )
 
 
 def _node_imports(paths: list, package: str) -> bool:
@@ -94,6 +106,14 @@ def _node_imports(paths: list, package: str) -> bool:
             if any(form in content for form in forms):
                 return True
     return False
+
+
+def _lib_python_packages() -> list:
+    """List the package names under lib/python."""
+    return sorted(
+        path.name for path in LIB_PYTHON_ROOT.iterdir()
+        if path.is_dir() and not path.name.startswith("_")
+    )
 
 
 def _matches_glob(glob: str, path: str) -> bool:
@@ -217,15 +237,14 @@ class TestGraphPathsMatchWorkflowFiles:
 class TestGraphPathsAreNoWiderThanDependencies:
     """Tests that a node's paths name what it is built from, and no more."""
 
-    def test_narrowed_nodes_keep_no_whole_tree_globs(
-        self, dependency_graph: dict
-    ) -> None:
-        """Verify narrowed nodes name packages instead of a whole directory."""
+    def test_no_node_keeps_a_whole_tree_glob(self, dependency_graph: dict) -> None:
+        """Verify no node deploys on any edit anywhere under lib/python."""
         violations = [
-            f"{key}: declares '{glob}', which dispatches it on any edit under it"
-            for key in sorted(NARROWED_NODES)
+            f"{key}: declares '{glob}', which deploys it on any edit under it"
+            for key, config in sorted(dependency_graph.items())
+            if key not in WHOLE_TREE_GLOB_NODES
             for glob in WHOLE_TREE_GLOBS
-            if glob in dependency_graph.get(key, {}).get("paths", [])
+            if glob in config.get("paths", [])
         ]
 
         assert not violations, (
@@ -249,6 +268,26 @@ class TestGraphPathsAreNoWiderThanDependencies:
 
         assert not unimported, (
             "Packages declared but not imported:\n  " + "\n  ".join(unimported)
+        )
+
+    def test_imported_packages_are_declared_by_the_node(
+        self, dependency_graph: dict
+    ) -> None:
+        """Verify each lib/python package a node's source imports is in its paths."""
+        undeclared = []
+
+        for key, config in sorted(dependency_graph.items()):
+            paths = config.get("paths", [])
+            declared = set(_declared_packages(paths, "lib/python/"))
+            for package in _lib_python_packages():
+                if package not in declared and _node_imports(paths, package):
+                    undeclared.append(
+                        f"{key}: its source imports lib/python/{package} but its "
+                        f"paths do not name it, so a change there never reaches it"
+                    )
+
+        assert not undeclared, (
+            "Packages imported but not declared:\n  " + "\n  ".join(undeclared)
         )
 
     def test_declared_test_packages_are_run_by_the_workflow(
