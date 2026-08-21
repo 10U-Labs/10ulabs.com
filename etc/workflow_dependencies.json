@@ -71,21 +71,6 @@
       "test/api/endpoints/runners/ec2/**"
     ]
   },
-  "api_endpoint_v1_runners": {
-    "depends_on": [
-      "api_common_routing"
-    ],
-    "name": "Ensuring /v1/runners API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_runners.yml",
-      "etc/runners.json",
-      "lib/python/runner_labels/**",
-      "src/api/endpoints/runners/*.tf",
-      "src/api/endpoints/runners/lambda/**",
-      "test/api/endpoints/runners/post_deployment/**",
-      "test/api/endpoints/runners/pre_deployment/**"
-    ]
-  },
   "api_operational_diagnostics": {
     "depends_on": [
       "api_common_routing"
