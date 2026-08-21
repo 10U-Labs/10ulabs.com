@@ -3,9 +3,7 @@ name: autopilot
 description: Start or stop the standing reminders that keep an autonomous issue-solving session on the rails. Use when the user says "start autopilot", "go autonomous on the open issues", "stop autopilot", or asks to clear the reminders. Takes "start" or "stop".
 ---
 
-# Autopilot
-
-## Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Sub-Commands](#sub-commands)
@@ -131,4 +129,4 @@ The body is read when the skill is invoked, so a change here needs `/autopilot s
 
 ### Naming a reminder and naming a line
 
-A reminder is named by the minute it fires — the `:01` reminder, the `:09` reminder — and a line in this file is written out in full, as "line 53". The rest of the repository writes `path/to/file.yml:115` for a line and then a bare `:120` for another line in the same file, and that shorthand collides here: a bare `:07` is line 7 everywhere else and the seven-past reminder in this file.
+A reminder is named by the minute it fires — the `:01` reminder, the `:09` reminder — and a line in this file is written out in full, as "line 51". The rest of the repository writes `path/to/file.yml:115` for a line and then a bare `:120` for another line in the same file, and that shorthand collides here: a bare `:07` is line 7 everywhere else and the seven-past reminder in this file.
