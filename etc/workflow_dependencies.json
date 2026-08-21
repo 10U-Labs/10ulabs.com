@@ -76,16 +76,6 @@
       "test/www/common/**"
     ]
   },
-  "www_rack_designer": {
-    "depends_on": [
-      "www_common"
-    ],
-    "name": "Ensuring www rack-designer frontend exists and is properly configured",
-    "paths": [
-      ".github/workflows/www_rack_designer.yml",
-      "src/www/paths/rack_designer/**"
-    ]
-  },
   "www_simulations_soc": {
     "depends_on": [
       "www_common"

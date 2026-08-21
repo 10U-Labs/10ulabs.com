@@ -36,9 +36,6 @@ EXTERNAL_STATE_KEYS = {"wan-synthesizer/common/routing/terraform.tfstate"}
 # Every other entry in a node's depends_on has to correspond to a
 # terraform_remote_state read under that node's own src paths.
 ORDERINGS_WITHOUT_STATE_READS = {
-    ("www_rack_designer", "www_common"):
-        "www_rack_designer.yml reads 'terraform -chdir=src/www/common output "
-        "-raw bucket_name' and syncs its built site into that bucket",
     ("www_simulations_soc", "www_common"):
         "www_simulations_soc.yml reads 'terraform -chdir=src/www/common output "
         "-raw bucket_name' and syncs its built site into that bucket",
@@ -50,6 +47,7 @@ DEFAULTS_ATTRIBUTE = re.compile(r"^\s*defaults\s*=", re.MULTILINE)
 WORKING_DIRECTORY = re.compile(r"^\s*cd\s+(\S+)", re.MULTILINE)
 DOCKERFILE_PATH = re.compile(r"^\s*\w+=(\S+/Dockerfile)$", re.MULTILINE)
 NPM_PREFIX = re.compile(r"--prefix\s+(src/\S+)")
+S3_SYNC = re.compile(r"aws s3 sync\s+(src/\S+)")
 CHANGED_FILE_EVENT = re.compile(r"github\.event\.(?:before|commits)")
 STEP_OUTPUT = re.compile(r"steps\.([A-Za-z0-9_-]+)\.outputs\.")
 TEST_ASSIGNMENT = re.compile(r"^\s*(\w+)=(test/[\w./-]+)\s*$", re.MULTILINE)
@@ -239,6 +237,16 @@ def _npm_directory(name: str) -> str:
     text = (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
     found = NPM_PREFIX.search(text)
     return found.group(1) if found else ""
+
+
+def _synced_directories(name: str) -> list:
+    """List the directories a workflow copies into S3, if it copies any.
+
+    A site is published by an 'aws s3 sync' of one directory, which is either
+    the checked-in source or a build output sitting inside it.
+    """
+    text = (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
+    return sorted({found.rstrip("/") for found in S3_SYNC.findall(text)})
 
 
 def _applied_stacks() -> dict:
@@ -601,6 +609,25 @@ class TestPushTriggeredWorkflows:
 
         assert not unmatched, (
             "Push triggers that miss their own source:\n  " + "\n  ".join(unmatched)
+        )
+
+    def test_a_push_triggered_workflow_names_the_files_it_publishes(self) -> None:
+        """Verify such a workflow's paths reach the files it copies into S3.
+
+        A site with no Terraform and no build step is published straight from
+        the tree, so its paths list is the only thing tying the workflow to the
+        pages it serves. One it misses is a page whose edits never reach the
+        bucket.
+        """
+        unreached = [
+            f"{name}: syncs {directory} into S3, which its paths do not reach"
+            for name, paths in sorted(_push_triggered_workflows().items())
+            for directory in _synced_directories(name)
+            if not any(f"{directory}/".startswith(glob.split("*")[0]) for glob in paths)
+        ]
+
+        assert not unreached, (
+            "Push triggers that miss the files they publish:\n  " + "\n  ".join(unreached)
         )
 
     def test_a_push_triggered_workflow_reads_only_stacks_deployed_here(self) -> None:
