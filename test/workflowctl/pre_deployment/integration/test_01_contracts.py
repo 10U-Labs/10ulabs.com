@@ -336,6 +336,24 @@ class TestGraphKeysMatchWorkflowFiles:
         )
 
 
+class TestTheControllerHasNothingLeftToStart:
+    """Tests that the graph is empty now every workflow carries its own trigger."""
+
+    def test_the_dependency_graph_has_no_keys(self, dependency_graph: dict) -> None:
+        """Verify no workflow is still left for the controller to dispatch.
+
+        Every workflow names its own paths now, so a key here is a workflow
+        GitHub starts on the push and the controller starts again the moment a
+        parent reports, with the two runs racing on one state lock. The file
+        goes altogether under #517; until then this is what keeps it empty.
+        """
+        remaining = sorted(dependency_graph)
+
+        assert not remaining, (
+            "Nodes the controller would still dispatch:\n  " + "\n  ".join(remaining)
+        )
+
+
 class TestGraphPathsMatchWorkflowFiles:
     """Tests that graph paths include the correct workflow file references."""
 
@@ -954,6 +972,29 @@ class TestEveryWorkflowCanBeStarted:
 
         assert not stranded, (
             "Workflows nothing starts:\n  " + "\n  ".join(stranded)
+        )
+
+
+class TestBootstrapCanBeAppliedIntoAnEmptyAccount:
+    """Tests that the one workflow a cold account needs can still be pressed."""
+
+    def test_bootstrap_keeps_its_workflow_dispatch_trigger(self) -> None:
+        """Verify bootstrap can be started by hand as well as by a push.
+
+        Bootstrap creates the bucket every other stack keeps its state in and
+        the role every other run assumes, so in an account where none of that
+        exists yet a push can start nothing at all and the first deploy has to
+        be pressed. A conversion that dropped this trigger would look correct
+        until the next fresh account, which is the worst moment to find out.
+        """
+        document = yaml.safe_load(
+            (WORKFLOWS_DIR / "bootstrap.yml").read_text(encoding="utf-8")
+        )
+        triggers = document.get(True) or document.get("on") or {}
+
+        assert "workflow_dispatch" in triggers, (
+            "bootstrap.yml can only be started by a push, so an account with no "
+            "state bucket and no OIDC role has no way to deploy it"
         )
 
 

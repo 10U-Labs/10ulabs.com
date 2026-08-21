@@ -1,12 +1,1 @@
-{
-  "bootstrap": {
-    "depends_on": [],
-    "name": "Ensuring bootstrap infrastructure exists and is properly configured",
-    "paths": [
-      ".github/workflows/bootstrap.yml",
-      "lib/terraform/common/**",
-      "src/bootstrap/**",
-      "test/bootstrap/**"
-    ]
-  }
-}
+{}
