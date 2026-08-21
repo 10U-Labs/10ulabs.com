@@ -13,16 +13,6 @@
       "test/api/conftest.py"
     ]
   },
-  "api_common_docker_repository": {
-    "depends_on": [],
-    "name": "Ensuring API common Docker repository exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_common_docker_repository.yml",
-      "lib/terraform/common/**",
-      "src/api/common/docker_repository/**",
-      "test/api/common/docker_repository/**"
-    ]
-  },
   "api_common_networking": {
     "depends_on": [],
     "name": "Ensuring API common networking infrastructure exists and is properly configured",
