@@ -1,7 +1,7 @@
 ---
 concurrency:
-  cancel-in-progress: true
-  group: ${{ github.workflow_ref }}-${{ github.ref }}
+  cancel-in-progress: false
+  group: ecs_task_stops/terraform.tfstate
 jobs:
   deploy:
     if: github.ref == 'refs/heads/main'

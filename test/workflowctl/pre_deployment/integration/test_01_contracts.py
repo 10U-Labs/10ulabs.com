@@ -50,6 +50,7 @@ ORDERINGS_WITHOUT_STATE_READS = {
 REMOTE_STATE_BLOCK = re.compile(r'data\s+"terraform_remote_state"\s+"[^"]+"\s*\{')
 STATE_KEY = re.compile(r'key\s*=\s*"([^"]+)"')
 DEFAULTS_ATTRIBUTE = re.compile(r"^\s*defaults\s*=", re.MULTILINE)
+WORKING_DIRECTORY = re.compile(r"^\s*cd\s+(\S+)", re.MULTILINE)
 
 
 @pytest.fixture(scope="module")
@@ -189,6 +190,25 @@ def _state_reads(graph: dict, hard_only: bool) -> dict:
                 continue
             reads.setdefault(node, set()).add(key.group(1))
     return reads
+
+
+def _applied_stacks() -> dict:
+    """Map each workflow that runs 'terraform apply' to the state key it writes.
+
+    The directory the apply runs in is the Terraform root module, and its
+    backend.tf names the state object the lock is taken against.
+    """
+    stacks = {}
+    for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        text = workflow.read_text(encoding="utf-8")
+        if "terraform apply" not in text:
+            continue
+        directory = WORKING_DIRECTORY.findall(text[:text.index("terraform apply")])
+        backend = REPO_ROOT / directory[-1] / "backend.tf"
+        key = STATE_KEY.search(backend.read_text(encoding="utf-8"))
+        if key is not None:
+            stacks[workflow.stem] = key.group(1)
+    return stacks
 
 
 class TestGraphKeysMatchWorkflowFiles:
@@ -417,6 +437,56 @@ class TestGraphNamesMatchWorkflowNames:
         assert not mismatches, (
             "Name mismatches between graph and workflow files:\n  " +
             "\n  ".join(mismatches)
+        )
+
+
+class TestApplyingWorkflowsAreNotCancelled:
+    """Tests that a deploy is never killed part-way through terraform apply."""
+
+    def test_no_applying_workflow_cancels_itself(self) -> None:
+        """Verify a workflow running terraform apply is not cancelled by a newer run.
+
+        Terraform holds a lock object beside the state for the length of an
+        apply. A run killed mid-apply need not reach the release, which strands
+        the lock and can leave the state no longer describing the account.
+        """
+        cancelled = []
+
+        for name in _applied_stacks():
+            path = WORKFLOWS_DIR / f"{name}.yml"
+            concurrency = yaml.safe_load(
+                path.read_text(encoding="utf-8")
+            ).get("concurrency", {})
+            if concurrency.get("cancel-in-progress"):
+                cancelled.append(
+                    f"{name}: runs terraform apply and declares "
+                    "cancel-in-progress: true"
+                )
+
+        assert not cancelled, (
+            "Deploys that can be killed mid-apply:\n  " + "\n  ".join(cancelled)
+        )
+
+    def test_applying_workflows_serialise_on_the_stack(self) -> None:
+        """Verify a deploy's concurrency group is the state key it applies.
+
+        The lock protects a state object, so two runs of one stack have to
+        queue and two runs of different stacks have to not.
+        """
+        misgrouped = []
+
+        for name, state_key in _applied_stacks().items():
+            path = WORKFLOWS_DIR / f"{name}.yml"
+            group = yaml.safe_load(
+                path.read_text(encoding="utf-8")
+            ).get("concurrency", {}).get("group")
+            if group != state_key:
+                misgrouped.append(
+                    f"{name}: applies '{state_key}' but queues on '{group}'"
+                )
+
+        assert not misgrouped, (
+            "Deploys not serialised on their stack:\n  " + "\n  ".join(misgrouped)
         )
 
 
