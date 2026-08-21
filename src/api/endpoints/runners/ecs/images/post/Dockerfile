@@ -61,7 +61,7 @@ RUN apt-get update && \
         mypy paramiko pylint PyJWT pytest pytest-dependency python-hcl2 PyYAML requests \
         types-paramiko types-PyYAML types-requests yamllint && \
     apt-get autoremove -y && apt-get clean && \
-    useradd -m -s /bin/bash runner && echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    useradd -m -u 1000 -s /bin/bash runner && echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     tar xzf /tmp/runner.tar.gz && rm /tmp/runner.tar.gz && \
     mv /tmp/entrypoint.py /home/runner/entrypoint.py && chmod 755 /home/runner/entrypoint.py && \
     chown -R runner:runner /home/runner && \
@@ -72,6 +72,6 @@ RUN apt-get update && \
     find /usr -type f -name '*.pyc' -delete && \
     find /usr -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
 ENV NODE_PATH=/usr/local/lib/node_modules
-USER runner
+USER 1000:1000
 ENTRYPOINT ["/home/runner/entrypoint.py"]
 CMD ["--repo", "", "--name", "", "--labels", "", "--token", ""]
