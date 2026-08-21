@@ -7,7 +7,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Deploy www_common infrastructure
     permissions:
-      actions: write
       contents: read
       id-token: write
     runs-on: >-
@@ -191,39 +190,17 @@ jobs:
             terraform plan
       - name: Terraform Apply
         run: cd src/www/common && terraform apply -auto-approve
-      - id: check_files
-        name: Check if CloudFront config changed
-        run: |
-          set -e
-          set -o pipefail
-          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
-            BASE_COMMIT="${{ github.event.before }}"
-          else
-            BASE_COMMIT="HEAD^"
-          fi
-          PATTERN='src/www/common/(cloudfront_s3|lambda_edge)\.tf'
-          PATTERN="$PATTERN|src/www/common/lambda/"
-          git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE "$PATTERN"; then
-              echo "changed=true" >> $GITHUB_OUTPUT
-            else
-              echo "changed=false" >> $GITHUB_OUTPUT
-            fi
       - if: >-
-          github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message,
-            '[invalidate cloudfront]') ||
-          steps.check_files.outputs.changed == 'true'
+          github.event_name == 'push' ||
+          github.event.inputs.invalidate_cloudfront == 'true'
         name: Get website domain from Terraform output
         run: |
           WEBSITE_FQDN=$(cd src/www/common && \
             terraform output -raw website_domain_name)
           echo "WEBSITE_FQDN=$WEBSITE_FQDN" >> $GITHUB_ENV
       - if: >-
-          github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message,
-            '[invalidate cloudfront]') ||
-          steps.check_files.outputs.changed == 'true'
+          github.event_name == 'push' ||
+          github.event.inputs.invalidate_cloudfront == 'true'
         name: Invalidate CloudFront cache
         run: |
           python3 scripts/invalidate_cloudfront.py \
@@ -242,45 +219,22 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $TEST/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        id: descendants
-        if: >-
-          github.event_name == 'workflow_dispatch' &&
-          (
-          github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message,
-           '[trigger descendants]'))
-        name: Compute descendants
-        run: |
-          python3 src/workflowctl/workflowctl.py compute-descendants \
-            --workflow www_common \
-            --repo ${{ github.repository }}
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: >-
-          steps.descendants.outputs.ready != '[]' &&
-          github.event_name == 'workflow_dispatch' &&
-          (
-          github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message,
-           '[trigger descendants]'))
-        name: Dispatch ready descendants
-        run: |
-          TRIGGER="${{ github.event.inputs.trigger_descendants }}"
-          INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
-          READY='${{ steps.descendants.outputs.ready }}'
-          for workflow in $(echo "$READY" | jq -r '.[]'); do
-            FLAGS="-f trigger_descendants=${TRIGGER:-false}"
-            if [ "$INVALIDATE" = "true" ]; then
-              FLAGS="$FLAGS -f invalidate_cloudfront=true"
-            fi
-            gh workflow run "${workflow}.yml" \
-              --repo ${{ github.repository }} \
-              $FLAGS
-          done
 name: Ensuring www common infrastructure exists and is properly configured
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/www_common.yml
+      - lib/terraform/common/**
+      - lib/terraform/s3_bucket/**
+      - lib/terraform/write_ahead_queue/**
+      - src/www/common/**
+      - test/lib/terraform/common/**
+      - test/lib/terraform/conftest.py
+      - test/lib/terraform/s3_bucket/**
+      - test/lib/terraform/write_ahead_queue/**
+      - test/www/common/**
   workflow_dispatch:
     inputs:
       github_hosted:
@@ -291,15 +245,6 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
-      spot_recovery_reason:
-        description: Spot recovery trigger reason
-        required: false
-        type: string
-      trigger_descendants:
-        default: true
-        description: Trigger descendant workflows after this workflow completes
-        type: boolean
 permissions:
-  actions: write
   contents: read
   id-token: write

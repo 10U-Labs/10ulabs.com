@@ -44,6 +44,7 @@ WORKING_DIRECTORY = re.compile(r"^\s*cd\s+(\S+)", re.MULTILINE)
 DOCKERFILE_PATH = re.compile(r"^\s*\w+=(\S+/Dockerfile)$", re.MULTILINE)
 NPM_PREFIX = re.compile(r"--prefix\s+(src/\S+)")
 S3_SYNC = re.compile(r"aws s3 sync\s+(src/\S+)")
+TERRAFORM_MODULE = re.compile(r"cd (lib/terraform/[\w-]+)")
 CHANGED_FILE_EVENT = re.compile(r"github\.event\.(?:before|commits)")
 INVALIDATION_INPUT = "github.event.inputs.invalidate_cloudfront"
 PUSH_EVENT = "github.event_name == 'push'"
@@ -245,6 +246,16 @@ def _synced_directories(name: str) -> list:
     """
     text = (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
     return sorted({found.rstrip("/") for found in S3_SYNC.findall(text)})
+
+
+def _checked_modules(name: str) -> list:
+    """List the shared Terraform modules a workflow formats and lints.
+
+    A module under lib/terraform is deployed by no workflow of its own, so
+    the runs that change directory into it are the only ones that check it.
+    """
+    text = (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
+    return sorted(set(TERRAFORM_MODULE.findall(text)))
 
 
 def _applied_stacks() -> dict:
@@ -637,6 +648,29 @@ class TestPushTriggeredWorkflows:
 
         assert not unmatched, (
             "Push triggers that miss their own source:\n  " + "\n  ".join(unmatched)
+        )
+
+    def test_a_push_triggered_workflow_names_the_modules_it_checks(self) -> None:
+        """Verify a shared module such a workflow checks is named in its paths.
+
+        A module under lib/terraform belongs to no stack, so the workflow that
+        formats and lints it is the only place its files are read at all. With
+        the graph node gone the paths list is the last record of that, and a
+        module left out of it is one whose edits are checked by nothing until
+        something else in the same workflow happens to change.
+        """
+        unchecked = []
+
+        for name, paths in sorted(_push_triggered_workflows().items()):
+            covered = {glob.split("*")[0].rstrip("/") for glob in paths}
+            for module in _checked_modules(name):
+                if module not in covered:
+                    unchecked.append(
+                        f"{name}: formats {module} but its paths do not name it"
+                    )
+
+        assert not unchecked, (
+            "Push triggers that miss a module they check:\n  " + "\n  ".join(unchecked)
         )
 
     def test_a_push_triggered_workflow_names_the_files_it_publishes(self) -> None:

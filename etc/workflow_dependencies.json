@@ -8,21 +8,5 @@
       "src/bootstrap/**",
       "test/bootstrap/**"
     ]
-  },
-  "www_common": {
-    "depends_on": [],
-    "name": "Ensuring www common infrastructure exists and is properly configured",
-    "paths": [
-      ".github/workflows/www_common.yml",
-      "lib/terraform/common/**",
-      "lib/terraform/s3_bucket/**",
-      "lib/terraform/write_ahead_queue/**",
-      "src/www/common/**",
-      "test/lib/terraform/common/**",
-      "test/lib/terraform/conftest.py",
-      "test/lib/terraform/s3_bucket/**",
-      "test/lib/terraform/write_ahead_queue/**",
-      "test/www/common/**"
-    ]
   }
 }
