@@ -13,16 +13,6 @@
       "test/api/conftest.py"
     ]
   },
-  "api_common_networking": {
-    "depends_on": [],
-    "name": "Ensuring API common networking infrastructure exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_common_networking.yml",
-      "lib/terraform/common/**",
-      "src/api/common/networking/**",
-      "test/api/common/networking/**"
-    ]
-  },
   "bootstrap": {
     "depends_on": [],
     "name": "Ensuring bootstrap infrastructure exists and is properly configured",
