@@ -72,14 +72,6 @@
       "test/api/endpoints/soc_simulations/**"
     ]
   },
-  "rtl_verilator": {
-    "depends_on": [],
-    "name": "RTL Verilator",
-    "paths": [
-      ".github/workflows/rtl_verilator.yml",
-      "src/rtl/**"
-    ]
-  },
   "www_home": {
     "depends_on": [
       "www_common"
