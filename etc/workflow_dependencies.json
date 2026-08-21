@@ -191,20 +191,6 @@
       "test/api/endpoints/ecs_task_stops/**"
     ]
   },
-  "api_endpoint_v1_runners_cleanups": {
-    "depends_on": [
-      "bootstrap",
-      "api_endpoint_v1_runners_ecs"
-    ],
-    "name": "Ensuring runners cleanup handler exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_runners_cleanups.yml",
-      "lib/terraform/common/**",
-      "src/api/endpoints/runners/cleanups/**",
-      "test/api/conftest.py",
-      "test/api/endpoints/runners/cleanups/**"
-    ]
-  },
   "api_endpoint_v1_github_workflows_retries": {
     "depends_on": [
       "bootstrap"

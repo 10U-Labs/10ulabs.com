@@ -586,6 +586,21 @@ class TestPushTriggeredWorkflows:
         )
 
 
+    def test_a_push_triggered_workflow_is_not_also_a_graph_node(
+        self, dependency_graph: dict
+    ) -> None:
+        """Verify no workflow is both started by a push and dispatched as a descendant.
+
+        A workflow named in both places runs twice for one commit: GitHub
+        starts it on its paths, and the controller starts it again as soon as
+        a parent reports, with the two runs racing on the same state lock.
+        """
+        doubled = sorted(set(dependency_graph) & set(_push_triggered_workflows()))
+
+        assert not doubled, (
+            "Workflows started twice for one push:\n  " + "\n  ".join(doubled)
+        )
+
     def test_a_push_triggered_workflow_names_no_whole_tree_glob(self) -> None:
         """Verify such a workflow does not rebuild on any edit under lib/python.
 
