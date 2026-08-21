@@ -8,4 +8,4 @@ Running the analysers locally would collapse that to one push, and it is the obv
 
 What is worth doing instead is reading the whole failed step rather than its first line — one `pylint` step reports every finding it has, and the step after it stays unread until this one passes — and sweeping the change for other instances of the same shape before pushing the fix. A fix that also clears every sibling instance turns two cycles into one without running anything here.
 
-`10U-Labs/wan-synthesizer` answered the same tension differently, by splitting each check into a job of its own so one run reports every finding at once. That is available here and is not done; until it is, the sweep is what stands in for it.
+There is a fix for the tension itself, which is to make each check a job of its own: jobs start together, so one run reports every finding it has instead of the first. That is not done here. Until it is, the sweep is what stands in for it.

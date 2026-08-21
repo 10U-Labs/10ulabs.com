@@ -24,6 +24,6 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [tenets-are-generic](tenets-are-generic.md) — the four tier files name no tool, language or directory and the repository follows them; `OVERVIEW.md` describes this suite and loses to the tree
 - [the-test-tree-splits-on-deployment-phase](the-test-tree-splits-on-deployment-phase.md) — `pre_deployment/{unit,integration}` and `post_deployment/{integration,e2e}` for a subsystem that deploys, and nothing of the kind under `test/lib/`
 
-## What is deliberately not here
+## The one rule with no note here
 
-These notes came from `10U-Labs/wan-synthesizer` with its `Verification`, `Commits`, `Tests`, `Markdown`, `Issues` and `Notes` sections. Its `CI workflows`, `Third-party code` and `Writing` sections were not ported, so the notes behind them are not here either. The one rule from that set still in force is the writing rule, which lives in the `:05` reminder of `.claude/skills/autopilot/SKILL.md` and nowhere else — deleting that reminder deletes the rule.
+Leading with what a thing is for — every paragraph opening with a plain sentence before any file, function or line is named — is in force and is written down in one place only, the `:05` reminder of `.claude/skills/autopilot/SKILL.md`. Delete that reminder and the rule leaves the repository. It belongs in a note here.

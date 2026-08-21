@@ -10,6 +10,6 @@ Definitive does not mean silent about what was rejected. Naming the alternative 
 
 The older half of this rule is about issues already on disk. Where a filed `Proposed Solution` says "either X or Y", do not pick, however clearly the text leans toward one and even when it calls one the smaller change; ask which one before editing a file, and ask before there is a draft, because a draft turns the question into a request to approve what is already done.
 
-Both halves were paid for in `10U-Labs/wan-synthesizer`. Its issue #60 was filed with two open questions at the end of its `Proposed Solution` on the reasoning that an either belongs to the user — half right, and applied in the wrong place: the questions did need the user, and the answer was to ask them before filing. Its issue #47 offered two incompatible options and was solved down the one it called smaller, which left a whole test tier unreachable for exactly the pushes it existed for, and took a third commit to undo.
+The reasoning that an either belongs to the user is the one to watch for, because it is half right: the fork does need the user, and what follows from that is asking before the issue is filed, not publishing the fork inside it. An issue that offers two incompatible options gets solved down whichever one it called smaller, and being smaller is not the same as being right.
 
 The sections an issue has and the order they come in are in [how-issues-are-written](how-issues-are-written.md).

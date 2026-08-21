@@ -15,6 +15,4 @@ The first passes the full hash, which `git rev-parse` gives and `git log --oneli
 
 The same caution applies to reading a run rather than finding one. `gh run view <run-id>` takes the numeric run id from the listing, not a commit hash of any length, so take the id from the listing rather than building a query out of the commit.
 
-The incident is in `10U-Labs/wan-synthesizer`, where two watchers in one session on 2026-07-30 were armed on the short hash and sat until they timed out while the workflows they were waiting for ran and went green. The behaviour is `gh`'s, not that repository's, and it applies here unchanged.
-
 See also [verification-in-ci-only](verification-in-ci-only.md), which is why finding the run matters: the run is the only evidence a change works, so a watcher that silently never finds it is a change with no verification at all.

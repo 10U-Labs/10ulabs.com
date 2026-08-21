@@ -1,6 +1,6 @@
 # Working in 10ulabs.com
 
-These are the standing conventions for working in this repository. Each section links the longer write-up behind it, one note per topic under `docs/claude/memories/`; [docs/claude/memories/README.md](docs/claude/memories/README.md) indexes them all. They are ported from the same file in `10U-Labs/wan-synthesizer` and say what is true here, which is not always what is true there.
+These are the standing conventions for working in this repository. Each section links the longer write-up behind it, one note per topic under `docs/claude/memories/`; [docs/claude/memories/README.md](docs/claude/memories/README.md) indexes them all.
 
 ## Verification
 
@@ -16,7 +16,7 @@ Longer: [verification-in-ci-only](docs/claude/memories/verification-in-ci-only.m
 
 Work goes straight to `main` as direct commits. Do not create a feature branch, do not open a pull request, and do not structure advice around a review cycle. The merge commits below `33031228` are the older pull-request habit rather than the current one; everything above it is a direct commit. There is no pull-request buffer, so CI is the only review there is and the tests land in the same commit as the code they cover.
 
-One issue is solved by one commit and one push, and the commit closes its issue in the message: `Closes #490` in `31f0066f`, or the qualified `Fixes 10U-Labs/wan-synthesizer#95` that `1e45d1f9` carries when the issue lives in another repository. That line is what drains the queue — an issue solved by a push that does not carry it stays open and is picked up again on the next pass. An issue that cannot be done in one commit is two issues, and filing the second is the answer rather than spreading one issue across pushes.
+One issue is solved by one commit and one push, and the commit closes its issue in the message: `Closes #490` in `31f0066f`, or the qualified `Fixes <owner>/<repo>#<n>` that `1e45d1f9` carries when the issue lives in another repository. That line is what drains the queue — an issue solved by a push that does not carry it stays open and is picked up again on the next pass. An issue that cannot be done in one commit is two issues, and filing the second is the answer rather than spreading one issue across pushes.
 
 A push rejected by CI is answered with a follow-up commit. Do not amend and force-push: `main` is published by the time the run reports, and rewriting it discards what was tried. The static-analysis checks here are steps of a single `deploy` job rather than jobs of their own, and a job stops at its first failing step, so a run reports the first failing check and nothing about the ones behind it. Read the whole failed step rather than its first line — one `pylint` step reports every finding it has — and sweep the change for other instances of the same shape before pushing the fix, because the step after it stays unread until this one passes.
 
