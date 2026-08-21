@@ -98,17 +98,6 @@
       "test/api/endpoints/sessions/**"
     ]
   },
-  "api_endpoint_v1_ec2_spot_interruptions": {
-    "depends_on": [],
-    "name": "Ensuring EC2 spot interruption handler exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_ec2_spot_interruptions.yml",
-      "lib/terraform/common/**",
-      "src/api/endpoints/ec2_spot_interruptions/**",
-      "test/api/conftest.py",
-      "test/api/endpoints/ec2_spot_interruptions/**"
-    ]
-  },
   "api_endpoint_v1_github_workflows_retries": {
     "depends_on": [
       "bootstrap"
