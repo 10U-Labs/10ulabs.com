@@ -105,21 +105,6 @@
       "test/lib/python/test_lambda_http/**"
     ]
   },
-  "api_endpoint_v1_runners_ecs_images": {
-    "depends_on": [
-      "api_common_docker_repository",
-      "api_common_routing"
-    ],
-    "name": "Ensuring /v1/runners/ecs/images API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_runners_ecs_images.yml",
-      "lib/python/lambda_http/**",
-      "lib/terraform/common/**",
-      "src/api/endpoints/runners/ecs/images/*.tf",
-      "src/api/endpoints/runners/ecs/images/lambda/**",
-      "test/api/endpoints/runners/ecs/images/endpoint/**"
-    ]
-  },
   "api_endpoint_v1_rack_configurations": {
     "depends_on": [
       "api_common_routing"

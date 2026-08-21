@@ -653,6 +653,27 @@ class TestPushTriggeredWorkflows:
             "Push triggers that reach another stack:\n  " + "\n  ".join(crossed)
         )
 
+    def test_a_push_triggered_workflow_reaches_no_other_build(self) -> None:
+        """Verify such a workflow's paths match no Docker build but its own.
+
+        The image a workflow builds sits in a directory of its own below the
+        stack that runs on it, so a glob reaching into it deploys a stack again
+        for every edit to a Dockerfile that stack does not build.
+        """
+        builds = {name: _dockerfile_directory(name) for name in _push_triggered_workflows()}
+        reached = [
+            f"{name}: its paths name '{glob}', which reaches {build}/Dockerfile"
+            for name, paths in sorted(_push_triggered_workflows().items())
+            for build in sorted(entry for entry in set(builds.values()) if entry)
+            if build != builds[name]
+            for glob in paths
+            if _glob_matches(glob, f"{build}/Dockerfile")
+        ]
+
+        assert not reached, (
+            "Push triggers that reach another build:\n  " + "\n  ".join(reached)
+        )
+
     def test_a_push_triggered_workflow_names_the_tests_it_runs(self) -> None:
         """Verify every test file such a workflow runs is named in its paths.
 
