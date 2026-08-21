@@ -23,18 +23,6 @@
       "test/bootstrap/**"
     ]
   },
-  "api_endpoint_v1_rack_configurations": {
-    "depends_on": [
-      "api_common_routing"
-    ],
-    "name": "Ensuring /v1/rack-configurations API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_rack_configurations.yml",
-      "lib/terraform/common/**",
-      "src/api/endpoints/rack_configurations/**",
-      "test/api/endpoints/rack_configurations/**"
-    ]
-  },
   "api_endpoint_v1_sessions": {
     "depends_on": [
       "api_common_routing"
