@@ -89,31 +89,6 @@
       "test/api/operational/diagnostics/**"
     ]
   },
-  "api_endpoint_v1_runners_ecs": {
-    "depends_on": [
-      "bootstrap",
-      "api_common_networking",
-      "api_common_docker_repository",
-      "api_common_routing"
-    ],
-    "name": "Ensuring the /v1/runners/ecs API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_runners_ecs.yml",
-      "lib/python/aws_clients/**",
-      "lib/python/github_runner_api/**",
-      "lib/python/infra_validation/**",
-      "lib/python/lambda_http/**",
-      "lib/python/runner_labels/**",
-      "lib/terraform/common/**",
-      "src/api/endpoints/runners/ecs/*.tf",
-      "src/api/endpoints/runners/ecs/lambda/**",
-      "test/api/conftest.py",
-      "test/api/endpoints/runners/ecs/__init__.py",
-      "test/api/endpoints/runners/ecs/conftest.py",
-      "test/api/endpoints/runners/ecs/post_deployment/**",
-      "test/api/endpoints/runners/ecs/pre_deployment/**"
-    ]
-  },
   "api_endpoint_v1_runners_ec2_images": {
     "depends_on": [
       "api_common_networking",

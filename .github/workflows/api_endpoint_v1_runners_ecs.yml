@@ -7,7 +7,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Deploy /v1/runners/ecs endpoint
     permissions:
-      actions: write
       contents: read
       id-token: write
     runs-on: >-
@@ -183,65 +182,33 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $TEST/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        id: descendants
-        if: >-
-          github.event_name == 'workflow_dispatch' &&
-          (
-          github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message,
-           '[trigger descendants]'))
-        name: Compute descendants
-        run: |
-          python3 src/workflowctl/workflowctl.py compute-descendants \
-            --workflow api_endpoint_v1_runners_ecs \
-            --repo ${{ github.repository }}
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: >-
-          steps.descendants.outputs.ready != '[]' &&
-          github.event_name == 'workflow_dispatch' &&
-          (
-          github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message,
-           '[trigger descendants]'))
-        name: Dispatch ready descendants
-        run: |
-          TRIGGER="${{ github.event.inputs.trigger_descendants }}"
-          INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
-          READY='${{ steps.descendants.outputs.ready }}'
-          for workflow in $(echo "$READY" | jq -r '.[]'); do
-            FLAGS="-f trigger_descendants=${TRIGGER:-false}"
-            if [ "$INVALIDATE" = "true" ]; then
-              FLAGS="$FLAGS -f invalidate_cloudfront=true"
-            fi
-            gh workflow run "${workflow}.yml" \
-              --repo ${{ github.repository }} \
-              $FLAGS
-          done
 name: >-
   Ensuring the /v1/runners/ecs API endpoint exists and is properly configured
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/api_endpoint_v1_runners_ecs.yml
+      - lib/python/aws_clients/**
+      - lib/python/github_runner_api/**
+      - lib/python/infra_validation/**
+      - lib/python/lambda_http/**
+      - lib/python/runner_labels/**
+      - lib/terraform/common/**
+      - src/api/endpoints/runners/ecs/*.tf
+      - src/api/endpoints/runners/ecs/lambda/**
+      - test/api/conftest.py
+      - test/api/endpoints/runners/ecs/__init__.py
+      - test/api/endpoints/runners/ecs/conftest.py
+      - test/api/endpoints/runners/ecs/post_deployment/**
+      - test/api/endpoints/runners/ecs/pre_deployment/**
   workflow_dispatch:
     inputs:
       github_hosted:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-      invalidate_cloudfront:
-        default: false
-        description: Force CloudFront cache invalidation
-        type: boolean
-      spot_recovery_reason:
-        description: Spot recovery trigger reason
-        required: false
-        type: string
-      trigger_descendants:
-        default: true
-        description: Trigger descendant workflows after this workflow completes
-        type: boolean
 permissions:
-  actions: write
   contents: read
   id-token: write

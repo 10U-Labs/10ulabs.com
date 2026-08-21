@@ -246,6 +246,16 @@ def _applied_stacks() -> dict:
     return stacks
 
 
+def _glob_matches(glob: str, path: str) -> bool:
+    """Say whether a GitHub path filter matches a repository path.
+
+    A single star stops at a directory separator and a double star crosses
+    them, which is what separates a stack's own files from a neighbour's.
+    """
+    pattern = re.escape(glob).replace(r"\*\*", "\x00").replace(r"\*", "[^/]*")
+    return re.fullmatch(pattern.replace("\x00", ".*"), path) is not None
+
+
 def _push_triggered_workflows() -> dict:
     """Map each workflow GitHub starts from a push to the paths it matches on."""
     triggered = {}
@@ -599,6 +609,27 @@ class TestPushTriggeredWorkflows:
 
         assert not doubled, (
             "Workflows started twice for one push:\n  " + "\n  ".join(doubled)
+        )
+
+    def test_a_push_triggered_workflow_reaches_no_other_stack(self) -> None:
+        """Verify such a workflow's paths match no Terraform root but its own.
+
+        Nothing orders these runs any more, so a glob that reaches a
+        neighbouring stack starts two applies against two state files for one
+        commit, each holding its own lock and neither aware of the other.
+        """
+        roots = {name: _terraform_directory(name) for name in _applied_stacks()}
+        crossed = [
+            f"{name}: its paths name '{glob}', which reaches {root}/backend.tf"
+            for name, paths in sorted(_push_triggered_workflows().items())
+            for root in sorted(set(roots.values()))
+            if root and root != roots.get(name, _terraform_directory(name))
+            for glob in paths
+            if _glob_matches(glob, f"{root}/backend.tf")
+        ]
+
+        assert not crossed, (
+            "Push triggers that reach another stack:\n  " + "\n  ".join(crossed)
         )
 
     def test_a_push_triggered_workflow_names_no_whole_tree_glob(self) -> None:
