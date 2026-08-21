@@ -445,6 +445,36 @@ class TestGraphDependenciesExist:
         )
 
 
+class TestNoNodeWaitsOnTwoParents:
+    """Tests that no node is left for more than one parent to dispatch."""
+
+    def test_no_node_declares_more_than_one_dependency(
+        self, dependency_graph: dict
+    ) -> None:
+        """Verify no node has a second parent able to dispatch it again.
+
+        A parent decides which descendants are ready from a step inside its
+        own run, and counts a sibling satisfied on any success within the
+        lookback window. This set redeploys every twenty minutes, so that
+        window always holds an unrelated success and every parent of a node
+        dispatches it, the later run cancelling the earlier one. Narrowing
+        the window inverts the failure rather than removing it, because a
+        parent still running for the commit cannot be observed by its
+        sibling and the node is then dispatched by nobody. A node GitHub
+        starts from its own paths has no join left to decide, so a second
+        parent is the thing to remove.
+        """
+        joins = [
+            f"{key}: dispatched by {', '.join(sorted(config['depends_on']))}"
+            for key, config in sorted(dependency_graph.items())
+            if len(config.get("depends_on", [])) > 1
+        ]
+
+        assert not joins, (
+            "Nodes waiting on more than one parent:\n  " + "\n  ".join(joins)
+        )
+
+
 class TestGraphDependenciesMatchTerraformReads:
     """Tests that depends_on records what Terraform reads, and nothing else."""
 
