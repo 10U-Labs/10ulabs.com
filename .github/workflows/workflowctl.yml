@@ -191,7 +191,7 @@ jobs:
           steps.detect-changes.outputs.workflowctl_changed == 'true'
         name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python python3 -m mypy lib/python/ test/
+          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
       - if: >-
           github.event.inputs.force_testing == 'true' ||
           contains(github.event.head_commit.message, '[force testing]') ||
