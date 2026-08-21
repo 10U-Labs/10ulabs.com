@@ -66,44 +66,20 @@ Call `CronList`, then call `CronDelete` once per job it returns — all of them,
 
 ### The standing rules live in CLAUDE.md
 
-`CLAUDE.md` at the root of the repository carries verification in CI, committing straight to `main`, the test tiers and the two issue forms, and is read at the start of every turn. This file does not restate them — a rule kept in two places drifts with nothing to signal it. The reminders exist for the part `CLAUDE.md` cannot reach: a rule read at the start of a turn is not read again forty minutes into one, and a session that has stopped is not reading anything at all.
+`CLAUDE.md` at the root of the repository carries verification in CI, committing straight to `main`, the test tiers and the two issue forms, and is read at the start of every turn. This file does not restate any of it — a rule kept in two places drifts with nothing to signal it. The reminders exist for the part `CLAUDE.md` cannot reach: a rule read at the start of a turn is not read again forty minutes into one, and a session that has stopped is not reading anything at all.
 
-### The :03 and :06 reminders pull against each other
+### How the reminders fire
 
-On purpose. One commit per issue keeps the work off multiple pushes; indivisible tasks keep it planned as steps that each finish or do not. An issue that cannot be done in one commit is two issues, which is what `:08` and `:09` are for.
+A job fires only while the session is idle, never mid-turn, because a turn cannot be preempted. So this skill cannot correct drift inside a task; what it can do is restart a loop that has stalled, which is the failure it is there to catch. It is also why `:07` earns its slot — a session waiting on a run is idle, so that is exactly when a reminder lands, and the answer to it is to keep waiting.
 
-### Starting autopilot begins the work
+Fire times drift by up to a tenth of the period, a minute here, and the offsets from `:03` on are a minute apart, so `:03` can arrive in the same minute as `:04`. A pair landing together is the tool working as documented, not a job created wrong, and not worth re-spacing the table over.
 
-Arming the reminders and doing the work look separate, and separating them leaves the session idle after `/autopilot start`. A job fires only when the session is idle, and the first is up to eleven minutes out once drift is counted — so a start at eight minutes past looks fine and a start at ten minutes past looks broken, on the same skill and the same rules.
+Both together are why `start` does the work rather than only arming the jobs: the first reminder is up to eleven minutes out, so a session that created the eight and then stopped sits silent for a whole period and looks broken.
 
-### The fire times drift
+### The :05 and :09 reminders are written down nowhere else
 
-A recurring job fires up to a tenth of its period late, a minute here, and the offsets from `:03` on are a minute apart — so `:03` can arrive in the same minute as `:04`. The stagger is a spread, not a timetable; what it still buys is that all eight cannot pile up at once. A pair landing together is not a job created wrong.
-
-### Jobs fire only while the session is idle
-
-Never mid-turn, because a turn cannot be preempted. This skill cannot correct drift inside a task; what it can do is restart a loop that has stalled, which is the failure it is there to catch. It is also why `:07` earns its slot — a session waiting on a run is idle, so that is exactly when a reminder lands, and the answer to it is to keep waiting.
-
-### The :05 reminder exists only here
-
-It is the one rule `CLAUDE.md` does not carry, and the table above is the only place it is written down: delete the reminder and the rule leaves the repository with it. It names the order and the cut as well as the structure, and says "every paragraph" rather than "every issue", because a reminder that named only structure would be read as though structure were the whole of it.
-
-### The :09 reminder carries both issue forms
-
-A reminder that names only one case is read as though that case were the whole rule, and most of the open queue here is workflow and config work. The split is by directory, so there is nothing to weigh: `src/`, `lib/python/`, `lib/terraform/` and `scripts/` owe tests; `etc/`, `.github/`, `docs/` and `products/` do not.
-
-### Where the owed tests go
-
-The `## Tests` section of `CLAUDE.md`, and one trap there is worth knowing before an issue is filed rather than after: `lib/python/` and `lib/terraform/` owe tests but have no `pre_deployment` / `post_deployment` split, so a regression section promising `test/lib/python/pre_deployment/unit/` promises a directory that exists nowhere in the tree.
-
-### The placement cases are settled by fact
-
-A session filing an issue knows what the issue is, which is exactly what the three cases read, and does not know what the sequence is for. Asking it to append, prepend or interpose as it judges best hands the decision to whoever is least able to make it.
+`:05` is the one rule `CLAUDE.md` does not carry, and the table above is the only copy of it: delete the reminder and the rule leaves the repository with it. `:09` carries the two-section issue form as well as the six-section one, because a reminder that names only one case is read as though that case were the whole rule, and most of the open queue here is workflow and config work. Neither prompt is longer than it needs to be.
 
 ### Editing this file does not reach a running session
 
-The body is read when the skill is invoked, so a change here needs `/autopilot stop` and `/autopilot start` before it takes effect. A session that solved the issue which changed this file and carried on is still working from the scope it started with, and will report that it has run out of issues rather than that it is reading the wrong set.
-
-### Naming a reminder and naming a line
-
-A reminder is named by the minute it fires — the `:01` reminder, the `:09` reminder — and a line in this file is written out in full, as the word "line" and the number. The rest of the repository writes `path/to/file.yml:115` for a line and then a bare `:120` for another line in the same file, and that shorthand collides here: a bare `:07` is a line number everywhere else and the seven-past reminder in this one.
+The body is read when the skill is invoked, so a change here needs `/autopilot stop` and `/autopilot start` before it takes effect. A session that solved the issue which changed this file and then carried on is still working from the scope it started with, and will report that it has run out of issues rather than that it is reading the wrong set.
