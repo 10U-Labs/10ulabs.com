@@ -119,7 +119,7 @@ jobs:
             src/api/endpoints/runners/ecs/images/post/*.py
       - name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python python3 -m mypy lib/python/ test/
+          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \

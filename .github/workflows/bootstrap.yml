@@ -114,7 +114,7 @@ jobs:
             --fail-on=C,R,W --fail-under=10.0
       - name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python python3 -m mypy lib/python/ test/
+          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
       - if: >-
           vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
