@@ -6,15 +6,18 @@ No AWS calls are made. This layer catches contract mismatches before deployment.
 import ast
 import re
 from pathlib import Path
+from unittest.mock import patch
 
+from module_utils import load_module_from_path
 import pytest
-
 from repo_utils import REPO_ROOT
+import yaml
 
 
 ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ec2" / "images"
 HANDLER_PATH = ENDPOINT_SRC / "lambda" / "handler.py"
 LAMBDA_TF_PATH = ENDPOINT_SRC / "lambda.tf"
+WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
 
 def _get_handler_env_vars() -> set:
@@ -134,4 +137,25 @@ class TestLambdaPackageContract:
         content = HANDLER_PATH.read_text()
         assert 'from lambda_http import' in content or 'import lambda_http' in content, (
             "handler.py should import lambda_http module"
+        )
+
+
+class TestWorkflowDispatchContract:
+    """Verify the dispatch payload names inputs the workflow will accept."""
+
+    def test_payload_inputs_are_declared_by_the_workflow(self):
+        """Verify every input the handler sends is one the workflow declares."""
+        handler = load_module_from_path("handler", HANDLER_PATH)
+        with patch.object(
+            handler, 'trigger_github_workflow', return_value={'success': True}
+        ) as mock_trigger:
+            handler.launch_ami_builder({})
+        workflow_file, payload = mock_trigger.call_args[0]
+        source = (WORKFLOWS_DIR / workflow_file).read_text(encoding="utf-8")
+        trigger = yaml.safe_load(source)[True]
+        declared = set((trigger.get("workflow_dispatch") or {}).get("inputs") or {})
+        undeclared = set(payload['inputs']) - declared
+        assert not undeclared, (
+            f"{workflow_file} declares no input named {sorted(undeclared)}, so "
+            "GitHub rejects the dispatch this handler sends"
         )

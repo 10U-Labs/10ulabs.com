@@ -35,6 +35,15 @@ class TestLaunchAmiBuilder:
 
             assert mock_trigger.call_args[0][0] == 'api_endpoint_v1_runners_ec2_images_post.yml'
 
+    def test_calls_with_no_workflow_inputs(self, handler_module):
+        """Test that the dispatch payload asks for no workflow inputs."""
+        with patch.object(
+            handler_module, 'trigger_github_workflow', return_value={'success': True}
+        ) as mock_trigger:
+            handler_module.launch_ami_builder({})
+
+            assert mock_trigger.call_args[0][1]['inputs'] == {}
+
     def test_error_handling(self, handler_module):
         """Test that errors from workflow trigger are properly handled."""
         with patch.object(

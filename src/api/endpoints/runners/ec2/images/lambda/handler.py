@@ -132,18 +132,7 @@ def handle_post_request(event: Dict[str, Any], handler_func) -> Dict[str, Any]:
 
 def launch_ami_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
     """Launch the AMI builder workflow."""
-    subnet_ids = os.environ['SUBNETS'].split(',')
-    vpc_id = os.environ['VPC_ID']
-    region = os.environ['AWS_REGION']
-
-    payload = {
-        'ref': 'main',
-        'inputs': {
-            'vpc_id': vpc_id,
-            'subnet_id': subnet_ids[0],
-            'region': region
-        }
-    }
+    payload = {'ref': 'main', 'inputs': {}}
 
     result = trigger_github_workflow('api_endpoint_v1_runners_ec2_images_post.yml', payload)
     return result

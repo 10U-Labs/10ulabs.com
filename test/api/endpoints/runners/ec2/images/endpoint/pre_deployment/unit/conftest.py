@@ -26,8 +26,6 @@ def _get_handler_env_vars() -> dict[str, str]:
         'EC2_AMI_STABLE_VALUE': 'true',
         'GITHUB_REPO': get_github_repo(),
         'GITHUB_TOKEN_SECRET_NAME': '/test/github-pat',
-        'SUBNETS': 'subnet-test1,subnet-test2',
-        'VPC_ID': 'vpc-test',
     }
 
 

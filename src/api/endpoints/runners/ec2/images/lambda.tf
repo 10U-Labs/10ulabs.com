@@ -31,8 +31,6 @@ resource "aws_lambda_function" "handler" {
       EC2_AMI_STABLE_VALUE     = local.ami_stable_value
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = module.common.ssm_github_pat_name
-      SUBNETS                  = data.terraform_remote_state.api_common_networking.outputs.public_subnets_ids
-      VPC_ID                   = data.terraform_remote_state.api_common_networking.outputs.vpc_id
     }
   }
 

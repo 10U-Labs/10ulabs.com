@@ -60,7 +60,6 @@
   },
   "api_endpoint_v1_runners_ec2_images": {
     "depends_on": [
-      "api_common_networking",
       "api_common_routing"
     ],
     "name": "Ensuring the /v1/runners/ec2/images API endpoint exists and is properly configured",
