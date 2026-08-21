@@ -72,18 +72,6 @@
       "test/api/endpoints/soc_simulations/**"
     ]
   },
-  "api_operational_health": {
-    "depends_on": [
-      "api_common_routing"
-    ],
-    "name": "Ensuring the /health API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_operational_health.yml",
-      "lib/terraform/common/**",
-      "src/api/operational/health/**",
-      "test/api/operational/health/**"
-    ]
-  },
   "rtl_verilator": {
     "depends_on": [],
     "name": "RTL Verilator",
