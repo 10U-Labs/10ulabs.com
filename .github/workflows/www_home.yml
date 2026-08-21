@@ -194,6 +194,12 @@ jobs:
           BASE_URL: https://10ulabs.com
         name: Run post-deployment integration tests
         run: npm run test:integration --prefix src/www/paths/home
+      - name: Run post-deployment integration tests with pytest
+        run: |
+          TEST=test/www/paths/home
+          PYTHONPATH=lib/python python3 -m pytest \
+            $TEST/post_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - env:
           BASE_URL: https://10ulabs.com
         name: Run E2E tests

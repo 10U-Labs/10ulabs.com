@@ -173,6 +173,12 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $BASE/pre_deployment/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
+      - name: Run pre-deployment Terraform tests
+        run: |
+          BASE=test/api/endpoints/github_workflows/webhooks
+          PYTHONPATH=lib/python python3 -m pytest \
+            $BASE/pre_deployment/terraform/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Plan
         run: |
           cd src/api/endpoints/github_workflows/webhooks && \

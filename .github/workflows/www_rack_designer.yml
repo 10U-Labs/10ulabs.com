@@ -50,6 +50,7 @@ jobs:
             assert-no-linter-config-files \
             assert-one-assert-per-pytest \
             boto3 \
+            pytest \
             yamllint
       - name: Assert no linter config files
         run: >-
@@ -98,6 +99,12 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
+      - name: Run unit tests
+        run: |
+          TEST=test/www/paths/rack_designer
+          PYTHONPATH=lib/python python3 -m pytest \
+            $TEST/pre_deployment/unit/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - name: Get website bucket name
         run: |
           terraform -chdir=src/www/common init \
@@ -131,6 +138,7 @@ on:
     paths:
       - .github/workflows/www_rack_designer.yml
       - src/www/paths/rack_designer/**
+      - test/www/paths/rack_designer/**
   workflow_dispatch:
     inputs:
       github_hosted:
