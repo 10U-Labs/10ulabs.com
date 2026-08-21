@@ -167,8 +167,9 @@ def _state_key_owners(graph: dict) -> dict:
     owners: dict = {}
     for backend in sorted(TERRAFORM_ROOT.rglob("backend.tf")):
         key = STATE_KEY.search(backend.read_text(encoding="utf-8"))
-        if key is not None:
-            owners[key.group(1)] = _owning_node(graph, _repo_relative(backend))
+        node = _owning_node(graph, _repo_relative(backend))
+        if key is not None and node:
+            owners[key.group(1)] = node
     return owners
 
 
@@ -183,6 +184,8 @@ def _state_reads(graph: dict, hard_only: bool) -> dict:
     for source in sorted(TERRAFORM_ROOT.rglob("*.tf")):
         text = source.read_text(encoding="utf-8")
         node = _owning_node(graph, _repo_relative(source))
+        if not node:
+            continue
         for match in REMOTE_STATE_BLOCK.finditer(text):
             body = _block_body(text, match.end() - 1)
             key = STATE_KEY.search(body)
@@ -190,6 +193,14 @@ def _state_reads(graph: dict, hard_only: bool) -> dict:
                 continue
             reads.setdefault(node, set()).add(key.group(1))
     return reads
+
+
+def _terraform_directory(name: str) -> str:
+    """Name the directory a workflow runs 'terraform apply' in, if it does."""
+    text = (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
+    if "terraform apply" not in text:
+        return ""
+    return WORKING_DIRECTORY.findall(text[:text.index("terraform apply")])[-1]
 
 
 def _applied_stacks() -> dict:
@@ -200,15 +211,28 @@ def _applied_stacks() -> dict:
     """
     stacks = {}
     for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
-        text = workflow.read_text(encoding="utf-8")
-        if "terraform apply" not in text:
+        directory = _terraform_directory(workflow.stem)
+        if not directory:
             continue
-        directory = WORKING_DIRECTORY.findall(text[:text.index("terraform apply")])
-        backend = REPO_ROOT / directory[-1] / "backend.tf"
+        backend = REPO_ROOT / directory / "backend.tf"
         key = STATE_KEY.search(backend.read_text(encoding="utf-8"))
         if key is not None:
             stacks[workflow.stem] = key.group(1)
     return stacks
+
+
+def _push_triggered_workflows() -> dict:
+    """Map each workflow GitHub starts from a push to the paths it matches on."""
+    triggered = {}
+    for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        # 'on' is YAML 1.1 true, so safe_load gives the trigger block that key.
+        document = yaml.safe_load(workflow.read_text(encoding="utf-8"))
+        paths = (document.get(True) or document.get("on") or {})
+        if isinstance(paths, dict) and isinstance(paths.get("push"), dict):
+            listed = paths["push"].get("paths")
+            if listed:
+                triggered[workflow.stem] = listed
+    return triggered
 
 
 class TestGraphKeysMatchWorkflowFiles:
@@ -360,15 +384,16 @@ class TestGraphDependenciesMatchTerraformReads:
     ) -> None:
         """Verify each stack a node reads state from is one of its dependencies."""
         owners = _state_key_owners(dependency_graph)
+        deployed = set(_applied_stacks().values()) | EXTERNAL_STATE_KEYS
         unrecorded = []
 
         for key, state_keys in sorted(_state_reads(dependency_graph, True).items()):
             declared = set(dependency_graph.get(key, {}).get("depends_on", []))
             for state_key in sorted(state_keys):
                 owner = owners.get(state_key)
-                if owner is None and state_key not in EXTERNAL_STATE_KEYS:
+                if owner is None and state_key not in deployed:
                     unrecorded.append(
-                        f"{key}: reads '{state_key}', which no node in the graph owns"
+                        f"{key}: reads '{state_key}', which nothing here writes"
                     )
                 elif owner not in (None, key) and owner not in declared:
                     unrecorded.append(
@@ -487,6 +512,56 @@ class TestApplyingWorkflowsAreNotCancelled:
 
         assert not misgrouped, (
             "Deploys not serialised on their stack:\n  " + "\n  ".join(misgrouped)
+        )
+
+
+class TestPushTriggeredWorkflows:
+    """Tests the workflows GitHub starts from a push rather than the controller."""
+
+    def test_a_push_triggered_workflow_matches_its_own_source(self) -> None:
+        """Verify a push-triggered workflow runs when its own file or stack changes.
+
+        A workflow the controller no longer dispatches is started by nothing
+        else, so a paths list that misses its own source silently stops
+        deploying it.
+        """
+        unmatched = []
+
+        for name, paths in _push_triggered_workflows().items():
+            if f".github/workflows/{name}.yml" not in paths:
+                unmatched.append(f"{name}: its paths do not name its own workflow file")
+            directory = _terraform_directory(name)
+            if directory and not any(glob.startswith(directory) for glob in paths):
+                unmatched.append(f"{name}: its paths do not cover '{directory}'")
+
+        assert not unmatched, (
+            "Push triggers that miss their own source:\n  " + "\n  ".join(unmatched)
+        )
+
+    def test_a_push_triggered_workflow_reads_only_stacks_deployed_here(self) -> None:
+        """Verify every state such a workflow's Terraform reads is applied by a workflow.
+
+        Nothing orders these runs any more, so a read of a stack no workflow
+        here deploys is a dependency on something that may never exist.
+        """
+        undeployed = []
+        deployed = set(_applied_stacks().values()) | EXTERNAL_STATE_KEYS
+
+        for name in _push_triggered_workflows():
+            directory = _terraform_directory(name)
+            if not directory:
+                continue
+            for source in sorted((REPO_ROOT / directory).glob("*.tf")):
+                text = source.read_text(encoding="utf-8")
+                for match in REMOTE_STATE_BLOCK.finditer(text):
+                    key = STATE_KEY.search(_block_body(text, match.end() - 1))
+                    if key is not None and key.group(1) not in deployed:
+                        undeployed.append(
+                            f"{name}: reads '{key.group(1)}', which no workflow applies"
+                        )
+
+        assert not undeployed, (
+            "Reads of stacks nothing deploys:\n  " + "\n  ".join(undeployed)
         )
 
 

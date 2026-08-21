@@ -229,21 +229,6 @@
       "test/api/endpoints/github_workflows/retries/**"
     ]
   },
-  "api_endpoint_v1_github_workflows_webhooks": {
-    "depends_on": [
-      "api_common_networking",
-      "api_common_docker_repository",
-      "api_common_routing"
-    ],
-    "name": "Ensuring the /v1/github-workflows/webhooks API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_github_workflows_webhooks.yml",
-      "lib/python/runner_labels/**",
-      "src/api/endpoints/github_workflows/webhooks/**",
-      "test/api/conftest.py",
-      "test/api/endpoints/github_workflows/webhooks/**"
-    ]
-  },
   "api_endpoint_v1_soc_simulations": {
     "depends_on": [
       "api_common_routing"
