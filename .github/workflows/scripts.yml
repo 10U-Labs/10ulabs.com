@@ -1,0 +1,800 @@
+---
+# Non-deploying Python
+#
+# lib/python/ is the shared library every lambda is built from and scripts/
+# holds the one program the deploys shell out to. Neither tree deploys, so
+# neither has a workflow of its own and until this file nothing ran their
+# tests. Every check here is its own job, so a red package reports alongside
+# the others rather than hiding behind the first failing step.
+concurrency:
+  cancel-in-progress: true
+  group: scripts-${{ github.ref }}
+jobs:
+  assert-no-inline-directives:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install assert-no-inline-directives
+        run: |
+          python3 -m pip install \
+            assert-no-inline-directives
+      - name: Assert no inline lint disables
+        run: >-
+          assert-no-inline-directives
+          --tools pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
+  assert-no-linter-config-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install assert-no-linter-config-files
+        run: |
+          python3 -m pip install \
+            assert-no-linter-config-files
+      - name: Assert no linter config files
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+  assert-one-assert-per-pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install assert-one-assert-per-pytest
+        run: |
+          python3 -m pip install \
+            assert-one-assert-per-pytest
+      - name: Assert one assert per pytest
+        run: >-
+          assert-one-assert-per-pytest
+          --verbose
+          ${{ github.workspace }}/test
+  copy-paste-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install jscpd
+        run: npm install -g jscpd@4.0.5
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ scripts/
+  copy-paste-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install jscpd
+        run: npm install -g jscpd@4.0.5
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test
+  mypy-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            paramiko \
+            pylint \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run mypy on source
+        run: |
+          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ scripts/
+  mypy-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            paramiko \
+            pylint \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run mypy on tests
+        run: |
+          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test
+  pylint-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            paramiko \
+            pylint \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run pylint on source
+        run: |
+          PYTHONPATH=lib/python:scripts python3 -m pylint \
+            lib/python/ scripts/ --fail-on=C,R,W --fail-under=10.0
+  pylint-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            paramiko \
+            pylint \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run pylint on tests
+        run: |
+          PYTHONPATH=lib/python:scripts python3 -m pylint \
+            lib/python/ test --fail-on=C,R,W --fail-under=10.0
+  test-audit-logger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run audit_logger tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_audit_logger/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=audit_logger \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-aws-clients:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run aws_clients tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_aws_clients/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=aws_clients \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-boto-mocks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run boto_mocks tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_boto_mocks/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=boto_mocks \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-ec2-fleet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run ec2_fleet tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_ec2_fleet/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=ec2_fleet \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-event-factories:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run event_factories tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_event_factories/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=event_factories \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-github-runner-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run github_runner_api tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_github_runner_api/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=github_runner_api \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-infra-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run infra_validation tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_infra_validation/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=infra_validation \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-invalidate-cloudfront:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run unit tests with a full coverage gate
+        run: |
+          BASE=test/scripts/invalidate_cloudfront
+          PYTHONPATH=lib/python:scripts python3 -m pytest \
+            $BASE/unit/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=invalidate_cloudfront \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+      - name: Run integration tests
+        run: |
+          BASE=test/scripts/invalidate_cloudfront
+          PYTHONPATH=lib/python:scripts python3 -m pytest \
+            $BASE/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+  test-lambda-http:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run lambda_http tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_lambda_http/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=lambda_http \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-lambda-response:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run lambda_response tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_lambda_response/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=lambda_response \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-module-utils:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run module_utils tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_module_utils/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=module_utils \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-naming-conventions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run naming_conventions tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_naming_conventions/ \
+            test/lib/python/test_naming_conventions_helpers/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=naming_conventions \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-repo-utils:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run repo_utils tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_repo_utils/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=repo_utils \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-runner-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run runner_labels tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_runner_labels/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=runner_labels \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-terraform-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run terraform_config tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_terraform_config/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=terraform_config \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-terraform-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run terraform_drift tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_terraform_drift/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=terraform_drift \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-test-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run test_fixtures tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_test_fixtures/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=test_fixtures \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-test-utils:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run test_utils tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_test_utils/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=test_utils \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-urllib-mocks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run urllib_mocks tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_urllib_mocks/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=urllib_mocks \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-workflowctl-mocks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            pytest-cov \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run workflowctl_mocks tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_workflowctl_mocks/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=workflowctl_mocks \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install yamllint
+        run: |
+          python3 -m pip install \
+            yamllint
+      - name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
+          yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/scripts.yml
+name: Testing the Python that deploys nothing
+on:
+  push:
+    branches:
+      - main
+    paths:
+      # src/ is deliberately absent: naming it would start every job here
+      # on every push to a lambda.
+      - .github/workflows/scripts.yml
+      - lib/python/**
+      - scripts/**
+      - test/lib/python/**
+      - test/scripts/**
+  workflow_dispatch:
+permissions:
+  contents: read

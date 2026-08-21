@@ -893,10 +893,15 @@ class TestPushTriggeredWorkflows:
 
         Once a node leaves the graph its trigger is the only record of how
         narrow it is, so the paths list is the only place left that can widen.
+        A workflow that applies no Terraform rebuilds nothing, so the cost this
+        measures does not exist for it: scripts.yml deploys nothing and lints
+        and tests both trees whole, which is why they are what it names.
         """
+        deploys = set(_applied_stacks())
         widened = [
             f"{name}: its paths name '{glob}', so any edit under it rebuilds this"
             for name, paths in sorted(_push_triggered_workflows().items())
+            if name in deploys
             for glob in WHOLE_TREE_GLOBS
             if glob in paths
         ]
