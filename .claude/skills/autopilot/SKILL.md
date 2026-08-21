@@ -3,29 +3,6 @@ name: autopilot
 description: Start or stop the standing reminders that keep an autonomous issue-solving session on the rails. Use when the user says "start autopilot", "go autonomous on the open issues", "stop autopilot", or asks to clear the reminders. Takes "start" or "stop".
 ---
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Sub-Commands](#sub-commands)
-  - [Start](#start)
-    - [Scope](#scope)
-    - [Create the reminders](#create-the-reminders)
-    - [Start working](#start-working)
-    - [Place a filed issue](#place-a-filed-issue)
-  - [Stop](#stop)
-- [Notes](#notes)
-  - [The standing rules live in CLAUDE.md](#the-standing-rules-live-in-claudemd)
-  - [The :03 and :06 reminders pull against each other](#the-03-and-06-reminders-pull-against-each-other)
-  - [Starting autopilot begins the work](#starting-autopilot-begins-the-work)
-  - [The fire times drift](#the-fire-times-drift)
-  - [Jobs fire only while the session is idle](#jobs-fire-only-while-the-session-is-idle)
-  - [The :05 reminder exists only here](#the-05-reminder-exists-only-here)
-  - [The :09 reminder carries both issue forms](#the-09-reminder-carries-both-issue-forms)
-  - [Where the owed tests go](#where-the-owed-tests-go)
-  - [The placement cases are settled by fact](#the-placement-cases-are-settled-by-fact)
-  - [Editing this file does not reach a running session](#editing-this-file-does-not-reach-a-running-session)
-  - [Naming a reminder and naming a line](#naming-a-reminder-and-naming-a-line)
-
 ## Overview
 
 Eight recurring reminders, one per standing rule, that fire back into this session while it works through the open issues on `10U-Labs/10ulabs.com` on its own. One reminder per rule, so no rule can be quietly dropped from a merged block of text; staggered across a ten-minute period so they arrive spread out rather than as a wall.
