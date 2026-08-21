@@ -1,6 +1,6 @@
 # Working in 10ulabs.com
 
-These are the standing conventions for working in this repository. They are ported from the same file in `10U-Labs/wan-synthesizer` and say what is true here, which is not always what is true there.
+These are the standing conventions for working in this repository. Each section links the longer write-up behind it, one note per topic under `docs/claude/memories/`; [docs/claude/memories/README.md](docs/claude/memories/README.md) indexes them all. They are ported from the same file in `10U-Labs/wan-synthesizer` and say what is true here, which is not always what is true there.
 
 ## Verification
 
@@ -10,6 +10,8 @@ A push starts several workflows, because every workflow here is path-filtered an
 
 Find the run by the full forty-character hash from `git rev-parse HEAD`. `gh run list --commit` silently returns an empty list for the short hash `git log --oneline` prints, which is indistinguishable from a run that has not started, so anything that polls should list recent runs and match `headSha` by prefix locally.
 
+Longer: [verification-in-ci-only](docs/claude/memories/verification-in-ci-only.md), [find-a-run-by-the-full-hash](docs/claude/memories/find-a-run-by-the-full-hash.md).
+
 ## Commits
 
 Work goes straight to `main` as direct commits. Do not create a feature branch, do not open a pull request, and do not structure advice around a review cycle. The merge commits below `33031228` are the older pull-request habit rather than the current one; everything above it is a direct commit. There is no pull-request buffer, so CI is the only review there is and the tests land in the same commit as the code they cover.
@@ -17,6 +19,8 @@ Work goes straight to `main` as direct commits. Do not create a feature branch, 
 One issue is solved by one commit and one push, and the commit closes its issue in the message: `Closes #490` in `31f0066f`, or the qualified `Fixes 10U-Labs/wan-synthesizer#95` that `1e45d1f9` carries when the issue lives in another repository. That line is what drains the queue — an issue solved by a push that does not carry it stays open and is picked up again on the next pass. An issue that cannot be done in one commit is two issues, and filing the second is the answer rather than spreading one issue across pushes.
 
 A push rejected by CI is answered with a follow-up commit. Do not amend and force-push: `main` is published by the time the run reports, and rewriting it discards what was tried. The static-analysis checks here are steps of a single `deploy` job rather than jobs of their own, and a job stops at its first failing step, so a run reports the first failing check and nothing about the ones behind it. Read the whole failed step rather than its first line — one `pylint` step reports every finding it has — and sweep the change for other instances of the same shape before pushing the fix, because the step after it stays unread until this one passes.
+
+Longer: [commit-straight-to-main](docs/claude/memories/commit-straight-to-main.md), [a-rejected-push-is-fixed-forward](docs/claude/memories/a-rejected-push-is-fixed-forward.md).
 
 ## Tests
 
@@ -30,9 +34,13 @@ A subsystem that deploys is laid out as `pre_deployment/{unit,integration}` and 
 
 Code under `lib/` deploys nothing of its own and so carries no such split. `test/lib/python/` mirrors the package and stops — `test/lib/python/test_ec2_fleet/` holds the tests for `lib/python/ec2_fleet/`, with no tier directory in between — and `test/lib/terraform/` names the module and then the one tier it has, as in `test/lib/terraform/s3_bucket/unit/test_s3_bucket_module.py`. Two of the four directories that owe tests are `lib/python/` and `lib/terraform/`, so this is the common case rather than the exception.
 
+Longer: [tdd-workflow](docs/claude/memories/tdd-workflow.md), [read-test-tenets-first](docs/claude/memories/read-test-tenets-first.md), [tenets-are-generic](docs/claude/memories/tenets-are-generic.md), [the-test-tree-splits-on-deployment-phase](docs/claude/memories/the-test-tree-splits-on-deployment-phase.md).
+
 ## Markdown
 
 Markdown is not hard-wrapped. There is no column limit on `.md` files here, and none on the bodies of GitHub issues: write each paragraph as one line and let the reader wrap it. Nothing enforces a width — the repository has no `markdownlint` and no `yamllint` configuration file, and none of the twenty-eight workflows runs a markdown linter. Most of the markdown under `products/` was written wrapped at about seventy columns before this was settled, so match this rule rather than the file next to you.
+
+Longer: [markdown-is-not-hard-wrapped](docs/claude/memories/markdown-is-not-hard-wrapped.md).
 
 ## Issues
 
@@ -46,8 +54,10 @@ An issue is definitive. Its `Proposed Solution` names one change — this functi
 
 A filed issue is placed in the queue before the work goes on, with a `blocked_by` edge either onto the issue it unblocks or onto the tail of the sequence. `.claude/skills/autopilot/SKILL.md` states the three cases and the `gh api` call that writes the edge.
 
+Longer: [how-issues-are-written](docs/claude/memories/how-issues-are-written.md), [an-issue-states-one-solution](docs/claude/memories/an-issue-states-one-solution.md).
+
 ## Notes
 
-A convention learned in a session belongs in this repository: a paragraph in this file, or a file under `docs/tenets/` when it says what a kind of work is for rather than how this repository does it. The session tool's local memory directory is one machine's unversioned files, and a rule kept in both places drifts with nothing to signal it. Keep there only what is true of that machine alone.
+A convention learned in a session belongs in this repository: a paragraph in this file and a topic file under `docs/claude/memories/`, linked from both indexes — or a file under `docs/tenets/` when it says what a kind of work is for rather than how this repository does it. The session tool's local memory directory is one machine's unversioned files, and a rule kept in both places drifts with nothing to signal it, which is why the local copy of the CI rule was deleted when these notes were written. Keep there only what is true of that machine alone.
 
 `.claude/skills/autopilot/SKILL.md` is the other half of this and does a different job: this file is read at the start of a turn, and the skill's reminders fire into a session that has gone idle. It carries how to pick the next issue and how to place a new one, and points here for the rules a turn already has in front of it.
