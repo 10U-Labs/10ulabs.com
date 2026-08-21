@@ -35,19 +35,6 @@
       "test/api/endpoints/contact_submissions/**"
     ]
   },
-  "api_operational_diagnostics": {
-    "depends_on": [
-      "api_common_routing"
-    ],
-    "name": "Ensuring the /diagnostics/echo API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_operational_diagnostics.yml",
-      "lib/python/lambda_http/**",
-      "lib/terraform/common/**",
-      "src/api/operational/diagnostics/**",
-      "test/api/operational/diagnostics/**"
-    ]
-  },
   "api_endpoint_v1_rack_configurations": {
     "depends_on": [
       "api_common_routing"
