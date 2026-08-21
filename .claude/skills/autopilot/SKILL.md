@@ -13,7 +13,7 @@ The argument is the sub-command: `start <issue-number>` or `stop`.
 
 ## Start
 
-The issue number is required — it is the `{X}` in the `:01` reminder, and it is the floor for this repository: every open issue above it here is in scope. An issue reached by following a dependency out of that set is in scope as well, whatever its number and whatever repository it lives in, because numbering in one repository says nothing about another — this one is past #522 while `10U-Labs/wan-synthesizer` is around #100, and work here already crosses that line, as the `Fixes 10U-Labs/wan-synthesizer#95` in `1e45d1f9` shows. If the user did not give an issue number, ask for it before creating anything.
+The issue number is required — it is the `{X}` in the `:01` reminder, and it is the floor for this repository: every open issue above it here is in scope. An issue reached by following a dependency out of that set is in scope as well, whatever its number and whatever repository it lives in, because numbering in one repository says nothing about another: an issue numbered below the floor here can be numbered below it everywhere and still be the thing that has to be done first. `1e45d1f9` closed an issue in another repository for exactly that reason. If the user did not give an issue number, ask for it before creating anything.
 
 Create eight jobs with `CronCreate`, exactly as listed below. Use `recurring: true` (the default). Substitute the issue number for `{X}` in the first prompt and leave the other seven verbatim. Each `cron` field is a distinct offset within the same ten-minute period, so the eight reminders never land together:
 
@@ -48,13 +48,13 @@ Call `CronList`, then call `CronDelete` once per job it returns — all of them,
 
 ## Notes
 
-The reminders are the rulebook while a session runs here, because this repository has no `CLAUDE.md` for it to read at the start of a turn. What it does have is `docs/tenets/`: `agents/AGENTS.md` ranks legality, profit, affordability, atomicity, observability and US-soil hosting, `tests/` states what each test tier is for, and `workflows/OVERVIEW.md` states what a workflow owes. Those are tenets — they name no directory or tool and they do not say how to work through a queue of issues, which is the gap these eight fill. A rule that is in neither place is not in force, so a rule worth keeping goes into a reminder here or into `docs/tenets/`, not into a chat message.
+The reminders are the rulebook while a session runs here, because this repository has no `CLAUDE.md` for it to read at the start of a turn. What it does have is `docs/tenets/tests/`, which states what each test tier is for. Those are tenets — they name no directory or tool and they do not say how to work through a queue of issues, which is the gap these eight fill. A rule that is in neither place is not in force, so a rule worth keeping goes into a reminder here or into `docs/tenets/`, not into a chat message.
 
 Verification happens in CI. Workflows here are path-filtered, so one push starts several and the change is done when each of them is green rather than when the first one is; `workflowctl.yml` runs on every push and carries the tree-wide pylint, mypy and jscpd passes. Read the run by the full forty-character hash from `git rev-parse HEAD`, since `gh run list --commit` answers an empty list for a short hash and that is indistinguishable from a run that has not started.
 
 Work goes straight to `main`. The history is direct commits — `31f0066f` and everything above it — and the merge commits below `33031228` are the older pull-request habit, not the current one. There is no review buffer, so the tests land in the same commit as the code they cover, and a push rejected by CI is answered with a follow-up commit rather than an amend and a force-push.
 
-A commit closes its issue in the message: `Closes #490` in `31f0066f`, and `Fixes 10U-Labs/wan-synthesizer#95` in `1e45d1f9` when the issue lives in the other repository. That line is what makes the queue drain — an issue solved by a push that does not carry it stays open and gets picked up again on the next traversal.
+A commit closes its issue in the message: `Closes #490` in `31f0066f`, and the qualified `Fixes <owner>/<repo>#<n>` that `1e45d1f9` carries when the issue lives in another repository. That line is what makes the queue drain — an issue solved by a push that does not carry it stays open and gets picked up again on the next traversal.
 
 The `:03` and `:06` reminders pull against each other on purpose. One commit per issue means the work is not spread across pushes; indivisible tasks means it is planned as steps that each finish or do not. An issue that cannot be done in one commit is two issues, and filing the second is what the `:08` and `:09` reminders are for.
 
