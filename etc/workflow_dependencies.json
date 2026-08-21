@@ -58,21 +58,6 @@
       "test/api/operational/diagnostics/**"
     ]
   },
-  "api_endpoint_v1_runners_ec2_images": {
-    "depends_on": [
-      "api_common_routing"
-    ],
-    "name": "Ensuring the /v1/runners/ec2/images API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_runners_ec2_images.yml",
-      "lib/python/lambda_http/**",
-      "lib/terraform/common/**",
-      "src/api/endpoints/runners/ec2/images/*.tf",
-      "src/api/endpoints/runners/ec2/images/lambda/**",
-      "test/api/endpoints/runners/ec2/images/endpoint/**",
-      "test/lib/python/test_lambda_http/**"
-    ]
-  },
   "api_endpoint_v1_rack_configurations": {
     "depends_on": [
       "api_common_routing"

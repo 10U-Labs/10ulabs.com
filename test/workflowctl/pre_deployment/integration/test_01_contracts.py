@@ -674,6 +674,31 @@ class TestPushTriggeredWorkflows:
             "Push triggers that reach another build:\n  " + "\n  ".join(reached)
         )
 
+    def test_a_push_triggered_workflow_owns_the_source_it_names(self) -> None:
+        """Verify no file under src/ is named by two push triggers.
+
+        A source file belongs to one deploy. Where a second trigger reaches it,
+        one edit runs two deploys, and the one that did not want the edit is
+        applying a stack for no reason.
+        """
+        triggers = _push_triggered_workflows()
+        shared = []
+
+        for entry in sorted((REPO_ROOT / "src").rglob("*")):
+            if not entry.is_file():
+                continue
+            path = _repo_relative(entry)
+            owners = [
+                name for name, paths in sorted(triggers.items())
+                if any(_glob_matches(glob, path) for glob in paths)
+            ]
+            if len(owners) > 1:
+                shared.append(f"{path}: named by {', '.join(owners)}")
+
+        assert not shared, (
+            "Source files more than one push trigger reaches:\n  " + "\n  ".join(shared)
+        )
+
     def test_a_push_triggered_workflow_names_the_tests_it_runs(self) -> None:
         """Verify every test file such a workflow runs is named in its paths.
 
