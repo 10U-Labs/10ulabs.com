@@ -23,18 +23,6 @@
       "test/bootstrap/**"
     ]
   },
-  "api_endpoint_v1_sessions": {
-    "depends_on": [
-      "api_common_routing"
-    ],
-    "name": "Ensuring the /v1/sessions API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_sessions.yml",
-      "lib/terraform/common/**",
-      "src/api/endpoints/sessions/**",
-      "test/api/endpoints/sessions/**"
-    ]
-  },
   "api_endpoint_v1_soc_simulations": {
     "depends_on": [
       "api_common_routing"
