@@ -3,6 +3,22 @@ name: autopilot
 description: Start or stop the standing reminders that keep an autonomous issue-solving session on the rails. Use when the user says "start autopilot", "go autonomous on the open issues", "stop autopilot", or asks to clear the reminders. Takes "start" or "stop".
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Sub-Commands](#sub-commands)
+  - [Start](#start)
+    - [Scope](#scope)
+    - [Create the reminders](#create-the-reminders)
+    - [Start working](#start-working)
+    - [Place a filed issue](#place-a-filed-issue)
+  - [Stop](#stop)
+- [Notes](#notes)
+  - [The standing rules live in CLAUDE.md](#the-standing-rules-live-in-claudemd)
+  - [How the reminders fire](#how-the-reminders-fire)
+  - [The :05 and :09 reminders are written down nowhere else](#the-05-and-09-reminders-are-written-down-nowhere-else)
+  - [Editing this file does not reach a running session](#editing-this-file-does-not-reach-a-running-session)
+
 ## Overview
 
 Eight recurring reminders, one per standing rule, that fire back into this session while it works through the open issues on `10U-Labs/10ulabs.com` on its own. One reminder per rule, so no rule can be quietly dropped from a merged block of text; staggered across a ten-minute period so they arrive spread out rather than as a wall.
