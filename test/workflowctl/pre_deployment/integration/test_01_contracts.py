@@ -117,6 +117,20 @@ def _lib_python_packages() -> list:
     )
 
 
+def _undeclared_imports(paths: list) -> list:
+    """List the lib/python packages a paths list imports without naming.
+
+    A package imported but not named is a package whose edits never reach the
+    thing built from it, whether the paths came from the graph or from a
+    workflow's own push trigger.
+    """
+    declared = set(_declared_packages(paths, "lib/python/"))
+    return [
+        package for package in _lib_python_packages()
+        if package not in declared and _node_imports(paths, package)
+    ]
+
+
 def _matches_glob(glob: str, path: str) -> bool:
     """Say whether a repository-relative path is matched by a graph path glob.
 
@@ -318,17 +332,12 @@ class TestGraphPathsAreNoWiderThanDependencies:
         self, dependency_graph: dict
     ) -> None:
         """Verify each lib/python package a node's source imports is in its paths."""
-        undeclared = []
-
-        for key, config in sorted(dependency_graph.items()):
-            paths = config.get("paths", [])
-            declared = set(_declared_packages(paths, "lib/python/"))
-            for package in _lib_python_packages():
-                if package not in declared and _node_imports(paths, package):
-                    undeclared.append(
-                        f"{key}: its source imports lib/python/{package} but its "
-                        f"paths do not name it, so a change there never reaches it"
-                    )
+        undeclared = [
+            f"{key}: its source imports lib/python/{package} but its paths do "
+            f"not name it, so a change there never reaches it"
+            for key, config in sorted(dependency_graph.items())
+            for package in _undeclared_imports(config.get("paths", []))
+        ]
 
         assert not undeclared, (
             "Packages imported but not declared:\n  " + "\n  ".join(undeclared)
@@ -562,6 +571,42 @@ class TestPushTriggeredWorkflows:
 
         assert not undeployed, (
             "Reads of stacks nothing deploys:\n  " + "\n  ".join(undeployed)
+        )
+
+
+    def test_a_push_triggered_workflow_names_no_whole_tree_glob(self) -> None:
+        """Verify such a workflow does not rebuild on any edit under lib/python.
+
+        Once a node leaves the graph its trigger is the only record of how
+        narrow it is, so the paths list is the only place left that can widen.
+        """
+        widened = [
+            f"{name}: its paths name '{glob}', so any edit under it rebuilds this"
+            for name, paths in sorted(_push_triggered_workflows().items())
+            for glob in WHOLE_TREE_GLOBS
+            if glob in paths
+        ]
+
+        assert not widened, (
+            "Push triggers wider than the source they build from:\n  "
+            + "\n  ".join(widened)
+        )
+
+    def test_a_push_triggered_workflow_names_every_package_it_imports(self) -> None:
+        """Verify each lib/python package such a workflow imports is in its paths.
+
+        Narrowing the paths list is what makes this reachable: a package left
+        out is one whose edits never rebuild the thing that imports it.
+        """
+        missing = [
+            f"{name}: its source imports lib/python/{package} but its paths do "
+            f"not name it, so a change there never reaches it"
+            for name, paths in sorted(_push_triggered_workflows().items())
+            for package in _undeclared_imports(paths)
+        ]
+
+        assert not missing, (
+            "Push triggers that miss a package they import:\n  " + "\n  ".join(missing)
         )
 
 

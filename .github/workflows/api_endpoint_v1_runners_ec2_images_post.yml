@@ -7,7 +7,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Build and deploy AMI for EC2 self-hosted runners
     permissions:
-      actions: write
       contents: read
       id-token: write
     runs-on: >-
@@ -319,39 +318,6 @@ jobs:
             --purpose-value "$PURPOSE_VALUE" \
             --stable-tag "$STABLE_TAG" \
             --stable-value "$STABLE_VALUE"
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        id: descendants
-        if: >-
-          github.event_name == 'workflow_dispatch' &&
-          (
-          github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message,
-           '[trigger descendants]'))
-        name: Compute descendants
-        run: |
-          python3 src/workflowctl/workflowctl.py compute-descendants \
-            --workflow api_endpoint_v1_runners_ec2_images_post \
-            --repo ${{ github.repository }}
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: >-
-          steps.descendants.outputs.ready != '[]' &&
-          github.event_name == 'workflow_dispatch' &&
-          (
-          github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message,
-           '[trigger descendants]'))
-        name: Dispatch ready descendants
-        run: |
-          TRIGGER="${{ github.event.inputs.trigger_descendants }}"
-          READY='${{ steps.descendants.outputs.ready }}'
-          for workflow in $(echo "$READY" | jq -r '.[]'); do
-            FLAGS="-f trigger_descendants=${TRIGGER:-false}"
-            gh workflow run "${workflow}.yml" \
-              --repo ${{ github.repository }} \
-              $FLAGS
-          done
       - if: cancelled()
         name: Clean up on cancellation
         run: |
@@ -403,21 +369,21 @@ jobs:
           echo "Cleanup complete."
 name: Building AMI for EC2 self-hosted runners
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/api_endpoint_v1_runners_ec2_images_post.yml
+      - etc/runners.json
+      - lib/python/ec2_fleet/**
+      - src/api/endpoints/runners/ec2/images/post/**
+      - test/api/endpoints/runners/ec2/images/post/**
   workflow_dispatch:
     inputs:
       github_hosted:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-      spot_recovery_reason:
-        description: Spot recovery trigger reason
-        required: false
-        type: string
-      trigger_descendants:
-        default: true
-        description: Trigger descendant workflows after this workflow completes
-        type: boolean
 permissions:
-  actions: write
   contents: read
   id-token: write
