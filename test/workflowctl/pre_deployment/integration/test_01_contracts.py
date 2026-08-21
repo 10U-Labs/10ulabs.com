@@ -36,9 +36,6 @@ EXTERNAL_STATE_KEYS = {"wan-synthesizer/common/routing/terraform.tfstate"}
 # Every other entry in a node's depends_on has to correspond to a
 # terraform_remote_state read under that node's own src paths.
 ORDERINGS_WITHOUT_STATE_READS = {
-    ("www_home", "www_common"):
-        "www_home.yml reads 'terraform -chdir=src/www/common output -raw "
-        "bucket_name' and syncs its built site into that bucket",
     ("www_rack_designer", "www_common"):
         "www_rack_designer.yml reads 'terraform -chdir=src/www/common output "
         "-raw bucket_name' and syncs its built site into that bucket",
@@ -52,6 +49,9 @@ STATE_KEY = re.compile(r'key\s*=\s*"([^"]+)"')
 DEFAULTS_ATTRIBUTE = re.compile(r"^\s*defaults\s*=", re.MULTILINE)
 WORKING_DIRECTORY = re.compile(r"^\s*cd\s+(\S+)", re.MULTILINE)
 DOCKERFILE_PATH = re.compile(r"^\s*\w+=(\S+/Dockerfile)$", re.MULTILINE)
+NPM_PREFIX = re.compile(r"--prefix\s+(src/\S+)")
+CHANGED_FILE_EVENT = re.compile(r"github\.event\.(?:before|commits)")
+STEP_OUTPUT = re.compile(r"steps\.([A-Za-z0-9_-]+)\.outputs\.")
 TEST_ASSIGNMENT = re.compile(r"^\s*(\w+)=(test/[\w./-]+)\s*$", re.MULTILINE)
 TEST_ARGUMENT = re.compile(r"(?<![=\w])test/[\w./-]+")
 
@@ -228,6 +228,17 @@ def _dockerfile_directory(name: str) -> str:
     text = (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
     found = DOCKERFILE_PATH.search(text)
     return str(Path(found.group(1)).parent) if found else ""
+
+
+def _npm_directory(name: str) -> str:
+    """Name the npm project a workflow builds, if it builds one.
+
+    A site with no Terraform of its own is still built from a directory, and
+    'npm --prefix' is where the workflow says which one.
+    """
+    text = (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
+    found = NPM_PREFIX.search(text)
+    return found.group(1) if found else ""
 
 
 def _applied_stacks() -> dict:
@@ -582,7 +593,8 @@ class TestPushTriggeredWorkflows:
         for name, paths in _push_triggered_workflows().items():
             if f".github/workflows/{name}.yml" not in paths:
                 unmatched.append(f"{name}: its paths do not name its own workflow file")
-            built = (_terraform_directory(name), _dockerfile_directory(name))
+            built = (_terraform_directory(name), _dockerfile_directory(name),
+                     _npm_directory(name))
             for directory in [entry for entry in built if entry]:
                 if not any(glob.startswith(directory) for glob in paths):
                     unmatched.append(f"{name}: its paths do not cover '{directory}'")
@@ -699,6 +711,27 @@ class TestPushTriggeredWorkflows:
             "Source files more than one push trigger reaches:\n  " + "\n  ".join(shared)
         )
 
+    def test_a_push_triggered_workflow_does_not_rederive_the_changed_files(self) -> None:
+        """Verify no such workflow works out for itself what the push changed.
+
+        The trigger already matched the push against this workflow's paths, so
+        a step that diffs github.event.before is answering the same question
+        from a worse place. A dispatch carries no such commit, and the fallback
+        compares a whole push against its own tip, which loses every commit
+        below it.
+        """
+        rederived = [
+            f"{name}: a step reads {reference}"
+            for name in sorted(set(_push_triggered_workflows()) - {CONTROLLER})
+            for reference in sorted(set(CHANGED_FILE_EVENT.findall(
+                (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
+            )))
+        ]
+
+        assert not rederived, (
+            "Push triggers recomputed inside the run:\n  " + "\n  ".join(rederived)
+        )
+
     def test_a_push_triggered_workflow_names_the_tests_it_runs(self) -> None:
         """Verify every test file such a workflow runs is named in its paths.
 
@@ -753,6 +786,37 @@ class TestPushTriggeredWorkflows:
 
         assert not missing, (
             "Push triggers that miss a package they import:\n  " + "\n  ".join(missing)
+        )
+
+
+class TestStepConditionsNameLiveSteps:
+    """Tests that a gated step reads an output some step beside it produces."""
+
+    def test_a_condition_names_only_step_outputs_that_exist(self) -> None:
+        """Verify no step is gated on the output of a step that is not there.
+
+        GitHub hands an absent step output the empty string rather than an
+        error, so a condition left behind when its step is deleted is false in
+        every run and the step it guards quietly stops happening.
+        """
+        dangling = []
+
+        for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
+            document = yaml.safe_load(workflow.read_text(encoding="utf-8"))
+            for job, definition in sorted((document.get("jobs") or {}).items()):
+                present = {
+                    step["id"] for step in definition.get("steps") or []
+                    if step.get("id")
+                }
+                named = set(STEP_OUTPUT.findall(yaml.safe_dump(definition)))
+                dangling += [
+                    f"{workflow.name}: job '{job}' reads steps.{missing}.outputs "
+                    "and no step in that job carries the id"
+                    for missing in sorted(named - present)
+                ]
+
+        assert not dangling, (
+            "Conditions on steps that are gone:\n  " + "\n  ".join(dangling)
         )
 
 

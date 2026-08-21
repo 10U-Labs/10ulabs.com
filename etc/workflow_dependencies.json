@@ -72,17 +72,6 @@
       "test/api/endpoints/soc_simulations/**"
     ]
   },
-  "www_home": {
-    "depends_on": [
-      "www_common"
-    ],
-    "name": "Ensuring www home page exists and is properly configured",
-    "paths": [
-      ".github/workflows/www_home.yml",
-      "src/www/paths/home/**",
-      "test/www/paths/home/**"
-    ]
-  },
   "www_common": {
     "depends_on": [],
     "name": "Ensuring www common infrastructure exists and is properly configured",

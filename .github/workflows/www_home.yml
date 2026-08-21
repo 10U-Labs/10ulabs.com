@@ -7,7 +7,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Deploy home page
     permissions:
-      actions: write
       contents: read
       id-token: write
     runs-on: >-
@@ -172,37 +171,17 @@ jobs:
             s3://${{ env.BUCKET_NAME }}/home/ --delete \
             --cache-control no-cache \
             --storage-class ONEZONE_IA
-      - id: check_files
-        name: Check if website files changed
-        run: |
-          set -e
-          set -o pipefail
-          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
-            BASE_COMMIT="${{ github.event.before }}"
-          else
-            BASE_COMMIT="HEAD^"
-          fi
-          git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/www/paths/home/'; then
-              echo "changed=true" >> $GITHUB_OUTPUT
-            else
-              echo "changed=false" >> $GITHUB_OUTPUT
-            fi
       - if: >-
-          github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message,
-          '[invalidate cloudfront]') ||
-          steps.check_files.outputs.changed == 'true'
+          github.event_name == 'push' ||
+          github.event.inputs.invalidate_cloudfront == 'true'
         name: Get website domain from Terraform output
         run: |
           WEBSITE_FQDN=$(terraform -chdir=src/www/common \
             output -raw website_domain_name)
           echo "WEBSITE_FQDN=$WEBSITE_FQDN" >> $GITHUB_ENV
       - if: >-
-          github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message,
-          '[invalidate cloudfront]') ||
-          steps.check_files.outputs.changed == 'true'
+          github.event_name == 'push' ||
+          github.event.inputs.invalidate_cloudfront == 'true'
         name: Invalidate CloudFront cache
         run: |
           python3 scripts/invalidate_cloudfront.py \
@@ -219,45 +198,15 @@ jobs:
           BASE_URL: https://10ulabs.com
         name: Run E2E tests
         run: npm run test:e2e --prefix src/www/paths/home
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        id: descendants
-        if: >-
-          github.event_name == 'workflow_dispatch' &&
-          (
-          github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message,
-           '[trigger descendants]'))
-        name: Compute descendants
-        run: |
-          python3 src/workflowctl/workflowctl.py compute-descendants \
-            --workflow www_home \
-            --repo ${{ github.repository }}
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: >-
-          steps.descendants.outputs.ready != '[]' &&
-          github.event_name == 'workflow_dispatch' &&
-          (
-          github.event.inputs.trigger_descendants == 'true' ||
-           contains(github.event.head_commit.message,
-           '[trigger descendants]'))
-        name: Dispatch ready descendants
-        run: |
-          TRIGGER="${{ github.event.inputs.trigger_descendants }}"
-          INVALIDATE="${{ github.event.inputs.invalidate_cloudfront }}"
-          READY='${{ steps.descendants.outputs.ready }}'
-          for workflow in $(echo "$READY" | jq -r '.[]'); do
-            FLAGS="-f trigger_descendants=${TRIGGER:-false}"
-            if [ "$INVALIDATE" = "true" ]; then
-              FLAGS="$FLAGS -f invalidate_cloudfront=true"
-            fi
-            gh workflow run "${workflow}.yml" \
-              --repo ${{ github.repository }} \
-              $FLAGS
-          done
 name: Ensuring www home page exists and is properly configured
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/www_home.yml
+      - src/www/paths/home/**
+      - test/www/paths/home/**
   workflow_dispatch:
     inputs:
       github_hosted:
@@ -268,15 +217,6 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
-      spot_recovery_reason:
-        description: Spot recovery trigger reason
-        required: false
-        type: string
-      trigger_descendants:
-        default: true
-        description: Trigger descendant workflows after this workflow completes
-        type: boolean
 permissions:
-  actions: write
   contents: read
   id-token: write
