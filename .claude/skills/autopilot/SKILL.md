@@ -5,20 +5,16 @@ description: Start or stop the standing reminders that keep an autonomous issue-
 
 # Autopilot
 
-Eight recurring reminders, one per standing rule, that fire back into this session while it works through the open issues on `10U-Labs/10ulabs.com` on its own. One reminder per rule, so no rule can be quietly dropped from a merged block of text; staggered across a ten-minute period so they arrive spread out rather than as a wall.
-
-The argument is the sub-command, `start` or `stop`. Neither takes anything else — `start` reads its scope out of the repository.
-
-`CronCreate`, `CronList` and `CronDelete` are deferred tools: the session is told their names but not their schemas, so a call made before the schema is fetched fails with `InputValidationError` and creates nothing. Fetch them first with `ToolSearch`, query `select:CronCreate,CronList,CronDelete`.
-
 ## Contents
 
-- [Start](#start)
-  - [Scope](#scope)
-  - [Create the reminders](#create-the-reminders)
-  - [Start working](#start-working)
-  - [Place a filed issue](#place-a-filed-issue)
-- [Stop](#stop)
+- [Overview](#overview)
+- [Sub-Commands](#sub-commands)
+  - [Start](#start)
+    - [Scope](#scope)
+    - [Create the reminders](#create-the-reminders)
+    - [Start working](#start-working)
+    - [Place a filed issue](#place-a-filed-issue)
+  - [Stop](#stop)
 - [Notes](#notes)
   - [The standing rules live in CLAUDE.md](#the-standing-rules-live-in-claudemd)
   - [The :03 and :06 reminders pull against each other](#the-03-and-06-reminders-pull-against-each-other)
@@ -32,13 +28,23 @@ The argument is the sub-command, `start` or `stop`. Neither takes anything else 
   - [Editing this file does not reach a running session](#editing-this-file-does-not-reach-a-running-session)
   - [Naming a reminder and naming a line](#naming-a-reminder-and-naming-a-line)
 
-## Start
+## Overview
 
-### Scope
+Eight recurring reminders, one per standing rule, that fire back into this session while it works through the open issues on `10U-Labs/10ulabs.com` on its own. One reminder per rule, so no rule can be quietly dropped from a merged block of text; staggered across a ten-minute period so they arrive spread out rather than as a wall.
+
+The argument is the sub-command, `start` or `stop`. Neither takes anything else — `start` reads its scope out of the repository.
+
+`CronCreate`, `CronList` and `CronDelete` are deferred tools: the session is told their names but not their schemas, so a call made before the schema is fetched fails with `InputValidationError` and creates nothing. Fetch them first with `ToolSearch`, query `select:CronCreate,CronList,CronDelete`.
+
+## Sub-Commands
+
+### Start
+
+#### Scope
 
 Every open issue in this repository is in scope, and so is every open issue reached by following a dependency out of that set, whatever its number and whatever repository it lives in — `1e45d1f9` closed an issue in another repository for exactly that reason. `start` takes no issue number: a number can only be a floor, a floor only excludes issues by age, and an issue's number says nothing about whether it has to be done, least of all across repositories where the numbering is unrelated. If the user names a number anyway, they are asking to start rather than to narrow; say the whole open set is in scope and start.
 
-### Create the reminders
+#### Create the reminders
 
 Create eight jobs with `CronCreate`, exactly as listed. Use `recurring: true` (the default), and take the prompts verbatim; none of them has anything to substitute. Each `cron` field is a distinct offset within the same ten-minute period.
 
@@ -55,13 +61,13 @@ Create eight jobs with `CronCreate`, exactly as listed. Use `recurring: true` (t
 
 Then tell the user that eight reminders are running, how many open issues are in scope, and the two limits that come with them: the jobs live in this session only and are gone when it ends, and recurring jobs auto-expire after seven days.
 
-### Start working
+#### Start working
 
 Start in the same turn that created the jobs. Running this skill is starting the work; the eight jobs only keep it on the rails once it is going.
 
 Read the open issues with `gh issue list`, then read `gh api repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by` for each of them; every entry names the repository its blocker lives in. Follow those entries, and the entries of the issues they reach, until nothing new comes back, and add every open issue found this way to the set. Then take the lowest-numbered issue in the set that no open issue blocks, preferring this repository when two are equally unblocked, and solve it under the standing rules the reminders carry — committing in whichever repository its `Proposed Solution` names, and reading that repository's CI to confirm it.
 
-### Place a filed issue
+#### Place a filed issue
 
 An issue filed during a run goes into the sequence before the session goes back to work. A `blocked_by` edge points from the issue that waits to the issue it waits on, and three cases cover everything:
 
@@ -75,7 +81,7 @@ Read the tail rather than remembering it, because issues are filed here in batch
 
 Add the edge with `gh api repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by -F issue_id=<id>`, where `{number}` is the issue that waits and `<id>` is the numeric id of the blocker, read from `gh api repos/{owner}/{repo}/issues/{n} --jq .id`. It has to be that numeric id: `gh issue view <n> --json id` returns the GraphQL node id, which this endpoint rejects. And it has to be sent with `-F` rather than `-f`, because `-f` sends the number as a string and the API answers `HTTP 422: Invalid property /issue_id: "5199031511" is not of type integer`.
 
-## Stop
+### Stop
 
 Call `CronList`, then call `CronDelete` once per job it returns — all of them, not only the eight this skill created. "Delete all your reminders" means the session ends with an empty schedule. Call `CronList` again afterwards to confirm it is empty, and report how many jobs were deleted.
 
@@ -125,4 +131,4 @@ The body is read when the skill is invoked, so a change here needs `/autopilot s
 
 ### Naming a reminder and naming a line
 
-A reminder is named by the minute it fires — the `:01` reminder — and a line is written out in full, as "line 47". The repository's usual shorthand, `path/to/file.yml:115` and then a bare `:120`, collides here: line 47 holds the `:01` reminder, but `:47` reads as the reminder that fires at minute 47, which is the `:07` one.
+A reminder is named by the minute it fires — the `:01` reminder, the `:09` reminder — and a line in this file is written out in full, as "line 53". The rest of the repository writes `path/to/file.yml:115` for a line and then a bare `:120` for another line in the same file, and that shorthand collides here: a bare `:07` is line 7 everywhere else and the seven-past reminder in this file.
