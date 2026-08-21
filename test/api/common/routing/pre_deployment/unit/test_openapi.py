@@ -198,21 +198,6 @@ def test_openapi_spec_health_options_allows_wildcard_origin(openapi_spec):
     assert "'*'" in origin_value
 
 
-def test_openapi_spec_has_soc_simulations_endpoint(openapi_spec):
-    """Verify spec has /v1/soc-simulations endpoint."""
-    assert '/v1/soc-simulations' in openapi_spec['paths']
-
-
-def test_openapi_spec_soc_simulations_has_post_method(openapi_spec):
-    """Verify /v1/soc-simulations has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/soc-simulations']
-
-
-def test_openapi_spec_soc_simulations_has_options_method(openapi_spec):
-    """Verify /v1/soc-simulations has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/soc-simulations']
-
-
 def test_openapi_spec_has_ecs_image_base_endpoint(openapi_spec):
     """Verify spec has /v1/runners/ecs/images endpoint."""
     assert '/v1/runners/ecs/images' in openapi_spec['paths']

@@ -39,7 +39,6 @@ locals {
     runners                   = "${local.resource_prefix}RunnersHandler"
     runners_cleanup           = "${local.resource_prefix}RunnersCleanupHandler"
     sessions                  = "${local.resource_prefix}SessionsHandler"
-    simulation_soc            = "${local.resource_prefix}SimulationSocHandler"
     webhook                   = "${local.resource_prefix}WebhookHandler"
   }
 }

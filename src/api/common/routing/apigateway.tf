@@ -17,7 +17,6 @@ locals {
     runners                  = module.common.lambda_handler_names.runners
     runners_cleanup          = module.common.lambda_handler_names.runners_cleanup
     sessions                 = module.common.lambda_handler_names.sessions
-    simulation_soc           = module.common.lambda_handler_names.simulation_soc
     webhook                  = module.common.lambda_handler_names.webhook
   }
 
@@ -44,7 +43,6 @@ locals {
   runners_router_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.runners}/invocations"
   runners_cleanup_arn          = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.runners_cleanup}/invocations"
   sessions_arn                 = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.sessions}/invocations"
-  simulation_soc_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
   webhook_router_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.webhook}/invocations"
 
   openapi_spec = templatefile("${path.module}/../../../www/api/openapi.json", {
@@ -64,7 +62,6 @@ locals {
     RunnersCleanupHandlerArn         = local.runners_cleanup_arn
     RunnersRouterHandlerArn          = local.runners_router_arn
     SessionsHandlerArn               = local.sessions_arn
-    SimulationSocHandlerArn          = local.simulation_soc_arn
     WebhookRouterHandlerArn          = local.webhook_router_arn
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)

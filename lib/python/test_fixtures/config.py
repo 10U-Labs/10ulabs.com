@@ -64,8 +64,8 @@ def parse_locals_file(
 def create_simple_config(tfvars_path: Path, shared_config: Dict[str, str]) -> Dict[str, str]:
     """Create a simple config dict from tfvars and shared config.
 
-    This is the standard pattern used by diagnostics, health, simulation_soc,
-    and similar endpoints that just need tfvars values plus aws_region and api_fqdn.
+    This is the standard pattern used by diagnostics, health, and similar
+    endpoints that just need tfvars values plus aws_region and api_fqdn.
 
     Args:
         tfvars_path: Path to the terraform.tfvars file
