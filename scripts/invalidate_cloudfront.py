@@ -25,7 +25,8 @@ def find_distribution_id(cloudfront, fqdn):
     return distribution_id
 
 
-def wait_for_invalidation(cloudfront, distribution_id, invalidation_id, max_attempts=20, poll_interval=5):
+def wait_for_invalidation(cloudfront, distribution_id, invalidation_id,
+                          max_attempts=20, poll_interval=5):
     """Poll an invalidation until CloudFront reports it complete.
 
     Args:
