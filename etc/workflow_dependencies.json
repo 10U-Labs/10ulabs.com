@@ -23,18 +23,6 @@
       "test/bootstrap/**"
     ]
   },
-  "api_endpoint_v1_contact_submissions": {
-    "depends_on": [
-      "api_common_routing"
-    ],
-    "name": "Ensuring the /v1/contact-submissions API endpoint exists and is properly configured",
-    "paths": [
-      ".github/workflows/api_endpoint_v1_contact_submissions.yml",
-      "lib/terraform/common/**",
-      "src/api/endpoints/contact_submissions/**",
-      "test/api/endpoints/contact_submissions/**"
-    ]
-  },
   "api_endpoint_v1_rack_configurations": {
     "depends_on": [
       "api_common_routing"
