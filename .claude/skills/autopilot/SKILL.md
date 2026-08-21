@@ -129,4 +129,4 @@ The body is read when the skill is invoked, so a change here needs `/autopilot s
 
 ### Naming a reminder and naming a line
 
-A reminder is named by the minute it fires — the `:01` reminder, the `:09` reminder — and a line in this file is written out in full, as "line 51". The rest of the repository writes `path/to/file.yml:115` for a line and then a bare `:120` for another line in the same file, and that shorthand collides here: a bare `:07` is line 7 everywhere else and the seven-past reminder in this file.
+A reminder is named by the minute it fires — the `:01` reminder, the `:09` reminder — and a line in this file is written out in full, as the word "line" and the number. The rest of the repository writes `path/to/file.yml:115` for a line and then a bare `:120` for another line in the same file, and that shorthand collides here: a bare `:07` is a line number everywhere else and the seven-past reminder in this one.
