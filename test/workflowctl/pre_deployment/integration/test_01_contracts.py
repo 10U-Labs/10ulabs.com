@@ -51,6 +51,10 @@ REMOTE_STATE_BLOCK = re.compile(r'data\s+"terraform_remote_state"\s+"[^"]+"\s*\{
 STATE_KEY = re.compile(r'key\s*=\s*"([^"]+)"')
 DEFAULTS_ATTRIBUTE = re.compile(r"^\s*defaults\s*=", re.MULTILINE)
 WORKING_DIRECTORY = re.compile(r"^\s*cd\s+(\S+)", re.MULTILINE)
+DOCKERFILE_PATH = re.compile(r"^\s*\w+=(\S+/Dockerfile)$", re.MULTILINE)
+
+# The controller itself, which is started by every push and names no paths.
+CONTROLLER = "workflowctl"
 
 
 @pytest.fixture(scope="module")
@@ -215,6 +219,13 @@ def _terraform_directory(name: str) -> str:
     if "terraform apply" not in text:
         return ""
     return WORKING_DIRECTORY.findall(text[:text.index("terraform apply")])[-1]
+
+
+def _dockerfile_directory(name: str) -> str:
+    """Name the directory holding the Dockerfile a workflow builds, if it builds one."""
+    text = (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
+    found = DOCKERFILE_PATH.search(text)
+    return str(Path(found.group(1)).parent) if found else ""
 
 
 def _applied_stacks() -> dict:
@@ -539,9 +550,10 @@ class TestPushTriggeredWorkflows:
         for name, paths in _push_triggered_workflows().items():
             if f".github/workflows/{name}.yml" not in paths:
                 unmatched.append(f"{name}: its paths do not name its own workflow file")
-            directory = _terraform_directory(name)
-            if directory and not any(glob.startswith(directory) for glob in paths):
-                unmatched.append(f"{name}: its paths do not cover '{directory}'")
+            built = (_terraform_directory(name), _dockerfile_directory(name))
+            for directory in [entry for entry in built if entry]:
+                if not any(glob.startswith(directory) for glob in paths):
+                    unmatched.append(f"{name}: its paths do not cover '{directory}'")
 
         assert not unmatched, (
             "Push triggers that miss their own source:\n  " + "\n  ".join(unmatched)
@@ -607,6 +619,26 @@ class TestPushTriggeredWorkflows:
 
         assert not missing, (
             "Push triggers that miss a package they import:\n  " + "\n  ".join(missing)
+        )
+
+
+class TestEveryWorkflowCanBeStarted:
+    """Tests that something in the repository is able to start each workflow."""
+
+    def test_no_workflow_is_left_with_nothing_to_start_it(
+        self, dependency_graph: dict, workflow_files: set
+    ) -> None:
+        """Verify each workflow is either a graph node or triggered by a push.
+
+        The controller starts a workflow only when the graph names it, so a
+        file in neither place is deployed only when somebody presses the
+        button and its steps go unread until they are pressed.
+        """
+        started = set(dependency_graph) | set(_push_triggered_workflows())
+        stranded = sorted(workflow_files - started - {CONTROLLER})
+
+        assert not stranded, (
+            "Workflows nothing starts:\n  " + "\n  ".join(stranded)
         )
 
 
