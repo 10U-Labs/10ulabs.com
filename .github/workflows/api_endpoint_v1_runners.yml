@@ -203,6 +203,7 @@ on:
       - .github/workflows/api_endpoint_v1_runners.yml
       - etc/runners.json
       - lib/python/runner_labels/**
+      - lib/terraform/common/**
       - src/api/endpoints/runners/*.tf
       - src/api/endpoints/runners/lambda/**
       - test/api/endpoints/runners/post_deployment/**

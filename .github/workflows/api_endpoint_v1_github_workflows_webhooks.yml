@@ -203,6 +203,7 @@ on:
     paths:
       - .github/workflows/api_endpoint_v1_github_workflows_webhooks.yml
       - lib/python/runner_labels/**
+      - lib/terraform/common/**
       - src/api/endpoints/github_workflows/webhooks/**
       - test/api/conftest.py
       - test/api/endpoints/github_workflows/webhooks/**

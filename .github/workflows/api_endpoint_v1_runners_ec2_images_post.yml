@@ -376,6 +376,7 @@ on:
       - .github/workflows/api_endpoint_v1_runners_ec2_images_post.yml
       - etc/runners.json
       - lib/python/ec2_fleet/**
+      - lib/terraform/common/**
       - src/api/endpoints/runners/ec2/images/post/**
       - test/api/endpoints/runners/ec2/images/post/**
   workflow_dispatch:

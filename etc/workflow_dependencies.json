@@ -6,6 +6,7 @@
     "name": "Ensuring API common routing exists and is properly configured",
     "paths": [
       ".github/workflows/api_common_routing.yml",
+      "lib/terraform/common/**",
       "src/api/common/routing/**",
       "src/www/api/**",
       "test/api/common/routing/**",
@@ -17,6 +18,7 @@
     "name": "Ensuring API common Docker repository exists and is properly configured",
     "paths": [
       ".github/workflows/api_common_docker_repository.yml",
+      "lib/terraform/common/**",
       "src/api/common/docker_repository/**",
       "test/api/common/docker_repository/**"
     ]
@@ -26,6 +28,7 @@
     "name": "Ensuring API common networking infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/api_common_networking.yml",
+      "lib/terraform/common/**",
       "src/api/common/networking/**",
       "test/api/common/networking/**"
     ]
@@ -47,6 +50,7 @@
     "name": "Ensuring the /v1/contact-submissions API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_contact_submissions.yml",
+      "lib/terraform/common/**",
       "src/api/endpoints/contact_submissions/**",
       "test/api/endpoints/contact_submissions/**"
     ]
@@ -66,6 +70,7 @@
       "lib/python/infra_validation/**",
       "lib/python/lambda_http/**",
       "lib/python/runner_labels/**",
+      "lib/terraform/common/**",
       "src/api/endpoints/runners/ec2/**",
       "test/api/conftest.py",
       "test/api/endpoints/runners/ec2/**"
@@ -79,6 +84,7 @@
     "paths": [
       ".github/workflows/api_operational_diagnostics.yml",
       "lib/python/lambda_http/**",
+      "lib/terraform/common/**",
       "src/api/operational/diagnostics/**",
       "test/api/operational/diagnostics/**"
     ]
@@ -98,6 +104,7 @@
       "lib/python/infra_validation/**",
       "lib/python/lambda_http/**",
       "lib/python/runner_labels/**",
+      "lib/terraform/common/**",
       "src/api/endpoints/runners/ecs/*.tf",
       "src/api/endpoints/runners/ecs/lambda/**",
       "test/api/conftest.py",
@@ -116,6 +123,7 @@
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ec2_images.yml",
       "lib/python/lambda_http/**",
+      "lib/terraform/common/**",
       "src/api/endpoints/runners/ec2/images/*.tf",
       "src/api/endpoints/runners/ec2/images/lambda/**",
       "test/api/endpoints/runners/ec2/images/endpoint/**",
@@ -131,6 +139,7 @@
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_ecs_images.yml",
       "lib/python/lambda_http/**",
+      "lib/terraform/common/**",
       "src/api/endpoints/runners/ecs/images/*.tf",
       "src/api/endpoints/runners/ecs/images/lambda/**",
       "test/api/endpoints/runners/ecs/images/endpoint/**"
@@ -143,6 +152,7 @@
     "name": "Ensuring /v1/rack-configurations API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_rack_configurations.yml",
+      "lib/terraform/common/**",
       "src/api/endpoints/rack_configurations/**",
       "test/api/endpoints/rack_configurations/**"
     ]
@@ -154,6 +164,7 @@
     "name": "Ensuring the /v1/sessions API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_sessions.yml",
+      "lib/terraform/common/**",
       "src/api/endpoints/sessions/**",
       "test/api/endpoints/sessions/**"
     ]
@@ -163,6 +174,7 @@
     "name": "Ensuring EC2 spot interruption handler exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_ec2_spot_interruptions.yml",
+      "lib/terraform/common/**",
       "src/api/endpoints/ec2_spot_interruptions/**",
       "test/api/conftest.py",
       "test/api/endpoints/ec2_spot_interruptions/**"
@@ -173,6 +185,7 @@
     "name": "Ensuring ECS task stops handler exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_ecs_task_stops.yml",
+      "lib/terraform/common/**",
       "src/api/endpoints/ecs_task_stops/**",
       "test/api/conftest.py",
       "test/api/endpoints/ecs_task_stops/**"
@@ -186,6 +199,7 @@
     "name": "Ensuring runners cleanup handler exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_runners_cleanups.yml",
+      "lib/terraform/common/**",
       "src/api/endpoints/runners/cleanups/**",
       "test/api/conftest.py",
       "test/api/endpoints/runners/cleanups/**"
@@ -198,6 +212,7 @@
     "name": "Ensuring the /v1/github-workflows/retries API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_endpoint_v1_github_workflows_retries.yml",
+      "lib/terraform/common/**",
       "src/api/endpoints/github_workflows/retries/**",
       "test/api/conftest.py",
       "test/api/endpoints/github_workflows/retries/**"
@@ -211,6 +226,7 @@
     "paths": [
       ".github/workflows/api_endpoint_v1_soc_simulations.yml",
       "lib/python/lambda_http/**",
+      "lib/terraform/common/**",
       "src/api/endpoints/soc_simulations/**",
       "test/api/endpoints/soc_simulations/**"
     ]
@@ -222,6 +238,7 @@
     "name": "Ensuring the /health API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/api_operational_health.yml",
+      "lib/terraform/common/**",
       "src/api/operational/health/**",
       "test/api/operational/health/**"
     ]
