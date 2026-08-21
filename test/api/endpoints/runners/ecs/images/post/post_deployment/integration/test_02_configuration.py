@@ -42,12 +42,7 @@ class TestImageConfiguration:
 
     def test_container_user_is_runner(self, docker_image):
         """Test that container runs as runner user."""
-        result = subprocess.run(
-            ["docker", "inspect", "--format", "{{.Config.User}}", docker_image],
-            check=False,
-            capture_output=True,
-            text=True
-        )
+        result = run_command_in_container(docker_image, "id -un")
         assert result.stdout.strip() == "runner"
 
     def test_container_workdir_is_runner_home(self, docker_image):
