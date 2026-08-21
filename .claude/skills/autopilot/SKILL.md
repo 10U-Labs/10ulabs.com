@@ -8,7 +8,6 @@ description: Start or stop the standing reminders that keep an autonomous issue-
 - [Overview](#overview)
 - [Sub-Commands](#sub-commands)
   - [Start](#start)
-    - [Scope](#scope)
     - [Create the reminders](#create-the-reminders)
     - [Start working](#start-working)
     - [Place a filed issue](#place-a-filed-issue)
@@ -18,17 +17,13 @@ description: Start or stop the standing reminders that keep an autonomous issue-
 
 Eight recurring reminders, one per standing rule, that fire back into this session while it works through the open issues on `10U-Labs/10ulabs.com` on its own. One reminder per rule, so no rule can be quietly dropped from a merged block of text; staggered across a ten-minute period so they arrive spread out rather than as a wall.
 
-The argument is the sub-command, `start` or `stop`. Neither takes anything else — `start` reads its scope out of the repository.
+The argument is the sub-command, `start` or `stop`. Neither takes anything else — `start` reads its scope out of the repository. If the user names an issue number anyway, they are asking to start rather than to narrow; say the whole open set is in scope and start.
 
 `CronCreate`, `CronList` and `CronDelete` are deferred tools: the session is told their names but not their schemas, so a call made before the schema is fetched fails with `InputValidationError` and creates nothing. Fetch them first with `ToolSearch`, query `select:CronCreate,CronList,CronDelete`.
 
 ## Sub-Commands
 
 ### Start
-
-#### Scope
-
-Every open issue in this repository is in scope, and so is every open issue reached by following a dependency out of that set, whatever its number and whatever repository it lives in — `1e45d1f9` closed an issue in another repository for exactly that reason. `start` takes no issue number: a number can only be a floor, a floor only excludes issues by age, and an issue's number says nothing about whether it has to be done, least of all across repositories where the numbering is unrelated. If the user names a number anyway, they are asking to start rather than to narrow; say the whole open set is in scope and start.
 
 #### Create the reminders
 
