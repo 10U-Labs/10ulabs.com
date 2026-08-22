@@ -174,7 +174,7 @@ jobs:
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
-            lib/python/ test --fail-on=C,R,W --fail-under=10.0
+            lib/python/ test --recursive=y --fail-on=C,R,W --fail-under=10.0
   test-aws-clients:
     runs-on: ubuntu-latest
     steps:
