@@ -3,6 +3,7 @@
 Wiring tests verify that components are connected properly.
 Assumes existence and configuration tests passed.
 """
+import pytest
 from botocore.exceptions import ClientError
 
 
@@ -67,35 +68,27 @@ class TestExportLambdaWiring:
         assert "s3:PutObject" in s3_actions
 
 
-class TestSchedulerWiring:
-    """Tests for EventBridge Scheduler wiring."""
-
-    def test_scheduler_role_can_invoke_export_lambda(self, iam_client, sessions_config):
-        """Verify scheduler role can invoke export Lambda."""
-        response = iam_client.list_role_policies(
-            RoleName=sessions_config["scheduler_role_name"]
-        )
-        policy_names = response["PolicyNames"]
-        assert "InvokeLambda" in policy_names
+def test_scheduler_wiring(iam_client, sessions_config):
+    """Verify scheduler role can invoke export Lambda."""
+    response = iam_client.list_role_policies(
+        RoleName=sessions_config["scheduler_role_name"]
+    )
+    policy_names = response["PolicyNames"]
+    assert "InvokeLambda" in policy_names
 
 
-class TestBackupWiring:
-    """Tests for AWS Backup wiring."""
+def test_backup_wiring(backup_client, sessions_config):
+    """Verify backup selection includes DynamoDB table."""
+    # Get the backup plan ID
+    plans_response = backup_client.list_backup_plans()
+    plan = next(
+        p for p in plans_response["BackupPlansList"]
+        if p["BackupPlanName"] == sessions_config["backup_plan_name"]
+    )
+    plan_id = plan["BackupPlanId"]
 
-    def test_backup_selection_includes_dynamodb_table(self, backup_client, sessions_config):
-        """Verify backup selection includes DynamoDB table."""
-        # Get the backup plan ID
-        plans_response = backup_client.list_backup_plans()
-        plan = next(
-            p for p in plans_response["BackupPlansList"]
-            if p["BackupPlanName"] == sessions_config["backup_plan_name"]
-        )
-        plan_id = plan["BackupPlanId"]
-
-        # Get selections for this plan
-        selections_response = backup_client.list_backup_selections(
-            BackupPlanId=plan_id
-        )
-        assert len(selections_response["BackupSelectionsList"]) > 0
-
-
+    # Get selections for this plan
+    selections_response = backup_client.list_backup_selections(
+        BackupPlanId=plan_id
+    )
+    assert len(selections_response["BackupSelectionsList"]) > 0

@@ -176,11 +176,8 @@ class TestMain:
         assert factory.call_args.kwargs["region_name"] == "eu-west-1"
 
 
-class TestEntryPoint:
-    """Tests for the sys.exit(main()) guard the workflows invoke."""
-
-    def test_exits_with_the_code_main_returned(self):
-        """Run as a program, the script exits on what main gave back."""
-        with patch("boto3.client", return_value=_serving("Completed")), \
-                patch.object(sys, "argv", ARGV):
-            assert _exit_code_of_the_script() == 0
+def test_entry_point():
+    """Run as a program, the script exits on what main gave back."""
+    with patch("boto3.client", return_value=_serving("Completed")), \
+            patch.object(sys, "argv", ARGV):
+        assert _exit_code_of_the_script() == 0

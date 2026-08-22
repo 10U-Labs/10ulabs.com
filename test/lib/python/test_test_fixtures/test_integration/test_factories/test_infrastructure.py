@@ -236,8 +236,7 @@ class TestCreateWwwCommonS3ExistenceTestsBucketNameOutput:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
         outputs = {"bucket_name": "my-bucket"}
-        result = instance.test_bucket_name_output_exists(outputs)
-        assert result is None
+        assert instance.test_bucket_name_output_exists(outputs) is None
 
     def test_fails_when_output_missing(self):
         """test_bucket_name_output_exists fails when output missing."""
@@ -287,14 +286,11 @@ class TestCreateSqsFifoQueueTestsHasMethods:
 # === handle_ecr_error ===
 
 
-class TestHandleEcrErrorRepositoryNotFound:
-    """Tests for handle_ecr_error with RepositoryNotFoundException."""
-
-    def test_skips_on_repository_not_found(self):
-        """handle_ecr_error skips on RepositoryNotFoundException."""
-        error = _create_client_error("RepositoryNotFoundException")
-        with pytest.raises(pytest.skip.Exception):
-            handle_ecr_error(error, "ecr:ListImages", "my-repo")
+def test_handle_ecr_error_repository_not_found():
+    """handle_ecr_error skips on RepositoryNotFoundException."""
+    error = _create_client_error("RepositoryNotFoundException")
+    with pytest.raises(pytest.skip.Exception):
+        handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
 
 class TestHandleEcrErrorAccessDenied:
@@ -319,14 +315,11 @@ class TestHandleEcrErrorAccessDenied:
             handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
 
-class TestHandleEcrErrorOtherErrors:
-    """Tests for handle_ecr_error with other errors."""
-
-    def test_reraises_other_errors(self):
-        """handle_ecr_error reraises other errors."""
-        error = _create_client_error("ServiceException")
-        with pytest.raises(ClientError, match="ServiceException"):
-            handle_ecr_error(error, "ecr:ListImages", "my-repo")
+def test_handle_ecr_error_other_errors():
+    """handle_ecr_error reraises other errors."""
+    error = _create_client_error("ServiceException")
+    with pytest.raises(ClientError, match="ServiceException"):
+        handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
 
 # === create_security_group_existence_test ===
@@ -362,7 +355,7 @@ class TestCreateLogGroupConfigurationTestsReturnsClass:
         assert isinstance(test_class, type)
 
     def test_returns_class_with_name(self):
-        """create_log_group_configuration_tests returns class named TestCloudWatchLogsConfiguration."""
+        """The factory names its class TestCloudWatchLogsConfiguration."""
         test_class = create_log_group_configuration_tests("log_group_fixture")
         assert test_class.__name__ == "TestCloudWatchLogsConfiguration"
 
@@ -428,8 +421,7 @@ class TestWwwCommonS3ExistenceS3BucketExistsExecution:
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
         outputs = {"bucket_name": "my-bucket"}
-        result = instance.test_s3_bucket_exists(mock_client, outputs)
-        assert result is None
+        assert instance.test_s3_bucket_exists(mock_client, outputs) is None
 
     def test_s3_bucket_exists_skips_when_no_output(self):
         """test_s3_bucket_exists skips when output missing."""
@@ -472,8 +464,7 @@ class TestSqsFifoQueueTestsExecution:
         mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "my-queue.fifo"
-        result = instance.test_queue_exists(mock_client, mock_request)
-        assert result is None
+        assert instance.test_queue_exists(mock_client, mock_request) is None
 
     def test_queue_exists_skips_on_non_existent(self):
         """test_queue_exists skips when queue doesn't exist (fail_on_missing=False)."""
@@ -523,8 +514,7 @@ class TestSqsFifoQueueTestsExecution:
         }
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "my-queue.fifo"
-        result = instance.test_queue_is_fifo(mock_client, mock_request)
-        assert result is None
+        assert instance.test_queue_is_fifo(mock_client, mock_request) is None
 
     def test_queue_is_fifo_fails_when_not_fifo(self):
         """test_queue_is_fifo fails when queue is not FIFO."""
@@ -558,8 +548,7 @@ class TestSqsFifoQueueTestsExecution:
         }
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "my-queue.fifo"
-        result = instance.test_queue_has_deduplication(mock_client, mock_request)
-        assert result is None
+        assert instance.test_queue_has_deduplication(mock_client, mock_request) is None
 
     def test_queue_has_deduplication_fails_when_disabled(self):
         """test_queue_has_deduplication fails when deduplication disabled."""
@@ -595,8 +584,7 @@ class TestSecurityGroupExistenceExecution:
         mock_client.describe_security_groups.return_value = {"SecurityGroups": [{}]}
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"security_group_id": "sg-123"}
-        result = test_func(None, mock_client, mock_request)
-        assert result is None
+        assert test_func(None, mock_client, mock_request) is None
 
     def test_security_group_exists_skips_when_no_output(self):
         """test_security_group_exists skips when output missing."""
@@ -645,15 +633,16 @@ class TestLogGroupConfigurationExecution:
         instance = test_class()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 7}
-        result = instance.test_handler_log_group_has_retention_set(mock_request)
-        assert result is None
+        assert instance.test_handler_log_group_has_retention_set(mock_request) is None
 
     def test_log_group_has_retention_set_fails_when_none(self):
         """test_handler_log_group_has_retention_set fails when retention is None."""
         test_class = create_log_group_configuration_tests("log_group_fixture")
         instance = test_class()
         mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": None}
+        mock_request.getfixturevalue.return_value = {
+            "name": "/aws/lambda/my-func", "retention": None
+        }
         with pytest.raises(AssertionError):
             instance.test_handler_log_group_has_retention_set(mock_request)
 
@@ -663,8 +652,7 @@ class TestLogGroupConfigurationExecution:
         instance = test_class()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 7}
-        result = instance.test_handler_log_group_retention_is_expected(mock_request)
-        assert result is None
+        assert instance.test_handler_log_group_retention_is_expected(mock_request) is None
 
     def test_log_group_retention_is_expected_fails_when_different(self):
         """test_handler_log_group_retention_is_expected fails when retention differs."""
@@ -706,8 +694,7 @@ class TestLambdaRoleExistenceExecution:
         mock_client.get_role.return_value = {"Role": {"RoleName": "my-role"}}
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "my-role"
-        result = test_func(None, mock_client, mock_request)
-        assert result is None
+        assert test_func(None, mock_client, mock_request) is None
         mock_client.get_role.assert_called_once_with(RoleName="my-role")
 
     def test_lambda_execution_role_exists_fails_when_role_missing(self):
@@ -733,8 +720,7 @@ class TestKmsPolicyExecution:
         }
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "my-role"
-        result = test_func(None, mock_client, mock_request)
-        assert result is None
+        assert test_func(None, mock_client, mock_request) is None
 
     def test_lambda_role_has_kms_policy_fails_when_policy_missing(self):
         """test_lambda_role_has_kms_policy fails when policy not attached."""

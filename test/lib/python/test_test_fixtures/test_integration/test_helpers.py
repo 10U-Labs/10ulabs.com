@@ -43,8 +43,7 @@ class TestCheckLambdaFunctionExistsSuccess:
         mock_client.get_function.return_value = {
             "Configuration": {"FunctionName": "MyFunction"}
         }
-        result = check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
-        assert result is None
+        assert check_lambda_function_exists(mock_client, "MyFunction", "terraform/path") is None
 
     def test_calls_get_function_with_function_name(self):
         """check_lambda_function_exists calls get_function with function name."""
@@ -87,15 +86,12 @@ class TestCheckLambdaFunctionExistsNotFound:
             check_lambda_function_exists(mock_client, "MyFunction", "custom/path")
 
 
-class TestCheckLambdaFunctionExistsOtherErrors:
-    """Tests for check_lambda_function_exists with other errors."""
-
-    def test_reraises_other_client_errors(self):
-        """check_lambda_function_exists reraises non-ResourceNotFoundException errors."""
-        mock_client = MagicMock()
-        mock_client.get_function.side_effect = _create_client_error("AccessDenied")
-        with pytest.raises(ClientError, match="AccessDenied"):
-            check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
+def test_check_lambda_function_exists_other_errors():
+    """check_lambda_function_exists reraises non-ResourceNotFoundException errors."""
+    mock_client = MagicMock()
+    mock_client.get_function.side_effect = _create_client_error("AccessDenied")
+    with pytest.raises(ClientError, match="AccessDenied"):
+        check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
 
 
 # === check_iam_role_exists ===
@@ -108,8 +104,7 @@ class TestCheckIAMRoleExistsSuccess:
         """check_iam_role_exists does not raise when role exists."""
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
-        result = check_iam_role_exists(mock_client, "MyRole", "terraform/path")
-        assert result is None
+        assert check_iam_role_exists(mock_client, "MyRole", "terraform/path") is None
 
     def test_calls_get_role_with_role_name(self):
         """check_iam_role_exists calls get_role with role name."""
@@ -137,15 +132,12 @@ class TestCheckIAMRoleExistsNotFound:
             check_iam_role_exists(mock_client, "MyRole", "terraform/path")
 
 
-class TestCheckIAMRoleExistsOtherErrors:
-    """Tests for check_iam_role_exists with other errors."""
-
-    def test_reraises_other_client_errors(self):
-        """check_iam_role_exists reraises non-NoSuchEntity errors."""
-        mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("AccessDenied")
-        with pytest.raises(ClientError, match="AccessDenied"):
-            check_iam_role_exists(mock_client, "MyRole", "terraform/path")
+def test_check_iam_role_exists_other_errors():
+    """check_iam_role_exists reraises non-NoSuchEntity errors."""
+    mock_client = MagicMock()
+    mock_client.get_role.side_effect = _create_client_error("AccessDenied")
+    with pytest.raises(ClientError, match="AccessDenied"):
+        check_iam_role_exists(mock_client, "MyRole", "terraform/path")
 
 
 # === check_lambda_role_has_policy ===
@@ -160,8 +152,7 @@ class TestCheckLambdaRoleHasPolicySuccess:
         mock_client.list_role_policies.return_value = {
             "PolicyNames": ["MyPolicy", "OtherPolicy"]
         }
-        result = check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
-        assert result is None
+        assert check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy") is None
 
     def test_calls_list_role_policies_with_role_name(self):
         """check_lambda_role_has_policy calls list_role_policies with role name."""
@@ -189,26 +180,20 @@ class TestCheckLambdaRoleHasPolicyMissing:
             check_lambda_role_has_policy(mock_client, "MyRole", "MissingPolicy")
 
 
-class TestCheckLambdaRoleHasPolicyRoleNotFound:
-    """Tests for check_lambda_role_has_policy when role not found."""
-
-    def test_skips_when_role_does_not_exist(self):
-        """check_lambda_role_has_policy skips when role does not exist."""
-        mock_client = MagicMock()
-        mock_client.list_role_policies.side_effect = _create_client_error("NoSuchEntity")
-        with pytest.raises(pytest.skip.Exception):
-            check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
+def test_check_lambda_role_has_policy_role_not_found():
+    """check_lambda_role_has_policy skips when role does not exist."""
+    mock_client = MagicMock()
+    mock_client.list_role_policies.side_effect = _create_client_error("NoSuchEntity")
+    with pytest.raises(pytest.skip.Exception):
+        check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
 
 
-class TestCheckLambdaRoleHasPolicyOtherErrors:
-    """Tests for check_lambda_role_has_policy with other errors."""
-
-    def test_reraises_other_client_errors(self):
-        """check_lambda_role_has_policy reraises non-NoSuchEntity errors."""
-        mock_client = MagicMock()
-        mock_client.list_role_policies.side_effect = _create_client_error("AccessDenied")
-        with pytest.raises(ClientError, match="AccessDenied"):
-            check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
+def test_check_lambda_role_has_policy_other_errors():
+    """check_lambda_role_has_policy reraises non-NoSuchEntity errors."""
+    mock_client = MagicMock()
+    mock_client.list_role_policies.side_effect = _create_client_error("AccessDenied")
+    with pytest.raises(ClientError, match="AccessDenied"):
+        check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
 
 
 # === fail_no_credentials ===
@@ -238,8 +223,7 @@ class TestCheckCredentialsAvailableSuccess:
         """check_credentials_available does not raise with valid credentials."""
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        result = check_credentials_available(mock_client)
-        assert result is None
+        assert check_credentials_available(mock_client) is None
 
     def test_calls_get_caller_identity(self):
         """check_credentials_available calls get_caller_identity."""
@@ -249,15 +233,12 @@ class TestCheckCredentialsAvailableSuccess:
         assert mock_client.get_caller_identity.call_count == 1
 
 
-class TestCheckCredentialsAvailableNoCredentials:
-    """Tests for check_credentials_available when no credentials."""
-
-    def test_fails_when_no_credentials(self):
-        """check_credentials_available fails with NoCredentialsError."""
-        mock_client = MagicMock()
-        mock_client.get_caller_identity.side_effect = NoCredentialsError()
-        with pytest.raises(pytest.fail.Exception):
-            check_credentials_available(mock_client)
+def test_check_credentials_available_no_credentials():
+    """check_credentials_available fails with NoCredentialsError."""
+    mock_client = MagicMock()
+    mock_client.get_caller_identity.side_effect = NoCredentialsError()
+    with pytest.raises(pytest.fail.Exception):
+        check_credentials_available(mock_client)
 
 
 # === check_credentials_valid ===
@@ -270,8 +251,7 @@ class TestCheckCredentialsValidSuccess:
         """check_credentials_valid does not raise with valid credentials."""
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        result = check_credentials_valid(mock_client)
-        assert result is None
+        assert check_credentials_valid(mock_client) is None
 
     def test_calls_get_caller_identity(self):
         """check_credentials_valid calls get_caller_identity."""
@@ -420,15 +400,12 @@ class TestGetAWSAccountIdViaCLISuccess:
         assert "get-caller-identity" in call_args
 
 
-class TestGetAWSAccountIdViaCLIFailure:
-    """Tests for get_aws_account_id_via_cli on failure."""
-
-    @patch("test_fixtures.integration.helpers.subprocess.run")
-    def test_returns_empty_string_on_failure(self, mock_run):
-        """get_aws_account_id_via_cli returns empty string on failure."""
-        mock_run.return_value = MagicMock(returncode=1, stdout="")
-        result = get_aws_account_id_via_cli()
-        assert result == ""
+@patch("test_fixtures.integration.helpers.subprocess.run")
+def test_get_aws_account_id_via_cli_failure(mock_run):
+    """get_aws_account_id_via_cli returns empty string on failure."""
+    mock_run.return_value = MagicMock(returncode=1, stdout="")
+    result = get_aws_account_id_via_cli()
+    assert result == ""
 
 
 # === handle_ecr_authorization_error ===
@@ -462,24 +439,17 @@ class TestHandleECRAuthorizationErrorAccessDenied:
             )
 
 
-class TestHandleECRAuthorizationErrorRepositoryNotFound:
-    """Tests for handle_ecr_authorization_error with RepositoryNotFound."""
-
-    def test_does_not_raise_on_repository_not_found(self):
-        """handle_ecr_authorization_error does not raise on RepositoryNotFoundException."""
-        error = _create_client_error("RepositoryNotFoundException")
-        result = handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo")
-        assert result is None
+def test_handle_ecr_authorization_error_repository_not_found():
+    """handle_ecr_authorization_error does not raise on RepositoryNotFoundException."""
+    error = _create_client_error("RepositoryNotFoundException")
+    assert handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo") is None
 
 
-class TestHandleECRAuthorizationErrorOtherErrors:
-    """Tests for handle_ecr_authorization_error with other errors."""
-
-    def test_reraises_other_errors(self):
-        """handle_ecr_authorization_error reraises other errors."""
-        error = _create_client_error("ServiceException")
-        with pytest.raises(ClientError, match="ServiceException"):
-            handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo")
+def test_handle_ecr_authorization_error_other_errors():
+    """handle_ecr_authorization_error reraises other errors."""
+    error = _create_client_error("ServiceException")
+    with pytest.raises(ClientError, match="ServiceException"):
+        handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo")
 
 
 # === check_s3_head_bucket_permission ===
@@ -492,8 +462,7 @@ class TestCheckS3HeadBucketPermissionSuccess:
         """check_s3_head_bucket_permission does not raise when bucket accessible."""
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
-        result = check_s3_head_bucket_permission(mock_client, "my-bucket")
-        assert result is None
+        assert check_s3_head_bucket_permission(mock_client, "my-bucket") is None
 
     def test_calls_head_bucket_with_bucket_name(self):
         """check_s3_head_bucket_permission calls head_bucket with bucket name."""
@@ -528,59 +497,42 @@ class TestCheckS3HeadBucketPermissionAccessDenied:
             check_s3_head_bucket_permission(mock_client, "my-bucket")
 
 
-class TestCheckS3HeadBucketPermissionBucketNotFound:
-    """Tests for check_s3_head_bucket_permission with bucket not found."""
-
-    def test_does_not_raise_on_404_error(self):
-        """check_s3_head_bucket_permission does not raise on 404 error."""
-        mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("404")
-        result = check_s3_head_bucket_permission(mock_client, "my-bucket")
-        assert result is None
+def test_check_s3_head_bucket_permission_bucket_not_found():
+    """check_s3_head_bucket_permission does not raise on 404 error."""
+    mock_client = MagicMock()
+    mock_client.head_bucket.side_effect = _create_client_error("404")
+    assert check_s3_head_bucket_permission(mock_client, "my-bucket") is None
 
 
-class TestCheckS3HeadBucketPermissionOtherErrors:
-    """Tests for check_s3_head_bucket_permission with other errors."""
-
-    def test_reraises_other_errors(self):
-        """check_s3_head_bucket_permission reraises other errors."""
-        mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("ServiceException")
-        with pytest.raises(ClientError, match="ServiceException"):
-            check_s3_head_bucket_permission(mock_client, "my-bucket")
+def test_check_s3_head_bucket_permission_other_errors():
+    """check_s3_head_bucket_permission reraises other errors."""
+    mock_client = MagicMock()
+    mock_client.head_bucket.side_effect = _create_client_error("ServiceException")
+    with pytest.raises(ClientError, match="ServiceException"):
+        check_s3_head_bucket_permission(mock_client, "my-bucket")
 
 
 # === skip_if_api_gateway_unavailable ===
 
 
-class TestSkipIfAPIGatewayUnavailableAvailable:
-    """Tests for skip_if_api_gateway_unavailable when available."""
-
-    def test_does_not_skip_when_api_exists(self):
-        """skip_if_api_gateway_unavailable does not skip when API exists."""
-        api_gateway_info = {"id": "abc123", "exists": True}
-        result = skip_if_api_gateway_unavailable(api_gateway_info)
-        assert result is None
+def test_skip_if_api_gateway_unavailable_available():
+    """skip_if_api_gateway_unavailable does not skip when API exists."""
+    api_gateway_info = {"id": "abc123", "exists": True}
+    assert skip_if_api_gateway_unavailable(api_gateway_info) is None
 
 
-class TestSkipIfAPIGatewayUnavailableNoId:
-    """Tests for skip_if_api_gateway_unavailable when no ID."""
-
-    def test_skips_when_id_is_none(self):
-        """skip_if_api_gateway_unavailable skips when ID is None."""
-        api_gateway_info = {"id": None, "exists": False}
-        with pytest.raises(pytest.skip.Exception):
-            skip_if_api_gateway_unavailable(api_gateway_info)
+def test_skip_if_api_gateway_unavailable_no_id():
+    """skip_if_api_gateway_unavailable skips when ID is None."""
+    api_gateway_info = {"id": None, "exists": False}
+    with pytest.raises(pytest.skip.Exception):
+        skip_if_api_gateway_unavailable(api_gateway_info)
 
 
-class TestSkipIfAPIGatewayUnavailableDoesNotExist:
-    """Tests for skip_if_api_gateway_unavailable when does not exist."""
-
-    def test_skips_when_api_does_not_exist(self):
-        """skip_if_api_gateway_unavailable skips when API does not exist."""
-        api_gateway_info = {"id": "abc123", "exists": False}
-        with pytest.raises(pytest.skip.Exception):
-            skip_if_api_gateway_unavailable(api_gateway_info)
+def test_skip_if_api_gateway_unavailable_does_not_exist():
+    """skip_if_api_gateway_unavailable skips when API does not exist."""
+    api_gateway_info = {"id": "abc123", "exists": False}
+    with pytest.raises(pytest.skip.Exception):
+        skip_if_api_gateway_unavailable(api_gateway_info)
 
 
 # === check_state_file_readable ===
@@ -593,8 +545,9 @@ class TestCheckStateFileReadableSuccess:
         """check_state_file_readable does not raise when file readable."""
         mock_client = MagicMock()
         mock_client.head_object.return_value = {}
-        result = check_state_file_readable(mock_client, "my-bucket", "state/terraform.tfstate")
-        assert result is None
+        assert check_state_file_readable(
+            mock_client, "my-bucket", "state/terraform.tfstate"
+        ) is None
 
     def test_calls_head_object_with_bucket_and_key(self):
         """check_state_file_readable calls head_object with bucket and key."""
@@ -626,53 +579,40 @@ class TestCheckStateFileReadableAccessDenied:
             )
 
 
-class TestCheckStateFileReadableNotFound:
-    """Tests for check_state_file_readable with file not found."""
-
-    def test_skips_on_404_error(self):
-        """check_state_file_readable skips on 404 error."""
-        mock_client = MagicMock()
-        mock_client.head_object.side_effect = _create_client_error("404")
-        with pytest.raises(pytest.skip.Exception):
-            check_state_file_readable(
-                mock_client, "my-bucket", "state/terraform.tfstate"
-            )
+def test_check_state_file_readable_not_found():
+    """check_state_file_readable skips on 404 error."""
+    mock_client = MagicMock()
+    mock_client.head_object.side_effect = _create_client_error("404")
+    with pytest.raises(pytest.skip.Exception):
+        check_state_file_readable(
+            mock_client, "my-bucket", "state/terraform.tfstate"
+        )
 
 
-class TestCheckStateFileReadableOtherErrors:
-    """Tests for check_state_file_readable with other errors."""
-
-    def test_reraises_other_errors(self):
-        """check_state_file_readable reraises other errors."""
-        mock_client = MagicMock()
-        mock_client.head_object.side_effect = _create_client_error("ServiceException")
-        with pytest.raises(ClientError, match="ServiceException"):
-            check_state_file_readable(
-                mock_client, "my-bucket", "state/terraform.tfstate"
-            )
+def test_check_state_file_readable_other_errors():
+    """check_state_file_readable reraises other errors."""
+    mock_client = MagicMock()
+    mock_client.head_object.side_effect = _create_client_error("ServiceException")
+    with pytest.raises(ClientError, match="ServiceException"):
+        check_state_file_readable(
+            mock_client, "my-bucket", "state/terraform.tfstate"
+        )
 
 
 # === assert_api_gateway_exists ===
 
 
-class TestAssertAPIGatewayExistsSuccess:
-    """Tests for assert_api_gateway_exists when API exists."""
-
-    def test_does_not_raise_when_api_exists(self):
-        """assert_api_gateway_exists does not raise when API exists."""
-        api_gateway_info = {"id": "abc123", "exists": True}
-        result = assert_api_gateway_exists(api_gateway_info)
-        assert result is None
+def test_assert_api_gateway_exists_success():
+    """assert_api_gateway_exists does not raise when API exists."""
+    api_gateway_info = {"id": "abc123", "exists": True}
+    assert assert_api_gateway_exists(api_gateway_info) is None
 
 
-class TestAssertAPIGatewayExistsNoId:
-    """Tests for assert_api_gateway_exists when no ID."""
-
-    def test_skips_when_id_is_none(self):
-        """assert_api_gateway_exists skips when ID is None."""
-        api_gateway_info = {"id": None, "exists": False}
-        with pytest.raises(pytest.skip.Exception):
-            assert_api_gateway_exists(api_gateway_info)
+def test_assert_api_gateway_exists_no_id():
+    """assert_api_gateway_exists skips when ID is None."""
+    api_gateway_info = {"id": None, "exists": False}
+    with pytest.raises(pytest.skip.Exception):
+        assert_api_gateway_exists(api_gateway_info)
 
 
 class TestAssertAPIGatewayExistsDoesNotExist:
@@ -708,8 +648,9 @@ class TestAssertIAMRoleNameIsPascalCaseValid:
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyServiceRole"}}
         validate_func = MagicMock(return_value=None)
-        result = assert_iam_role_name_is_pascalcase(mock_client, "MyServiceRole", validate_func)
-        assert result is None
+        assert assert_iam_role_name_is_pascalcase(
+            mock_client, "MyServiceRole", validate_func
+        ) is None
 
     def test_calls_get_role_with_role_name(self):
         """assert_iam_role_name_is_pascalcase calls get_role with role name."""

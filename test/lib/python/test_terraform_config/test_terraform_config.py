@@ -1,16 +1,25 @@
 """Unit tests for terraform_config module."""
-import pytest
-
+from pathlib import Path
 from unittest.mock import patch
 
 from terraform_config import (
+    TEST_AWS_REGION,
     _parse_map_block,
-    _resolve_prefix_refs,
-    _resolve_local_interpolations,
     _resolve_all_refs,
     _resolve_lambda_function_name,
-    get_tfvars_values,
+    _resolve_local_interpolations,
+    _resolve_prefix_refs,
+    extract_iam_role_names,
+    extract_lambda_function_names,
+    extract_sqs_queue_names,
+    get_endpoint_local_values,
+    get_resource_prefix,
     get_shared_config,
+    get_tfvars_values,
+    get_webhooks_resource_names,
+    parse_lambda_handler_names,
+    parse_locals,
+    parse_outputs,
 )
 
 
@@ -36,7 +45,7 @@ class TestParseMapBlock:
         }
         '''
         result = _parse_map_block(content, "my_map")
-        assert result == {}
+        assert not result
 
     def test_handles_nested_braces(self):
         """Test handles content with nested braces."""
@@ -59,7 +68,7 @@ class TestParseMapBlock:
         }
         '''
         result = _parse_map_block(content, "empty_map")
-        assert result == {}
+        assert not result
 
 
 class TestResolvePrefixRefs:
@@ -241,19 +250,16 @@ class TestParseLocals:
 
     def test_returns_dict(self):
         """Test parse_locals returns a dict."""
-        from terraform_config import parse_locals
         result = parse_locals()
         assert isinstance(result, dict)
 
     def test_contains_aws_region(self):
         """Test parse_locals contains aws_region."""
-        from terraform_config import parse_locals
         result = parse_locals()
         assert "aws_region" in result
 
     def test_contains_resource_prefix(self):
         """Test parse_locals contains resource_prefix."""
-        from terraform_config import parse_locals
         result = parse_locals()
         assert "resource_prefix" in result
 
@@ -263,26 +269,20 @@ class TestParseLambdaHandlerNames:
 
     def test_returns_dict(self):
         """Test parse_lambda_handler_names returns a dict."""
-        from terraform_config import parse_lambda_handler_names
         result = parse_lambda_handler_names()
         assert isinstance(result, dict)
 
     def test_values_do_not_contain_unresolved_local_resource_prefix(self):
         """Test handler name values do not contain unresolved local.resource_prefix."""
-        from terraform_config import parse_lambda_handler_names
         result = parse_lambda_handler_names()
         unresolved_values = [v for v in result.values() if "${local.resource_prefix}" in v]
-        assert unresolved_values == []
+        assert not unresolved_values
 
 
-class TestParseOutputs:
-    """Tests for parse_outputs function."""
-
-    def test_returns_dict(self):
-        """Test parse_outputs returns a dict."""
-        from terraform_config import parse_outputs
-        result = parse_outputs()
-        assert isinstance(result, dict)
+def test_parse_outputs_returns_dict():
+    """Test parse_outputs returns a dict."""
+    result = parse_outputs()
+    assert isinstance(result, dict)
 
 
 class TestGetSharedConfig:
@@ -290,25 +290,21 @@ class TestGetSharedConfig:
 
     def test_returns_dict(self):
         """Test get_shared_config returns a dict."""
-        from terraform_config import get_shared_config
         result = get_shared_config()
         assert isinstance(result, dict)
 
     def test_contains_lambda_handler_names_key(self):
         """Test get_shared_config includes lambda_handler_names key."""
-        from terraform_config import get_shared_config
         result = get_shared_config()
         assert "lambda_handler_names" in result
 
     def test_lambda_handler_names_is_dict(self):
         """Test get_shared_config lambda_handler_names value is a dict."""
-        from terraform_config import get_shared_config
         result = get_shared_config()
         assert isinstance(result["lambda_handler_names"], dict)
 
     def test_omits_aws_account_id(self):
         """Test get_shared_config carries no account identifier."""
-        from terraform_config import get_shared_config
         result = get_shared_config()
         assert "aws_account_id" not in result
 
@@ -318,12 +314,10 @@ class TestTestAwsRegion:
 
     def test_is_string(self):
         """Test TEST_AWS_REGION is a string."""
-        from terraform_config import TEST_AWS_REGION
         assert isinstance(TEST_AWS_REGION, str)
 
     def test_is_valid_region_format(self):
         """Test TEST_AWS_REGION matches AWS region format."""
-        from terraform_config import TEST_AWS_REGION
         assert TEST_AWS_REGION.startswith("us-") or TEST_AWS_REGION.startswith("eu-")
 
 
@@ -332,13 +326,11 @@ class TestGetResourcePrefix:
 
     def test_returns_string(self):
         """Test get_resource_prefix returns a string."""
-        from terraform_config import get_resource_prefix
         result = get_resource_prefix()
         assert isinstance(result, str)
 
     def test_returns_non_empty(self):
         """Test get_resource_prefix returns non-empty string."""
-        from terraform_config import get_resource_prefix
         result = get_resource_prefix()
         assert len(result) > 0
 
@@ -348,37 +340,31 @@ class TestGetWebhooksResourceNames:
 
     def test_returns_dict(self):
         """Test get_webhooks_resource_names returns a dict."""
-        from terraform_config import get_webhooks_resource_names
         result = get_webhooks_resource_names()
         assert isinstance(result, dict)
 
     def test_contains_idempotency_table_key(self):
         """Test get_webhooks_resource_names contains idempotency_table key."""
-        from terraform_config import get_webhooks_resource_names
         result = get_webhooks_resource_names()
         assert "idempotency_table" in result
 
     def test_contains_circuit_breaker_state_table_key(self):
         """Test get_webhooks_resource_names contains circuit_breaker_state_table key."""
-        from terraform_config import get_webhooks_resource_names
         result = get_webhooks_resource_names()
         assert "circuit_breaker_state_table" in result
 
     def test_contains_job_queue_key(self):
         """Test get_webhooks_resource_names contains job_queue key."""
-        from terraform_config import get_webhooks_resource_names
         result = get_webhooks_resource_names()
         assert "job_queue" in result
 
     def test_contains_job_dlq_key(self):
         """Test get_webhooks_resource_names contains job_dlq key."""
-        from terraform_config import get_webhooks_resource_names
         result = get_webhooks_resource_names()
         assert "job_dlq" in result
 
     def test_custom_prefix_applies_to_circuit_breaker_state_table(self):
         """Test get_webhooks_resource_names applies custom prefix to circuit_breaker_state_table."""
-        from terraform_config import get_webhooks_resource_names
         result = get_webhooks_resource_names(prefix="Custom")
         assert result["circuit_breaker_state_table"].startswith("Custom")
 
@@ -388,14 +374,11 @@ class TestGetTfvarsValues:
 
     def test_returns_empty_for_nonexistent_dir(self):
         """Test returns empty dict for nonexistent directory."""
-        from pathlib import Path
-        from terraform_config import get_tfvars_values
         result = get_tfvars_values(Path("/nonexistent/path"))
-        assert result == {}
+        assert not result
 
     def test_parses_string_values(self, tmp_path):
         """Test parses string values from tfvars."""
-        from terraform_config import get_tfvars_values
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('my_var = "my_value"\n')
         result = get_tfvars_values(tmp_path)
@@ -403,7 +386,6 @@ class TestGetTfvarsValues:
 
     def test_parses_list_values(self, tmp_path):
         """Test parses list values from tfvars."""
-        from terraform_config import get_tfvars_values
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('my_list = ["a", "b", "c"]\n')
         result = get_tfvars_values(tmp_path)
@@ -411,7 +393,6 @@ class TestGetTfvarsValues:
 
     def test_ignores_comments(self, tmp_path):
         """Test ignores comment lines."""
-        from terraform_config import get_tfvars_values
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('# This is a comment\nmy_var = "value"\n')
         result = get_tfvars_values(tmp_path)
@@ -423,14 +404,11 @@ class TestGetEndpointLocalValues:
 
     def test_returns_empty_for_nonexistent_file(self):
         """Test returns empty dict when locals.tf doesn't exist."""
-        from pathlib import Path
-        from terraform_config import get_endpoint_local_values
         result = get_endpoint_local_values(Path("/nonexistent/path"))
-        assert result == {}
+        assert not result
 
     def test_parses_local_values(self, tmp_path):
         """Test parses local values from locals.tf."""
-        from terraform_config import get_endpoint_local_values
         locals_file = tmp_path / "locals.tf"
         locals_file.write_text('locals {\n  my_local = "my_value"\n}\n')
         result = get_endpoint_local_values(tmp_path)
@@ -438,8 +416,6 @@ class TestGetEndpointLocalValues:
 
     def test_parses_module_shared_handler_reference(self, tmp_path):
         """Test parses module.common.lambda_handler_names references."""
-        from unittest.mock import patch
-        from terraform_config import get_endpoint_local_values
         locals_file = tmp_path / "locals.tf"
         locals_file.write_text(
             'locals {\n  handler = module.common.lambda_handler_names.webhook\n}\n'
@@ -457,14 +433,11 @@ class TestExtractIamRoleNames:
 
     def test_returns_empty_for_nonexistent_file(self):
         """Test returns empty list when file doesn't exist."""
-        from pathlib import Path
-        from terraform_config import extract_iam_role_names
         result = extract_iam_role_names(Path("/nonexistent/file.tf"))
-        assert result == []
+        assert not result
 
     def test_extracts_quoted_name_returns_single_result(self, tmp_path):
         """Test extracts exactly one role from file with one role definition."""
-        from terraform_config import extract_iam_role_names
         iam_file = tmp_path / "iam.tf"
         iam_file.write_text('''
 resource "aws_iam_role" "my_role" {
@@ -477,7 +450,6 @@ resource "aws_iam_role" "my_role" {
 
     def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path):
         """Test extracts correct resource name and role name tuple."""
-        from terraform_config import extract_iam_role_names
         iam_file = tmp_path / "iam.tf"
         iam_file.write_text('''
 resource "aws_iam_role" "my_role" {
@@ -490,7 +462,6 @@ resource "aws_iam_role" "my_role" {
 
     def test_extracts_var_reference_name(self, tmp_path):
         """Test extracts role name from var reference when in tfvars."""
-        from terraform_config import extract_iam_role_names
         iam_file = tmp_path / "iam.tf"
         iam_file.write_text('''
 resource "aws_iam_role" "my_role" {
@@ -506,7 +477,6 @@ resource "aws_iam_role" "my_role" {
 
     def test_extracts_local_reference_name(self, tmp_path):
         """Test extracts role name from local reference."""
-        from terraform_config import extract_iam_role_names
         iam_file = tmp_path / "iam.tf"
         iam_file.write_text('''
 resource "aws_iam_role" "my_role" {
@@ -525,14 +495,11 @@ class TestExtractLambdaFunctionNames:
 
     def test_returns_empty_for_nonexistent_file(self):
         """Test returns empty list when file doesn't exist."""
-        from pathlib import Path
-        from terraform_config import extract_lambda_function_names
         result = extract_lambda_function_names(Path("/nonexistent/file.tf"))
-        assert result == []
+        assert not result
 
     def test_extracts_quoted_name_returns_single_result(self, tmp_path):
         """Test extracts exactly one function from file with one function definition."""
-        from terraform_config import extract_lambda_function_names
         lambda_file = tmp_path / "lambda.tf"
         lambda_file.write_text('''
 resource "aws_lambda_function" "my_func" {
@@ -546,7 +513,6 @@ resource "aws_lambda_function" "my_func" {
 
     def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path):
         """Test extracts correct resource name and function name tuple."""
-        from terraform_config import extract_lambda_function_names
         lambda_file = tmp_path / "lambda.tf"
         lambda_file.write_text('''
 resource "aws_lambda_function" "my_func" {
@@ -560,7 +526,6 @@ resource "aws_lambda_function" "my_func" {
 
     def test_with_use_handler_names_returns_single_result(self, tmp_path):
         """Test with use_handler_names=True returns exactly one result."""
-        from terraform_config import extract_lambda_function_names
         lambda_file = tmp_path / "lambda.tf"
         lambda_file.write_text('''
 resource "aws_lambda_function" "my_func" {
@@ -577,14 +542,11 @@ class TestExtractSqsQueueNames:
 
     def test_returns_empty_for_nonexistent_file(self):
         """Test returns empty list when file doesn't exist."""
-        from pathlib import Path
-        from terraform_config import extract_sqs_queue_names
         result = extract_sqs_queue_names(Path("/nonexistent/file.tf"))
-        assert result == []
+        assert not result
 
     def test_extracts_quoted_name_returns_single_result(self, tmp_path):
         """Test extracts exactly one queue from file with one queue definition."""
-        from terraform_config import extract_sqs_queue_names
         (tmp_path / "locals.tf").write_text("")  # Empty locals
         sqs_file = tmp_path / "sqs.tf"
         sqs_file.write_text('''
@@ -597,7 +559,6 @@ resource "aws_sqs_queue" "my_queue" {
 
     def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path):
         """Test extracts correct resource name and queue name tuple."""
-        from terraform_config import extract_sqs_queue_names
         (tmp_path / "locals.tf").write_text("")  # Empty locals
         sqs_file = tmp_path / "sqs.tf"
         sqs_file.write_text('''
@@ -610,7 +571,6 @@ resource "aws_sqs_queue" "my_queue" {
 
     def test_extracts_local_reference_returns_single_result(self, tmp_path):
         """Test extracts exactly one queue when name uses local reference."""
-        from terraform_config import extract_sqs_queue_names
         locals_file = tmp_path / "locals.tf"
         locals_file.write_text('locals {\n  queue_name = "LocalQueueName"\n}\n')
         sqs_file = tmp_path / "sqs.tf"
@@ -624,7 +584,6 @@ resource "aws_sqs_queue" "my_queue" {
 
     def test_extracts_local_reference_returns_correct_tuple(self, tmp_path):
         """Test extracts correct tuple when name uses local reference."""
-        from terraform_config import extract_sqs_queue_names
         locals_file = tmp_path / "locals.tf"
         locals_file.write_text('locals {\n  queue_name = "LocalQueueName"\n}\n')
         sqs_file = tmp_path / "sqs.tf"
@@ -711,7 +670,7 @@ class TestGetTfvarsValuesAdditional:
     def test_returns_empty_dict_when_file_missing(self, tmp_path):
         """Test returns empty dict when tfvars file doesn't exist."""
         result = get_tfvars_values(tmp_path)
-        assert result == {}
+        assert not result
 
 
 class TestGetSharedConfigDomainName:
@@ -788,84 +747,68 @@ class TestResolveLocalInterpolationsMaxIterationsExhaustion:
         assert result.count("y") == 10
 
 
-class TestGetEndpointLocalValuesMissingHandler:
-    """Tests for handler_key not in handler_names branch."""
-
-    def test_handler_key_not_in_handler_names(self, tmp_path):
-        """Test that handler references not in handler_names are skipped."""
-        from terraform_config import get_endpoint_local_values
-        locals_file = tmp_path / "locals.tf"
-        # Reference a handler that won't be in the mocked handler_names
-        locals_file.write_text(
-            'locals {\n  handler = module.common.lambda_handler_names.nonexistent\n}\n'
-        )
-        with patch("terraform_config.parse_lambda_handler_names") as mock_handlers:
-            mock_handlers.return_value = {"webhook": "WebhookHandler"}  # No "nonexistent"
-            with patch("terraform_config.get_resource_prefix") as mock_prefix:
-                mock_prefix.return_value = "TenULabs"
-                result = get_endpoint_local_values(tmp_path)
-        # The "handler" key should not be in result since "nonexistent" wasn't found
-        assert "handler" not in result
+def test_get_endpoint_local_values_skips_an_unknown_handler(tmp_path):
+    """Test that handler references not in handler_names are skipped."""
+    locals_file = tmp_path / "locals.tf"
+    # Reference a handler that won't be in the mocked handler_names
+    locals_file.write_text(
+        'locals {\n  handler = module.common.lambda_handler_names.nonexistent\n}\n'
+    )
+    with patch("terraform_config.parse_lambda_handler_names") as mock_handlers:
+        mock_handlers.return_value = {"webhook": "WebhookHandler"}  # No "nonexistent"
+        with patch("terraform_config.get_resource_prefix") as mock_prefix:
+            mock_prefix.return_value = "TenULabs"
+            result = get_endpoint_local_values(tmp_path)
+    # The "handler" key should not be in result since "nonexistent" wasn't found
+    assert "handler" not in result
 
 
-class TestExtractIamRoleNamesUnmatchedPattern:
-    """Tests for IAM role name patterns that don't match any resolution."""
-
-    def test_role_with_unresolvable_expression(self, tmp_path):
-        """Test role with name expression that doesn't match any pattern."""
-        from terraform_config import extract_iam_role_names
-        iam_file = tmp_path / "iam.tf"
-        # Use an expression that won't match quoted, local, or var patterns
-        iam_file.write_text('''
+def test_extract_iam_role_names_skips_an_unresolvable_expression(tmp_path):
+    """Test role with name expression that doesn't match any pattern."""
+    iam_file = tmp_path / "iam.tf"
+    # Use an expression that won't match quoted, local, or var patterns
+    iam_file.write_text('''
 resource "aws_iam_role" "my_role" {
   name = data.aws_caller_identity.current.account_id
   assume_role_policy = jsonencode({})
 }
 ''')
-        (tmp_path / "locals.tf").write_text("")
-        (tmp_path / "terraform.tfvars").write_text("")
-        result = extract_iam_role_names(iam_file)
-        # Role should not be extracted since name doesn't match any pattern
-        assert len(result) == 0
+    (tmp_path / "locals.tf").write_text("")
+    (tmp_path / "terraform.tfvars").write_text("")
+    result = extract_iam_role_names(iam_file)
+    # Role should not be extracted since name doesn't match any pattern
+    assert len(result) == 0
 
 
-class TestExtractLambdaFunctionNamesUnresolvable:
-    """Tests for Lambda functions with unresolvable function names."""
-
-    def test_function_with_unresolvable_name(self, tmp_path):
-        """Test Lambda function with function_name that can't be resolved."""
-        from terraform_config import extract_lambda_function_names
-        lambda_file = tmp_path / "lambda.tf"
-        # Use an expression that doesn't match any resolution pattern
-        lambda_file.write_text('''
+def test_extract_lambda_function_names_skips_an_unresolvable_name(tmp_path):
+    """Test Lambda function with function_name that can't be resolved."""
+    lambda_file = tmp_path / "lambda.tf"
+    # Use an expression that doesn't match any resolution pattern
+    lambda_file.write_text('''
 resource "aws_lambda_function" "my_func" {
   function_name = data.aws_caller_identity.current.account_id
   handler = "index.handler"
   runtime = "python3.11"
 }
 ''')
-        (tmp_path / "locals.tf").write_text("")
-        (tmp_path / "terraform.tfvars").write_text("")
-        result = extract_lambda_function_names(lambda_file)
-        # Function should not be in result since name couldn't be resolved
-        assert len(result) == 0
+    (tmp_path / "locals.tf").write_text("")
+    (tmp_path / "terraform.tfvars").write_text("")
+    result = extract_lambda_function_names(lambda_file)
+    # Function should not be in result since name couldn't be resolved
+    assert len(result) == 0
 
 
-class TestExtractSqsQueueNamesUnmatchedLocal:
-    """Tests for SQS queue names with unresolvable local references."""
-
-    def test_queue_with_local_not_in_values(self, tmp_path):
-        """Test SQS queue with local reference that's not in local_values."""
-        from terraform_config import extract_sqs_queue_names
-        sqs_file = tmp_path / "sqs.tf"
-        # Reference a local that won't be in local_values
-        sqs_file.write_text('''
+def test_extract_sqs_queue_names_skips_an_unknown_local(tmp_path):
+    """Test SQS queue with local reference that's not in local_values."""
+    sqs_file = tmp_path / "sqs.tf"
+    # Reference a local that won't be in local_values
+    sqs_file.write_text('''
 resource "aws_sqs_queue" "my_queue" {
   name = local.undefined_queue_name
 }
 ''')
-        # Empty locals.tf so undefined_queue_name won't be found
-        (tmp_path / "locals.tf").write_text('locals {\n  other_var = "value"\n}\n')
-        result = extract_sqs_queue_names(sqs_file)
-        # Queue should not be in result since local reference wasn't found
-        assert len(result) == 0
+    # Empty locals.tf so undefined_queue_name won't be found
+    (tmp_path / "locals.tf").write_text('locals {\n  other_var = "value"\n}\n')
+    result = extract_sqs_queue_names(sqs_file)
+    # Queue should not be in result since local reference wasn't found
+    assert len(result) == 0

@@ -1,6 +1,5 @@
 """Comprehensive tests for repo_utils module."""
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 import pytest
 
 from repo_utils import (

@@ -6,10 +6,38 @@ import pytest
 from botocore.exceptions import ClientError
 
 from test_fixtures.aws import (
-    iam_role_exists,
-    get_log_group_info,
+    api_gateway_info,
+    api_key_fixture,
+    api_url_fixture,
+    apigateway_client,
+    aws_region,
+    backup_client,
+    caller_identity,
+    current_role_arn,
+    current_role_name,
+    dynamodb_client,
+    ec2_client,
+    ecr_client,
+    ecs_client,
+    events_client,
     find_lifecycle_rule,
+    get_log_group_info,
+    glue_client,
+    iam_client,
+    iam_role_exists,
+    kms_client,
+    lambda_client,
+    logs_client,
+    s3_client,
+    scheduler_client,
+    ses_client,
+    shared_config,
+    ssm_client,
+    ssm_github_pat_name,
     stale_delete_markers,
+    state_bucket_name,
+    state_bucket_region,
+    sts_client,
 )
 
 
@@ -166,9 +194,7 @@ class TestSharedConfigFixture:
     def test_shared_config_calls_get_shared_config(self, mock_get_shared_config):
         """Test that shared_config fixture calls get_shared_config."""
         mock_get_shared_config.return_value = {"aws_region": "us-east-1"}
-        from test_fixtures.aws import shared_config
-        # Fixtures are generator functions, need to access underlying function
-        result = mock_get_shared_config()
+        mock_get_shared_config()
         assert mock_get_shared_config.called
 
     @patch("test_fixtures.aws.get_shared_config")
@@ -179,34 +205,25 @@ class TestSharedConfigFixture:
         assert isinstance(result, dict)
 
 
-class TestAwsRegionFixture:
-    """Tests for aws_region fixture behavior."""
-
-    def test_aws_region_extracts_from_config(self):
-        """Test that aws_region extracts aws_region from shared_config."""
-        config = {"aws_region": "eu-west-1", "other_key": "value"}
-        region = config["aws_region"]
-        assert region == "eu-west-1"
+def test_aws_region_fixture():
+    """Test that aws_region extracts aws_region from shared_config."""
+    config = {"aws_region": "eu-west-1", "other_key": "value"}
+    region = config["aws_region"]
+    assert region == "eu-west-1"
 
 
-class TestSsmGithubPatNameFixture:
-    """Tests for ssm_github_pat_name fixture behavior."""
-
-    def test_ssm_github_pat_name_extracts_from_config(self):
-        """Test that ssm_github_pat_name extracts correct key from config."""
-        config = {"ssm_github_pat_name": "/github/pat", "aws_region": "us-east-1"}
-        pat_name = config["ssm_github_pat_name"]
-        assert pat_name == "/github/pat"
+def test_ssm_github_pat_name_fixture():
+    """Test that ssm_github_pat_name extracts correct key from config."""
+    config = {"ssm_github_pat_name": "/github/pat", "aws_region": "us-east-1"}
+    pat_name = config["ssm_github_pat_name"]
+    assert pat_name == "/github/pat"
 
 
-class TestStateBucketNameFixture:
-    """Tests for state_bucket_name fixture behavior."""
-
-    def test_state_bucket_name_extracts_from_config(self):
-        """Test that state_bucket_name extracts correct key from config."""
-        config = {"name_for_terraform_state_bucket": "my-state-bucket"}
-        bucket_name = config["name_for_terraform_state_bucket"]
-        assert bucket_name == "my-state-bucket"
+def test_state_bucket_name_fixture():
+    """Test that state_bucket_name extracts correct key from config."""
+    config = {"name_for_terraform_state_bucket": "my-state-bucket"}
+    bucket_name = config["name_for_terraform_state_bucket"]
+    assert bucket_name == "my-state-bucket"
 
 
 class TestClientFixtures:
@@ -320,12 +337,18 @@ class TestCallerIdentityFixture:
 
     def test_caller_identity_returns_dict_with_account(self):
         """Test that caller_identity returns dict with Account key."""
-        mock_response = {"Account": "123456789012", "Arn": "arn:aws:sts::123456789012:assumed-role/role/session"}
+        mock_response = {
+            "Account": "123456789012",
+            "Arn": "arn:aws:sts::123456789012:assumed-role/role/session",
+        }
         assert "Account" in mock_response
 
     def test_caller_identity_returns_dict_with_arn(self):
         """Test that caller_identity returns dict with Arn key."""
-        mock_response = {"Account": "123456789012", "Arn": "arn:aws:sts::123456789012:assumed-role/role/session"}
+        mock_response = {
+            "Account": "123456789012",
+            "Arn": "arn:aws:sts::123456789012:assumed-role/role/session",
+        }
         assert "Arn" in mock_response
 
 
@@ -384,7 +407,7 @@ class TestCurrentRoleNameFixture:
         if not role_arn:
             result = ""
         else:
-            result = role_arn.split("/")[-1]
+            result = role_arn.rsplit("/", maxsplit=1)[-1]
         assert result == "my-test-role"
 
     def test_returns_empty_string_for_empty_arn(self):
@@ -393,13 +416,13 @@ class TestCurrentRoleNameFixture:
         if not role_arn:
             result = ""
         else:
-            result = role_arn.split("/")[-1]
+            result = role_arn.rsplit("/", maxsplit=1)[-1]
         assert result == ""
 
     def test_handles_complex_role_names(self):
         """Test that complex role names with hyphens are handled."""
         role_arn = "arn:aws:iam::123456789012:role/my-complex-role-name-123"
-        result = role_arn.split("/")[-1]
+        result = role_arn.rsplit("/", maxsplit=1)[-1]
         assert result == "my-complex-role-name-123"
 
 
@@ -528,69 +551,50 @@ class TestApiKeyFixture:
         assert result is None
 
 
-class TestStateBucketRegionFixture:
-    """Tests for state_bucket_region fixture behavior."""
-
-    def test_returns_aws_region(self):
-        """Test that state_bucket_region returns the aws_region."""
-        aws_region = "us-west-2"
-        result = aws_region
-        assert result == "us-west-2"
+def test_state_bucket_region_fixture():
+    """Test that state_bucket_region returns the aws_region."""
+    aws_region = "us-west-2"
+    result = aws_region
+    assert result == "us-west-2"
 
 
 # === Direct Fixture Function Execution Tests ===
 # These tests execute the actual fixture functions with mocked dependencies
 
 
-class TestSharedConfigFixtureExecution:
-    """Tests that execute the shared_config fixture function."""
-
-    @patch("test_fixtures.aws.get_shared_config")
-    def test_shared_config_fixture_returns_config(self, mock_get_config):
-        """Test shared_config fixture calls get_shared_config and returns result."""
-        from test_fixtures.aws import shared_config
-        mock_get_config.return_value = {"aws_region": "us-east-1", "key": "value"}
-        # Fixtures without request param use __wrapped__ too
-        result = shared_config.__wrapped__()
-        assert result == {"aws_region": "us-east-1", "key": "value"}
-        mock_get_config.assert_called_once()
+@patch("test_fixtures.aws.get_shared_config")
+def test_shared_config_fixture_execution(mock_get_config):
+    """Test shared_config fixture calls get_shared_config and returns result."""
+    mock_get_config.return_value = {"aws_region": "us-east-1", "key": "value"}
+    # Fixtures without request param use __wrapped__ too
+    result = shared_config.__wrapped__()
+    assert result == {"aws_region": "us-east-1", "key": "value"}
+    mock_get_config.assert_called_once()
 
 
-class TestAwsRegionFixtureExecution:
-    """Tests that execute the aws_region fixture function."""
-
-    def test_aws_region_fixture_extracts_region(self):
-        """Test aws_region fixture extracts aws_region from shared_config."""
-        from test_fixtures.aws import aws_region
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {"aws_region": "eu-west-1"}
-        result = aws_region.__wrapped__(mock_request)
-        assert result == "eu-west-1"
-        mock_request.getfixturevalue.assert_called_with("shared_config")
+def test_aws_region_fixture_execution():
+    """Test aws_region fixture extracts aws_region from shared_config."""
+    mock_request = MagicMock()
+    mock_request.getfixturevalue.return_value = {"aws_region": "eu-west-1"}
+    result = aws_region.__wrapped__(mock_request)
+    assert result == "eu-west-1"
+    mock_request.getfixturevalue.assert_called_with("shared_config")
 
 
-class TestSsmGithubPatNameFixtureExecution:
-    """Tests that execute the ssm_github_pat_name fixture function."""
-
-    def test_ssm_github_pat_name_fixture_extracts_value(self):
-        """Test ssm_github_pat_name fixture extracts from shared_config."""
-        from test_fixtures.aws import ssm_github_pat_name
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {"ssm_github_pat_name": "/github/pat"}
-        result = ssm_github_pat_name.__wrapped__(mock_request)
-        assert result == "/github/pat"
+def test_ssm_github_pat_name_fixture_execution():
+    """Test ssm_github_pat_name fixture extracts from shared_config."""
+    mock_request = MagicMock()
+    mock_request.getfixturevalue.return_value = {"ssm_github_pat_name": "/github/pat"}
+    result = ssm_github_pat_name.__wrapped__(mock_request)
+    assert result == "/github/pat"
 
 
-class TestStateBucketNameFixtureExecution:
-    """Tests that execute the state_bucket_name fixture function."""
-
-    def test_state_bucket_name_fixture_extracts_value(self):
-        """Test state_bucket_name fixture extracts from shared_config."""
-        from test_fixtures.aws import state_bucket_name
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {"name_for_terraform_state_bucket": "my-bucket"}
-        result = state_bucket_name.__wrapped__(mock_request)
-        assert result == "my-bucket"
+def test_state_bucket_name_fixture_execution():
+    """Test state_bucket_name fixture extracts from shared_config."""
+    mock_request = MagicMock()
+    mock_request.getfixturevalue.return_value = {"name_for_terraform_state_bucket": "my-bucket"}
+    result = state_bucket_name.__wrapped__(mock_request)
+    assert result == "my-bucket"
 
 
 class TestClientFixturesExecution:
@@ -599,7 +603,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_sts_client_fixture_creates_client(self, mock_boto3):
         """Test sts_client fixture creates STS client with region."""
-        from test_fixtures.aws import sts_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-2"
         mock_boto3.client.return_value = MagicMock()
@@ -609,7 +612,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_iam_client_fixture_creates_client(self, mock_boto3):
         """Test iam_client fixture creates IAM client with region."""
-        from test_fixtures.aws import iam_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-west-2"
         iam_client.__wrapped__(mock_request)
@@ -618,7 +620,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_s3_client_fixture_creates_client(self, mock_boto3):
         """Test s3_client fixture creates S3 client with region."""
-        from test_fixtures.aws import s3_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         s3_client.__wrapped__(mock_request)
@@ -627,7 +628,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_ssm_client_fixture_creates_client(self, mock_boto3):
         """Test ssm_client fixture creates SSM client with region."""
-        from test_fixtures.aws import ssm_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         ssm_client.__wrapped__(mock_request)
@@ -636,7 +636,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_kms_client_fixture_creates_client(self, mock_boto3):
         """Test kms_client fixture creates KMS client with region."""
-        from test_fixtures.aws import kms_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         kms_client.__wrapped__(mock_request)
@@ -645,7 +644,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_ecr_client_fixture_creates_client(self, mock_boto3):
         """Test ecr_client fixture creates ECR client with region."""
-        from test_fixtures.aws import ecr_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         ecr_client.__wrapped__(mock_request)
@@ -654,7 +652,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_logs_client_fixture_creates_client(self, mock_boto3):
         """Test logs_client fixture creates CloudWatch Logs client with region."""
-        from test_fixtures.aws import logs_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         logs_client.__wrapped__(mock_request)
@@ -663,7 +660,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_lambda_client_fixture_creates_client(self, mock_boto3):
         """Test lambda_client fixture creates Lambda client with region."""
-        from test_fixtures.aws import lambda_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         lambda_client.__wrapped__(mock_request)
@@ -672,7 +668,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_apigateway_client_fixture_creates_client(self, mock_boto3):
         """Test apigateway_client fixture creates API Gateway client with region."""
-        from test_fixtures.aws import apigateway_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         apigateway_client.__wrapped__(mock_request)
@@ -681,7 +676,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_dynamodb_client_fixture_creates_client(self, mock_boto3):
         """Test dynamodb_client fixture creates DynamoDB client with region."""
-        from test_fixtures.aws import dynamodb_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         dynamodb_client.__wrapped__(mock_request)
@@ -690,7 +684,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_ecs_client_fixture_creates_client(self, mock_boto3):
         """Test ecs_client fixture creates ECS client with region."""
-        from test_fixtures.aws import ecs_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         ecs_client.__wrapped__(mock_request)
@@ -699,7 +692,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_ec2_client_fixture_creates_client(self, mock_boto3):
         """Test ec2_client fixture creates EC2 client with region."""
-        from test_fixtures.aws import ec2_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         ec2_client.__wrapped__(mock_request)
@@ -708,7 +700,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_ses_client_fixture_creates_client(self, mock_boto3):
         """Test ses_client fixture creates SES client with region."""
-        from test_fixtures.aws import ses_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         ses_client.__wrapped__(mock_request)
@@ -717,7 +708,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_glue_client_fixture_creates_client(self, mock_boto3):
         """Test glue_client fixture creates Glue client with region."""
-        from test_fixtures.aws import glue_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         glue_client.__wrapped__(mock_request)
@@ -726,7 +716,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_events_client_fixture_creates_client(self, mock_boto3):
         """Test events_client fixture creates EventBridge client with region."""
-        from test_fixtures.aws import events_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         events_client.__wrapped__(mock_request)
@@ -735,7 +724,6 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_scheduler_client_fixture_creates_client(self, mock_boto3):
         """Test scheduler_client fixture creates Scheduler client with region."""
-        from test_fixtures.aws import scheduler_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         scheduler_client.__wrapped__(mock_request)
@@ -744,27 +732,22 @@ class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
     def test_backup_client_fixture_creates_client(self, mock_boto3):
         """Test backup_client fixture creates Backup client with region."""
-        from test_fixtures.aws import backup_client
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         backup_client.__wrapped__(mock_request)
         assert mock_boto3.client.call_args[0][0] == "backup"
 
 
-class TestCallerIdentityFixtureExecution:
-    """Tests that execute the caller_identity fixture function."""
-
-    def test_caller_identity_fixture_calls_get_caller_identity(self):
-        """Test caller_identity fixture calls STS get_caller_identity."""
-        from test_fixtures.aws import caller_identity
-        mock_request = MagicMock()
-        mock_sts_client = MagicMock()
-        mock_sts_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        mock_request.getfixturevalue.return_value = mock_sts_client
-        # Access underlying function via __wrapped__
-        result = caller_identity.__wrapped__(mock_request)
-        assert result == {"Account": "123456789012"}
-        mock_sts_client.get_caller_identity.assert_called_once()
+def test_caller_identity_fixture_execution():
+    """Test caller_identity fixture calls STS get_caller_identity."""
+    mock_request = MagicMock()
+    mock_sts_client = MagicMock()
+    mock_sts_client.get_caller_identity.return_value = {"Account": "123456789012"}
+    mock_request.getfixturevalue.return_value = mock_sts_client
+    # Access underlying function via __wrapped__
+    result = caller_identity.__wrapped__(mock_request)
+    assert result == {"Account": "123456789012"}
+    mock_sts_client.get_caller_identity.assert_called_once()
 
 
 class TestCurrentRoleArnFixtureExecution:
@@ -772,7 +755,6 @@ class TestCurrentRoleArnFixtureExecution:
 
     def test_current_role_arn_converts_assumed_role(self):
         """Test current_role_arn converts assumed-role ARN to role ARN."""
-        from test_fixtures.aws import current_role_arn
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {
             "Account": "123456789012",
@@ -783,7 +765,6 @@ class TestCurrentRoleArnFixtureExecution:
 
     def test_current_role_arn_returns_unchanged_for_non_assumed(self):
         """Test current_role_arn returns unchanged ARN for non-assumed-role."""
-        from test_fixtures.aws import current_role_arn
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {
             "Account": "123456789012",
@@ -798,7 +779,6 @@ class TestCurrentRoleNameFixtureExecution:
 
     def test_current_role_name_extracts_role_name(self):
         """Test current_role_name extracts role name from ARN."""
-        from test_fixtures.aws import current_role_name
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "arn:aws:iam::123456789012:role/MyRole"
         result = current_role_name.__wrapped__(mock_request)
@@ -806,23 +786,18 @@ class TestCurrentRoleNameFixtureExecution:
 
     def test_current_role_name_returns_empty_for_empty_arn(self):
         """Test current_role_name returns empty string for empty ARN."""
-        from test_fixtures.aws import current_role_name
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = ""
         result = current_role_name.__wrapped__(mock_request)
         assert result == ""
 
 
-class TestStateBucketRegionFixtureExecution:
-    """Tests that execute the state_bucket_region fixture function."""
-
-    def test_state_bucket_region_returns_aws_region(self):
-        """Test state_bucket_region returns aws_region value."""
-        from test_fixtures.aws import state_bucket_region
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-west-2"
-        result = state_bucket_region.__wrapped__(mock_request)
-        assert result == "us-west-2"
+def test_state_bucket_region_fixture_execution():
+    """Test state_bucket_region returns aws_region value."""
+    mock_request = MagicMock()
+    mock_request.getfixturevalue.return_value = "us-west-2"
+    result = state_bucket_region.__wrapped__(mock_request)
+    assert result == "us-west-2"
 
 
 class TestApiGatewayInfoFixtureExecution:
@@ -830,7 +805,6 @@ class TestApiGatewayInfoFixtureExecution:
 
     def test_api_gateway_info_returns_not_found_when_no_id(self):
         """Test api_gateway_info returns not found when api_gateway_id is None."""
-        from test_fixtures.aws import api_gateway_info
         mock_request = MagicMock()
         mock_request.getfixturevalue.side_effect = lambda name: {
             "apigateway_client": MagicMock(),
@@ -841,7 +815,6 @@ class TestApiGatewayInfoFixtureExecution:
 
     def _create_success_mock_request(self):
         """Create mock request for successful API gateway info tests."""
-        from test_fixtures.aws import api_gateway_info
         mock_request = MagicMock()
         mock_client = MagicMock()
         mock_client.get_rest_api.return_value = {
@@ -883,7 +856,6 @@ class TestApiGatewayInfoFixtureExecution:
 
     def test_api_gateway_info_handles_access_denied(self):
         """Test api_gateway_info handles AccessDeniedException."""
-        from test_fixtures.aws import api_gateway_info
         mock_request = MagicMock()
         mock_client = MagicMock()
         mock_client.get_rest_api.side_effect = ClientError(
@@ -898,7 +870,6 @@ class TestApiGatewayInfoFixtureExecution:
 
     def test_api_gateway_info_handles_not_found(self):
         """Test api_gateway_info handles NotFoundException."""
-        from test_fixtures.aws import api_gateway_info
         mock_request = MagicMock()
         mock_client = MagicMock()
         mock_client.get_rest_api.side_effect = ClientError(
@@ -913,7 +884,6 @@ class TestApiGatewayInfoFixtureExecution:
 
     def test_api_gateway_info_reraises_other_errors(self):
         """Test api_gateway_info re-raises non-handled ClientErrors."""
-        from test_fixtures.aws import api_gateway_info
         mock_request = MagicMock()
         mock_client = MagicMock()
         mock_client.get_rest_api.side_effect = ClientError(
@@ -927,33 +897,25 @@ class TestApiGatewayInfoFixtureExecution:
             api_gateway_info.__wrapped__(mock_request)
 
 
-class TestApiUrlFixtureExecution:
-    """Tests that execute the api_url fixture function."""
-
-    def test_api_url_fixture_constructs_url(self):
-        """Test api_url fixture constructs URL from api_fqdn."""
-        from test_fixtures.aws import api_url_fixture
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {"api_fqdn": "api.example.com"}
-        result = api_url_fixture.__wrapped__(mock_request)
-        assert result == "https://api.example.com"
+def test_api_url_fixture_execution():
+    """Test api_url fixture constructs URL from api_fqdn."""
+    mock_request = MagicMock()
+    mock_request.getfixturevalue.return_value = {"api_fqdn": "api.example.com"}
+    result = api_url_fixture.__wrapped__(mock_request)
+    assert result == "https://api.example.com"
 
 
-class TestApiKeyFixtureExecution:
-    """Tests that execute the api_key fixture function."""
-
-    def test_api_key_fixture_retrieves_from_ssm(self):
-        """Test api_key fixture retrieves value from SSM."""
-        from test_fixtures.aws import api_key_fixture
-        mock_request = MagicMock()
-        mock_client = MagicMock()
-        mock_client.get_parameter.return_value = {
-            "Parameter": {"Value": "secret-key-123"}
-        }
-        mock_request.getfixturevalue.return_value = mock_client
-        result = api_key_fixture.__wrapped__(mock_request)
-        assert result == "secret-key-123"
-        mock_client.get_parameter.assert_called_with(Name='/api/key', WithDecryption=True)
+def test_api_key_fixture_execution():
+    """Test api_key fixture retrieves value from SSM."""
+    mock_request = MagicMock()
+    mock_client = MagicMock()
+    mock_client.get_parameter.return_value = {
+        "Parameter": {"Value": "secret-key-123"}
+    }
+    mock_request.getfixturevalue.return_value = mock_client
+    result = api_key_fixture.__wrapped__(mock_request)
+    assert result == "secret-key-123"
+    mock_client.get_parameter.assert_called_with(Name='/api/key', WithDecryption=True)
 
 
 class TestFindLifecycleRule:
@@ -1011,7 +973,7 @@ class TestStaleDeleteMarkers:
     def test_omits_a_marker_newer_than_the_cutoff(self):
         """Test a marker minutes old is the trace of a delete, not something left."""
         pages = self._client({"DeleteMarkers": [self._marker("just-deleted", minutes=5)]})
-        assert stale_delete_markers(pages, "a-bucket") == []
+        assert not stale_delete_markers(pages, "a-bucket")
 
     def test_reads_every_page_the_paginator_yields(self):
         """Test a bucket holding more markers than one page reports the later ones."""

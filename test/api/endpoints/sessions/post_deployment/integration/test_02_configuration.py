@@ -204,28 +204,22 @@ class TestCloudWatchLogsConfiguration:
         )
         assert log_group["retentionInDays"] == 7
 
-class TestBackupConfiguration:
-    """Tests for AWS Backup configuration."""
-
-    def test_backup_plan_has_30_day_retention(self, backup_client, sessions_config):
-        """Verify backup plan has 30-day retention."""
-        response = backup_client.list_backup_plans()
-        plan = next(
-            p for p in response["BackupPlansList"]
-            if p["BackupPlanName"] == sessions_config["backup_plan_name"]
-        )
-        plan_details = backup_client.get_backup_plan(BackupPlanId=plan["BackupPlanId"])
-        rules = plan_details["BackupPlan"]["Rules"]
-        assert any(r["Lifecycle"]["DeleteAfterDays"] == 30 for r in rules)
+def test_backup_configuration(backup_client, sessions_config):
+    """Verify backup plan has 30-day retention."""
+    response = backup_client.list_backup_plans()
+    plan = next(
+        p for p in response["BackupPlansList"]
+        if p["BackupPlanName"] == sessions_config["backup_plan_name"]
+    )
+    plan_details = backup_client.get_backup_plan(BackupPlanId=plan["BackupPlanId"])
+    rules = plan_details["BackupPlan"]["Rules"]
+    assert any(r["Lifecycle"]["DeleteAfterDays"] == 30 for r in rules)
 
 
-class TestSchedulerConfiguration:
-    """Tests for EventBridge Scheduler configuration."""
-
-    def test_scheduler_has_daily_export_schedule(self, scheduler_client, sessions_config):
-        """Verify scheduler runs daily export at 5 AM UTC."""
-        response = scheduler_client.get_schedule(
-            Name=sessions_config["scheduler_name"]
-        )
-        schedule = response["ScheduleExpression"]
-        assert "cron(0 5" in schedule
+def test_scheduler_configuration(scheduler_client, sessions_config):
+    """Verify scheduler runs daily export at 5 AM UTC."""
+    response = scheduler_client.get_schedule(
+        Name=sessions_config["scheduler_name"]
+    )
+    schedule = response["ScheduleExpression"]
+    assert "cron(0 5" in schedule

@@ -1,5 +1,4 @@
 """Unit tests for test_fixtures.terraform_tests module."""
-from pathlib import Path
 from unittest.mock import patch, mock_open
 
 import pytest
@@ -21,7 +20,10 @@ class TestGetApiCommonRoutingOutputs:
         result = get_api_common_routing_outputs()
         assert isinstance(result, set)
 
-    @patch('test_fixtures.terraform_tests.open', mock_open(read_data='output "foo" {\n  value = "bar"\n}\n'))
+    @patch(
+        'test_fixtures.terraform_tests.open',
+        mock_open(read_data='output "foo" {\n  value = "bar"\n}\n')
+    )
     def test_extracts_single_output(self):
         """Test that function extracts a single output name."""
         result = get_api_common_routing_outputs()
@@ -98,7 +100,7 @@ class TestCreateRemoteStateContractTests:
         assert hasattr(result, "test_lambda_file_exists")
 
     def test_class_has_api_remote_state_references_method(self, tmp_path):
-        """Test that returned class has test_all_api_remote_state_references_exist_in_backend_outputs method."""
+        """Test the returned class carries the backend outputs test."""
         lambda_file = tmp_path / "lambda.tf"
         lambda_file.write_text("")
         result = create_remote_state_contract_tests(tmp_path, "test_endpoint")
@@ -186,7 +188,7 @@ class TestCreateRemoteStateContractTests:
             tmp_path, "test_endpoint", required_outputs=["required_output"]
         )
         instance = TestClass()
-        assert instance.test_required_output_output_exists_in_backend() is None
+        assert getattr(instance, "test_required_output_output_exists_in_backend")() is None
 
     @patch('test_fixtures.terraform_tests.get_api_common_routing_outputs')
     def test_required_output_test_fails_when_missing(self, mock_outputs, tmp_path):
@@ -199,7 +201,7 @@ class TestCreateRemoteStateContractTests:
         )
         instance = TestClass()
         with pytest.raises(AssertionError):
-            instance.test_required_output_output_exists_in_backend()
+            getattr(instance, "test_required_output_output_exists_in_backend")()
 
 
 class TestCreateNamingConventionsTests:
@@ -575,7 +577,9 @@ class TestCreateNamingConventionsTestsParameterization:
 
     @patch('test_fixtures.terraform_tests.extract_iam_role_names')
     @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_lambda_parametrize_uses_none_marker_when_no_functions(self, mock_lambda, mock_iam, tmp_path):
+    def test_lambda_parametrize_uses_none_marker_when_no_functions(
+        self, mock_lambda, mock_iam, tmp_path
+    ):
         """Test that Lambda test uses NONE marker when no functions found."""
         mock_iam.return_value = []
         mock_lambda.return_value = []
@@ -662,7 +666,9 @@ class TestNamingConventionsNoneCase:
         mock_lambda.return_value = [("test_func", "ValidFunctionName")]
         _, lambda_class = create_naming_conventions_tests(tmp_path)
         instance = lambda_class()
-        assert instance.test_lambda_function_name_is_pascalcase("test_func", "ValidFunctionName") is None
+        assert instance.test_lambda_function_name_is_pascalcase(
+            "test_func", "ValidFunctionName"
+        ) is None
 
     @patch('test_fixtures.terraform_tests.extract_iam_role_names')
     @patch('test_fixtures.terraform_tests.extract_lambda_function_names')

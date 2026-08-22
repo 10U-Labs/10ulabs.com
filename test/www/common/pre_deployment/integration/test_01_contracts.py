@@ -4,7 +4,6 @@ Verify local files that must work together are compatible. No AWS calls.
 """
 import re
 
-import pytest
 from repo_utils import REPO_ROOT
 
 

@@ -1,10 +1,11 @@
 """Unit tests for test_fixtures.config module."""
-import tempfile
+from functools import partial
 from pathlib import Path
 from typing import Callable, Dict
 
 import pytest
 
+from test_fixtures.tempfiles import write_temporary_file
 from test_fixtures.config import (
     parse_tfvars_file,
     parse_locals_file,
@@ -13,34 +14,20 @@ from test_fixtures.config import (
 )
 
 
-@pytest.fixture
-def tfvars_file() -> Callable[[str], Path]:
+@pytest.fixture(name="tfvars_file")
+def fixture_tfvars_file() -> Callable[[str], Path]:
     """Create a temporary tfvars file with given content."""
-    def _create(content: str) -> Path:
-        with tempfile.NamedTemporaryFile(
-            mode='w', suffix='.tfvars', delete=False
-        ) as f:
-            f.write(content)
-            f.flush()
-            return Path(f.name)
-    return _create
+    return partial(write_temporary_file, suffix=".tfvars")
 
 
-@pytest.fixture
-def tf_file() -> Callable[[str], Path]:
+@pytest.fixture(name="tf_file")
+def fixture_tf_file() -> Callable[[str], Path]:
     """Create a temporary .tf file with given content."""
-    def _create(content: str) -> Path:
-        with tempfile.NamedTemporaryFile(
-            mode='w', suffix='.tf', delete=False
-        ) as f:
-            f.write(content)
-            f.flush()
-            return Path(f.name)
-    return _create
+    return partial(write_temporary_file, suffix=".tf")
 
 
-@pytest.fixture
-def base_shared_config() -> Dict[str, str]:
+@pytest.fixture(name="base_shared_config")
+def fixture_base_shared_config() -> Dict[str, str]:
     """Provide base shared config for tests."""
     return {'aws_region': 'us-east-1', 'domain_name': 'example.com'}
 
@@ -71,7 +58,7 @@ class TestParseTfvarsFile:
     def test_returns_empty_dict_for_empty_file(self, tfvars_file):
         """Test that empty file returns empty dict."""
         result = parse_tfvars_file(tfvars_file(''))
-        assert result == {}
+        assert not result
 
     def test_parses_multiple_key_value_pairs(self, tfvars_file):
         """Test that multiple key-value pairs are parsed."""
@@ -133,7 +120,7 @@ class TestParseLocalsFile:
     def test_returns_empty_dict_for_empty_file(self, tf_file):
         """Test that empty file returns empty dict."""
         result = parse_locals_file(tf_file(''))
-        assert result == {}
+        assert not result
 
     def test_ignores_malformed_lines_with_equals(self, tf_file):
         """Test that lines with equals but no valid pattern are ignored."""

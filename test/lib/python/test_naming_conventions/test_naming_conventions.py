@@ -1,5 +1,4 @@
 """Comprehensive tests for naming_conventions module."""
-import pytest
 
 from naming_conventions import (
     is_pascalcase,
@@ -130,7 +129,7 @@ class TestFindViolations:
     def test_no_violations_returns_empty(self):
         """find_violations returns empty list when all valid."""
         result = find_violations(["ValidName", "AnotherValid"])
-        assert result == []
+        assert not result
 
     def test_single_violation_returns_one_item(self):
         """find_violations returns list with one item for single violation."""
@@ -167,7 +166,7 @@ class TestFindViolations:
     def test_empty_list_returns_empty(self):
         """find_violations returns empty list for empty input."""
         result = find_violations([])
-        assert result == []
+        assert not result
 
 
 # === extract_iam_role_names_from_terraform Function ===
@@ -248,12 +247,12 @@ resource "aws_lambda_function" "my_func" {
 }
 '''
         result = extract_iam_role_names_from_terraform(content)
-        assert result == []
+        assert not result
 
     def test_empty_content_returns_empty(self):
         """extract_iam_role_names_from_terraform returns empty for empty content."""
         result = extract_iam_role_names_from_terraform("")
-        assert result == []
+        assert not result
 
     def test_role_without_name_returns_empty(self):
         """extract_iam_role_names_from_terraform skips roles without name attribute."""
@@ -263,7 +262,7 @@ resource "aws_iam_role" "my_role" {
 }
 '''
         result = extract_iam_role_names_from_terraform(content)
-        assert result == []
+        assert not result
 
     def test_handles_interpolation_returns_one_item(self):
         """extract_iam_role_names_from_terraform returns one item for interpolated name."""
@@ -366,7 +365,7 @@ resource "aws_lambda_function" "my_func" {
 }
 '''
         result = extract_lambda_function_names_from_terraform(content)
-        assert result == []
+        assert not result
 
     def test_no_functions_returns_empty(self):
         """extract_lambda_function_names_from_terraform returns empty for none."""
@@ -376,12 +375,12 @@ resource "aws_iam_role" "my_role" {
 }
 '''
         result = extract_lambda_function_names_from_terraform(content)
-        assert result == []
+        assert not result
 
     def test_empty_content_returns_empty(self):
         """extract_lambda_function_names_from_terraform returns empty for empty content."""
         result = extract_lambda_function_names_from_terraform("")
-        assert result == []
+        assert not result
 
     def test_function_without_name_returns_empty(self):
         """extract_lambda_function_names_from_terraform skips functions without name."""
@@ -392,7 +391,7 @@ resource "aws_lambda_function" "my_func" {
 }
 '''
         result = extract_lambda_function_names_from_terraform(content)
-        assert result == []
+        assert not result
 
     def test_handles_unquoted_name(self):
         """extract_lambda_function_names_from_terraform handles unquoted names."""

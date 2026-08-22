@@ -50,8 +50,8 @@ class TestCreateMockUrllibResponse:
     def test_context_manager_enter(self):
         """Test that mock supports context manager __enter__."""
         result = create_mock_urllib_response()
-        context = result.__enter__()
-        assert context is result
+        with result as context:
+            assert context is result
 
     def test_context_manager_exit(self):
         """Test that mock supports context manager __exit__."""

@@ -38,16 +38,13 @@ def _skip_callers(path):
     ]
 
 
-class TestNoAssertionHelperSkips:
-    """Verify no test_utils helper turns a failure into a skip."""
-
-    def test_no_function_calls_pytest_skip(self):
-        """No function under lib/python/test_utils/ calls pytest.skip."""
-        callers = [
-            name
-            for path in sorted(TEST_UTILS_SRC.glob("*.py"))
-            for name in _skip_callers(path)
-        ]
-        assert callers == [], (
-            f"assertion helpers must fail rather than skip: {callers}"
-        )
+def test_no_assertion_helper_skips():
+    """No function under lib/python/test_utils/ calls pytest.skip."""
+    callers = [
+        name
+        for path in sorted(TEST_UTILS_SRC.glob("*.py"))
+        for name in _skip_callers(path)
+    ]
+    assert callers == [], (
+        f"assertion helpers must fail rather than skip: {callers}"
+    )

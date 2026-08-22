@@ -55,16 +55,12 @@ class TestCreateLayer1AuthenticationTestsHasMethods:
         assert hasattr(test_class, "test_identity_has_arn")
 
 
-class TestCreateLayer1AuthenticationTestsCredentialsAvailable:
-    """Tests for test_credentials_available method."""
-
-    def test_does_not_raise_with_valid_client(self):
-        """test_credentials_available does not raise with valid client."""
-        test_class = create_layer1_authentication_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        result = instance.test_credentials_available(mock_client)
-        assert result is None
+def test_create_layer1_authentication_tests_credentials_available():
+    """test_credentials_available does not raise with valid client."""
+    test_class = create_layer1_authentication_tests()
+    instance = test_class()
+    mock_client = MagicMock()
+    assert instance.test_credentials_available(mock_client) is None
 
 
 class TestCreateLayer1AuthenticationTestsCanCallStsApi:
@@ -76,8 +72,7 @@ class TestCreateLayer1AuthenticationTestsCanCallStsApi:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        result = instance.test_can_call_sts_api(mock_client)
-        assert result is None
+        assert instance.test_can_call_sts_api(mock_client) is None
 
     def test_fails_when_response_has_no_account(self):
         """test_can_call_sts_api fails when response has no Account."""
@@ -109,8 +104,7 @@ class TestCreateLayer1AuthenticationTestsIdentityHasArn:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Arn": "arn:aws:iam::123:role/Test"}
-        result = instance.test_identity_has_arn(mock_client)
-        assert result is None
+        assert instance.test_identity_has_arn(mock_client) is None
 
     def test_fails_when_arn_missing(self):
         """test_identity_has_arn fails when Arn missing."""
@@ -162,8 +156,7 @@ class TestCreateSimpleLayer1AuthenticationTestsCredentialsValid:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        result = instance.test_aws_credentials_valid(mock_client)
-        assert result is None
+        assert instance.test_aws_credentials_valid(mock_client) is None
 
     def test_fails_when_account_is_none(self):
         """test_aws_credentials_valid fails when Account is None."""
@@ -184,8 +177,7 @@ class TestCreateSimpleLayer1AuthenticationTestsCredentialsNotExpired:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {"Arn": "arn:aws:iam::123:role/Test"}
-        result = instance.test_aws_credentials_not_expired(mock_client)
-        assert result is None
+        assert instance.test_aws_credentials_not_expired(mock_client) is None
 
     def test_fails_when_arn_missing(self):
         """test_aws_credentials_not_expired fails when Arn missing."""
@@ -228,17 +220,13 @@ class TestCreateLayer2S3AuthorizationTestsHasMethods:
         assert hasattr(test_class, "test_bucket_name_is_configured")
 
 
-class TestCreateLayer2S3AuthorizationTestsCanCallHeadBucket:
-    """Tests for test_can_call_s3_head_bucket method."""
-
-    def test_does_not_raise_with_accessible_bucket(self):
-        """test_can_call_s3_head_bucket does not raise with accessible bucket."""
-        test_class = create_layer2_s3_authorization_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.head_bucket.return_value = {}
-        result = instance.test_can_call_s3_head_bucket(mock_client, "my-bucket")
-        assert result is None
+def test_create_layer2_s3_authorization_tests_can_call_head_bucket():
+    """test_can_call_s3_head_bucket does not raise with accessible bucket."""
+    test_class = create_layer2_s3_authorization_tests()
+    instance = test_class()
+    mock_client = MagicMock()
+    mock_client.head_bucket.return_value = {}
+    assert instance.test_can_call_s3_head_bucket(mock_client, "my-bucket") is None
 
 
 class TestCreateLayer2S3AuthorizationTestsBucketNameConfigured:
@@ -248,8 +236,7 @@ class TestCreateLayer2S3AuthorizationTestsBucketNameConfigured:
         """test_bucket_name_is_configured does not raise with bucket name."""
         test_class = create_layer2_s3_authorization_tests()
         instance = test_class()
-        result = instance.test_bucket_name_is_configured("my-bucket")
-        assert result is None
+        assert instance.test_bucket_name_is_configured("my-bucket") is None
 
     def test_fails_when_bucket_name_empty(self):
         """test_bucket_name_is_configured fails when bucket name empty."""

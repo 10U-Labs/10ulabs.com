@@ -22,24 +22,18 @@ class TestLambdaExistence:
         )
         assert response["Configuration"]["FunctionName"] == sessions_config["export_function_name"]
 
-class TestDynamoDbExistence:
-    """Tests for DynamoDB table existence."""
-
-    def test_session_events_dynamodb_table_exists(self, dynamodb_client, sessions_config):
-        """Verify session events DynamoDB table exists."""
-        response = dynamodb_client.describe_table(
-            TableName=sessions_config["dynamodb_table_name"]
-        )
-        assert response["Table"]["TableName"] == sessions_config["dynamodb_table_name"]
+def test_dynamo_db_existence(dynamodb_client, sessions_config):
+    """Verify session events DynamoDB table exists."""
+    response = dynamodb_client.describe_table(
+        TableName=sessions_config["dynamodb_table_name"]
+    )
+    assert response["Table"]["TableName"] == sessions_config["dynamodb_table_name"]
 
 
-class TestS3Existence:
-    """Tests for S3 bucket existence."""
-
-    def test_analytics_s3_bucket_exists(self, s3_client, sessions_config):
-        """Verify analytics S3 bucket exists."""
-        response = s3_client.head_bucket(Bucket=sessions_config["s3_bucket_name"])
-        assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
+def test_s3_existence(s3_client, sessions_config):
+    """Verify analytics S3 bucket exists."""
+    response = s3_client.head_bucket(Bucket=sessions_config["s3_bucket_name"])
+    assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
 
 
 class TestCloudWatchLogsExistence:
@@ -78,15 +72,12 @@ class TestBackupExistence:
         assert sessions_config["backup_plan_name"] in plan_names
 
 
-class TestEventBridgeExistence:
-    """Tests for EventBridge resource existence."""
-
-    def test_eventbridge_scheduler_exists(self, scheduler_client, sessions_config):
-        """Verify EventBridge scheduler exists."""
-        response = scheduler_client.get_schedule(
-            Name=sessions_config["scheduler_name"]
-        )
-        assert response["Name"] == sessions_config["scheduler_name"]
+def test_event_bridge_existence(scheduler_client, sessions_config):
+    """Verify EventBridge scheduler exists."""
+    response = scheduler_client.get_schedule(
+        Name=sessions_config["scheduler_name"]
+    )
+    assert response["Name"] == sessions_config["scheduler_name"]
 
 
 class TestIamRoleExistence:

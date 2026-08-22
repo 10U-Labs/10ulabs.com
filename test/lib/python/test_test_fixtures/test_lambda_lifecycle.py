@@ -1,5 +1,4 @@
 """Unit tests for test_fixtures.lambda_lifecycle module."""
-from pathlib import Path
 
 import pytest
 
@@ -254,14 +253,11 @@ resource "aws_lambda_function" "bad_lambda" {
             check_lambda_lifecycle_rules(tf_file)
 
 
-class TestCheckLambdaLifecycleRulesFileNotFound:
-    """Tests for check_lambda_lifecycle_rules when file doesn't exist."""
-
-    def test_raises_file_not_found_for_missing_file(self, tmp_path):
-        """Test that missing file raises FileNotFoundError."""
-        missing_file = tmp_path / "nonexistent.tf"
-        with pytest.raises(FileNotFoundError):
-            check_lambda_lifecycle_rules(missing_file)
+def test_check_lambda_lifecycle_rules_file_not_found(tmp_path):
+    """Test that missing file raises FileNotFoundError."""
+    missing_file = tmp_path / "nonexistent.tf"
+    with pytest.raises(FileNotFoundError):
+        check_lambda_lifecycle_rules(missing_file)
 
 
 class TestCreateLambdaLifecycleTestsReturnType:

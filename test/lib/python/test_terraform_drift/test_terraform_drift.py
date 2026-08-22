@@ -1,6 +1,5 @@
 """Comprehensive tests for terraform_drift module."""
 import json
-import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -303,13 +302,10 @@ class TestResourceCheckers:
             assert callable(checker)
 
 
-class TestResourceToClient:
-    """Tests for RESOURCE_TO_CLIENT registry."""
-
-    def test_all_types_have_clients(self):
-        """All resource types have client mappings."""
-        for resource_type in RESOURCE_CHECKERS:
-            assert resource_type in RESOURCE_TO_CLIENT
+def test_resource_to_client():
+    """All resource types have client mappings."""
+    for resource_type in RESOURCE_CHECKERS:
+        assert resource_type in RESOURCE_TO_CLIENT
 
 
 # === Public API Functions ===
@@ -452,7 +448,7 @@ class TestGetPlannedCreates:
             stdout=_make_plan_output(action="update"), returncode=0
         )
         result = get_planned_creates(Path("/tmp/terraform"))
-        assert result == []
+        assert not result
 
     @patch("terraform_drift.subprocess.run")
     def test_ignores_unsupported_types(self, mock_run):
@@ -464,7 +460,7 @@ class TestGetPlannedCreates:
             returncode=0,
         )
         result = get_planned_creates(Path("/tmp/terraform"))
-        assert result == []
+        assert not result
 
     @patch("terraform_drift.subprocess.run")
     def test_handles_invalid_json(self, mock_run):
@@ -489,7 +485,7 @@ class TestGetPlannedCreates:
         refresh_entry = json.dumps({"type": "refresh_complete", "resource": {}})
         mock_run.return_value = MagicMock(stdout=refresh_entry, returncode=0)
         result = get_planned_creates(Path("/tmp/terraform"))
-        assert result == []
+        assert not result
 
     @patch("terraform_drift.subprocess.run")
     def test_ignores_create_with_empty_resource_name(self, mock_run):
@@ -508,7 +504,7 @@ class TestGetPlannedCreates:
         })
         mock_run.return_value = MagicMock(stdout=plan_with_empty_name, returncode=0)
         result = get_planned_creates(Path("/tmp/terraform"))
-        assert result == []
+        assert not result
 
     @patch("terraform_drift.subprocess.run")
     def test_ignores_create_with_missing_name_field(self, mock_run):
@@ -527,7 +523,7 @@ class TestGetPlannedCreates:
         })
         mock_run.return_value = MagicMock(stdout=plan_with_missing_name, returncode=0)
         result = get_planned_creates(Path("/tmp/terraform"))
-        assert result == []
+        assert not result
 
 
 class TestGetTerraformStateResources:
@@ -551,7 +547,7 @@ class TestGetTerraformStateResources:
         mock_run.return_value = MagicMock(stdout="", returncode=1)
 
         result = get_terraform_state_resources(Path("/tmp/terraform"))
-        assert result == []
+        assert not result
 
     @patch("terraform_drift.subprocess.run")
     def test_filters_empty_lines(self, mock_run):
@@ -666,4 +662,4 @@ class TestFindOrphanedResources:
         mock_check_exists.return_value = False
 
         result = find_orphaned_resources(Path("/tmp"), "us-east-2")
-        assert result == []
+        assert not result

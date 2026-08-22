@@ -4,7 +4,6 @@ These tests verify that resources Terraform plans to create don't already
 exist in AWS. If they do, it indicates the resource was created outside
 of Terraform or the state was lost, and needs to be imported.
 """
-import pytest
 
 from repo_utils import REPO_ROOT
 from terraform_config import TEST_AWS_REGION

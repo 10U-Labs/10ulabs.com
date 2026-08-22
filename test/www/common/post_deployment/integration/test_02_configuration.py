@@ -2,7 +2,6 @@
 
 Verify resources are configured correctly. Assumes existence tests passed.
 """
-import pytest
 
 
 

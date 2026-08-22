@@ -42,16 +42,13 @@ def _invoking_steps():
     ]
 
 
-class TestInvalidateCloudfrontInvocations:
-    """Verify every caller passes the arguments the script requires."""
-
-    def test_every_invocation_passes_every_required_argument(self):
-        """Each step calling the script passes all of its required flags."""
-        required = _required_arguments()
-        missing = [
-            f"{name}:{flag}"
-            for name, step in _invoking_steps()
-            for flag in required
-            if flag not in step
-        ]
-        assert missing == []
+def test_invalidate_cloudfront_invocations():
+    """Each step calling the script passes all of its required flags."""
+    required = _required_arguments()
+    missing = [
+        f"{name}:{flag}"
+        for name, step in _invoking_steps()
+        for flag in required
+        if flag not in step
+    ]
+    assert missing == []

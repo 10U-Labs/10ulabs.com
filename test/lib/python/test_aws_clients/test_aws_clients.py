@@ -241,7 +241,7 @@ class TestSetClient:
         """set_client adds client to cache."""
         mock_client = MagicMock()
         set_client("custom", mock_client)
-        assert aws_clients._clients["custom"] is mock_client
+        assert getattr(aws_clients, "_clients")["custom"] is mock_client
 
     def test_get_client_returns_set_client(self):
         """get_client returns client set by set_client."""
@@ -259,7 +259,7 @@ class TestResetClients:
         set_client("test1", MagicMock())
         set_client("test2", MagicMock())
         reset_clients()
-        assert len(aws_clients._clients) == 0
+        assert len(getattr(aws_clients, "_clients")) == 0
 
     @patch("aws_clients.boto3")
     def test_reset_allows_new_client_creation(self, mock_boto3):

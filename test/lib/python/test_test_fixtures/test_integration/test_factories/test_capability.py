@@ -81,13 +81,10 @@ class TestCreateLayer6CapabilityTestsDefaultMethods:
 # === create_layer6_capability_tests with lambda capability ===
 
 
-class TestCreateLayer6CapabilityTestsLambdaCapability:
-    """Tests for create_layer6_capability_tests lambda capability."""
-
-    def test_has_lambda_test_when_lambda_in_capabilities(self):
-        """create_layer6_capability_tests has lambda test when lambda specified."""
-        test_class = create_layer6_capability_tests(frozenset({"lambda"}))
-        assert hasattr(test_class, "test_can_list_lambda_functions")
+def test_create_layer6_capability_tests_lambda_capability():
+    """create_layer6_capability_tests has lambda test when lambda specified."""
+    test_class = create_layer6_capability_tests(frozenset({"lambda"}))
+    assert hasattr(test_class, "test_can_list_lambda_functions")
 
 
 class TestCreateLayer6CapabilityTestsLambdaTestBehavior:
@@ -99,8 +96,7 @@ class TestCreateLayer6CapabilityTestsLambdaTestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.list_functions.return_value = {"Functions": []}
-        result = instance.test_can_list_lambda_functions(mock_client)
-        assert result is None
+        assert getattr(instance, "test_can_list_lambda_functions")(mock_client) is None
 
     def test_fails_on_client_error(self):
         """test_can_list_lambda_functions fails on ClientError."""
@@ -109,19 +105,16 @@ class TestCreateLayer6CapabilityTestsLambdaTestBehavior:
         mock_client = MagicMock()
         mock_client.list_functions.side_effect = _create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
-            instance.test_can_list_lambda_functions(mock_client)
+            getattr(instance, "test_can_list_lambda_functions")(mock_client)
 
 
 # === create_layer6_capability_tests with iam capability ===
 
 
-class TestCreateLayer6CapabilityTestsIAMCapability:
-    """Tests for create_layer6_capability_tests IAM capability."""
-
-    def test_has_iam_test_when_iam_in_capabilities(self):
-        """create_layer6_capability_tests has IAM test when iam specified."""
-        test_class = create_layer6_capability_tests(frozenset({"iam"}))
-        assert hasattr(test_class, "test_can_list_iam_roles")
+def test_create_layer6_capability_tests_iam_capability():
+    """create_layer6_capability_tests has IAM test when iam specified."""
+    test_class = create_layer6_capability_tests(frozenset({"iam"}))
+    assert hasattr(test_class, "test_can_list_iam_roles")
 
 
 class TestCreateLayer6CapabilityTestsIAMTestBehavior:
@@ -133,8 +126,7 @@ class TestCreateLayer6CapabilityTestsIAMTestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.list_roles.return_value = {"Roles": []}
-        result = instance.test_can_list_iam_roles(mock_client)
-        assert result is None
+        assert getattr(instance, "test_can_list_iam_roles")(mock_client) is None
 
     def test_fails_on_client_error(self):
         """test_can_list_iam_roles fails on ClientError."""
@@ -143,7 +135,7 @@ class TestCreateLayer6CapabilityTestsIAMTestBehavior:
         mock_client = MagicMock()
         mock_client.list_roles.side_effect = _create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
-            instance.test_can_list_iam_roles(mock_client)
+            getattr(instance, "test_can_list_iam_roles")(mock_client)
 
 
 # === create_layer6_capability_tests with ssm capability ===
@@ -172,8 +164,7 @@ class TestCreateLayer6CapabilityTestsSSMTestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.describe_parameters.return_value = {"Parameters": []}
-        result = instance.test_can_describe_ssm_parameters(mock_client)
-        assert result is None
+        assert getattr(instance, "test_can_describe_ssm_parameters")(mock_client) is None
 
     def test_fails_on_client_error(self):
         """test_can_describe_ssm_parameters fails on ClientError."""
@@ -182,7 +173,7 @@ class TestCreateLayer6CapabilityTestsSSMTestBehavior:
         mock_client = MagicMock()
         mock_client.describe_parameters.side_effect = _create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
-            instance.test_can_describe_ssm_parameters(mock_client)
+            getattr(instance, "test_can_describe_ssm_parameters")(mock_client)
 
 
 # === create_layer6_capability_tests with dynamodb capability ===
@@ -211,8 +202,7 @@ class TestCreateLayer6CapabilityTestsDynamoDBTestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.list_tables.return_value = {"TableNames": []}
-        result = instance.test_can_list_dynamodb_tables(mock_client)
-        assert result is None
+        assert getattr(instance, "test_can_list_dynamodb_tables")(mock_client) is None
 
     def test_fails_on_client_error(self):
         """test_can_list_dynamodb_tables fails on ClientError."""
@@ -221,7 +211,7 @@ class TestCreateLayer6CapabilityTestsDynamoDBTestBehavior:
         mock_client = MagicMock()
         mock_client.list_tables.side_effect = _create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
-            instance.test_can_list_dynamodb_tables(mock_client)
+            getattr(instance, "test_can_list_dynamodb_tables")(mock_client)
 
 
 # === create_layer6_capability_tests with logs capability ===
@@ -250,8 +240,7 @@ class TestCreateLayer6CapabilityTestsLogsTestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {"logGroups": []}
-        result = instance.test_can_list_log_groups(mock_client)
-        assert result is None
+        assert getattr(instance, "test_can_list_log_groups")(mock_client) is None
 
     def test_fails_on_client_error(self):
         """test_can_list_log_groups fails on ClientError."""
@@ -260,7 +249,7 @@ class TestCreateLayer6CapabilityTestsLogsTestBehavior:
         mock_client = MagicMock()
         mock_client.describe_log_groups.side_effect = _create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
-            instance.test_can_list_log_groups(mock_client)
+            getattr(instance, "test_can_list_log_groups")(mock_client)
 
 
 # === create_layer6_capability_tests with s3 capability ===
@@ -289,8 +278,7 @@ class TestCreateLayer6CapabilityTestsS3TestBehavior:
         instance = test_class()
         mock_client = MagicMock()
         mock_client.list_buckets.return_value = {"Buckets": []}
-        result = instance.test_can_list_s3_buckets(mock_client)
-        assert result is None
+        assert getattr(instance, "test_can_list_s3_buckets")(mock_client) is None
 
     def test_fails_on_client_error(self):
         """test_can_list_s3_buckets fails on ClientError."""
@@ -299,7 +287,7 @@ class TestCreateLayer6CapabilityTestsS3TestBehavior:
         mock_client = MagicMock()
         mock_client.list_buckets.side_effect = _create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
-            instance.test_can_list_s3_buckets(mock_client)
+            getattr(instance, "test_can_list_s3_buckets")(mock_client)
 
 
 # === create_layer6_capability_tests with multiple capabilities ===
@@ -341,12 +329,9 @@ class TestCreateLayer6CapabilityTestsMultipleCapabilities:
         assert "s3" in self._get_all_capabilities()
 
 
-class TestCreateLayer6CapabilityTestsEmptyCapabilities:
-    """Tests for create_layer6_capability_tests with empty capabilities."""
-
-    def test_test_capabilities_configured_fails_with_empty_set(self):
-        """test_capabilities_configured fails with empty capabilities set."""
-        test_class = create_layer6_capability_tests(frozenset())
-        instance = test_class()
-        with pytest.raises(AssertionError):
-            instance.test_capabilities_configured()
+def test_create_layer6_capability_tests_empty_capabilities():
+    """test_capabilities_configured fails with empty capabilities set."""
+    test_class = create_layer6_capability_tests(frozenset())
+    instance = test_class()
+    with pytest.raises(AssertionError):
+        instance.test_capabilities_configured()

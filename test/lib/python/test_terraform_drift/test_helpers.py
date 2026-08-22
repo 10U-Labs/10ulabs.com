@@ -1,6 +1,6 @@
 """Comprehensive tests for terraform_drift.test_helpers module."""
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -67,18 +67,15 @@ class TestTerraformInitialized:
             instance.test_terraform_initialized()
 
 
-class TestNoOrphanedResourcesNoCreates:
-    """Tests for test_no_orphaned_resources when there are no creates."""
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_no_orphaned_resources_no_creates(mock_get_planned):
+    """test_no_orphaned_resources passes when no resources to create."""
+    mock_get_planned.return_value = []
 
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_passes_when_no_creates(self, mock_get_planned):
-        """test_no_orphaned_resources passes when no resources to create."""
-        mock_get_planned.return_value = []
+    TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    instance = TestClass()
 
-        TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        instance = TestClass()
-
-        assert instance.test_no_orphaned_resources() is None
+    assert instance.test_no_orphaned_resources() is None
 
 
 def _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=False):
@@ -281,50 +278,44 @@ class TestNoOrphanedResourcesWithOrphans:
             instance.test_no_orphaned_resources()
 
 
-class TestGetPlannedCreatesIntegration:
-    """Tests for get_planned_creates being called correctly."""
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_get_planned_creates_integration(mock_get_planned):
+    """test_no_orphaned_resources calls get_planned_creates with terraform dir."""
+    mock_get_planned.return_value = []
+    terraform_dir = Path("/tmp/my-terraform")
 
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_calls_get_planned_creates_with_terraform_dir(self, mock_get_planned):
-        """test_no_orphaned_resources calls get_planned_creates with terraform dir."""
-        mock_get_planned.return_value = []
-        terraform_dir = Path("/tmp/my-terraform")
+    TestClass = create_orphaned_resource_tests(terraform_dir)
+    instance = TestClass()
+    instance.test_no_orphaned_resources()
 
-        TestClass = create_orphaned_resource_tests(terraform_dir)
-        instance = TestClass()
-        instance.test_no_orphaned_resources()
-
-        assert mock_get_planned.call_args[0][0] == terraform_dir
+    assert mock_get_planned.call_args[0][0] == terraform_dir
 
 
-class TestMultipleResources:
-    """Tests for handling multiple resources."""
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_multiple_resources(mock_get_planned, mock_check_exists):
+    """test_no_orphaned_resources checks all planned resources."""
+    mock_get_planned.return_value = [
+        {
+            "type": "aws_lambda_function",
+            "name": "Function1",
+            "address": "aws_lambda_function.func1",
+        },
+        {
+            "type": "aws_lambda_function",
+            "name": "Function2",
+            "address": "aws_lambda_function.func2",
+        },
+        {
+            "type": "aws_iam_role",
+            "name": "Role1",
+            "address": "aws_iam_role.role1",
+        },
+    ]
+    mock_check_exists.return_value = False
 
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_checks_all_resources(self, mock_get_planned, mock_check_exists):
-        """test_no_orphaned_resources checks all planned resources."""
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "Function1",
-                "address": "aws_lambda_function.func1",
-            },
-            {
-                "type": "aws_lambda_function",
-                "name": "Function2",
-                "address": "aws_lambda_function.func2",
-            },
-            {
-                "type": "aws_iam_role",
-                "name": "Role1",
-                "address": "aws_iam_role.role1",
-            },
-        ]
-        mock_check_exists.return_value = False
+    TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    instance = TestClass()
+    instance.test_no_orphaned_resources()
 
-        TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        instance = TestClass()
-        instance.test_no_orphaned_resources()
-
-        assert mock_check_exists.call_count == 3
+    assert mock_check_exists.call_count == 3

@@ -10,6 +10,12 @@ User Journeys:
 """
 import requests
 
+from test_fixtures.http_endpoint import (
+    error_response_hides,
+    error_response_is_json,
+    error_response_names_the_error,
+)
+
 
 class TestInputValidationJourney:
     """User Journey: Validation of user input.
@@ -110,42 +116,20 @@ class TestErrorResponseSecurityJourney:
 
     def test_error_response_is_json(self, api_url):
         """Verify error responses return valid JSON."""
-        response = requests.post(
-            f"{api_url}/v1/rack-configurations",
-            json={},  # Invalid request
-            timeout=10
-        )
-        try:
-            response.json()
-        except ValueError:
-            assert False, "Error response should be valid JSON"
+        assert error_response_is_json(
+            f"{api_url}/v1/rack-configurations")
 
     def test_error_response_has_error_field(self, api_url):
         """Verify error responses have an error field."""
-        response = requests.post(
-            f"{api_url}/v1/rack-configurations",
-            json={},  # Invalid request
-            timeout=10
-        )
-        data = response.json()
-        assert "error" in data, "Error response should have 'error' field"
+        assert error_response_names_the_error(
+            f"{api_url}/v1/rack-configurations")
 
     def test_error_response_does_not_reveal_var_paths(self, api_url):
         """Verify error responses don't expose /var/ paths."""
-        response = requests.post(
-            f"{api_url}/v1/rack-configurations",
-            json={},  # Invalid request
-            timeout=10
-        )
-        text = response.text.lower()
-        assert "/var/" not in text, "Error should not contain /var/ paths"
+        assert error_response_hides(
+            f"{api_url}/v1/rack-configurations", "/var/")
 
     def test_error_response_does_not_reveal_tmp_paths(self, api_url):
         """Verify error responses don't expose /tmp/ paths."""
-        response = requests.post(
-            f"{api_url}/v1/rack-configurations",
-            json={},  # Invalid request
-            timeout=10
-        )
-        text = response.text.lower()
-        assert "/tmp/" not in text, "Error should not contain /tmp/ paths"
+        assert error_response_hides(
+            f"{api_url}/v1/rack-configurations", "/tmp/")

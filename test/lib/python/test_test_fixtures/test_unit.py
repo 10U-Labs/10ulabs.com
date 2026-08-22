@@ -1,13 +1,14 @@
 """Comprehensive tests for test_fixtures.unit module."""
 import io
 import json
-import tempfile
+from functools import partial
 from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock
 
 import pytest
 
+from test_fixtures.tempfiles import write_temporary_file
 from test_fixtures.unit import (
     TEST_CONSTANTS,
     ENV_VAR_PRESETS,
@@ -22,8 +23,8 @@ from terraform_config import TEST_AWS_REGION
 # === TEST_CONSTANTS ===
 
 
-class TestTestConstants:
-    """Tests for TEST_CONSTANTS dictionary."""
+class TestTestConstantsKeys:
+    """Tests that TEST_CONSTANTS carries the keys its readers ask for."""
 
     def test_has_queue_url_key(self):
         """TEST_CONSTANTS has 'queue_url' key."""
@@ -84,6 +85,10 @@ class TestTestConstants:
     def test_has_aws_region_key(self):
         """TEST_CONSTANTS has 'aws_region' key."""
         assert 'aws_region' in TEST_CONSTANTS
+
+
+class TestTestConstantsValues:
+    """Tests the shape of the values TEST_CONSTANTS carries."""
 
     def test_queue_url_contains_sqs(self):
         """TEST_CONSTANTS queue_url contains 'sqs'."""
@@ -379,17 +384,10 @@ class TestCreateMockDynamodbClient:
 # === assert_no_hardcoded_env_defaults ===
 
 
-@pytest.fixture
-def lambda_file_factory():
+@pytest.fixture(name="lambda_file_factory")
+def fixture_lambda_file_factory():
     """Create a temporary lambda file with given content."""
-    def _create(content: str) -> Path:
-        with tempfile.NamedTemporaryFile(
-            mode='w', suffix='.py', delete=False
-        ) as f:
-            f.write(content)
-            f.flush()
-            return Path(f.name)
-    return _create
+    return partial(write_temporary_file, suffix=".py")
 
 
 class TestAssertNoHardcodedEnvDefaults:

@@ -54,14 +54,11 @@ class TestIamRoleNamingConventions:
         assert 'SessionsSchedulerRole' in content
 
 
-class TestLambdaFunctionNamingConventions:
-    """Tests for Lambda function naming conventions."""
-
-    def test_export_function_name_is_pascalcase(self):
-        """Verify SessionsExport function name follows PascalCase."""
-        locals_tf = SESSIONS_SRC_PATH / "locals.tf"
-        content = locals_tf.read_text()
-        assert 'SessionsExport' in content
+def test_lambda_function_naming_conventions():
+    """Verify SessionsExport function name follows PascalCase."""
+    locals_tf = SESSIONS_SRC_PATH / "locals.tf"
+    content = locals_tf.read_text()
+    assert 'SessionsExport' in content
 
 class TestLambdaConfiguration:
     """Tests for Lambda configuration in Terraform."""
@@ -91,20 +88,17 @@ class TestLambdaConfiguration:
         assert 'python3.13' in content
 
 
-class TestAnalyticsBucketConfiguration:
-    """Tests for the analytics S3 bucket configuration."""
-
-    def test_analytics_bucket_versioning_is_disabled(self):
-        """Verify the analytics bucket declares versioning as disabled."""
-        analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
-        with open(analytics_tf, encoding='utf-8') as f:
-            tf_config = hcl2.load(f)
-        versioning = next(
-            r['aws_s3_bucket_versioning']['analytics']
-            for r in tf_config['resource']
-            if 'analytics' in r.get('aws_s3_bucket_versioning', {})
-        )
-        assert versioning['versioning_configuration'][0]['status'] == 'Disabled'
+def test_analytics_bucket_configuration():
+    """Verify the analytics bucket declares versioning as disabled."""
+    analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
+    with open(analytics_tf, encoding='utf-8') as f:
+        tf_config = hcl2.load(f)
+    versioning = next(
+        r['aws_s3_bucket_versioning']['analytics']
+        for r in tf_config['resource']
+        if 'analytics' in r.get('aws_s3_bucket_versioning', {})
+    )
+    assert versioning['versioning_configuration'][0]['status'] == 'Disabled'
 
 
 class TestBackendConfiguration:

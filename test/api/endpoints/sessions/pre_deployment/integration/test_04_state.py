@@ -40,23 +40,20 @@ class TestNoOrphanedLambdaFunctions:
         assert checked
 
 
-class TestNoOrphanedDynamoDbTables:
-    """Tests for orphaned DynamoDB table detection."""
-
-    def test_events_table_not_orphaned(self, dynamodb_client, sessions_config):
-        """Verify DynamoDB table can be checked for orphan status."""
-        checked = False
-        try:
-            dynamodb_client.describe_table(
-                TableName=sessions_config["dynamodb_table_name"]
-            )
+def test_no_orphaned_dynamo_db_tables(dynamodb_client, sessions_config):
+    """Verify DynamoDB table can be checked for orphan status."""
+    checked = False
+    try:
+        dynamodb_client.describe_table(
+            TableName=sessions_config["dynamodb_table_name"]
+        )
+        checked = True
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ResourceNotFoundException":
             checked = True
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                checked = True
-            else:
-                raise
-        assert checked
+        else:
+            raise
+    assert checked
 
 
 class TestNoOrphanedIamRoles:

@@ -358,8 +358,8 @@ jobs:
             types-requests
       - name: Run pylint on tests
         run: |
-          PYTHONPATH=lib/python:. python3 -m pylint \
-            lib/python/ test/ \
+          PYTHONPATH=lib/python:scripts python3 -m pylint \
+            lib/python/ test \
             --recursive=y \
             --fail-on=C,R,W --fail-under=10.0
   reconciliation:

@@ -392,10 +392,16 @@ class TestHandleEventsErrorHandling:
         event = {
             'path': '/v1/sessions/abc123/events',
             'httpMethod': 'POST',
-            'body': '{"device_id": "dev1", "events": [{"event_type": "test", "timestamp": "2024-01-15T10:30:00Z"}]}'
+            'body': (
+                '{"device_id": "dev1", "events": [{"event_type": "test",'
+                ' "timestamp": "2024-01-15T10:30:00Z"}]}'
+            )
         }
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
-            with patch.object(handler, 'save_analytics_events', side_effect=KeyError('missing_key')):
+            with patch.object(
+                handler, 'save_analytics_events',
+                side_effect=KeyError('missing_key')
+            ):
                 response = handler.handle_events(event)
         assert response['statusCode'] == 500
 
@@ -441,7 +447,10 @@ class TestLambdaHandlerPostRoute:
         event = {
             'httpMethod': 'POST',
             'path': '/v1/sessions/test-session/events',
-            'body': '{"device_id": "dev1", "events": [{"event_type": "test", "timestamp": "2024-01-15T10:30:00Z"}]}'
+            'body': (
+                '{"device_id": "dev1", "events": [{"event_type": "test",'
+                ' "timestamp": "2024-01-15T10:30:00Z"}]}'
+            )
         }
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             response = handler.lambda_handler(event, None)
@@ -453,7 +462,10 @@ class TestLambdaHandlerPostRoute:
         event = {
             'httpMethod': 'POST',
             'path': '/v1/sessions/my-session-id/events',
-            'body': '{"device_id": "device123", "events": [{"event_type": "click", "timestamp": "2024-01-15T10:30:00Z"}]}'
+            'body': (
+                '{"device_id": "device123", "events": [{"event_type":'
+                ' "click", "timestamp": "2024-01-15T10:30:00Z"}]}'
+            )
         }
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             response = handler.lambda_handler(event, None)

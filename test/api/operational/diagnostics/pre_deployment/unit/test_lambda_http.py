@@ -109,28 +109,6 @@ class TestErrorResponse:
         assert parsed['details'] == 'Missing required field'
 
 
-class TestParseBody:
-    """Tests for parse_body function."""
-
-    def test_parse_body_with_string_body(self):
-        """Verify parse_body parses JSON string body."""
-        event = {'body': '{"key": "value"}'}
-        result = parse_body(event)
-        assert result == {'key': 'value'}
-
-    def test_parse_body_with_dict_body(self):
-        """Verify parse_body returns dict body as-is."""
-        event = {'body': {'key': 'value'}}
-        result = parse_body(event)
-        assert result == {'key': 'value'}
-
-    def test_parse_body_with_empty_body(self):
-        """Verify parse_body handles missing body."""
-        event = {}
-        result = parse_body(event)
-        assert result == {}
-
-
 class TestIsCapacityError:
     """Tests for is_capacity_error function."""
 

@@ -3,7 +3,11 @@
 
 def test_module_files_exist(module_path):
     """Test that required module files exist."""
-    assert (module_path / "main.tf").exists() and (module_path / "variables.tf").exists() and (module_path / "outputs.tf").exists()
+    assert (
+        (module_path / "main.tf").exists()
+        and (module_path / "variables.tf").exists()
+        and (module_path / "outputs.tf").exists()
+    )
 
 
 def test_s3_bucket_resource_exists(main_tf_content):
@@ -28,7 +32,12 @@ def test_s3_bucket_public_access_block_exists(main_tf_content):
 
 def test_s3_bucket_public_access_block_all_enabled(main_tf_content):
     """Test that all public access block settings are enabled."""
-    assert 'block_public_acls       = true' in main_tf_content and 'block_public_policy     = true' in main_tf_content and 'ignore_public_acls      = true' in main_tf_content and 'restrict_public_buckets = true' in main_tf_content
+    assert (
+        'block_public_acls       = true' in main_tf_content
+        and 'block_public_policy     = true' in main_tf_content
+        and 'ignore_public_acls      = true' in main_tf_content
+        and 'restrict_public_buckets = true' in main_tf_content
+    )
 
 
 def test_s3_bucket_encryption_exists(main_tf_content):

@@ -2,6 +2,8 @@
 
 Per tenets: If the test sends an HTTP request, it's an e2e test.
 """
+import re
+
 import requests
 
 
@@ -139,7 +141,6 @@ def test_ads_txt_accessible(website_url):
 
 def test_assets_js_returns_200_status(website_response, website_url):
     """Test that /assets/*.js returns 200 status code."""
-    import re
     html = website_response.text
     js_match = re.search(r'src="(/assets/[^"]+\.js)"', html)
     if js_match:
@@ -150,7 +151,6 @@ def test_assets_js_returns_200_status(website_response, website_url):
 
 def test_assets_js_returns_javascript_content_type(website_response, website_url):
     """Test that /assets/*.js returns JavaScript content-type, not HTML fallback."""
-    import re
     html = website_response.text
     js_match = re.search(r'src="(/assets/[^"]+\.js)"', html)
     if js_match:
@@ -162,7 +162,6 @@ def test_assets_js_returns_javascript_content_type(website_response, website_url
 
 def test_assets_css_returns_200_status(website_response, website_url):
     """Test that /assets/*.css returns 200 status code."""
-    import re
     html = website_response.text
     css_match = re.search(r'href="(/assets/[^"]+\.css)"', html)
     if css_match:
@@ -173,7 +172,6 @@ def test_assets_css_returns_200_status(website_response, website_url):
 
 def test_assets_css_returns_css_content_type(website_response, website_url):
     """Test that /assets/*.css returns CSS content-type, not HTML fallback."""
-    import re
     html = website_response.text
     css_match = re.search(r'href="(/assets/[^"]+\.css)"', html)
     if css_match:
