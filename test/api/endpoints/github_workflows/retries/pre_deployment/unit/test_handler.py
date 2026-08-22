@@ -185,10 +185,16 @@ class TestGetWorkflowInfoFromRun:
 class TestDispatchWorkflow:
     """Tests for _dispatch_workflow function."""
 
+    def test_dispatch_workflow_sends_only_the_ref(self, handler_module):
+        """The payload names the ref and carries no inputs at all."""
+        with patch.object(handler_module, '_github_api_request', return_value={}) as request:
+            handler_module._dispatch_workflow("token", "org/repo", "123", "main")
+        assert request.call_args.kwargs["data"] == {"ref": "main"}
+
     def test_dispatch_workflow_success_returns_true(self, handler_module):
         """When dispatch succeeds, returns True."""
         with patch.object(handler_module, '_github_api_request', return_value={}):
-            result = handler_module._dispatch_workflow("token", "org/repo", "123", "main", "test")
+            result = handler_module._dispatch_workflow("token", "org/repo", "123", "main")
         assert result is True
 
     def test_dispatch_workflow_204_returns_true(self, handler_module):
@@ -198,7 +204,7 @@ class TestDispatchWorkflow:
             handler_module, '_github_api_request',
             side_effect=urllib.error.HTTPError(None, 204, "No Content", {}, None)
         ):
-            result = handler_module._dispatch_workflow("token", "org/repo", "123", "main", "test")
+            result = handler_module._dispatch_workflow("token", "org/repo", "123", "main")
         assert result is True
 
     def test_dispatch_workflow_http_error_returns_false(self, handler_module):
@@ -208,7 +214,7 @@ class TestDispatchWorkflow:
             handler_module, '_github_api_request',
             side_effect=urllib.error.HTTPError(None, 500, "Server Error", {}, None)
         ):
-            result = handler_module._dispatch_workflow("token", "org/repo", "123", "main", "test")
+            result = handler_module._dispatch_workflow("token", "org/repo", "123", "main")
         assert result is False
 
 

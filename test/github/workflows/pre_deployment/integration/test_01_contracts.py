@@ -9,6 +9,7 @@ Layer 1 contract tests validate cross-file compatibility without making AWS
 calls.
 """
 
+import ast
 import re
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from repo_utils import REPO_ROOT
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 GREPPED_NAME = re.compile(r"grep '(\w+)'")
 LIB_PYTHON_ROOT = REPO_ROOT / "lib" / "python"
+SRC_ROOT = REPO_ROOT / "src"
 
 # The directory the deleted controller lived in. A workflow naming it is a
 # workflow starting another one again.
@@ -283,6 +285,44 @@ def _workflow_jobs() -> list:
         for job, definition in sorted((document.get("jobs") or {}).items()):
             found.append((workflow.name, job, definition))
     return found
+
+
+def _declared_dispatch_inputs() -> set:
+    """Name every workflow_dispatch input some workflow here accepts."""
+    declared: set = set()
+    for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        document = yaml.safe_load(workflow.read_text(encoding="utf-8"))
+        triggers = document.get(True) or document.get("on") or {}
+        dispatch = triggers.get("workflow_dispatch") or {}
+        if isinstance(dispatch, dict):
+            declared |= set(dispatch.get("inputs") or {})
+    return declared
+
+
+def _sent_dispatch_inputs() -> list:
+    """List the dispatch inputs the Lambdas here send, as (file name, input name).
+
+    A handler asks GitHub to start a workflow by posting a payload whose
+    'inputs' mapping carries them, so the string keys of that literal are the
+    names the workflow on the other end has to declare.
+    """
+    sent = []
+    for source in sorted(SRC_ROOT.rglob("*.py")):
+        for node in ast.walk(ast.parse(source.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.Dict):
+                continue
+            for key, value in zip(node.keys, node.values):
+                if not isinstance(key, ast.Constant) or key.value != "inputs":
+                    continue
+                if not isinstance(value, ast.Dict):
+                    continue
+                sent += [
+                    (_repo_relative(source), name.value)
+                    for name in value.keys
+                    if isinstance(name, ast.Constant) and isinstance(name.value, str)
+                ]
+    return sorted(sent)
+
 
 
 class TestApplyingWorkflowsAreNotCancelled:
@@ -776,6 +816,26 @@ class TestWhatCanStartAWorkflow:
 
         assert not unstarted, (
             "Workflows a push does not start:\n  " + "\n  ".join(unstarted)
+        )
+
+    def test_every_input_a_lambda_sends_is_declared_by_a_workflow(self) -> None:
+        """Verify each dispatch input sent from src/ is one a workflow accepts.
+
+        GitHub refuses a dispatch carrying an input the workflow does not
+        declare and answers 422, so the run the handler meant to start never
+        starts. The handler logs the refusal and returns False, which leaves a
+        run nothing restarted looking exactly like a run nobody asked to
+        restart, and the failure visible only in a Lambda log nothing reads.
+        """
+        declared = _declared_dispatch_inputs()
+        undeclared = [
+            f"{source}: sends '{name}', which no workflow declares"
+            for source, name in _sent_dispatch_inputs()
+            if name not in declared
+        ]
+
+        assert not undeclared, (
+            "Dispatch inputs no workflow accepts:\n  " + "\n  ".join(undeclared)
         )
 
     def test_no_workflow_names_the_controller_source(self) -> None:

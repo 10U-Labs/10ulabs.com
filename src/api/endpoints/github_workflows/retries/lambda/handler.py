@@ -135,11 +135,14 @@ def _get_workflow_info_from_run(token: str, repo: str, run_id: int) -> dict[str,
         return {"workflow_id": "", "head_sha": "", "head_branch": "main"}
 
 
-def _dispatch_workflow(
-    token: str, repo: str, workflow_id: str, ref: str, reason: str
-) -> bool:
-    """Dispatch a workflow run."""
-    payload = {"ref": ref, "inputs": {"retry_reason": reason}}
+def _dispatch_workflow(token: str, repo: str, workflow_id: str, ref: str) -> bool:
+    """Dispatch a workflow run.
+
+    A restart wants the same workflow on the same ref and nothing else. An
+    input the workflow does not declare is refused with a 422, so the payload
+    names the ref alone.
+    """
+    payload = {"ref": ref}
     try:
         _github_api_request(
             "POST",
@@ -231,10 +234,7 @@ def _process_retry_request(body: dict) -> dict[str, Any]:
     _wait_for_workflow_completion(token, github_repo, run_id)
 
     # Re-dispatch the workflow
-    if _dispatch_workflow(
-        token, github_repo, workflow_id, head_branch,
-        f"Auto-retry: {reason} ({resource_type}:{resource_id})"
-    ):
+    if _dispatch_workflow(token, github_repo, workflow_id, head_branch):
         logger.info("Successfully dispatched retry workflow for %s", workflow_id)
         result = {
             "statusCode": 200,
