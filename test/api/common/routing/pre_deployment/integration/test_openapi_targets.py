@@ -78,10 +78,13 @@ def _resolved_target(variable: str) -> str:
     return parse_lambda_handler_names().get(key, "") if key else ""
 
 
+INTEGRATED_PATHS = _integrated_paths()
+
+
 @pytest.mark.parametrize(
     "route,method,variable",
-    _integrated_paths(),
-    ids=[f"{method.upper()} {route}" for route, method, _ in _integrated_paths()],
+    INTEGRATED_PATHS,
+    ids=[f"{verb.upper()} {name}" for name, verb, _ in INTEGRATED_PATHS],
 )
 def test_route_integrates_a_declared_lambda(route: str, method: str, variable: str) -> None:
     """Test that this route's integration names a Lambda declared under src/."""
