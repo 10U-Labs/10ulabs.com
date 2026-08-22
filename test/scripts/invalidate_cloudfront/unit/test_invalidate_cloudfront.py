@@ -47,6 +47,19 @@ def _run_main(cloudfront, argv=None):
         return main(), factory
 
 
+def _exit_code_of_the_script():
+    """Run the file as a program and give back the code it exited with.
+
+    pytest.raises counts as an assertion, so catching SystemExit here is what
+    leaves the test with the one assert the tree is checked for.
+    """
+    try:
+        runpy.run_path(SCRIPT, run_name="__main__")
+    except SystemExit as exited:
+        return exited.code
+    return None
+
+
 class TestFindDistributionId:
     """Tests for find_distribution_id function."""
 
@@ -170,6 +183,4 @@ class TestEntryPoint:
         """Run as a program, the script exits on what main gave back."""
         with patch("boto3.client", return_value=_serving("Completed")), \
                 patch.object(sys, "argv", ARGV):
-            with pytest.raises(SystemExit) as exited:
-                runpy.run_path(SCRIPT, run_name="__main__")
-        assert exited.value.code == 0
+            assert _exit_code_of_the_script() == 0
