@@ -271,6 +271,20 @@ def _push_triggered_workflows() -> dict:
     return triggered
 
 
+def _workflow_jobs() -> list:
+    """List every job in every workflow, as (file name, job name, definition).
+
+    Three of the tests below read a property of a job rather than of a
+    workflow, and walking the files to reach them is the same walk each time.
+    """
+    found = []
+    for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        document = yaml.safe_load(workflow.read_text(encoding="utf-8"))
+        for job, definition in sorted((document.get("jobs") or {}).items()):
+            found.append((workflow.name, job, definition))
+    return found
+
+
 class TestApplyingWorkflowsAreNotCancelled:
     """Tests that a deploy is never killed part-way through terraform apply."""
 
@@ -651,8 +665,8 @@ class TestPushTriggeredWorkflows:
         )
 
 
-class TestWorkflowsReadOnlyLiteralLocals:
-    """Tests that a workflow reading locals.tf takes a value written there."""
+class TestStepsReadValuesThatExist:
+    """Tests that a step reads a value something beside it actually produces."""
 
     def test_a_scraped_local_is_a_quoted_literal(self) -> None:
         """Verify each local a workflow cuts out of locals.tf is a string.
@@ -672,27 +686,21 @@ class TestWorkflowsReadOnlyLiteralLocals:
         }
         scraped = []
 
-        for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
-            document = yaml.safe_load(workflow.read_text(encoding="utf-8"))
-            for job, definition in sorted((document.get("jobs") or {}).items()):
-                for step in definition.get("steps") or []:
-                    script = step.get("run") or ""
-                    if "locals.tf" not in script:
-                        continue
-                    scraped += [
-                        f"{workflow.name}: job '{job}' cuts '{name}' out of "
-                        "locals.tf, where it is an expression and not a string"
-                        for name in sorted(set(GREPPED_NAME.findall(script)))
-                        if name in expressions
-                    ]
+        for workflow, job, definition in _workflow_jobs():
+            for step in definition.get("steps") or []:
+                script = step.get("run") or ""
+                if "locals.tf" not in script:
+                    continue
+                scraped += [
+                    f"{workflow}: job '{job}' cuts '{name}' out of "
+                    "locals.tf, where it is an expression and not a string"
+                    for name in sorted(set(GREPPED_NAME.findall(script)))
+                    if name in expressions
+                ]
 
         assert not scraped, (
             "Locals read as strings that are not:\n  " + "\n  ".join(scraped)
         )
-
-
-class TestStepConditionsNameLiveSteps:
-    """Tests that a gated step reads an output some step beside it produces."""
 
     def test_a_condition_names_only_step_outputs_that_exist(self) -> None:
         """Verify no step is gated on the output of a step that is not there.
@@ -703,27 +711,25 @@ class TestStepConditionsNameLiveSteps:
         """
         dangling = []
 
-        for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
-            document = yaml.safe_load(workflow.read_text(encoding="utf-8"))
-            for job, definition in sorted((document.get("jobs") or {}).items()):
-                present = {
-                    step["id"] for step in definition.get("steps") or []
-                    if step.get("id")
-                }
-                named = set(STEP_OUTPUT.findall(yaml.safe_dump(definition)))
-                dangling += [
-                    f"{workflow.name}: job '{job}' reads steps.{missing}.outputs "
-                    "and no step in that job carries the id"
-                    for missing in sorted(named - present)
-                ]
+        for workflow, job, definition in _workflow_jobs():
+            present = {
+                step["id"] for step in definition.get("steps") or []
+                if step.get("id")
+            }
+            named = set(STEP_OUTPUT.findall(yaml.safe_dump(definition)))
+            dangling += [
+                f"{workflow}: job '{job}' reads steps.{missing}.outputs "
+                "and no step in that job carries the id"
+                for missing in sorted(named - present)
+            ]
 
         assert not dangling, (
             "Conditions on steps that are gone:\n  " + "\n  ".join(dangling)
         )
 
 
-class TestBootstrapCanBeAppliedIntoAnEmptyAccount:
-    """Tests that the one workflow a cold account needs can still be pressed."""
+class TestWhatCanStartAWorkflow:
+    """Tests what is able to start a run, now that no other run is."""
 
     def test_bootstrap_keeps_its_workflow_dispatch_trigger(self) -> None:
         """Verify bootstrap can be started by hand as well as by a push.
@@ -743,10 +749,6 @@ class TestBootstrapCanBeAppliedIntoAnEmptyAccount:
             "bootstrap.yml can only be started by a push, so an account with no "
             "state bucket and no OIDC role has no way to deploy it"
         )
-
-
-class TestEveryWorkflowIsStartedByItsOwnPaths:
-    """Tests that GitHub starts every workflow, now nothing else can."""
 
     def test_every_workflow_declares_a_push_trigger_with_paths(self) -> None:
         """Verify each workflow runs on a push to main that matches its paths.
@@ -776,10 +778,6 @@ class TestEveryWorkflowIsStartedByItsOwnPaths:
             "Workflows a push does not start:\n  " + "\n  ".join(unstarted)
         )
 
-
-class TestNoWorkflowRunsTheController:
-    """Tests that the deleted controller does not come back a step at a time."""
-
     def test_no_workflow_names_the_controller_source(self) -> None:
         """Verify no workflow file still shells out to src/workflowctl.
 
@@ -798,10 +796,6 @@ class TestNoWorkflowRunsTheController:
             "Workflows running the deleted controller:\n  " + "\n  ".join(revived)
         )
 
-
-class TestNoWorkflowCanStartOrCancelAnother:
-    """Tests that no run holds the token permission a dispatch needs."""
-
     def test_no_workflow_requests_permission_to_write_actions(self) -> None:
         """Verify no workflow asks for actions: write.
 
@@ -810,21 +804,23 @@ class TestNoWorkflowCanStartOrCancelAnother:
         another can kill a deploy part-way through terraform apply, which
         strands the state lock, so this is where a request for it is noticed.
         """
-        requested = []
-
-        for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
-            document = yaml.safe_load(workflow.read_text(encoding="utf-8"))
-            declared = [("the file", document.get("permissions"))]
-            declared += [
-                (f"job '{job}'", definition.get("permissions"))
-                for job, definition in sorted((document.get("jobs") or {}).items())
-            ]
-            requested += [
-                f"{workflow.name}: {where} asks for actions: write"
-                for where, permissions in declared
-                if isinstance(permissions, dict)
-                and permissions.get("actions") == "write"
-            ]
+        declared = [
+            (
+                workflow.name,
+                "the file",
+                yaml.safe_load(workflow.read_text(encoding="utf-8")).get("permissions"),
+            )
+            for workflow in sorted(WORKFLOWS_DIR.glob("*.yml"))
+        ]
+        declared += [
+            (workflow, f"job '{job}'", definition.get("permissions"))
+            for workflow, job, definition in _workflow_jobs()
+        ]
+        requested = [
+            f"{workflow}: {where} asks for actions: write"
+            for workflow, where, permissions in sorted(declared, key=lambda entry: entry[:2])
+            if isinstance(permissions, dict) and permissions.get("actions") == "write"
+        ]
 
         assert not requested, (
             "Workflows able to start or cancel another:\n  " + "\n  ".join(requested)
