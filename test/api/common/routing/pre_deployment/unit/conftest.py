@@ -113,4 +113,3 @@ def drift_recovery(config):
 def catchall_unknown_event():
     """Create an event for an unknown path."""
     return {'path': '/unknown', 'httpMethod': 'GET'}
-

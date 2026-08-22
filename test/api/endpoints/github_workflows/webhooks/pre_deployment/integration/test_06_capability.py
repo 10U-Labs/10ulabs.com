@@ -30,4 +30,3 @@ def test_can_decrypt_github_pat_parameter(ssm_client, ssm_github_pat_name):
     assert response.get("Parameter") is not None, (
         f"SSM parameter '{ssm_github_pat_name}' returned empty response"
     )
-

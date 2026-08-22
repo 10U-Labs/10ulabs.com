@@ -13,8 +13,6 @@ from test_fixtures.integration import (
 )
 
 
-
-
 class TestAPIBackendPrerequisites(Layer4APIBackendPrerequisiteTests):
     """Layer 5: Verify api_common_routing prerequisites exist.
 

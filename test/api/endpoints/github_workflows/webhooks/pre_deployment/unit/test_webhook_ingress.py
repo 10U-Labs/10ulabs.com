@@ -145,52 +145,27 @@ class TestIngressHandlerHandle:
         """Create an IngressHandler with mock dependencies."""
         return webhook_ingress_module.IngressHandler(mock_ingress_deps)
 
-    def test_handle_workflow_job_queued(self, handler, mock_ingress_deps):
-        """Test handling a workflow_job with action=queued is archived."""
+    @pytest.mark.parametrize(
+        "action", ["queued", "cancelled", "completed", "in_progress"]
+    )
+    def test_handle_workflow_job_is_archived(self, handler, action):
+        """Test every workflow_job action is archived now nothing serves one."""
         body = {
+            "action": action,
+            "workflow_job": {"id": 123, "run_id": 456},
+            "repository": {"full_name": "org/repo"}
+        }
+        result = run_async(handler.handle(_create_sqs_record(body)))
+        assert result["routed"] == "ignored_events"
+
+    def test_handle_workflow_job_reaches_the_archive(self, handler, mock_ingress_deps):
+        """Test a workflow_job is handed to the ignored-event archive."""
+        run_async(handler.handle(_create_sqs_record({
             "action": "queued",
-            "workflow_job": {"id": 123, "run_id": 456, "labels": ["ubuntu-latest"]},
+            "workflow_job": {"id": 1},
             "repository": {"full_name": "org/repo"}
-        }
-        record = _create_sqs_record(body)
-        result = run_async(handler.handle(record))
-        mock_ingress_deps.enqueue_ignored.assert_called_once()
-        assert result["success"] is True and result["routed"] == "ignored_events"
-
-    def test_handle_workflow_job_cancelled(self, handler, mock_ingress_deps):
-        """Test handling a workflow_job with action=cancelled is ignored."""
-        body = {
-            "action": "cancelled",
-            "workflow_job": {"id": 123, "run_id": 456},
-            "repository": {"full_name": "org/repo"}
-        }
-        record = _create_sqs_record(body)
-        result = run_async(handler.handle(record))
-        mock_ingress_deps.enqueue_ignored.assert_called_once()
-        assert result["success"] is True and result["routed"] == "ignored_events"
-
-    def test_handle_workflow_job_completed(self, handler):
-        """Test handling a workflow_job with action=completed is ignored."""
-        body = {
-            "action": "completed",
-            "workflow_job": {"id": 123, "run_id": 456},
-            "repository": {"full_name": "org/repo"}
-        }
-        record = _create_sqs_record(body)
-        result = run_async(handler.handle(record))
-        assert result["success"] is True and result["routed"] == "ignored_events"
-
-    def test_handle_workflow_job_in_progress_ignored(self, handler, mock_ingress_deps):
-        """Test handling a workflow_job with action=in_progress is ignored."""
-        body = {
-            "action": "in_progress",
-            "workflow_job": {"id": 123, "run_id": 456},
-            "repository": {"full_name": "org/repo"}
-        }
-        record = _create_sqs_record(body)
-        result = run_async(handler.handle(record))
-        mock_ingress_deps.enqueue_ignored.assert_called_once()
-        assert result["success"] is True and result["routed"] == "ignored_events"
+        })))
+        assert mock_ingress_deps.enqueue_ignored.call_count == 1
 
     def test_handle_workflow_run(self, handler):
         """Test handling a workflow_run event."""

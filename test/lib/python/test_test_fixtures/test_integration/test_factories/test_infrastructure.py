@@ -45,10 +45,6 @@ def _create_sqs_service_error_mocks():
     return mock_client, mock_request
 
 
-
-
-
-
 # === create_www_common_fixtures ===
 
 

@@ -109,4 +109,3 @@ def cloudwatch_logs_firehose_role_name(shared_config):
 # =============================================================================
 # Shared Resource Fixtures (used by both L3 existence and L4 configuration)
 # =============================================================================
-

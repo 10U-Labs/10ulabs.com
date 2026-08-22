@@ -304,6 +304,3 @@ class TestCreateCircuitBreakerOpenState:
         """create_circuit_breaker_open_state last_failure_time is float."""
         result = create_circuit_breaker_open_state()
         assert isinstance(result["last_failure_time"], float)
-
-
-
