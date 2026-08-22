@@ -135,6 +135,10 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
+      - name: Terraform Init
+        run: |
+          cd src/bootstrap && \
+            terraform init
       - name: Run E2E tests
         run: |
           BASE=test/bootstrap
@@ -232,6 +236,10 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
+      - name: Terraform Init
+        run: |
+          cd src/bootstrap && \
+            terraform init
       - name: Run post-deployment integration tests
         run: |
           BASE=test/bootstrap
@@ -302,6 +310,10 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
+      - name: Terraform Init
+        run: |
+          cd src/bootstrap && \
+            terraform init
       - name: Run pre-deployment integration tests
         run: |
           BASE=test/bootstrap
