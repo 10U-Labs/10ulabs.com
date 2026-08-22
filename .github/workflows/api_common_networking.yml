@@ -175,9 +175,7 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $BASE/post_deployment/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
-name: >-
-  Ensuring API common networking infrastructure exists and is properly
-  configured
+name: api_common_networking
 on:
   push:
     branches:

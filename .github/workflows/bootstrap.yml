@@ -214,7 +214,7 @@ jobs:
             terraform output -raw arn_for_github_actions_role)
           gh variable set AWS_REGION --body "$AWS_REGION"
           gh variable set OIDC_ROLE_ARN --body "$ROLE_ARN"
-name: Ensuring bootstrap infrastructure exists and is properly configured
+name: bootstrap
 on:
   push:
     branches:

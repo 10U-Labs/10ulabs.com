@@ -317,7 +317,7 @@ jobs:
             --workflow "${{ inputs.start_from }}" \
             --repo "${{ github.repository }}" \
             $FLAGS
-name: Workflow Controller
+name: workflowctl
 on:
   push:
     branches:

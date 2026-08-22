@@ -334,7 +334,7 @@ jobs:
             --repository "$REPO" \
             --image-tag "$TAG" \
             --region "$REGION"
-name: Building Docker image for ECS runners
+name: api_endpoint_v1_runners_ecs_images_post
 on:
   push:
     branches:

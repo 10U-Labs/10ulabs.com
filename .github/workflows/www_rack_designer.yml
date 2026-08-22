@@ -130,7 +130,7 @@ jobs:
             --fqdn "$WEBSITE_FQDN" \
             --region ${{ vars.AWS_REGION }} \
             --paths "/rack-designer/*"
-name: Ensuring www rack-designer frontend exists and is properly configured
+name: www_rack_designer
 on:
   push:
     branches:

@@ -219,7 +219,7 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $TEST/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
-name: Ensuring www common infrastructure exists and is properly configured
+name: www_common
 on:
   push:
     branches:

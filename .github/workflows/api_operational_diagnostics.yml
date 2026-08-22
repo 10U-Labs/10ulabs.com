@@ -190,8 +190,7 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             test/api/operational/diagnostics/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
-name: >-
-  Ensuring the /diagnostics/echo API endpoint exists and is properly configured
+name: api_operational_diagnostics
 on:
   push:
     branches:

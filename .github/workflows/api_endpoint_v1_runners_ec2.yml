@@ -191,8 +191,7 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $TEST/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
-name: >-
-  Ensuring the /v1/runners/ec2 API endpoint exists and is properly configured
+name: api_endpoint_v1_runners_ec2
 on:
   push:
     branches:

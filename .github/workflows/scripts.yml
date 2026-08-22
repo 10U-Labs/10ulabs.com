@@ -782,7 +782,7 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/scripts.yml
-name: Testing the Python that deploys nothing
+name: scripts
 on:
   push:
     branches:

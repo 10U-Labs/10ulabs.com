@@ -217,7 +217,7 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $BASE/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
-name: Ensuring API common routing exists and is properly configured
+name: api_common_routing
 on:
   push:
     branches:

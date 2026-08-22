@@ -367,7 +367,7 @@ jobs:
               --key-pair-id "$KP" || true
           done
           echo "Cleanup complete."
-name: Building AMI for EC2 self-hosted runners
+name: api_endpoint_v1_runners_ec2_images_post
 on:
   push:
     branches:

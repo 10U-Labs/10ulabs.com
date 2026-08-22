@@ -187,9 +187,7 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $BASE/post_deployment/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
-name: >-
-  Ensuring runners cleanup handler
-  exists and is properly configured
+name: api_endpoint_v1_runners_cleanups
 on:
   push:
     branches:
