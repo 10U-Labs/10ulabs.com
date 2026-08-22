@@ -90,10 +90,9 @@ def _declared_packages(paths: list, prefix: str) -> list:
 def _python_files_under(path_glob: str) -> list:
     """List the Python files a path glob matches.
 
-    The literal part only says where to start looking: 'src/.../webhooks/*.tf'
-    reaches no Python at all, and 'src/api/endpoints/github_workflows/**'
-    reaches every stack nested inside it. Matching the whole glob is what tells
-    them apart.
+    The literal part only says where to start looking: 'src/api/endpoints/sessions/*.tf'
+    reaches no Python at all, and 'src/api/endpoints/**' reaches every stack
+    nested inside it. Matching the whole glob is what tells them apart.
     """
     root = REPO_ROOT / Path(path_glob.split("*")[0])
     if not root.is_dir():

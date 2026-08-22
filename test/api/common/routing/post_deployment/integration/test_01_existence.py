@@ -133,11 +133,6 @@ def test_route53_api_record_exists(api_route53_records, config):
     assert config['api_fqdn'] in record_names
 
 
-# Note: CloudWatch/EventBridge resources (circuit breaker rules, alarms, WebhookRouter
-# metrics namespace) are tested in github_workflows/webhooks post-deployment tests because
-# they are created by that module, which deploys after routing.
-
-
 # =============================================================================
 # WAF
 # =============================================================================

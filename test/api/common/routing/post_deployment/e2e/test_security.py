@@ -68,18 +68,18 @@ def test_malformed_request_handled_gracefully(api_url, api_key):
 
     Security Impact: Prevents denial of service via malformed input
     """
-    skip_if_endpoint_not_deployed(api_url, "/v1/github-workflows/webhooks", "POST")
+    skip_if_endpoint_not_deployed(api_url, "/diagnostics/echo", "POST")
     headers = {"x-api-key": api_key, "x-test-mode": "true"}
     payload = {"action": "invalid-type"}
     response = requests.post(
-        f"{api_url}/v1/github-workflows/webhooks",
+        f"{api_url}/diagnostics/echo",
         json=payload,
         headers=headers,
         timeout=10,
     )
     # 404 means endpoint not deployed (skip check is unauthenticated)
     if response.status_code == 404:
-        pytest.skip("Endpoint /v1/github-workflows/webhooks not deployed")
+        pytest.skip("Endpoint /diagnostics/echo not deployed")
     # Should get client error (4xx) or success, not server error
     assert response.status_code in [200, 400, 401, 403, 422]
 

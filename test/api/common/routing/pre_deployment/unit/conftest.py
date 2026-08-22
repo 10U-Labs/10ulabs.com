@@ -31,68 +31,6 @@ def catchall_handler():
 
 
 @pytest.fixture
-def webhook_router(config):
-    """Load the webhook router Lambda with test environment."""
-    env_vars = {
-        'API_KEY_PARAMETER_NAME': config['ssm_parameter_name_for_api_key'],
-        'WEBHOOK_SECRET_NAME': config['ssm_parameter_name_for_webhook_secret'],
-        'API_BASE_URL': f"https://{config['api_fqdn']}/{config['api_version']}",
-    }
-    with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("webhook_router.py", "webhook_router")
-        if hasattr(module, '_clients'):
-            setattr(module, '_clients', {
-                'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None
-            })
-        if hasattr(module, '_webhook_secret_cache'):
-            setattr(module, '_webhook_secret_cache', {'value': None})
-        if hasattr(module, '_api_key_cache'):
-            setattr(module, '_api_key_cache', {'value': None})
-        if hasattr(module, '_circuit_breaker_state'):
-            setattr(module, '_circuit_breaker_state', {
-                'failures': 0, 'last_failure_time': 0.0, 'state': 'closed'
-            })
-        yield module
-
-
-@pytest.fixture
-def circuit_breaker_remediation(config):
-    """Load circuit breaker remediation Lambda with test environment."""
-    env_vars = {
-        'AWS_REGION': config['aws_region']
-    }
-    with patch.dict('os.environ', env_vars):
-        module = load_lambda_module(
-            "circuit_breaker_remediation.py", "circuit_breaker_remediation"
-        )
-        yield module
-
-
-@pytest.fixture
-def dlq_reprocessor(config):
-    """Load DLQ reprocessor Lambda with test environment."""
-    env_vars = {
-        'AWS_REGION': config['aws_region']
-    }
-    with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("dlq_reprocessor.py", "dlq_reprocessor")
-        yield module
-
-
-@pytest.fixture
-def circuit_breaker_recovery(config):
-    """Load circuit breaker recovery Lambda with test environment."""
-    env_vars = {
-        'AWS_REGION': config['aws_region']
-    }
-    with patch.dict('os.environ', env_vars):
-        module = load_lambda_module(
-            "circuit_breaker_recovery.py", "circuit_breaker_recovery"
-        )
-        yield module
-
-
-@pytest.fixture
 def drift_recovery(config):
     """Load drift recovery Lambda with test environment."""
     env_vars = {

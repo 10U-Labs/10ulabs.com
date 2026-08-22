@@ -73,16 +73,6 @@ def test_openapi_spec_diagnostics_echo_has_post_method(openapi_spec):
     assert 'post' in openapi_spec['paths']['/diagnostics/echo']
 
 
-def test_openapi_spec_has_github_workflows_webhooks_post_endpoint(openapi_spec):
-    """Verify spec has /v1/github-workflows/webhooks endpoint."""
-    assert '/v1/github-workflows/webhooks' in openapi_spec['paths']
-
-
-def test_openapi_spec_github_workflows_webhooks_has_post_method(openapi_spec):
-    """Verify /v1/github-workflows/webhooks has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/github-workflows/webhooks']
-
-
 def test_openapi_spec_has_catchall_endpoint(openapi_spec):
     """Verify spec has /{proxy+} catchall endpoint."""
     assert '/{proxy+}' in openapi_spec['paths']
@@ -220,11 +210,6 @@ def test_openapi_spec_diagnostics_echo_has_options_method(openapi_spec):
     assert 'options' in openapi_spec['paths']['/diagnostics/echo']
 
 
-def test_openapi_spec_github_workflows_webhooks_has_options_method(openapi_spec):
-    """Verify /v1/github-workflows/webhooks has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/github-workflows/webhooks']
-
-
 def test_openapi_spec_has_request_validators(openapi_spec):
     """Verify spec has x-amazon-apigateway-request-validators section."""
     assert 'x-amazon-apigateway-request-validators' in openapi_spec
@@ -240,54 +225,6 @@ def test_openapi_spec_validate_headers_validates_parameters(openapi_spec):
     """Verify validate-headers validator validates request parameters."""
     validators = openapi_spec['x-amazon-apigateway-request-validators']
     assert validators['validate-headers']['validateRequestParameters'] is True
-
-
-def test_openapi_spec_github_workflows_webhooks_post_has_request_validator(openapi_spec):
-    """Verify /v1/github-workflows/webhooks POST has request validator reference."""
-    post = openapi_spec['paths']['/v1/github-workflows/webhooks']['post']
-    assert 'x-amazon-apigateway-request-validator' in post
-
-
-def test_openapi_spec_github_workflows_webhooks_post_uses_validate_headers(openapi_spec):
-    """Verify /v1/github-workflows/webhooks POST uses validate-headers validator."""
-    post = openapi_spec['paths']['/v1/github-workflows/webhooks']['post']
-    assert post['x-amazon-apigateway-request-validator'] == 'validate-headers'
-
-
-def test_openapi_spec_github_workflows_webhooks_post_has_parameters(openapi_spec):
-    """Verify /v1/github-workflows/webhooks POST has parameters defined."""
-    post = openapi_spec['paths']['/v1/github-workflows/webhooks']['post']
-    assert 'parameters' in post
-
-
-def test_openapi_spec_github_workflows_webhooks_post_has_github_event_parameter(openapi_spec):
-    """Verify /v1/github-workflows/webhooks POST has x-github-event parameter."""
-    post = openapi_spec['paths']['/v1/github-workflows/webhooks']['post']
-    parameters = post['parameters']
-    param_names = [p.get('name') for p in parameters]
-    assert 'x-github-event' in param_names
-
-
-def test_openapi_spec_github_workflows_webhooks_post_github_event_is_header(openapi_spec):
-    """Verify x-github-event parameter is a header parameter."""
-    post = openapi_spec['paths']['/v1/github-workflows/webhooks']['post']
-    parameters = post['parameters']
-    github_event_param = next(
-        (p for p in parameters if p.get('name') == 'x-github-event'),
-        None
-    )
-    assert github_event_param['in'] == 'header'
-
-
-def test_openapi_spec_github_workflows_webhooks_post_github_event_is_required(openapi_spec):
-    """Verify x-github-event header is required."""
-    post = openapi_spec['paths']['/v1/github-workflows/webhooks']['post']
-    parameters = post['parameters']
-    github_event_param = next(
-        (p for p in parameters if p.get('name') == 'x-github-event'),
-        None
-    )
-    assert github_event_param['required'] is True
 
 
 def test_openapi_spec_has_gateway_responses(openapi_spec):
