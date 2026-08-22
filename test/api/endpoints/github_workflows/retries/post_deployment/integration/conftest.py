@@ -2,6 +2,7 @@
 import pytest
 
 from test_fixtures.aws import get_log_group_info
+from test_fixtures.integration import get_aws_account_id_via_cli
 
 
 @pytest.fixture
@@ -29,7 +30,7 @@ def config_fixture(shared_config, res_prefix):
     return {
         "resource_prefix": res_prefix,
         "aws_region": shared_config["aws_region"],
-        "aws_account_id": shared_config["aws_account_id"],
+        "aws_account_id": get_aws_account_id_via_cli(),
         "function_name": f"{res_prefix}GitHubWorkflowsRetries",
         "lambda_role_name": f"{res_prefix}GitHubWorkflowsRetriesRole",
     }

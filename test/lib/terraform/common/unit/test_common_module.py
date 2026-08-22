@@ -1,5 +1,12 @@
 """Tests for common Terraform module."""
 
+import re
+
+
+def test_locals_names_no_account_number(locals_tf_content):
+    """Test that no AWS account number is written into locals.tf."""
+    assert not re.search(r"\b\d{12}\b", locals_tf_content)
+
 
 def test_locals_file_exists(module_path):
     """Test that locals.tf file exists."""

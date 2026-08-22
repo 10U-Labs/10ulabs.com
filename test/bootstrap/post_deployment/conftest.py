@@ -2,6 +2,14 @@
 import boto3
 import pytest
 
+from test_fixtures.integration import get_aws_account_id_via_cli
+
+
+@pytest.fixture(scope="module")
+def aws_account_id():
+    """Provide the AWS account the deployment is authenticated to."""
+    return get_aws_account_id_via_cli()
+
 
 @pytest.fixture(scope="module")
 def iam_client(config):

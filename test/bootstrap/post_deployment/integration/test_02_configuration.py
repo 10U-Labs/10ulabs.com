@@ -479,10 +479,10 @@ def test_mx_record_priority_equals_one(mx_record):
 # =============================================================================
 
 
-def test_iam_role_trust_policy_has_federated_principal(iam_client, config):
+def test_iam_role_trust_policy_has_federated_principal(iam_client, config, aws_account_id):
     """Test that IAM role trust policy has federated principal."""
     role_name = config['name_for_github_actions_role']
-    account_id = config['aws_account_id']
+    account_id = aws_account_id
     oidc_provider = "token.actions.githubusercontent.com"
     expected_provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/{oidc_provider}"
     response = iam_client.get_role(RoleName=role_name)
@@ -564,18 +564,18 @@ def test_cloudtrail_iam_role_name_is_pascalcase(config):
 # =============================================================================
 
 
-def test_oidc_provider_has_correct_thumbprint(iam_client, config):
+def test_oidc_provider_has_correct_thumbprint(iam_client, aws_account_id):
     """Test that OIDC provider has correct thumbprint."""
-    account_id = config['aws_account_id']
+    account_id = aws_account_id
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
     response = iam_client.get_open_id_connect_provider(OpenIDConnectProviderArn=provider_arn)
     thumbprint = response['ThumbprintList'][0]
     assert thumbprint == '6938fd4d98bab03faadb97b34396831e3780aea1'
 
 
-def test_oidc_provider_has_correct_client_id(iam_client, config):
+def test_oidc_provider_has_correct_client_id(iam_client, aws_account_id):
     """Test that OIDC provider has correct client ID."""
-    account_id = config['aws_account_id']
+    account_id = aws_account_id
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
     response = iam_client.get_open_id_connect_provider(OpenIDConnectProviderArn=provider_arn)
     client_id = response['ClientIDList'][0]

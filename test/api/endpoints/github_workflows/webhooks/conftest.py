@@ -7,6 +7,7 @@ import boto3
 import pytest
 from repo_utils import REPO_ROOT
 from test_fixtures import get_shared_config, get_tfvars_values, get_endpoint_local_values
+from test_fixtures.integration import get_aws_account_id_via_cli
 
 RUNNERS_SRC_PATH = (
     REPO_ROOT / "src" / "api" / "endpoints" / "github_workflows" / "webhooks"
@@ -52,7 +53,7 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     # Add computed/derived values
     result['aws_region'] = shared_config['aws_region']
     result['aws_account_id'] = runners_locals.get(
-        'aws_account_id', shared_config.get('aws_account_id', '')
+        'aws_account_id', get_aws_account_id_via_cli()
     )
     result['central_logs_bucket'] = shared_config.get('name_for_central_logs_bucket', '')
     result['api_fqdn'] = runners_locals.get('api_fqdn', '')

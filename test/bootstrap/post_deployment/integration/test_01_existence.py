@@ -125,9 +125,9 @@ def test_github_actions_role_exists(iam_client, config):
 # =============================================================================
 
 
-def test_oidc_provider_exists_in_aws(iam_client, config):
+def test_oidc_provider_exists_in_aws(iam_client, aws_account_id):
     """Test that OIDC provider exists in AWS."""
-    account_id = config['aws_account_id']
+    account_id = aws_account_id
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
     response = iam_client.get_open_id_connect_provider(OpenIDConnectProviderArn=provider_arn)
     assert response['Url'] == 'token.actions.githubusercontent.com'

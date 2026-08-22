@@ -76,10 +76,10 @@ class TestCompleteOIDCWorkflow:
         return get_github_oidc_token()
 
     @pytest.fixture
-    def aws_creds(self, config, oidc_token):
+    def aws_creds(self, config, oidc_token, aws_account_id):
         """Get AWS credentials fixture."""
         return assume_role_with_oidc(
-            config['aws_account_id'],
+            aws_account_id,
             config['aws_region'],
             config['name_for_github_actions_role'],
             oidc_token

@@ -11,6 +11,7 @@ import pytest
 from repo_utils import REPO_ROOT
 from terraform_config import TEST_AWS_REGION, get_shared_config
 from test_fixtures.aws import get_log_group_info
+from test_fixtures.integration import get_aws_account_id_via_cli
 from test_fixtures.terraform import terraform_init, terraform_output
 
 RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
@@ -58,8 +59,7 @@ def lambda_role_name(request):
 def lambda_role_arn(request):
     """Get the full ARN for the Lambda execution role."""
     role_name = request.getfixturevalue("lambda_role_name")
-    config = request.getfixturevalue("shared_config")
-    account_id = config.get("aws_account_id", "")
+    account_id = get_aws_account_id_via_cli()
     return f"arn:aws:iam::{account_id}:role/{role_name}"
 
 

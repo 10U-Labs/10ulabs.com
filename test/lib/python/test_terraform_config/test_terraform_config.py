@@ -306,6 +306,12 @@ class TestGetSharedConfig:
         result = get_shared_config()
         assert isinstance(result["lambda_handler_names"], dict)
 
+    def test_omits_aws_account_id(self):
+        """Test get_shared_config carries no account identifier."""
+        from terraform_config import get_shared_config
+        result = get_shared_config()
+        assert "aws_account_id" not in result
+
 
 class TestTestAwsRegion:
     """Tests for TEST_AWS_REGION constant."""

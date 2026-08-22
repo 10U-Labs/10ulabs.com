@@ -3,6 +3,7 @@ from botocore.exceptions import ClientError
 import pytest
 
 from test_fixtures.aws import get_log_group_info
+from test_fixtures.integration import get_aws_account_id_via_cli
 from test_fixtures.terraform import terraform_output
 
 from ...conftest import EC2_RUNNER_SRC
@@ -28,9 +29,9 @@ def lambda_function_name():
 
 
 @pytest.fixture(scope="session")
-def lambda_role_arn(shared_config):
+def lambda_role_arn():
     """Get the full ARN for the Lambda execution role."""
-    account_id = shared_config.get("aws_account_id", "")
+    account_id = get_aws_account_id_via_cli()
     role_name = terraform_output(EC2_RUNNER_SRC, "lambda_role_name")
     return f"arn:aws:iam::{account_id}:role/{role_name}"
 

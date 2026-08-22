@@ -792,6 +792,9 @@ on:
       # on every push to a lambda.
       - .github/workflows/scripts.yml
       - lib/python/**
+      # lib/terraform/common is parsed by lib/python/terraform_config, so a
+      # change to it can break the parser whose tests run here.
+      - lib/terraform/common/**
       - scripts/**
       - test/conftest.py
       - test/lib/python/**

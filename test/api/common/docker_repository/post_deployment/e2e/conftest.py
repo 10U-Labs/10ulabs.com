@@ -12,6 +12,8 @@ from typing import Any, Generator
 
 import pytest
 
+from test_fixtures.integration import get_aws_account_id_via_cli
+
 
 @dataclass
 class ImageBuildConfig:
@@ -28,7 +30,7 @@ class ImageBuildConfig:
 @pytest.fixture(scope="module")
 def ecr_registry_url(shared_config):
     """Get the ECR registry URL."""
-    account_id = shared_config["aws_account_id"]
+    account_id = get_aws_account_id_via_cli()
     region = shared_config["aws_region"]
     return f"{account_id}.dkr.ecr.{region}.amazonaws.com"
 
@@ -39,7 +41,7 @@ def docker_logged_in(ecr_client, shared_config):
     auth = ecr_client.get_authorization_token()
     token = auth["authorizationData"][0]["authorizationToken"]
 
-    account_id = shared_config["aws_account_id"]
+    account_id = get_aws_account_id_via_cli()
     region = shared_config["aws_region"]
     registry_url = f"{account_id}.dkr.ecr.{region}.amazonaws.com"
 
