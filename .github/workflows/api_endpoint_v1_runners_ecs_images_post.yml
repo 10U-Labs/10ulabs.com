@@ -340,6 +340,7 @@ on:
     branches:
       - main
     paths:
+      - .github/actions/verify-oidc-vars/action.yml
       - .github/workflows/api_endpoint_v1_runners_ecs_images_post.yml
       - lib/terraform/common/**
       - src/api/endpoints/runners/ecs/images/post/**

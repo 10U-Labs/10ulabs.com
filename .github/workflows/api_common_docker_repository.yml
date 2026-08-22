@@ -187,6 +187,7 @@ on:
     branches:
       - main
     paths:
+      - .github/actions/verify-oidc-vars/action.yml
       - .github/workflows/api_common_docker_repository.yml
       - lib/terraform/common/**
       - src/api/common/docker_repository/**

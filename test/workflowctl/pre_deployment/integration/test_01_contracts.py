@@ -51,6 +51,7 @@ PUSH_EVENT = "github.event_name == 'push'"
 STEP_OUTPUT = re.compile(r"steps\.([A-Za-z0-9_-]+)\.outputs\.")
 TEST_ASSIGNMENT = re.compile(r"^\s*(\w+)=(test/[\w./-]+)\s*$", re.MULTILINE)
 TEST_ARGUMENT = re.compile(r"(?<![=\w])test/[\w./-]+")
+LOCAL_ACTION = "./.github/actions/"
 
 # The controller itself, which is started by every push and names no paths.
 CONTROLLER = "workflowctl"
@@ -320,6 +321,22 @@ def _loaded_conftests(directory: str) -> list:
         for candidate in candidates
         if (REPO_ROOT / candidate / "conftest.py").exists()
     ]
+
+
+def _local_actions(name: str) -> list:
+    """List the composite actions under .github/actions a workflow runs.
+
+    A step reaches a local action by its directory rather than its file, so
+    'uses: ./.github/actions/verify-oidc-vars' is the action.yml inside it.
+    """
+    source = (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
+    used = set()
+    for job in (yaml.safe_load(source).get("jobs") or {}).values():
+        for step in job.get("steps") or []:
+            reference = step.get("uses")
+            if isinstance(reference, str) and reference.startswith(LOCAL_ACTION):
+                used.add(f"{reference[2:]}/action.yml")
+    return sorted(used)
 
 
 def _push_triggered_workflows() -> dict:
@@ -924,6 +941,26 @@ class TestPushTriggeredWorkflows:
 
         assert not unnamed, (
             "Push triggers that miss a conftest they load:\n  " + "\n  ".join(unnamed)
+        )
+
+    def test_a_push_triggered_workflow_names_the_actions_it_uses(self) -> None:
+        """Verify every composite action such a workflow runs is in its paths.
+
+        The actions under .github/actions are shared source: one of them is
+        what every deploy runs to check the OIDC role is configured before it
+        authenticates. A paths list that does not name the action it runs never
+        re-runs on an edit to it, so a mistake there lands green and then
+        breaks whichever unrelated push next starts a deploy.
+        """
+        missed = [
+            f"{workflow}: uses {action}, which its paths do not name"
+            for workflow, paths in sorted(_push_triggered_workflows().items())
+            for action in _local_actions(workflow)
+            if not any(_glob_matches(glob, action) for glob in paths)
+        ]
+
+        assert not missed, (
+            "Push triggers that miss an action they use:\n  " + "\n  ".join(missed)
         )
 
     def test_a_push_triggered_workflow_names_no_whole_tree_glob(self) -> None:

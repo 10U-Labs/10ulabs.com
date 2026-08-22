@@ -197,6 +197,7 @@ on:
     branches:
       - main
     paths:
+      - .github/actions/verify-oidc-vars/action.yml
       - .github/workflows/api_endpoint_v1_runners_ecs_images.yml
       - lib/python/lambda_http/**
       - lib/terraform/common/**

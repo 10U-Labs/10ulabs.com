@@ -225,6 +225,7 @@ on:
     branches:
       - main
     paths:
+      - .github/actions/verify-oidc-vars/action.yml
       - .github/workflows/www_common.yml
       - lib/terraform/common/**
       - lib/terraform/s3_bucket/**

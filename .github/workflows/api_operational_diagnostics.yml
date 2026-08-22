@@ -196,6 +196,7 @@ on:
     branches:
       - main
     paths:
+      - .github/actions/verify-oidc-vars/action.yml
       - .github/workflows/api_operational_diagnostics.yml
       - lib/python/lambda_http/**
       - lib/terraform/common/**

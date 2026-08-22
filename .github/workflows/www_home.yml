@@ -210,6 +210,7 @@ on:
     branches:
       - main
     paths:
+      - .github/actions/verify-oidc-vars/action.yml
       - .github/workflows/www_home.yml
       - src/www/paths/home/**
       - test/conftest.py

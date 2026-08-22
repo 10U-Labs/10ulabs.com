@@ -373,6 +373,7 @@ on:
     branches:
       - main
     paths:
+      - .github/actions/verify-oidc-vars/action.yml
       - .github/workflows/api_endpoint_v1_runners_ec2_images_post.yml
       - etc/runners.json
       - lib/python/ec2_fleet/**
