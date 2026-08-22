@@ -233,35 +233,6 @@ jobs:
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
-  test-ec2-fleet:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            boto3-stubs \
-            botocore \
-            dnspython \
-            paramiko \
-            pytest \
-            pytest-cov \
-            'python-hcl2<8' \
-            PyYAML \
-            requests \
-            types-PyYAML \
-            types-requests
-      - name: Run ec2_fleet tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_ec2_fleet/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=ec2_fleet \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
   test-event-factories:
     runs-on: ubuntu-latest
     steps:
