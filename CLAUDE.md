@@ -56,7 +56,9 @@ An issue is definitive. Its `Proposed Solution` names one change — this functi
 
 A filed issue is placed in the queue before the work goes on, with a `blocked_by` edge either onto the issue it unblocks or onto the tail of the sequence. `.claude/skills/autopilot/SKILL.md` states the three cases and the `gh api` call that writes the edge.
 
-Longer: [how-issues-are-written](docs/claude/memories/how-issues-are-written.md), [an-issue-states-one-solution](docs/claude/memories/an-issue-states-one-solution.md).
+A defect found while working on something else is filed in the same turn it is found, with its `blocked_by` edge, rather than named in the reply and left for the user to ask for. A reply is not a record and does not outlive the session. Neither of the two reasons for holding one back survives contact: a fork in how to fix it is a reason to ask which branch and then file, since the fork says nothing about whether the defect is real, and a fix that is not yet specifiable is the work rather than a reason to defer it. A sweep that turns up five defects files five issues.
+
+Longer: [how-issues-are-written](docs/claude/memories/how-issues-are-written.md), [an-issue-states-one-solution](docs/claude/memories/an-issue-states-one-solution.md), [file-what-the-sweep-turns-up](docs/claude/memories/file-what-the-sweep-turns-up.md).
 
 ## Notes
 

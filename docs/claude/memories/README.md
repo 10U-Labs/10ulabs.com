@@ -16,6 +16,7 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 
 - [how-issues-are-written](how-issues-are-written.md) — six fixed sections for the program, two for everything else, plain English, no test owed for a config or a workflow file
 - [an-issue-states-one-solution](an-issue-states-one-solution.md) — a `Proposed Solution` names one change; a fork is asked about before the issue is filed, never published as an either
+- [file-what-the-sweep-turns-up](file-what-the-sweep-turns-up.md) — a defect found while working on something else is filed in the same turn, not named in a reply and left for the user to ask for
 
 ## Tests
 
