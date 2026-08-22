@@ -19,6 +19,7 @@ from repo_utils import REPO_ROOT
 GRAPH_PATH = REPO_ROOT / "etc" / "workflow_dependencies.json"
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 TERRAFORM_ROOT = REPO_ROOT / "src"
+GREPPED_NAME = re.compile(r"grep '(\w+)'")
 LIB_PYTHON_ROOT = REPO_ROOT / "lib" / "python"
 
 # Nodes still allowed to deploy on any edit anywhere under lib/python. Narrow
@@ -1001,6 +1002,46 @@ class TestPushTriggeredWorkflows:
 
         assert not missing, (
             "Push triggers that miss a package they import:\n  " + "\n  ".join(missing)
+        )
+
+
+class TestWorkflowsReadOnlyLiteralLocals:
+    """Tests that a workflow reading locals.tf takes a value written there."""
+
+    def test_a_scraped_local_is_a_quoted_literal(self) -> None:
+        """Verify each local a workflow cuts out of locals.tf is a string.
+
+        A workflow that needs a shared setting greps its line out of locals.tf
+        and cuts the value from between the quotes, which hands back the whole
+        line when the setting is a Terraform expression rather than a literal.
+        The step then carries a fragment of HCL where a value belongs, and
+        every command built from it fails on a run that reached AWS.
+        """
+        locals_text = (
+            REPO_ROOT / "lib" / "terraform" / "common" / "locals.tf"
+        ).read_text(encoding="utf-8")
+        assigned = dict(re.findall(r"^  (\w+)\s*=\s*(\S)", locals_text, re.M))
+        expressions = {
+            name for name, first in assigned.items() if first != '"'
+        }
+        scraped = []
+
+        for workflow in sorted(WORKFLOWS_DIR.glob("*.yml")):
+            document = yaml.safe_load(workflow.read_text(encoding="utf-8"))
+            for job, definition in sorted((document.get("jobs") or {}).items()):
+                for step in definition.get("steps") or []:
+                    script = step.get("run") or ""
+                    if "locals.tf" not in script:
+                        continue
+                    scraped += [
+                        f"{workflow.name}: job '{job}' cuts '{name}' out of "
+                        "locals.tf, where it is an expression and not a string"
+                        for name in sorted(set(GREPPED_NAME.findall(script)))
+                        if name in expressions
+                    ]
+
+        assert not scraped, (
+            "Locals read as strings that are not:\n  " + "\n  ".join(scraped)
         )
 
 

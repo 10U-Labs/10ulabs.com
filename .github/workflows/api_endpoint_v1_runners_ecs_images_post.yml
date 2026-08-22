@@ -155,9 +155,8 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          TF_SHARED_LOCALS=lib/terraform/common/locals.tf
-          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity \
+            --query Account --output text)
           ECR_REPOSITORY_NAME=$( \
             grep -A1 'output "ecr_repository_name_runners"' \
             lib/terraform/common/outputs.tf | \
