@@ -22,18 +22,6 @@ def handler_fixture():
     return module
 
 
-@pytest.fixture(name="crawler_module")
-def crawler_module_fixture():
-    """Provide the crawler trigger Lambda module for tests."""
-    os.environ['CRAWLER_NAME'] = 'test-crawler'
-    with patch('boto3.client') as mock_client:
-        mock_glue_client = MagicMock()
-        mock_client.return_value = mock_glue_client
-        module = load_analytics_module("crawler_trigger.py", "crawler_trigger")
-        yield module, mock_glue_client
-    del os.environ['CRAWLER_NAME']
-
-
 @pytest.fixture(name="export_module")
 def export_module_fixture():
     """Provide the export handler Lambda module for tests."""

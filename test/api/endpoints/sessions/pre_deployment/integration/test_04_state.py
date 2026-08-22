@@ -39,21 +39,6 @@ class TestNoOrphanedLambdaFunctions:
                 raise
         assert checked
 
-    def test_crawler_trigger_lambda_not_orphaned(self, lambda_client, sessions_config):
-        """Verify crawler trigger Lambda can be checked for orphan status."""
-        checked = False
-        try:
-            lambda_client.get_function(
-                FunctionName=sessions_config["crawler_trigger_function_name"]
-            )
-            checked = True
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                checked = True
-            else:
-                raise
-        assert checked
-
 
 class TestNoOrphanedDynamoDbTables:
     """Tests for orphaned DynamoDB table detection."""
@@ -95,19 +80,6 @@ class TestNoOrphanedIamRoles:
         checked = False
         try:
             iam_client.get_role(RoleName=sessions_config["export_role_name"])
-            checked = True
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchEntity":
-                checked = True
-            else:
-                raise
-        assert checked
-
-    def test_crawler_trigger_role_not_orphaned(self, iam_client, sessions_config):
-        """Verify crawler trigger IAM role can be checked for orphan status."""
-        checked = False
-        try:
-            iam_client.get_role(RoleName=sessions_config["crawler_trigger_role_name"])
             checked = True
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchEntity":
