@@ -1,15 +1,14 @@
 locals {
   # Lambda function names - sourced from shared module for consistency
   lambda_function_names = {
-    catchall                 = module.common.lambda_handler_names.catchall
-    circuit_opens            = module.common.lambda_handler_names.circuit_opens
-    contact                  = module.common.lambda_handler_names.contact
-    echo                     = module.common.lambda_handler_names.echo
-    github_workflows_retries = module.common.lambda_handler_names.github_workflows_retries
-    health                   = module.common.lambda_handler_names.health
-    rack_configurations      = module.common.lambda_handler_names.rack_configurations
-    sessions                 = module.common.lambda_handler_names.sessions
-    webhook                  = module.common.lambda_handler_names.webhook
+    catchall            = module.common.lambda_handler_names.catchall
+    circuit_opens       = module.common.lambda_handler_names.circuit_opens
+    contact             = module.common.lambda_handler_names.contact
+    echo                = module.common.lambda_handler_names.echo
+    health              = module.common.lambda_handler_names.health
+    rack_configurations = module.common.lambda_handler_names.rack_configurations
+    sessions            = module.common.lambda_handler_names.sessions
+    webhook             = module.common.lambda_handler_names.webhook
   }
 
   # Helper to construct Lambda ARN from function name
@@ -19,26 +18,24 @@ locals {
   apigw_integration_prefix = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions"
 
   # Construct all integration ARNs directly from function names
-  catchall_integration_arn     = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.catchall}/invocations"
-  circuit_opens_arn            = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.circuit_opens}/invocations"
-  contact_arn                  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.contact}/invocations"
-  echo_arn                     = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.echo}/invocations"
-  github_workflows_retries_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.github_workflows_retries}/invocations"
-  health_arn                   = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.health}/invocations"
-  rack_configurations_arn      = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_configurations}/invocations"
-  sessions_arn                 = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.sessions}/invocations"
-  webhook_router_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.webhook}/invocations"
+  catchall_integration_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.catchall}/invocations"
+  circuit_opens_arn        = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.circuit_opens}/invocations"
+  contact_arn              = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.contact}/invocations"
+  echo_arn                 = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.echo}/invocations"
+  health_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.health}/invocations"
+  rack_configurations_arn  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_configurations}/invocations"
+  sessions_arn             = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.sessions}/invocations"
+  webhook_router_arn       = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.webhook}/invocations"
 
   openapi_spec = templatefile("${path.module}/../../../www/api/openapi.json", {
-    CatchAllHandlerArn               = local.catchall_integration_arn
-    CircuitOpensHandlerArn           = local.circuit_opens_arn
-    ContactHandlerArn                = local.contact_arn
-    EchoHandlerArn                   = local.echo_arn
-    GithubWorkflowsRetriesHandlerArn = local.github_workflows_retries_arn
-    HealthHandlerArn                 = local.health_arn
-    RackConfigurationsHandlerArn     = local.rack_configurations_arn
-    SessionsHandlerArn               = local.sessions_arn
-    WebhookRouterHandlerArn          = local.webhook_router_arn
+    CatchAllHandlerArn           = local.catchall_integration_arn
+    CircuitOpensHandlerArn       = local.circuit_opens_arn
+    ContactHandlerArn            = local.contact_arn
+    EchoHandlerArn               = local.echo_arn
+    HealthHandlerArn             = local.health_arn
+    RackConfigurationsHandlerArn = local.rack_configurations_arn
+    SessionsHandlerArn           = local.sessions_arn
+    WebhookRouterHandlerArn      = local.webhook_router_arn
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)
 }

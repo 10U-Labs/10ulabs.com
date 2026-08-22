@@ -24,7 +24,6 @@ locals {
     circuit_open_remediations = "${local.resource_prefix}CircuitOpenRemediationsHandler"
     contact                   = "${local.resource_prefix}ContactHandler"
     echo                      = "${local.resource_prefix}DiagnosticsHandler"
-    github_workflows_retries  = "${local.resource_prefix}GithubWorkflowsRetriesHandler"
     health                    = "${local.resource_prefix}HealthHandler"
     rack_configurations       = "${local.resource_prefix}RackConfigurationsHandler"
     sessions                  = "${local.resource_prefix}SessionsHandler"
