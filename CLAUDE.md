@@ -26,7 +26,7 @@ Longer: [commit-straight-to-main](docs/claude/memories/commit-straight-to-main.m
 
 We do TDD: the test is written first, then the code that makes it pass. Test-first means authoring order — the red and the green observations belong to CI, since nothing runs locally.
 
-Read `docs/tenets/tests/` before implementing. Unit tests alone are not sufficient: add coverage at every tier the change touches, one assert per pytest. `Assert one assert per pytest` is a step in thirteen of the fourteen workflows — every one but `documentation.yml`, which runs no tests — so a test with two asserts fails the push rather than being noticed in review.
+Read `docs/tenets/tests/` before implementing. Unit tests alone are not sufficient: add coverage at every tier the change touches, one assert per pytest. `Assert one assert per pytest` is a step in every workflow that runs tests, which is every one but `documentation.yml`, so a test with two asserts fails the push rather than being noticed in review.
 
 The four tier files there — `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRATION_TESTS.md`, `POST_DEPLOYMENT_INTEGRATION_TESTS.md` and `E2E_TESTS.md` — are tenets, not a description of the suite. They name no language, tool, directory or resource, because the repository already states all of that and a second copy drifts. When a tenet and the repository disagree, the repository is what changes; editing a tenet to match the code is backwards. `OVERVIEW.md` beside them is the opposite kind of document and is read the opposite way: it describes this suite by name, down to the conftest levels and the four static-analysis steps, so where it and the tree disagree it is `OVERVIEW.md` that is out of date.
 
