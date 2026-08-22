@@ -306,6 +306,22 @@ def _test_directories(name: str) -> list:
     return sorted(found)
 
 
+def _loaded_conftests(directory: str) -> list:
+    """List the conftest.py files pytest loads for one test directory.
+
+    pytest reads a conftest from every directory between --confcutdir and the
+    one it is handed, so the fixtures a suite is written against usually sit
+    several levels above the suite itself.
+    """
+    parts = Path(directory).parts
+    candidates = [Path(*parts[:depth]) for depth in range(1, len(parts) + 1)]
+    return [
+        _repo_relative(REPO_ROOT / candidate / "conftest.py")
+        for candidate in candidates
+        if (REPO_ROOT / candidate / "conftest.py").exists()
+    ]
+
+
 def _push_triggered_workflows() -> dict:
     """Map each workflow GitHub starts from a push to the paths it matches on."""
     triggered = {}
@@ -886,6 +902,28 @@ class TestPushTriggeredWorkflows:
 
         assert not unnamed, (
             "Push triggers that miss a test they run:\n  " + "\n  ".join(unnamed)
+        )
+
+    def test_a_push_triggered_workflow_names_the_conftests_it_loads(self) -> None:
+        """Verify every conftest.py such a workflow's tests load is in its paths.
+
+        A suite's fixtures live in the conftest files above it, not only in the
+        directory the workflow hands to pytest. A paths list that names the
+        directory and not those files never re-runs the suite when the fixtures
+        change, so a fixture edit that breaks or quietly weakens a dozen
+        endpoints' tests starts nothing, and surfaces on whichever unrelated
+        push happens to touch that workflow next.
+        """
+        unnamed = [
+            f"{name}: loads {conftest}, which its paths do not name"
+            for name, paths in sorted(_push_triggered_workflows().items())
+            for directory in _test_directories(name)
+            for conftest in _loaded_conftests(directory)
+            if not any(_glob_matches(glob, conftest) for glob in paths)
+        ]
+
+        assert not unnamed, (
+            "Push triggers that miss a conftest they load:\n  " + "\n  ".join(unnamed)
         )
 
     def test_a_push_triggered_workflow_names_no_whole_tree_glob(self) -> None:

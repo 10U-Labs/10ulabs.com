@@ -201,7 +201,10 @@ on:
       - lib/python/lambda_http/**
       - lib/terraform/common/**
       - src/api/operational/diagnostics/**
+      - test/api/conftest.py
+      - test/api/operational/conftest.py
       - test/api/operational/diagnostics/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

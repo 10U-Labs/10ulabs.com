@@ -224,6 +224,7 @@ on:
       - lib/terraform/common/**
       - src/bootstrap/**
       - test/bootstrap/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

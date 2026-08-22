@@ -206,8 +206,11 @@ on:
       - lib/terraform/common/**
       - src/api/endpoints/runners/*.tf
       - src/api/endpoints/runners/lambda/**
+      - test/api/conftest.py
+      - test/api/endpoints/conftest.py
       - test/api/endpoints/runners/post_deployment/**
       - test/api/endpoints/runners/pre_deployment/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

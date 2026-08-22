@@ -212,6 +212,9 @@ on:
     paths:
       - .github/workflows/www_home.yml
       - src/www/paths/home/**
+      - test/conftest.py
+      - test/www/conftest.py
+      - test/www/paths/conftest.py
       - test/www/paths/home/**
   workflow_dispatch:
     inputs:

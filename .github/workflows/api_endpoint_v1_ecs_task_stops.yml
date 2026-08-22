@@ -199,7 +199,9 @@ on:
       - lib/terraform/common/**
       - src/api/endpoints/ecs_task_stops/**
       - test/api/conftest.py
+      - test/api/endpoints/conftest.py
       - test/api/endpoints/ecs_task_stops/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

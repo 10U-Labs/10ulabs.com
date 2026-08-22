@@ -207,7 +207,11 @@ on:
       - lib/terraform/common/**
       - src/api/endpoints/runners/ec2/images/*.tf
       - src/api/endpoints/runners/ec2/images/lambda/**
+      - test/api/conftest.py
+      - test/api/endpoints/conftest.py
+      - test/api/endpoints/runners/ec2/conftest.py
       - test/api/endpoints/runners/ec2/images/endpoint/**
+      - test/conftest.py
       - test/lib/python/test_lambda_http/**
   workflow_dispatch:
     inputs:

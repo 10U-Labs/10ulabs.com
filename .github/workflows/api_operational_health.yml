@@ -197,7 +197,10 @@ on:
       - .github/workflows/api_operational_health.yml
       - lib/terraform/common/**
       - src/api/operational/health/**
+      - test/api/conftest.py
+      - test/api/operational/conftest.py
       - test/api/operational/health/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

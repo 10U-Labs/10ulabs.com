@@ -210,10 +210,12 @@ on:
       - src/api/endpoints/runners/ec2/*.tfvars
       - src/api/endpoints/runners/ec2/lambda/**
       - test/api/conftest.py
+      - test/api/endpoints/conftest.py
       - test/api/endpoints/runners/ec2/__init__.py
       - test/api/endpoints/runners/ec2/conftest.py
       - test/api/endpoints/runners/ec2/post_deployment/**
       - test/api/endpoints/runners/ec2/pre_deployment/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

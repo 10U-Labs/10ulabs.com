@@ -191,7 +191,10 @@ on:
       - .github/workflows/api_common_docker_repository.yml
       - lib/terraform/common/**
       - src/api/common/docker_repository/**
+      - test/api/common/conftest.py
       - test/api/common/docker_repository/**
+      - test/api/conftest.py
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

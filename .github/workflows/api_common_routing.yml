@@ -227,8 +227,10 @@ on:
       - lib/terraform/common/**
       - src/api/common/routing/**
       - src/www/api/**
+      - test/api/common/conftest.py
       - test/api/common/routing/**
       - test/api/conftest.py
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

@@ -199,7 +199,9 @@ on:
       - lib/terraform/common/**
       - src/api/endpoints/github_workflows/retries/**
       - test/api/conftest.py
+      - test/api/endpoints/conftest.py
       - test/api/endpoints/github_workflows/retries/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

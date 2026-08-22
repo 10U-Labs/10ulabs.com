@@ -186,7 +186,10 @@ on:
       - .github/workflows/api_common_networking.yml
       - lib/terraform/common/**
       - src/api/common/networking/**
+      - test/api/common/conftest.py
       - test/api/common/networking/**
+      - test/api/conftest.py
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

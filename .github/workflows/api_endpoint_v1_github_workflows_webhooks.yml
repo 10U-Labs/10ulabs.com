@@ -212,7 +212,9 @@ on:
       - lib/terraform/common/**
       - src/api/endpoints/github_workflows/webhooks/**
       - test/api/conftest.py
+      - test/api/endpoints/conftest.py
       - test/api/endpoints/github_workflows/webhooks/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

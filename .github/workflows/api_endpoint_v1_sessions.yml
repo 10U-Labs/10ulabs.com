@@ -205,7 +205,10 @@ on:
       - .github/workflows/api_endpoint_v1_sessions.yml
       - lib/terraform/common/**
       - src/api/endpoints/sessions/**
+      - test/api/conftest.py
+      - test/api/endpoints/conftest.py
       - test/api/endpoints/sessions/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

@@ -378,7 +378,11 @@ on:
       - lib/python/ec2_fleet/**
       - lib/terraform/common/**
       - src/api/endpoints/runners/ec2/images/post/**
+      - test/api/conftest.py
+      - test/api/endpoints/conftest.py
+      - test/api/endpoints/runners/ec2/conftest.py
       - test/api/endpoints/runners/ec2/images/post/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

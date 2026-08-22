@@ -202,7 +202,10 @@ on:
       - .github/workflows/api_endpoint_v1_rack_configurations.yml
       - lib/terraform/common/**
       - src/api/endpoints/rack_configurations/**
+      - test/api/conftest.py
+      - test/api/endpoints/conftest.py
       - test/api/endpoints/rack_configurations/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

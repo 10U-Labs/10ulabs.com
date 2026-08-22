@@ -793,6 +793,7 @@ on:
       - .github/workflows/scripts.yml
       - lib/python/**
       - scripts/**
+      - test/conftest.py
       - test/lib/python/**
       - test/scripts/**
   workflow_dispatch:

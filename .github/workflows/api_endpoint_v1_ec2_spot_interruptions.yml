@@ -199,7 +199,9 @@ on:
       - lib/terraform/common/**
       - src/api/endpoints/ec2_spot_interruptions/**
       - test/api/conftest.py
+      - test/api/endpoints/conftest.py
       - test/api/endpoints/ec2_spot_interruptions/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

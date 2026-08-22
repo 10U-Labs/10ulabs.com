@@ -199,7 +199,9 @@ on:
       - lib/terraform/common/**
       - src/api/endpoints/runners/cleanups/**
       - test/api/conftest.py
+      - test/api/endpoints/conftest.py
       - test/api/endpoints/runners/cleanups/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

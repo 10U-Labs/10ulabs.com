@@ -199,10 +199,12 @@ on:
       - src/api/endpoints/runners/ecs/*.tf
       - src/api/endpoints/runners/ecs/lambda/**
       - test/api/conftest.py
+      - test/api/endpoints/conftest.py
       - test/api/endpoints/runners/ecs/__init__.py
       - test/api/endpoints/runners/ecs/conftest.py
       - test/api/endpoints/runners/ecs/post_deployment/**
       - test/api/endpoints/runners/ecs/pre_deployment/**
+      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:

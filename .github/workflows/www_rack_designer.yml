@@ -138,6 +138,9 @@ on:
     paths:
       - .github/workflows/www_rack_designer.yml
       - src/www/paths/rack_designer/**
+      - test/conftest.py
+      - test/www/conftest.py
+      - test/www/paths/conftest.py
       - test/www/paths/rack_designer/**
   workflow_dispatch:
     inputs:
