@@ -59,16 +59,6 @@ WORKFLOW_LITERAL = re.compile(r"['\"]([\w-]+)\.yml['\"]")
 # The controller itself, which is started by every push and names no paths.
 CONTROLLER = "workflowctl"
 
-# The two workflows that bake a machine image. An image build runs for the best
-# part of an hour on an instance sized to compile, and neither of them produces
-# anything a commit needs, so they are started by the endpoint that wants a new
-# image and never by a push.
-DISPATCH_ONLY = (
-    "api_endpoint_v1_runners_ec2_images_post",
-    "api_endpoint_v1_runners_ecs_images_post",
-)
-
-
 @pytest.fixture(scope="module")
 def dependency_graph() -> dict:
     """Load the workflow dependency graph."""
@@ -101,9 +91,10 @@ def _declared_packages(paths: list, prefix: str) -> list:
 def _python_files_under(path_glob: str) -> list:
     """List the Python files a path glob matches.
 
-    The literal part only says where to start looking: 'src/.../runners/*.tf'
-    reaches no Python at all, and 'src/.../runners/ec2/**' reaches the images
-    node nested inside it. Matching the whole glob is what tells them apart.
+    The literal part only says where to start looking: 'src/.../webhooks/*.tf'
+    reaches no Python at all, and 'src/api/endpoints/github_workflows/**'
+    reaches every node nested inside it. Matching the whole glob is what tells
+    them apart.
     """
     root = REPO_ROOT / Path(path_glob.split("*")[0])
     if not root.is_dir():
@@ -160,8 +151,9 @@ def _matches_glob(glob: str, path: str) -> bool:
 def _owning_node(graph: dict, path: str) -> str:
     """Name the node a file under src/ belongs to.
 
-    Node paths nest — 'src/api/endpoints/runners/ec2/**' contains the images
-    node — so the owner is the one whose matching glob is most specific.
+    Node paths nest — 'src/api/endpoints/github_workflows/**' contains the
+    webhooks node — so the owner is the one whose matching glob is most
+    specific.
     """
     owner, longest = "", -1
     for key, config in graph.items():
@@ -1147,30 +1139,6 @@ class TestBootstrapCanBeAppliedIntoAnEmptyAccount:
         assert "workflow_dispatch" in triggers, (
             "bootstrap.yml can only be started by a push, so an account with no "
             "state bucket and no OIDC role has no way to deploy it"
-        )
-
-
-class TestAnImageBuildIsOnlyEverAskedFor:
-    """Tests that the two workflows which bake a machine image cost nothing idle."""
-
-    @pytest.mark.parametrize("name", DISPATCH_ONLY)
-    def test_the_workflow_has_no_push_trigger(self, name: str) -> None:
-        """Verify an image build starts only when an endpoint asks for one.
-
-        Both of these run a build on an instance sized to compile and produce
-        an AMI or a container image that no commit is waiting on. They used to
-        name lib/terraform/common in their paths, which every stack reads, so
-        an edit to a shared local started two image builds that nobody wanted
-        and the account was billed for both.
-        """
-        document = yaml.safe_load(
-            (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
-        )
-        triggers = document.get(True) or document.get("on") or {}
-
-        assert "push" not in triggers, (
-            f"{name}.yml starts on a push, so an edit to a path it names bakes "
-            "an image nothing asked for"
         )
 
 

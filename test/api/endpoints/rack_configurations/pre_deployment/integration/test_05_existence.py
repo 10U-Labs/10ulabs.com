@@ -9,8 +9,6 @@ Seven-layer testing model:
 
 from test_fixtures.integration import (
     assert_api_gateway_exists,
-    create_ecs_runner_outputs_tests,
-    create_ecs_runner_lambda_existence_tests,
     create_www_common_s3_existence_tests,
 )
 
@@ -33,6 +31,4 @@ class TestAPIBackendPrerequisites:
         assert True  # Explicit pass
 
 
-TestECSRunnerOutputs = create_ecs_runner_outputs_tests()
-TestECSRunnerLambdaExistence = create_ecs_runner_lambda_existence_tests()
 TestWWWSharedPrerequisites = create_www_common_s3_existence_tests()

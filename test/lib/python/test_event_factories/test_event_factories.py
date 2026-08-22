@@ -10,7 +10,6 @@ from event_factories import (
     dlq_message_factory,
     create_circuit_breaker_closed_state,
     create_circuit_breaker_open_state,
-    create_ecs_runner_post_event,
 )
 
 
@@ -28,7 +27,7 @@ class TestCreateWorkflowJobEvent:
     def test_has_correct_path(self):
         """create_workflow_job_event has correct path."""
         result = create_workflow_job_event()
-        assert result["path"] == "/v1/runners"
+        assert result["path"] == "/v1/github-workflows/webhooks"
 
     def test_has_correct_http_method(self):
         """create_workflow_job_event has POST method."""
@@ -307,59 +306,4 @@ class TestCreateCircuitBreakerOpenState:
         assert isinstance(result["last_failure_time"], float)
 
 
-# === create_ecs_runner_post_event ===
 
-
-class TestCreateEcsRunnerPostEvent:
-    """Tests for create_ecs_runner_post_event function."""
-
-    def test_returns_dict(self):
-        """create_ecs_runner_post_event returns a dictionary."""
-        result = create_ecs_runner_post_event()
-        assert isinstance(result, dict)
-
-    def test_has_correct_path(self):
-        """create_ecs_runner_post_event has correct path."""
-        result = create_ecs_runner_post_event()
-        assert result["path"] == "/v1/runners/ecs"
-
-    def test_has_post_method(self):
-        """create_ecs_runner_post_event has POST method."""
-        result = create_ecs_runner_post_event()
-        assert result["httpMethod"] == "POST"
-
-    def test_default_job_id(self):
-        """create_ecs_runner_post_event default job_id is 123."""
-        result = create_ecs_runner_post_event()
-        body = json.loads(result["body"])
-        assert body["job_id"] == 123
-
-    def test_custom_job_id(self):
-        """create_ecs_runner_post_event uses custom job_id."""
-        result = create_ecs_runner_post_event(job_id=999)
-        body = json.loads(result["body"])
-        assert body["job_id"] == 999
-
-    def test_default_job_labels(self):
-        """create_ecs_runner_post_event default labels."""
-        result = create_ecs_runner_post_event()
-        body = json.loads(result["body"])
-        assert body["job_labels"] == ["fargate", "self-hosted"]
-
-    def test_custom_job_labels(self):
-        """create_ecs_runner_post_event uses custom labels."""
-        result = create_ecs_runner_post_event(job_labels=["custom"])
-        body = json.loads(result["body"])
-        assert body["job_labels"] == ["custom"]
-
-    def test_default_github_repo(self):
-        """create_ecs_runner_post_event default repo."""
-        result = create_ecs_runner_post_event()
-        body = json.loads(result["body"])
-        assert body["github_repo"] == "test/repo"
-
-    def test_custom_github_repo(self):
-        """create_ecs_runner_post_event uses custom repo."""
-        result = create_ecs_runner_post_event(github_repo="owner/name")
-        body = json.loads(result["body"])
-        assert body["github_repo"] == "owner/name"

@@ -4,9 +4,6 @@ locals {
   resource_prefix     = "TenULabs"
   ssm_github_pat_name = "/github/pat"
 
-  # Runner configuration for self-hosted GitHub Actions runners
-  runners_config = jsondecode(file("${path.module}/../../../etc/runners.json"))
-
   # AgentCore shared infrastructure
   agentcore = {
     execution_role_name = "${local.resource_prefix}AgentCoreExecutionRole"
@@ -26,16 +23,10 @@ locals {
     circuit_open_recoveries   = "${local.resource_prefix}CircuitOpenRecoveriesHandler"
     circuit_open_remediations = "${local.resource_prefix}CircuitOpenRemediationsHandler"
     contact                   = "${local.resource_prefix}ContactHandler"
-    ec2_runner                = "${local.resource_prefix}EC2RunnerHandler"
-    ecs_runner                = "${local.resource_prefix}EcsRunnerHandler"
     echo                      = "${local.resource_prefix}DiagnosticsHandler"
     github_workflows_retries  = "${local.resource_prefix}GithubWorkflowsRetriesHandler"
     health                    = "${local.resource_prefix}HealthHandler"
-    image_for_ec2_runners     = "${local.resource_prefix}ImageForEC2RunnersHandler"
-    image_for_ecs_runners     = "${local.resource_prefix}ImageForEcsRunnersHandler"
     rack_configurations       = "${local.resource_prefix}RackConfigurationsHandler"
-    runners                   = "${local.resource_prefix}RunnersHandler"
-    runners_cleanup           = "${local.resource_prefix}RunnersCleanupHandler"
     sessions                  = "${local.resource_prefix}SessionsHandler"
     webhook                   = "${local.resource_prefix}WebhookHandler"
   }

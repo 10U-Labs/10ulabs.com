@@ -34,26 +34,6 @@ from common.webhook_ingress import (
     is_webhook_ingress_queue,
     IngressHandler,
 )
-from runner_labels import (
-    LabelParseError,
-    LabelValidationError,
-    parse_labels,
-    validate_labels,
-    get_instance_type,
-    get_ecs_config,
-    get_task_architecture,
-    is_spot,
-    get_runner_id_number,
-    get_runner_type_from_labels,
-    PLATFORMS,
-    PRICING_MODELS,
-    ECS_COMPUTE,
-    ECS_ARCHITECTURES,
-    EC2_COMPUTE,
-    EC2_ARCHITECTURES,
-    COMPUTE_TYPES,
-    ALL_ARCHITECTURES,
-)
 
 __all__ = [
     # aws_clients
@@ -71,25 +51,6 @@ __all__ = [
     "get_github_token",
     "clear_token_cache",
     "github_api_request",
-    # runner_labels
-    "LabelParseError",
-    "LabelValidationError",
-    "parse_labels",
-    "validate_labels",
-    "get_instance_type",
-    "get_ecs_config",
-    "get_task_architecture",
-    "is_spot",
-    "get_runner_id_number",
-    "get_runner_type_from_labels",
-    "PLATFORMS",
-    "PRICING_MODELS",
-    "ECS_COMPUTE",
-    "ECS_ARCHITECTURES",
-    "EC2_COMPUTE",
-    "EC2_ARCHITECTURES",
-    "COMPUTE_TYPES",
-    "ALL_ARCHITECTURES",
     # ec2_utils
     "terminate_ec2_instance",
     "find_instances_by_tags",

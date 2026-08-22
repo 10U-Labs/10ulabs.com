@@ -343,43 +343,43 @@ class TestGetResourcePrefix:
         assert len(result) > 0
 
 
-class TestGetRunnersResourceNames:
-    """Tests for get_runners_resource_names function."""
+class TestGetWebhooksResourceNames:
+    """Tests for get_webhooks_resource_names function."""
 
     def test_returns_dict(self):
-        """Test get_runners_resource_names returns a dict."""
-        from terraform_config import get_runners_resource_names
-        result = get_runners_resource_names()
+        """Test get_webhooks_resource_names returns a dict."""
+        from terraform_config import get_webhooks_resource_names
+        result = get_webhooks_resource_names()
         assert isinstance(result, dict)
 
     def test_contains_idempotency_table_key(self):
-        """Test get_runners_resource_names contains idempotency_table key."""
-        from terraform_config import get_runners_resource_names
-        result = get_runners_resource_names()
+        """Test get_webhooks_resource_names contains idempotency_table key."""
+        from terraform_config import get_webhooks_resource_names
+        result = get_webhooks_resource_names()
         assert "idempotency_table" in result
 
     def test_contains_circuit_breaker_state_table_key(self):
-        """Test get_runners_resource_names contains circuit_breaker_state_table key."""
-        from terraform_config import get_runners_resource_names
-        result = get_runners_resource_names()
+        """Test get_webhooks_resource_names contains circuit_breaker_state_table key."""
+        from terraform_config import get_webhooks_resource_names
+        result = get_webhooks_resource_names()
         assert "circuit_breaker_state_table" in result
 
     def test_contains_job_queue_key(self):
-        """Test get_runners_resource_names contains job_queue key."""
-        from terraform_config import get_runners_resource_names
-        result = get_runners_resource_names()
+        """Test get_webhooks_resource_names contains job_queue key."""
+        from terraform_config import get_webhooks_resource_names
+        result = get_webhooks_resource_names()
         assert "job_queue" in result
 
     def test_contains_job_dlq_key(self):
-        """Test get_runners_resource_names contains job_dlq key."""
-        from terraform_config import get_runners_resource_names
-        result = get_runners_resource_names()
+        """Test get_webhooks_resource_names contains job_dlq key."""
+        from terraform_config import get_webhooks_resource_names
+        result = get_webhooks_resource_names()
         assert "job_dlq" in result
 
     def test_custom_prefix_applies_to_circuit_breaker_state_table(self):
-        """Test get_runners_resource_names applies custom prefix to circuit_breaker_state_table."""
-        from terraform_config import get_runners_resource_names
-        result = get_runners_resource_names(prefix="Custom")
+        """Test get_webhooks_resource_names applies custom prefix to circuit_breaker_state_table."""
+        from terraform_config import get_webhooks_resource_names
+        result = get_webhooks_resource_names(prefix="Custom")
         assert result["circuit_breaker_state_table"].startswith("Custom")
 
 

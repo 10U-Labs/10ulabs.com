@@ -83,51 +83,6 @@ def test_openapi_spec_github_workflows_webhooks_has_post_method(openapi_spec):
     assert 'post' in openapi_spec['paths']['/v1/github-workflows/webhooks']
 
 
-def test_openapi_spec_has_ec2_ami_base_endpoint(openapi_spec):
-    """Verify spec has /v1/runners/ec2/images endpoint."""
-    assert '/v1/runners/ec2/images' in openapi_spec['paths']
-
-
-def test_openapi_spec_has_ec2_ami_latest_endpoint(openapi_spec):
-    """Verify spec has /v1/runners/ec2/images/latest endpoint."""
-    assert '/v1/runners/ec2/images/latest' in openapi_spec['paths']
-
-
-def test_openapi_spec_has_ec2_ami_delete_endpoint(openapi_spec):
-    """Verify spec has /v1/runners/ec2/images/{ami_id} endpoint."""
-    assert '/v1/runners/ec2/images/{ami_id}' in openapi_spec['paths']
-
-
-def test_openapi_spec_has_ecs_runner_endpoint(openapi_spec):
-    """Verify spec has /v1/runners/ecs endpoint."""
-    assert '/v1/runners/ecs' in openapi_spec['paths']
-
-
-def test_openapi_spec_ecs_runner_has_post_method(openapi_spec):
-    """Verify /v1/runners/ecs has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/runners/ecs']
-
-
-def test_openapi_spec_ecs_runner_has_get_method(openapi_spec):
-    """Verify /v1/runners/ecs has GET method."""
-    assert 'get' in openapi_spec['paths']['/v1/runners/ecs']
-
-
-def test_openapi_spec_does_not_have_ecs_runner_latest(openapi_spec):
-    """Verify spec does not have /v1/runners/ecs/latest endpoint."""
-    assert '/v1/runners/ecs/latest' not in openapi_spec['paths']
-
-
-def test_openapi_spec_has_ec2_runner_endpoint(openapi_spec):
-    """Verify spec has /v1/runners/ec2 endpoint."""
-    assert '/v1/runners/ec2' in openapi_spec['paths']
-
-
-def test_openapi_spec_ec2_runner_has_post_method(openapi_spec):
-    """Verify /v1/runners/ec2 has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/runners/ec2']
-
-
 def test_openapi_spec_has_catchall_endpoint(openapi_spec):
     """Verify spec has /{proxy+} catchall endpoint."""
     assert '/{proxy+}' in openapi_spec['paths']
@@ -196,71 +151,6 @@ def test_openapi_spec_health_options_allows_wildcard_origin(openapi_spec):
     origin_key = 'method.response.header.Access-Control-Allow-Origin'
     origin_value = response_params[origin_key]
     assert "'*'" in origin_value
-
-
-def test_openapi_spec_has_ecs_image_base_endpoint(openapi_spec):
-    """Verify spec has /v1/runners/ecs/images endpoint."""
-    assert '/v1/runners/ecs/images' in openapi_spec['paths']
-
-
-def test_openapi_spec_ecs_image_has_get_method(openapi_spec):
-    """Verify /v1/runners/ecs/images has GET method."""
-    assert 'get' in openapi_spec['paths']['/v1/runners/ecs/images']
-
-
-def test_openapi_spec_ecs_image_has_post_method(openapi_spec):
-    """Verify /v1/runners/ecs/images has POST method."""
-    assert 'post' in openapi_spec['paths']['/v1/runners/ecs/images']
-
-
-def test_openapi_spec_ecs_image_has_options_method(openapi_spec):
-    """Verify /v1/runners/ecs/images has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/runners/ecs/images']
-
-
-def test_openapi_spec_has_ecs_image_latest_endpoint(openapi_spec):
-    """Verify spec has /v1/runners/ecs/images/latest endpoint."""
-    assert '/v1/runners/ecs/images/latest' in openapi_spec['paths']
-
-
-def test_openapi_spec_ecs_image_latest_has_get_method(openapi_spec):
-    """Verify /v1/runners/ecs/images/latest has GET method."""
-    assert 'get' in openapi_spec['paths']['/v1/runners/ecs/images/latest']
-
-
-def test_openapi_spec_ecs_image_latest_has_options_method(openapi_spec):
-    """Verify /v1/runners/ecs/images/latest has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/runners/ecs/images/latest']
-
-
-def test_openapi_spec_has_ecs_image_digest_endpoint(openapi_spec):
-    """Verify spec has /v1/runners/ecs/images/{digest} endpoint."""
-    assert '/v1/runners/ecs/images/{digest}' in openapi_spec['paths']
-
-
-def test_openapi_spec_ecs_image_digest_has_get_method(openapi_spec):
-    """Verify /v1/runners/ecs/images/{digest} has GET method."""
-    assert 'get' in openapi_spec['paths']['/v1/runners/ecs/images/{digest}']
-
-
-def test_openapi_spec_ecs_image_digest_has_delete_method(openapi_spec):
-    """Verify /v1/runners/ecs/images/{digest} has DELETE method."""
-    assert 'delete' in openapi_spec['paths']['/v1/runners/ecs/images/{digest}']
-
-
-def test_openapi_spec_ecs_image_digest_has_options_method(openapi_spec):
-    """Verify /v1/runners/ecs/images/{digest} has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/runners/ecs/images/{digest}']
-
-
-def test_openapi_spec_ec2_runner_has_get_method(openapi_spec):
-    """Verify /v1/runners/ec2 has GET method."""
-    assert 'get' in openapi_spec['paths']['/v1/runners/ec2']
-
-
-def test_openapi_spec_ec2_runner_has_options_method(openapi_spec):
-    """Verify /v1/runners/ec2 has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/runners/ec2']
 
 
 def test_openapi_spec_has_contact_submissions_endpoint(openapi_spec):
@@ -333,26 +223,6 @@ def test_openapi_spec_diagnostics_echo_has_options_method(openapi_spec):
 def test_openapi_spec_github_workflows_webhooks_has_options_method(openapi_spec):
     """Verify /v1/github-workflows/webhooks has OPTIONS method."""
     assert 'options' in openapi_spec['paths']['/v1/github-workflows/webhooks']
-
-
-def test_openapi_spec_ec2_ami_base_has_options_method(openapi_spec):
-    """Verify /v1/runners/ec2/images has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/runners/ec2/images']
-
-
-def test_openapi_spec_ec2_ami_latest_has_options_method(openapi_spec):
-    """Verify /v1/runners/ec2/images/latest has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/runners/ec2/images/latest']
-
-
-def test_openapi_spec_ec2_ami_delete_has_options_method(openapi_spec):
-    """Verify /v1/runners/ec2/images/{ami_id} has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/runners/ec2/images/{ami_id}']
-
-
-def test_openapi_spec_ecs_runner_has_options_method(openapi_spec):
-    """Verify /v1/runners/ecs has OPTIONS method."""
-    assert 'options' in openapi_spec['paths']['/v1/runners/ecs']
 
 
 def test_openapi_spec_has_request_validators(openapi_spec):

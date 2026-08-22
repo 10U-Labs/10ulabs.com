@@ -207,8 +207,6 @@ class TestLambdaEnvironmentVariables:
     def test_webhook_handler_has_required_env_vars(self, lambda_tf_content):
         """Verify webhook handler has required environment variables."""
         required_vars = [
-            "API_BASE_URL",
-            "API_KEY_PARAMETER_NAME",
             "CIRCUIT_OPEN_TABLE_NAME",
             "GITHUB_REPO",
             "GITHUB_TOKEN_SECRET_NAME",

@@ -2,7 +2,6 @@ locals {
   api_fqdn         = "api.${module.common.domain_name}"
   aws_account_id   = module.common.aws_account_id
   aws_region       = module.common.aws_region
-  etc_dir          = "${path.module}/../../../../../etc"
   github_org       = module.common.github_org
   github_repo      = module.common.name_for_github_repo
   github_repo_full = "${module.common.github_org}/${module.common.name_for_github_repo}"

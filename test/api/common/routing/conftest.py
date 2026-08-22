@@ -2,8 +2,6 @@
 from pathlib import Path
 from typing import Any, Dict, List
 
-from test.api.conftest import get_runner_labels
-
 import boto3
 import pytest
 from test_fixtures.config import parse_tfvars_file, parse_locals_file
@@ -74,10 +72,6 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     ssm_param = parse_bootstrap_tfvar('ssm_parameter_name_for_github_pat')
     result['ssm_parameter_name_for_github_pat'] = ssm_param
     _add_derived_config(result)
-    result['ec2_runner_ami_purpose_tag'] = api_locals.get('ec2_runner_ami_purpose_tag', '')
-    result['ec2_runner_ami_purpose_value'] = api_locals.get('ec2_runner_ami_purpose_value', '')
-    result['ec2_runner_ami_stable_tag'] = api_locals.get('ec2_runner_ami_stable_tag', '')
-    result.update(get_runner_labels())
     health_config = parse_health_tfvars()
     result['health_handler_function_name'] = health_config.get('health_handler_function_name', '')
     result['health_handler_log_group_name'] = health_config.get('health_handler_log_group_name', '')

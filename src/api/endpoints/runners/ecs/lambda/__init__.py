@@ -1,1 +1,0 @@
-"""ECS runner Lambda package."""

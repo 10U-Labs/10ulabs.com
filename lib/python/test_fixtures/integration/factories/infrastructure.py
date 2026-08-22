@@ -6,98 +6,6 @@ from test_fixtures.integration.helpers import check_iam_role_exists, check_lambd
 from test_fixtures.terraform import terraform_init, terraform_output
 
 
-def create_ecs_runner_outputs_tests():
-    """Create tests for ECS runner terraform outputs existence.
-
-    Tests that ecs_runner terraform outputs are accessible.
-    Requires `ecs_runner_outputs` fixture.
-
-    Returns:
-        Test class with ECS runner output tests
-    """
-
-    class TestECSRunnerOutputs:
-        """Verify ecs_runner terraform outputs are accessible."""
-
-        def test_task_definition_arn_output_exists(self, ecs_runner_outputs):
-            """Verify task_definition_arn output is available."""
-            assert ecs_runner_outputs.get("task_definition_arn"), (
-                "task_definition_arn output not found in ecs_runner. "
-                "Run terraform apply in src/api/endpoints/ecs_runner/"
-            )
-
-        def test_cluster_arn_output_exists(self, ecs_runner_outputs):
-            """Verify cluster_arn output is available."""
-            assert ecs_runner_outputs.get("cluster_arn"), (
-                "cluster_arn output not found in ecs_runner. "
-                "Run terraform apply in src/api/endpoints/ecs_runner/"
-            )
-
-        def test_cluster_name_output_exists(self, ecs_runner_outputs):
-            """Verify cluster_name output is available."""
-            assert ecs_runner_outputs.get("cluster_name"), (
-                "cluster_name output not found in ecs_runner. "
-                "Run terraform apply in src/api/endpoints/ecs_runner/"
-            )
-
-        def test_lambda_function_name_output_exists(self, ecs_runner_outputs):
-            """Verify lambda_function_name output is available."""
-            assert ecs_runner_outputs.get("lambda_function_name"), (
-                "lambda_function_name output not found in ecs_runner. "
-                "Run terraform apply in src/api/endpoints/ecs_runner/"
-            )
-
-    return TestECSRunnerOutputs
-
-
-def create_ecs_runner_lambda_existence_tests():
-    """Create tests for ECS runner Lambda function existence.
-
-    Used by endpoints that depend on the ECS runner Lambda function.
-    Requires `lambda_client` and `ecs_runner_outputs` fixtures.
-
-    Returns:
-        Test class with ECS runner Lambda existence tests
-    """
-
-    class TestECSRunnerLambdaExistence:
-        """Verify the ECS runner Lambda function exists in AWS."""
-
-        def test_lambda_function_exists(self, lambda_client, ecs_runner_outputs):
-            """Verify the ECS runner Lambda function exists."""
-            function_name = ecs_runner_outputs.get("lambda_function_name")
-            if not function_name:
-                pytest.skip("lambda_function_name output not available")
-            try:
-                lambda_client.get_function(FunctionName=function_name)
-            except ClientError as e:
-                if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                    pytest.fail(
-                        f"Lambda function '{function_name}' does not exist. "
-                        "Run terraform apply in src/api/endpoints/ecs_runner/"
-                    )
-                raise
-
-        def test_lambda_function_is_active(self, lambda_client, ecs_runner_outputs):
-            """Verify the ECS runner Lambda function is active."""
-            function_name = ecs_runner_outputs.get("lambda_function_name")
-            if not function_name:
-                pytest.skip("lambda_function_name output not available")
-            try:
-                response = lambda_client.get_function(FunctionName=function_name)
-                state = response["Configuration"]["State"]
-                assert state == "Active", (
-                    f"Lambda function '{function_name}' is not active (state: {state}). "
-                    "Check Lambda function configuration."
-                )
-            except ClientError as e:
-                if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                    pytest.skip("Lambda function does not exist")
-                raise
-
-    return TestECSRunnerLambdaExistence
-
-
 def create_www_common_fixtures(
     include_cloudfront: bool = False,
     include_website_domain: bool = False,
@@ -294,8 +202,8 @@ def handle_ecr_error(error: ClientError, operation: str, repository_name: str) -
 
 def create_security_group_existence_test(
     outputs_fixture: str,
-    sg_id_key: str = "runner_security_group_id",
-    terraform_path: str = "src/api/common/networking",
+    sg_id_key: str,
+    terraform_path: str,
 ):
     """Create a security group existence test method.
 

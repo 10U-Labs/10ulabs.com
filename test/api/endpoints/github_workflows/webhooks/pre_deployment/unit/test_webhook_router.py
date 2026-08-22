@@ -62,10 +62,7 @@ def router_module_fixture():
     env_vars = {
         'WEBHOOK_SECRET_NAME': '/test/webhook-secret',
         'IDEMPOTENCY_TABLE_NAME': 'test-idempotency-table',
-        'JOB_QUEUE_URL': 'https://sqs.us-east-2.amazonaws.com/123456789/test-queue',
         'IGNORED_EVENTS_QUEUE_URL': 'https://sqs.us-east-2.amazonaws.com/123456789/ignored-queue',
-        'API_BASE_URL': 'https://api.example.com',
-        'API_KEY_PARAMETER_NAME': '/test/api-key',
         'ARCHIVE_BUCKET_NAME': 'test-archive-bucket',
     }
     with patch.dict('os.environ', env_vars):
@@ -77,7 +74,6 @@ def router_module_fixture():
                     )
                     # Reset cache between tests
                     module.cache["webhook_secret"] = None
-                    module.cache["api_key"] = None
                     module.cache["test_mode"] = False
                     yield module
 
@@ -124,51 +120,6 @@ class TestPublishMetric:
         with patch.object(router_module, 'common_publish_metric') as mock_pub:
             router_module.publish_metric("TestMetric", 1.0, "Count")
             assert mock_pub.call_count == 0
-
-
-class TestGetApiKey:
-    """Tests for get_api_key function."""
-
-    def test_returns_cached_api_key(self, router_module):
-        """Test that cached API key is returned without SSM call."""
-        router_module.cache["api_key"] = "cached-key"
-        result = router_module.get_api_key()
-        assert result == "cached-key"
-
-    def test_retrieves_api_key_from_ssm(self, router_module):
-        """Test that API key is retrieved from SSM when not cached."""
-        router_module.cache["api_key"] = None
-        with mock_ssm_client(router_module, "ssm-api-key") as mock_ssm:
-            with patch.object(router_module, 'get_ssm_client', return_value=mock_ssm):
-                result = router_module.get_api_key()
-                assert result == "ssm-api-key"
-
-    def test_caches_api_key_after_retrieval(self, router_module):
-        """Test that API key is cached after retrieval."""
-        router_module.cache["api_key"] = None
-        with mock_ssm_client(router_module, "new-api-key") as mock_ssm:
-            with patch.object(router_module, 'get_ssm_client', return_value=mock_ssm):
-                router_module.get_api_key()
-                assert router_module.cache["api_key"] == "new-api-key"
-
-    def test_raises_runtime_error_when_param_name_not_set(self, router_module):
-        """Test that RuntimeError is raised when parameter name not set."""
-        router_module.cache["api_key"] = None
-        with patch.dict('os.environ', {'API_KEY_PARAMETER_NAME': ''}):
-            with pytest.raises(RuntimeError, match=".*"):
-                router_module.get_api_key()
-
-    def test_raises_runtime_error_on_ssm_error(self, router_module):
-        """Test that RuntimeError is raised on SSM client error."""
-        router_module.cache["api_key"] = None
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.side_effect = ClientError(
-            {"Error": {"Code": "AccessDenied", "Message": "Access denied"}},
-            "GetParameter"
-        )
-        with patch.object(router_module, 'get_ssm_client', return_value=mock_ssm):
-            with pytest.raises(RuntimeError, match=".*"):
-                router_module.get_api_key()
 
 
 class TestVerifySignature:
@@ -299,35 +250,6 @@ class TestCheckAndRecordIdempotency:
             assert result is False
 
 
-class TestEnqueueJob:
-    """Tests for enqueue_job function."""
-
-    def test_returns_success_on_send(self, router_module):
-        """Test that successful send returns success."""
-        mock_sqs = MagicMock()
-        mock_sqs.send_message.return_value = {"MessageId": "msg-123"}
-        mock_sqs.get_queue_attributes.return_value = {
-            "Attributes": {"ApproximateNumberOfMessages": "5"}
-        }
-        with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
-            with patch.object(router_module, 'publish_metric'):
-                result = run_async(router_module.enqueue_job({"job_id": 123}))
-                assert result["success"] is True and result["message_id"] == "msg-123"
-
-    def test_returns_error_when_queue_url_not_set(self, router_module):
-        """Test that missing queue URL returns error."""
-        with patch.dict('os.environ', {'JOB_QUEUE_URL': ''}):
-            result = run_async(router_module.enqueue_job({"job_id": 123}))
-            assert result["success"] is False and "not configured" in result["error"]
-
-    def test_returns_error_on_sqs_failure(self, router_module):
-        """Test that SQS failure returns error."""
-        mock_sqs = _create_mock_sqs_with_error()
-        with patch.object(router_module, 'get_sqs_client', return_value=mock_sqs):
-            result = run_async(router_module.enqueue_job({"job_id": 123}))
-            assert result["success"] is False
-
-
 class TestArchiveIgnoredEvent:
     """Tests for archive_ignored_event function."""
 
@@ -380,104 +302,6 @@ class TestHandleWorkflowRun:
         result = router_module.handle_workflow_run(event_data)
         body = json.loads(result["body"])
         assert "requested" in body["message"]
-
-
-class TestHandleWorkflowJob:
-    """Tests for handle_workflow_job function."""
-
-    def test_ignores_non_queued_action(self, router_module):
-        """Test that non-queued action is ignored."""
-        event_data = {
-            "action": "completed",
-            "workflow_job": {"id": 123, "name": "test", "labels": [], "status": "completed"},
-            "repository": {"full_name": "test/repo"}
-        }
-        result = run_async(router_module.handle_workflow_job(event_data))
-        body = json.loads(result["body"])
-        assert result["statusCode"] == 200 and "Ignored action" in body["message"]
-
-    def test_returns_test_mode_response_when_enabled(self, router_module):
-        """Test that test mode returns test response without forwarding."""
-        router_module.cache["test_mode"] = True
-        event_data = {
-            "action": "queued",
-            "workflow_job": {
-                "id": 123,
-                "name": "test-job",
-                "labels": ["self-hosted"],
-                "status": "queued",
-                "run_id": 456
-            },
-            "repository": {"full_name": "test/repo"}
-        }
-        result = run_async(router_module.handle_workflow_job(event_data))
-        body = json.loads(result["body"])
-        assert result["statusCode"] == 200 and body["test_mode"] is True
-
-    def test_forwards_queued_job_to_runners(self, router_module):
-        """Test that queued job is forwarded to /v1/runners."""
-        router_module.cache["test_mode"] = False
-        event_data = _create_queued_workflow_job_event()
-        async def mock_post(*_args, **_kwargs):
-            return {"success": True}
-        with patch.object(router_module, 'post_to_runners', side_effect=mock_post):
-            result = run_async(router_module.handle_workflow_job(event_data))
-            body = json.loads(result["body"])
-            assert result["statusCode"] == 200 and "forwarded" in body["message"].lower()
-
-    def test_returns_500_when_forward_fails(self, router_module):
-        """Test that failed forward returns 500."""
-        router_module.cache["test_mode"] = False
-        event_data = _create_queued_workflow_job_event()
-        async def mock_post(*_args, **_kwargs):
-            return {"success": False, "error": "Network error"}
-        with patch.object(router_module, 'post_to_runners', side_effect=mock_post):
-            result = run_async(router_module.handle_workflow_job(event_data))
-            assert result["statusCode"] == 500
-
-
-class TestPostToRunners:
-    """Tests for post_to_runners function."""
-
-    def test_returns_error_when_api_base_url_not_set(self, router_module):
-        """Test that missing API base URL returns error."""
-        with patch.dict('os.environ', {'API_BASE_URL': ''}):
-            result = run_async(router_module.post_to_runners({"job_id": 123}))
-            assert result["success"] is False and "not configured" in result["error"]
-
-    def test_returns_error_when_api_key_unavailable(self, router_module):
-        """Test that unavailable API key returns error."""
-        with patch.object(router_module, 'get_api_key', side_effect=RuntimeError("No key")):
-            result = run_async(router_module.post_to_runners({"job_id": 123}))
-            assert result["success"] is False
-
-    def test_returns_success_on_successful_post(self, router_module):
-        """Test that successful POST returns success."""
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-        with patch.object(router_module, 'get_api_key', return_value="test-key"):
-            with patch('urllib.request.urlopen', return_value=mock_response):
-                result = run_async(router_module.post_to_runners({"job_id": 123}))
-                assert result["success"] is True and result["status_code"] == 200
-
-    def test_returns_error_on_http_error(self, router_module):
-        """Test that HTTP error returns error."""
-        with patch.object(router_module, 'get_api_key', return_value="test-key"):
-            with patch('urllib.request.urlopen', side_effect=urllib.error.HTTPError(
-                url="", code=500, msg="Internal Server Error", hdrs={}, fp=None
-            )):
-                result = run_async(router_module.post_to_runners({"job_id": 123}))
-                assert result["success"] is False and result["status_code"] == 500
-
-    def test_returns_error_on_url_error(self, router_module):
-        """Test that URL error returns error."""
-        url_err = urllib.error.URLError("Network error")
-        with patch.object(router_module, 'get_api_key', return_value="test-key"):
-            with patch('urllib.request.urlopen', side_effect=url_err):
-                result = run_async(router_module.post_to_runners({"job_id": 123}))
-                assert result["success"] is False
 
 
 class TestGetWebhookSecret:
@@ -577,18 +401,6 @@ class TestProcessWebhookEvent:
             result = run_async(router_module.process_webhook_event(event, headers, 0))
             body = json.loads(result["body"])
             assert result["statusCode"] == 200 and "Duplicate" in body["message"]
-
-    def test_handles_workflow_job_event(self, router_module):
-        """Test that workflow_job event is handled."""
-        event = {"body": json.dumps({
-            "action": "completed",
-            "workflow_job": {"id": 123, "name": "test", "labels": [], "status": "completed"},
-            "repository": {"full_name": "test/repo"}
-        })}
-        headers = {"x-github-event": "workflow_job", "x-github-delivery": "new-123"}
-        with _mock_idempotency_check(router_module):
-            result = run_async(router_module.process_webhook_event(event, headers, 0))
-            assert result["statusCode"] == 200
 
     def test_returns_error_on_signature_verification_failure(self, router_module):
         """Test that signature verification failure returns error."""
@@ -735,23 +547,6 @@ class TestIngressDeps:
             deps = handler.get_deps()
             result = run_async(deps.check_idempotency("delivery-id"))
             assert result is True
-
-    def test_ingress_deps_get_runner_type(self, router_module):
-        """Test IngressDeps.get_runner_type returns forwarded placeholder."""
-        handler = router_module.get_ingress_handler()
-        deps = handler.get_deps()
-        result = deps.get_runner_type(["self-hosted"])
-        assert result == ("forwarded", "runners")
-
-    def test_ingress_depsenqueue_job(self, router_module):
-        """Test IngressDeps.enqueue_job calls post_to_runners."""
-        async def mock_post(*_args, **_kwargs):
-            return {"success": True}
-        with patch.object(router_module, 'post_to_runners', side_effect=mock_post):
-            handler = router_module.get_ingress_handler()
-            deps = handler.get_deps()
-            result = run_async(deps.enqueue_job({"job": "data"}))
-            assert result["success"] is True
 
     def test_ingress_deps_enqueue_ignored(self, router_module):
         """Test IngressDeps.enqueue_ignored calls archive_ignored_event."""

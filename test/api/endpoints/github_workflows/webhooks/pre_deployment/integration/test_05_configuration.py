@@ -15,9 +15,7 @@ from botocore.exceptions import ClientError
 import pytest
 
 from repo_utils import REPO_ROOT
-from terraform_config import get_runners_resource_names
-
-
+from terraform_config import get_webhooks_resource_names
 
 
 RUNNERS_SRC = (
@@ -27,60 +25,8 @@ SQS_TF_FILE = RUNNERS_SRC / "sqs.tf"
 
 
 # =============================================================================
-# VPC Configuration
-# =============================================================================
-
-
-class TestVPCConfiguration:
-    """Layer 5: Verify VPC resources are properly configured."""
-
-    def test_vpc_is_available(self, vpc_info, api_common_networking_outputs):
-        """Verify the VPC is in available state."""
-        vpc_id = api_common_networking_outputs.get("vpc_id")
-        if not vpc_id:
-            pytest.skip("vpc_id output not available")
-        if vpc_info is None:
-            pytest.skip("VPC not found - covered by existence test")
-        assert vpc_info["State"] == "available", (
-            f"VPC {vpc_id} is in state '{vpc_info['State']}', not 'available'."
-        )
-
-    def test_subnets_are_available(self, subnets_info, api_common_networking_outputs):
-        """Verify all subnets are in available state."""
-        if not api_common_networking_outputs.get("public_subnets_ids"):
-            pytest.skip("public_subnets_ids output not available")
-        if not subnets_info:
-            pytest.skip("Subnets not found - covered by existence test")
-        for subnet in subnets_info:
-            assert subnet["State"] == "available", (
-                f"Subnet {subnet['SubnetId']} is in state '{subnet['State']}', "
-                "not 'available'."
-            )
-
-
-# =============================================================================
 # Lambda Configuration
 # =============================================================================
-
-
-class TestLambdaConfiguration:
-    """Layer 5: Verify Lambda functions are properly configured."""
-
-    def test_ec2_runner_lambda_is_active(self, lambda_client, ec2_runner_outputs):
-        """Verify the EC2 runner Lambda function is active."""
-        function_name = ec2_runner_outputs.get("lambda_function_name")
-        if not function_name:
-            pytest.skip("lambda_function_name output not available")
-        response = lambda_client.get_function(FunctionName=function_name)
-        assert response["Configuration"]["State"] == "Active"
-
-    def test_ecs_runner_lambda_is_active(self, lambda_client, ecs_runner_outputs):
-        """Verify the ECS runner Lambda function is active."""
-        function_name = ecs_runner_outputs.get("lambda_function_name")
-        if not function_name:
-            pytest.skip("lambda_function_name output not available")
-        response = lambda_client.get_function(FunctionName=function_name)
-        assert response["Configuration"]["State"] == "Active"
 
 
 # =============================================================================
@@ -117,7 +63,7 @@ class TestSQSNamingConventions:
 
     def test_webhook_dlq_uses_handler_prefix(self):
         """Verify webhook_dlq name uses the webhook handler name as prefix."""
-        resource_names = get_runners_resource_names()
+        resource_names = get_webhooks_resource_names()
         webhook_dlq = resource_names['webhook_dlq']
         assert webhook_dlq.startswith('TenULabs'), (
             f"Queue {webhook_dlq} doesn't follow naming convention. "
@@ -126,7 +72,7 @@ class TestSQSNamingConventions:
 
     def test_dlq_names_include_dlq_suffix(self):
         """Verify DLQ names include 'Dlq' suffix."""
-        resource_names = get_runners_resource_names()
+        resource_names = get_webhooks_resource_names()
         dlq_keys = [k for k in resource_names if 'dlq' in k]
         for key in dlq_keys:
             queue_name = resource_names[key]

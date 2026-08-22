@@ -1,1 +1,1 @@
-"""Pre-deployment integration tests for runners endpoint."""
+"""Pre-deployment integration tests for the webhooks endpoint."""

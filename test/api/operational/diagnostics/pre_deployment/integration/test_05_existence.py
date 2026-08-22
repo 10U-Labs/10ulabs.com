@@ -10,8 +10,6 @@ Seven-layer testing model:
 
 from test_fixtures.integration import (
     Layer4APIBackendPrerequisiteTests,
-    create_ecs_runner_outputs_tests,
-    create_ecs_runner_lambda_existence_tests,
 )
 
 
@@ -22,10 +20,3 @@ class TestAPIBackendPrerequisites(Layer4APIBackendPrerequisiteTests):
 
     All tests inherited from Layer4APIBackendPrerequisiteTests.
     """
-
-
-# Use factory-created test classes for ecs_runner tests
-# These factories include tests for task_definition_arn, cluster_arn,
-# cluster_name, and lambda_function_name outputs
-TestECSRunnerOutputs = create_ecs_runner_outputs_tests()
-TestECSRunnerLambdaExistence = create_ecs_runner_lambda_existence_tests()

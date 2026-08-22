@@ -11,32 +11,10 @@ Six-layer testing model:
 - Layer 5: Configuration - Are resources configured correctly?
 - Layer 6: Capability - Can we perform required operations? (THIS FILE)
 
-Note: The api_endpoint_v1_runners deployment relies on prerequisites from other
-workflows (api_common_networking, api_common_docker_repository, ec2_runner, ecs_runner).
-Capability tests here verify we can perform operations on those prerequisites.
+Note: The api_endpoint_v1_github_workflows_webhooks deployment relies on the API
+Gateway that api_common_routing creates. Capability tests here verify we can
+perform operations on those prerequisites.
 """
-import pytest
-
-from botocore.exceptions import ClientError
-
-
-
-
-def _verify_lambda_configuration(lambda_client, outputs, output_key):
-    """Verify we can read a Lambda function configuration from outputs.
-
-    Returns None if skipped, raises on unexpected error.
-    """
-    function_name = outputs.get(output_key)
-    if not function_name:
-        pytest.skip(f"{output_key} output not available")
-    try:
-        response = lambda_client.get_function_configuration(FunctionName=function_name)
-        assert response.get("FunctionName") == function_name
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "ResourceNotFoundException":
-            pytest.skip("Function not found - covered by existence test")
-        raise
 
 
 # === SSM Capability ===
@@ -53,20 +31,3 @@ def test_can_decrypt_github_pat_parameter(ssm_client, ssm_github_pat_name):
         f"SSM parameter '{ssm_github_pat_name}' returned empty response"
     )
 
-
-class TestLambdaCapability:
-    """Layer 6: Verify capability to invoke runner Lambda functions."""
-
-    def test_can_get_ec2_runner_lambda_configuration(
-        self, lambda_client, ec2_runner_outputs
-    ):
-        """Verify we can read the EC2 runner Lambda configuration."""
-        _verify_lambda_configuration(lambda_client, ec2_runner_outputs, "lambda_function_name")
-        assert True  # Explicit pass
-
-    def test_can_get_ecs_runner_lambda_configuration(
-        self, lambda_client, ecs_runner_outputs
-    ):
-        """Verify we can read the ECS runner Lambda configuration."""
-        _verify_lambda_configuration(lambda_client, ecs_runner_outputs, "lambda_function_name")
-        assert True  # Explicit pass

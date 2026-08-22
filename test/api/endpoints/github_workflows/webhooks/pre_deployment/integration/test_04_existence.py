@@ -16,9 +16,6 @@ import pytest
 
 from repo_utils import REPO_ROOT
 from terraform_config import extract_sqs_queue_names
-from test_fixtures.integration import create_security_group_existence_test
-
-
 
 
 RUNNERS_SRC = (
@@ -40,7 +37,7 @@ class TestApiBackendFirehoseResources:
     ):
         """Verify Firehose delivery stream exists.
 
-        This resource is created by api_common_routing and required for runners
+        This resource is created by api_common_routing and required for the webhooks stack
         subscription filters to route logs to S3.
         """
         response = firehose_client.describe_delivery_stream(
@@ -68,165 +65,9 @@ class TestApiBackendFirehoseResources:
         )
 
 
-class TestApiSharedNetworkingOutputs:
-    """Layer 4: Verify api_common_networking terraform outputs are accessible."""
-
-    def test_vpc_id_output_exists(self, api_common_networking_outputs):
-        """Verify vpc_id output exists."""
-        assert api_common_networking_outputs.get("vpc_id"), (
-            "vpc_id output not found in api_common_networking. "
-            "Run: cd src/api/common/networking && terraform apply"
-        )
-
-    def test_subnet_ids_output_exists(self, api_common_networking_outputs):
-        """Verify public_subnets_ids output exists."""
-        assert api_common_networking_outputs.get("public_subnets_ids"), (
-            "public_subnets_ids output not found in api_common_networking. "
-            "Run: cd src/api/common/networking && terraform apply"
-        )
-
-    def test_security_group_id_output_exists(self, api_common_networking_outputs):
-        """Verify security_group_id_for_runners output exists."""
-        assert api_common_networking_outputs.get("security_group_id_for_runners"), (
-            "security_group_id_for_runners output not found in api_common_networking. "
-            "Run: cd src/api/common/networking && terraform apply"
-        )
-
-
-class TestApiSharedEcsRunnerOutputs:
-    """Layer 4: Verify api_common_docker_repository terraform outputs are accessible."""
-
-    def test_ecr_repository_arn_output_exists(self, api_common_docker_repository_outputs):
-        """Verify ecr_repository_arn output exists."""
-        assert api_common_docker_repository_outputs.get("ecr_repository_arn"), (
-            "ecr_repository_arn output not found in api_common_docker_repository. "
-            "Run: cd src/api/common/docker_repository && terraform apply"
-        )
-
-    def test_ecr_repository_name_output_exists(self, api_common_docker_repository_outputs):
-        """Verify ecr_repository_name output exists."""
-        assert api_common_docker_repository_outputs.get("ecr_repository_name"), (
-            "ecr_repository_name output not found in api_common_docker_repository. "
-            "Run: cd src/api/common/docker_repository && terraform apply"
-        )
-
-    def test_ecr_repository_url_output_exists(self, api_common_docker_repository_outputs):
-        """Verify ecr_repository_url output exists."""
-        assert api_common_docker_repository_outputs.get("ecr_repository_url"), (
-            "ecr_repository_url output not found in api_common_docker_repository. "
-            "Run: cd src/api/common/docker_repository && terraform apply"
-        )
-
-
-class TestEC2RunnerOutputs:
-    """Layer 4: Verify ec2_runner terraform outputs are accessible."""
-
-    def test_lambda_function_arn_output_exists(self, ec2_runner_outputs):
-        """Verify ec2_runner has lambda_function_arn output."""
-        assert ec2_runner_outputs.get("lambda_function_arn"), \
-            "lambda_function_arn output not found in ec2_runner"
-
-    def test_lambda_function_name_output_exists(self, ec2_runner_outputs):
-        """Verify ec2_runner has lambda_function_name output."""
-        assert ec2_runner_outputs.get("lambda_function_name"), \
-            "lambda_function_name output not found in ec2_runner"
-
-    def test_lambda_invoke_arn_output_exists(self, ec2_runner_outputs):
-        """Verify ec2_runner has lambda_invoke_arn output."""
-        assert ec2_runner_outputs.get("lambda_invoke_arn"), \
-            "lambda_invoke_arn output not found in ec2_runner"
-
-
-class TestECSRunnerOutputs:
-    """Layer 4: Verify ecs_runner terraform outputs are accessible."""
-
-    def test_lambda_function_arn_output_exists(self, ecs_runner_outputs):
-        """Verify ecs_runner has lambda_function_arn output."""
-        assert ecs_runner_outputs.get("lambda_function_arn"), \
-            "lambda_function_arn output not found in ecs_runner"
-
-    def test_lambda_function_name_output_exists(self, ecs_runner_outputs):
-        """Verify ecs_runner has lambda_function_name output."""
-        assert ecs_runner_outputs.get("lambda_function_name"), \
-            "lambda_function_name output not found in ecs_runner"
-
-    def test_cluster_arn_output_exists(self, ecs_runner_outputs):
-        """Verify ecs_runner has cluster_arn output."""
-        assert ecs_runner_outputs.get("cluster_arn"), \
-            "cluster_arn output not found in ecs_runner"
-
-    def test_cluster_name_output_exists(self, ecs_runner_outputs):
-        """Verify ecs_runner has cluster_name output."""
-        assert ecs_runner_outputs.get("cluster_name"), \
-            "cluster_name output not found in ecs_runner"
-
-
 # =============================================================================
 # AWS Resource Existence
 # =============================================================================
-
-
-class TestVPCResourceExistence:
-    """Layer 4: Verify VPC resources exist in AWS."""
-
-    def test_vpc_exists(self, vpc_info, api_common_networking_outputs):
-        """Verify the VPC exists."""
-        vpc_id = api_common_networking_outputs.get("vpc_id")
-        if not vpc_id:
-            pytest.skip("vpc_id output not available")
-        assert vpc_info is not None, (
-            f"VPC {vpc_id} not found. "
-            "Run: cd src/api/common/networking && terraform apply"
-        )
-
-    def test_subnets_exist(self, subnets_info, api_common_networking_outputs):
-        """Verify all subnets exist."""
-        subnet_ids_str = api_common_networking_outputs.get("public_subnets_ids")
-        if not subnet_ids_str:
-            pytest.skip("public_subnets_ids output not available")
-        subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
-        assert len(subnets_info) == len(subnet_ids), (
-            f"Expected {len(subnet_ids)} subnets, found {len(subnets_info)}. "
-            "Some subnets may have been deleted."
-        )
-
-    # Use factory for security group existence test
-    test_security_group_exists = create_security_group_existence_test(
-        outputs_fixture="api_common_networking_outputs",
-        sg_id_key="security_group_id_for_runners",
-        terraform_path="src/api/common/networking",
-    )
-
-
-def test_ecr_repository_exists(ecr_repository_info, api_common_docker_repository_outputs):
-    """Verify the ECR repository exists."""
-    repo_name = api_common_docker_repository_outputs.get("ecr_repository_name")
-    if not repo_name:
-        pytest.skip("ecr_repository_name output not available")
-    assert ecr_repository_info is not None, (
-        f"ECR repository '{repo_name}' not found. "
-        "Run: cd src/api/common/docker_repository && terraform apply"
-    )
-
-
-class TestLambdaResourceExistence:
-    """Layer 4: Verify Lambda functions exist in AWS."""
-
-    def test_ec2_runner_lambda_exists(self, lambda_client, ec2_runner_outputs):
-        """Verify the EC2 runner Lambda function exists."""
-        function_name = ec2_runner_outputs.get("lambda_function_name")
-        if not function_name:
-            pytest.skip("lambda_function_name output not available")
-        response = lambda_client.get_function(FunctionName=function_name)
-        assert response["Configuration"]["FunctionName"] == function_name
-
-    def test_ecs_runner_lambda_exists(self, lambda_client, ecs_runner_outputs):
-        """Verify the ECS runner Lambda function exists."""
-        function_name = ecs_runner_outputs.get("lambda_function_name")
-        if not function_name:
-            pytest.skip("lambda_function_name output not available")
-        response = lambda_client.get_function(FunctionName=function_name)
-        assert response["Configuration"]["FunctionName"] == function_name
 
 
 class TestSSMResourceExistence:
@@ -279,10 +120,10 @@ class TestSQSTerraformConfigExistence:
     """Layer 4: Verify SQS queue definitions exist in Terraform config."""
 
     def test_sqs_tf_file_exists(self):
-        """Verify sqs.tf file exists in runners endpoint."""
+        """Verify sqs.tf file exists in the webhooks endpoint."""
         assert SQS_TF_FILE.exists(), (
             f"sqs.tf not found at {SQS_TF_FILE}. "
-            "The runners endpoint requires SQS queue definitions."
+            "The webhooks endpoint requires SQS queue definitions."
         )
 
     def test_sqs_queues_extractable(self):

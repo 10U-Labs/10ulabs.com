@@ -18,10 +18,6 @@ output "ecr_repository_name_agents" {
   value = "agents"
 }
 
-output "ecr_repository_name_runners" {
-  value = "runners"
-}
-
 output "github_org" {
   value = "10U-Labs"
 }
@@ -68,10 +64,6 @@ output "github_app_ssm_arns" {
 
 output "agentcore" {
   value = local.agentcore
-}
-
-output "runners_config" {
-  value = local.runners_config
 }
 
 output "kms_lambda_key_arn" {

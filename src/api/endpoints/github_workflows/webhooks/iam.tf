@@ -32,8 +32,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_ssm" {
       Effect = "Allow"
       Action = ["ssm:GetParameter"]
       Resource = [
-        aws_ssm_parameter.webhook_secret.arn,
-        data.terraform_remote_state.api.outputs.api_key_ssm_parameter_arn
+        aws_ssm_parameter.webhook_secret.arn
       ]
     }]
   })

@@ -9,15 +9,9 @@ import re
 EXPECTED_OUTPUTS = [
     "lambda_function_arn",
     "lambda_function_name",
-    "vpc_id",
-    "public_subnets_ids",
-    "security_group_id_for_runners",
     "github_token_secret_name",
     "webhook_parameter_name",
     "webhook_parameter_arn",
-    "ecr_repository_arn",
-    "ecr_repository_name",
-    "ecr_repository_uri",
     "api_endpoint",
     "webhook_ingress_queue_url",
     "webhook_ingress_queue_arn",
@@ -104,24 +98,6 @@ class TestOutputDescriptions:
             assert re.search(pattern, outputs_tf_content, re.DOTALL), (
                 f"Output '{output_name}' should have a description"
             )
-
-
-class TestRemoteStateReferences:
-    """Test outputs that reference remote state."""
-
-    def test_vpc_id_references_remote_state(self, outputs_tf_content):
-        """Verify vpc_id references remote state."""
-        pattern = r'data\.terraform_remote_state\.\w+\.outputs\.vpc_id'
-        assert re.search(pattern, outputs_tf_content), (
-            "vpc_id should reference terraform_remote_state outputs"
-        )
-
-    def test_ecr_outputs_reference_remote_state(self, outputs_tf_content):
-        """Verify ECR outputs reference remote state."""
-        pattern = r'data\.terraform_remote_state\.api_common_docker_repository\.outputs'
-        assert re.search(pattern, outputs_tf_content), (
-            "ECR outputs should reference api_common_docker_repository remote state"
-        )
 
 
 class TestOutputCount:

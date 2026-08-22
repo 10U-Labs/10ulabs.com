@@ -1,7 +1,5 @@
-"""Shared pytest fixtures and utilities for runners endpoint tests."""
+"""Shared pytest fixtures and utilities for the webhooks endpoint tests."""
 from typing import Any, Dict, List
-
-from test.api.conftest import get_runner_labels
 
 import boto3
 import pytest
@@ -12,7 +10,6 @@ from test_fixtures.integration import get_aws_account_id_via_cli
 RUNNERS_SRC_PATH = (
     REPO_ROOT / "src" / "api" / "endpoints" / "github_workflows" / "webhooks"
 )
-ECS_RUNNER_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners" / "ecs"
 
 # Use shared AWS fixtures (provides ssm_client, etc.)
 pytest_plugins = ['test_fixtures.aws']
@@ -83,11 +80,7 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     for key in ['circuit_open_remediations', 'dlq_reprocessor', 'circuit_open_recoveries']:
         fn_name = result.get(f'{key}_function_name', '')
         result[f'{key}_log_group_name'] = f"/aws/lambda/{fn_name}"
-    result.update(get_runner_labels())
     result['api_version'] = 'v1'
-    ecs_vars = get_tfvars_values(ECS_RUNNER_SRC_PATH)
-    if 'cluster_name' in ecs_vars:
-        result['cluster_name'] = ecs_vars['cluster_name']
     return result
 
 

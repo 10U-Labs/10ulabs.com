@@ -11,8 +11,6 @@ from test_fixtures.integration.factories.capability import (
     create_layer6_capability_tests,
 )
 from test_fixtures.integration.factories.infrastructure import (
-    create_ecs_runner_lambda_existence_tests,
-    create_ecs_runner_outputs_tests,
     create_kms_policy_test,
     create_lambda_role_existence_test,
     create_log_group_configuration_tests,

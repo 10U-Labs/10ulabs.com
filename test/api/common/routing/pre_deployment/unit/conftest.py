@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 import pytest
 
-from event_factories import create_ecs_runner_post_event
 from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
 
@@ -115,8 +114,3 @@ def catchall_unknown_event():
     """Create an event for an unknown path."""
     return {'path': '/unknown', 'httpMethod': 'GET'}
 
-
-@pytest.fixture
-def ecs_runner_post_event_factory():
-    """Factory for creating ECS runner POST events."""
-    return create_ecs_runner_post_event

@@ -99,8 +99,8 @@ def remove_lambda_reserved_concurrency(function_name: str) -> dict[str, Any]:
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """Handle circuit open API requests.
 
-    GET  /v1/runners/circuit-open - Get status
-    POST /v1/runners/circuit-open - Reset circuit open
+    GET  /v1/github-workflows/webhooks/circuit-opens - Get status
+    POST /v1/github-workflows/webhooks/circuit-opens/reset - Reset circuit open
     """
     webhook_function_name = os.environ["WEBHOOK_FUNCTION_NAME"]
     state_table_name = os.environ["STATE_TABLE_NAME"]

@@ -5,8 +5,6 @@ import pytest
 from botocore.exceptions import ClientError
 
 from test_fixtures.integration.factories.infrastructure import (
-    create_ecs_runner_lambda_existence_tests,
-    create_ecs_runner_outputs_tests,
     create_kms_policy_test,
     create_lambda_role_existence_test,
     create_log_group_configuration_tests,
@@ -47,116 +45,8 @@ def _create_sqs_service_error_mocks():
     return mock_client, mock_request
 
 
-# === create_ecs_runner_outputs_tests ===
 
 
-class TestCreateEcsRunnerOutputsTestsReturnsClass:
-    """Tests for create_ecs_runner_outputs_tests return type."""
-
-    def test_returns_class(self):
-        """create_ecs_runner_outputs_tests returns a class."""
-        test_class = create_ecs_runner_outputs_tests()
-        assert isinstance(test_class, type)
-
-    def test_returns_class_with_name(self):
-        """create_ecs_runner_outputs_tests returns class named TestECSRunnerOutputs."""
-        test_class = create_ecs_runner_outputs_tests()
-        assert test_class.__name__ == "TestECSRunnerOutputs"
-
-
-class TestCreateEcsRunnerOutputsTestsHasMethods:
-    """Tests for create_ecs_runner_outputs_tests class methods."""
-
-    def test_has_test_task_definition_arn_output_exists(self):
-        """create_ecs_runner_outputs_tests has test_task_definition_arn_output_exists."""
-        test_class = create_ecs_runner_outputs_tests()
-        assert hasattr(test_class, "test_task_definition_arn_output_exists")
-
-    def test_has_test_cluster_arn_output_exists(self):
-        """create_ecs_runner_outputs_tests has test_cluster_arn_output_exists."""
-        test_class = create_ecs_runner_outputs_tests()
-        assert hasattr(test_class, "test_cluster_arn_output_exists")
-
-    def test_has_test_cluster_name_output_exists(self):
-        """create_ecs_runner_outputs_tests has test_cluster_name_output_exists."""
-        test_class = create_ecs_runner_outputs_tests()
-        assert hasattr(test_class, "test_cluster_name_output_exists")
-
-    def test_has_test_lambda_function_name_output_exists(self):
-        """create_ecs_runner_outputs_tests has test_lambda_function_name_output_exists."""
-        test_class = create_ecs_runner_outputs_tests()
-        assert hasattr(test_class, "test_lambda_function_name_output_exists")
-
-
-class TestCreateEcsRunnerOutputsTestsTaskDefinitionArn:
-    """Tests for test_task_definition_arn_output_exists method."""
-
-    def test_does_not_raise_when_output_exists(self):
-        """test_task_definition_arn_output_exists does not raise when output exists."""
-        test_class = create_ecs_runner_outputs_tests()
-        instance = test_class()
-        outputs = {"task_definition_arn": "arn:aws:ecs:us-east-1:123:task-def"}
-        result = instance.test_task_definition_arn_output_exists(outputs)
-        assert result is None
-
-    def test_fails_when_output_missing(self):
-        """test_task_definition_arn_output_exists fails when output missing."""
-        test_class = create_ecs_runner_outputs_tests()
-        instance = test_class()
-        outputs = {}
-        with pytest.raises(AssertionError):
-            instance.test_task_definition_arn_output_exists(outputs)
-
-
-class TestCreateEcsRunnerOutputsTestsClusterArn:
-    """Tests for test_cluster_arn_output_exists method."""
-
-    def test_does_not_raise_when_output_exists(self):
-        """test_cluster_arn_output_exists does not raise when output exists."""
-        test_class = create_ecs_runner_outputs_tests()
-        instance = test_class()
-        outputs = {"cluster_arn": "arn:aws:ecs:us-east-1:123:cluster/test"}
-        result = instance.test_cluster_arn_output_exists(outputs)
-        assert result is None
-
-    def test_fails_when_output_missing(self):
-        """test_cluster_arn_output_exists fails when output missing."""
-        test_class = create_ecs_runner_outputs_tests()
-        instance = test_class()
-        outputs = {}
-        with pytest.raises(AssertionError):
-            instance.test_cluster_arn_output_exists(outputs)
-
-
-# === create_ecs_runner_lambda_existence_tests ===
-
-
-class TestCreateEcsRunnerLambdaExistenceTestsReturnsClass:
-    """Tests for create_ecs_runner_lambda_existence_tests return type."""
-
-    def test_returns_class(self):
-        """create_ecs_runner_lambda_existence_tests returns a class."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        assert isinstance(test_class, type)
-
-    def test_returns_class_with_name(self):
-        """create_ecs_runner_lambda_existence_tests returns class named TestECSRunnerLambdaExistence."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        assert test_class.__name__ == "TestECSRunnerLambdaExistence"
-
-
-class TestCreateEcsRunnerLambdaExistenceTestsHasMethods:
-    """Tests for create_ecs_runner_lambda_existence_tests class methods."""
-
-    def test_has_test_lambda_function_exists(self):
-        """create_ecs_runner_lambda_existence_tests has test_lambda_function_exists."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        assert hasattr(test_class, "test_lambda_function_exists")
-
-    def test_has_test_lambda_function_is_active(self):
-        """create_ecs_runner_lambda_existence_tests has test_lambda_function_is_active."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        assert hasattr(test_class, "test_lambda_function_is_active")
 
 
 # === create_www_common_fixtures ===
@@ -451,12 +341,16 @@ class TestCreateSecurityGroupExistenceTestReturnsFunction:
 
     def test_returns_callable(self):
         """create_security_group_existence_test returns a callable."""
-        test_func = create_security_group_existence_test("outputs_fixture")
+        test_func = create_security_group_existence_test(
+            "outputs_fixture", "security_group_id", "src/api/common/routing"
+        )
         assert callable(test_func)
 
     def test_returns_function_with_name(self):
         """create_security_group_existence_test returns function with correct name."""
-        test_func = create_security_group_existence_test("outputs_fixture")
+        test_func = create_security_group_existence_test(
+            "outputs_fixture", "security_group_id", "src/api/common/routing"
+        )
         assert test_func.__name__ == "test_security_group_exists"
 
 
@@ -526,138 +420,6 @@ class TestCreateKmsPolicyTestReturnsFunction:
 
 
 # === Method Execution Tests ===
-
-
-class TestEcsRunnerOutputsClusterNameExecution:
-    """Tests that execute test_cluster_name_output_exists."""
-
-    def test_passes_when_output_exists(self):
-        """test_cluster_name_output_exists passes when output exists."""
-        test_class = create_ecs_runner_outputs_tests()
-        instance = test_class()
-        outputs = {"cluster_name": "my-cluster"}
-        result = instance.test_cluster_name_output_exists(outputs)
-        assert result is None
-
-    def test_fails_when_output_missing(self):
-        """test_cluster_name_output_exists fails when output missing."""
-        test_class = create_ecs_runner_outputs_tests()
-        instance = test_class()
-        outputs = {}
-        with pytest.raises(AssertionError):
-            instance.test_cluster_name_output_exists(outputs)
-
-
-class TestEcsRunnerOutputsLambdaFunctionNameExecution:
-    """Tests that execute test_lambda_function_name_output_exists."""
-
-    def test_passes_when_output_exists(self):
-        """test_lambda_function_name_output_exists passes when output exists."""
-        test_class = create_ecs_runner_outputs_tests()
-        instance = test_class()
-        outputs = {"lambda_function_name": "my-function"}
-        result = instance.test_lambda_function_name_output_exists(outputs)
-        assert result is None
-
-    def test_fails_when_output_missing(self):
-        """test_lambda_function_name_output_exists fails when output missing."""
-        test_class = create_ecs_runner_outputs_tests()
-        instance = test_class()
-        outputs = {}
-        with pytest.raises(AssertionError):
-            instance.test_lambda_function_name_output_exists(outputs)
-
-
-class TestEcsRunnerLambdaExistenceExecution:
-    """Tests that execute ECS runner Lambda existence test methods."""
-
-    def test_lambda_function_exists_success(self):
-        """test_lambda_function_exists passes when Lambda exists."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_function.return_value = {"Configuration": {"FunctionName": "my-func"}}
-        outputs = {"lambda_function_name": "my-func"}
-        result = instance.test_lambda_function_exists(mock_client, outputs)
-        assert result is None
-
-    def test_lambda_function_exists_skips_when_no_output(self):
-        """test_lambda_function_exists skips when output missing."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        outputs = {}
-        with pytest.raises(pytest.skip.Exception):
-            instance.test_lambda_function_exists(mock_client, outputs)
-
-    def test_lambda_function_exists_fails_on_not_found(self):
-        """test_lambda_function_exists fails when Lambda not found."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_function.side_effect = _create_client_error("ResourceNotFoundException")
-        outputs = {"lambda_function_name": "my-func"}
-        with pytest.raises(pytest.fail.Exception):
-            instance.test_lambda_function_exists(mock_client, outputs)
-
-    def test_lambda_function_exists_reraises_other_errors(self):
-        """test_lambda_function_exists reraises other errors."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_function.side_effect = _create_client_error("ServiceException")
-        outputs = {"lambda_function_name": "my-func"}
-        with pytest.raises(ClientError):
-            instance.test_lambda_function_exists(mock_client, outputs)
-
-    def test_lambda_function_is_active_success(self):
-        """test_lambda_function_is_active passes when Lambda is active."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_function.return_value = {"Configuration": {"State": "Active"}}
-        outputs = {"lambda_function_name": "my-func"}
-        result = instance.test_lambda_function_is_active(mock_client, outputs)
-        assert result is None
-
-    def test_lambda_function_is_active_skips_when_no_output(self):
-        """test_lambda_function_is_active skips when output missing."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        outputs = {}
-        with pytest.raises(pytest.skip.Exception):
-            instance.test_lambda_function_is_active(mock_client, outputs)
-
-    def test_lambda_function_is_active_fails_when_not_active(self):
-        """test_lambda_function_is_active fails when Lambda not active."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_function.return_value = {"Configuration": {"State": "Pending"}}
-        outputs = {"lambda_function_name": "my-func"}
-        with pytest.raises(AssertionError):
-            instance.test_lambda_function_is_active(mock_client, outputs)
-
-    def test_lambda_function_is_active_skips_on_not_found(self):
-        """test_lambda_function_is_active skips when Lambda not found."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_function.side_effect = _create_client_error("ResourceNotFoundException")
-        outputs = {"lambda_function_name": "my-func"}
-        with pytest.raises(pytest.skip.Exception):
-            instance.test_lambda_function_is_active(mock_client, outputs)
-
-    def test_lambda_function_is_active_reraises_other_errors(self):
-        """test_lambda_function_is_active reraises other errors."""
-        test_class = create_ecs_runner_lambda_existence_tests()
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_function.side_effect = _create_client_error("ServiceException")
-        outputs = {"lambda_function_name": "my-func"}
-        with pytest.raises(ClientError):
-            instance.test_lambda_function_is_active(mock_client, outputs)
 
 
 class TestWwwCommonS3ExistenceS3BucketExistsExecution:
@@ -830,17 +592,21 @@ class TestSecurityGroupExistenceExecution:
 
     def test_security_group_exists_success(self):
         """test_security_group_exists passes when SG exists."""
-        test_func = create_security_group_existence_test("outputs_fixture")
+        test_func = create_security_group_existence_test(
+            "outputs_fixture", "security_group_id", "src/api/common/routing"
+        )
         mock_client = MagicMock()
         mock_client.describe_security_groups.return_value = {"SecurityGroups": [{}]}
         mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {"runner_security_group_id": "sg-123"}
+        mock_request.getfixturevalue.return_value = {"security_group_id": "sg-123"}
         result = test_func(None, mock_client, mock_request)
         assert result is None
 
     def test_security_group_exists_skips_when_no_output(self):
         """test_security_group_exists skips when output missing."""
-        test_func = create_security_group_existence_test("outputs_fixture")
+        test_func = create_security_group_existence_test(
+            "outputs_fixture", "security_group_id", "src/api/common/routing"
+        )
         mock_client = MagicMock()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {}
@@ -849,23 +615,27 @@ class TestSecurityGroupExistenceExecution:
 
     def test_security_group_exists_fails_on_not_found(self):
         """test_security_group_exists fails when SG not found."""
-        test_func = create_security_group_existence_test("outputs_fixture")
+        test_func = create_security_group_existence_test(
+            "outputs_fixture", "security_group_id", "src/api/common/routing"
+        )
         mock_client = MagicMock()
         mock_client.describe_security_groups.side_effect = _create_client_error(
             "InvalidGroup.NotFound"
         )
         mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {"runner_security_group_id": "sg-123"}
+        mock_request.getfixturevalue.return_value = {"security_group_id": "sg-123"}
         with pytest.raises(pytest.fail.Exception):
             test_func(None, mock_client, mock_request)
 
     def test_security_group_exists_reraises_other_errors(self):
         """test_security_group_exists reraises other errors."""
-        test_func = create_security_group_existence_test("outputs_fixture")
+        test_func = create_security_group_existence_test(
+            "outputs_fixture", "security_group_id", "src/api/common/routing"
+        )
         mock_client = MagicMock()
         mock_client.describe_security_groups.side_effect = _create_client_error("ServiceException")
         mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {"runner_security_group_id": "sg-123"}
+        mock_request.getfixturevalue.return_value = {"security_group_id": "sg-123"}
         with pytest.raises(ClientError):
             test_func(None, mock_client, mock_request)
 

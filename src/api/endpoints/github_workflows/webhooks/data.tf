@@ -1,23 +1,3 @@
-data "terraform_remote_state" "api_common_networking" {
-  backend = "s3"
-
-  config = {
-    bucket = module.common.name_for_terraform_state_bucket
-    key    = "api/common/networking/terraform.tfstate"
-    region = module.common.aws_region
-  }
-}
-
-data "terraform_remote_state" "api_common_docker_repository" {
-  backend = "s3"
-
-  config = {
-    bucket = module.common.name_for_terraform_state_bucket
-    key    = "api/common/docker_repository/terraform.tfstate"
-    region = module.common.aws_region
-  }
-}
-
 data "terraform_remote_state" "api" {
   backend = "s3"
 
@@ -28,7 +8,6 @@ data "terraform_remote_state" "api" {
   }
 
   defaults = {
-    api_key_ssm_parameter_arn         = ""
     cloudwatch_logs_firehose_role_arn = ""
     firehose_cloudwatch_logs_arn      = ""
   }

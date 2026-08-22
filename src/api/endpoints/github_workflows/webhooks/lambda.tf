@@ -42,14 +42,6 @@ data "archive_file" "runners_handler" {
     content  = file("${path.module}/lambdas/common/webhook_ingress.py")
     filename = "common/webhook_ingress.py"
   }
-  source {
-    content  = file("${path.module}/../../../../../lib/python/runner_labels/__init__.py")
-    filename = "runner_labels.py"
-  }
-  source {
-    content  = file("${path.module}/../../../../../etc/runners.json")
-    filename = "etc/runners.json"
-  }
 }
 
 resource "aws_lambda_function" "runners_handler" {
@@ -63,12 +55,10 @@ resource "aws_lambda_function" "runners_handler" {
   timeout                        = local.lambda_timeout_seconds
   memory_size                    = local.lambda_memory_mb
   reserved_concurrent_executions = -1
-  description                    = "GitHub webhook router for GitHub self-hosted runners"
+  description                    = "GitHub webhook router"
 
   environment {
     variables = {
-      API_BASE_URL             = "https://${local.api_fqdn}"
-      API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
       ARCHIVE_BUCKET_NAME      = aws_s3_bucket.ignored_events_archive.bucket
       CIRCUIT_OPEN_TABLE_NAME  = aws_dynamodb_table.circuit_open_state.name
       GITHUB_REPO              = local.github_repo_full
@@ -159,14 +149,6 @@ data "archive_file" "circuit_opens" {
   source {
     content  = file("${path.module}/lambdas/common/webhook_ingress.py")
     filename = "common/webhook_ingress.py"
-  }
-  source {
-    content  = file("${path.module}/../../../../../lib/python/runner_labels/__init__.py")
-    filename = "runner_labels.py"
-  }
-  source {
-    content  = file("${local.etc_dir}/runners.json")
-    filename = "etc/runners.json"
   }
 }
 
@@ -270,14 +252,6 @@ data "archive_file" "circuit_open_remediations" {
   source {
     content  = file("${path.module}/lambdas/common/webhook_ingress.py")
     filename = "common/webhook_ingress.py"
-  }
-  source {
-    content  = file("${path.module}/../../../../../lib/python/runner_labels/__init__.py")
-    filename = "runner_labels.py"
-  }
-  source {
-    content  = file("${local.etc_dir}/runners.json")
-    filename = "etc/runners.json"
   }
 }
 
@@ -431,14 +405,6 @@ data "archive_file" "circuit_open_recoveries" {
   source {
     content  = file("${path.module}/lambdas/common/webhook_ingress.py")
     filename = "common/webhook_ingress.py"
-  }
-  source {
-    content  = file("${path.module}/../../../../../lib/python/runner_labels/__init__.py")
-    filename = "runner_labels.py"
-  }
-  source {
-    content  = file("${local.etc_dir}/runners.json")
-    filename = "etc/runners.json"
   }
 }
 

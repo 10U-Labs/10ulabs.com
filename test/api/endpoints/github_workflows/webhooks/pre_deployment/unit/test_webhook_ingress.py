@@ -68,8 +68,6 @@ def mock_ingress_deps_fixture():
     deps.verify_signature = MagicMock(return_value=True)
     deps.publish_metric = MagicMock()
     deps.check_idempotency = AsyncMock(return_value=False)
-    deps.get_runner_type = MagicMock(return_value=("ec2", "m5.large"))
-    deps.enqueue_job = AsyncMock(return_value={"success": True})
     deps.enqueue_ignored = MagicMock()
     return deps
 
@@ -148,25 +146,22 @@ class TestIngressHandlerHandle:
         return webhook_ingress_module.IngressHandler(mock_ingress_deps)
 
     def test_handle_workflow_job_queued(self, handler, mock_ingress_deps):
-        """Test handling a workflow_job with action=queued."""
+        """Test handling a workflow_job with action=queued is archived."""
         body = {
             "action": "queued",
-            "workflow_job": {"id": 123, "run_id": 456, "labels": ["self-hosted", "linux", "ec2"]},
+            "workflow_job": {"id": 123, "run_id": 456, "labels": ["ubuntu-latest"]},
             "repository": {"full_name": "org/repo"}
         }
         record = _create_sqs_record(body)
         result = run_async(handler.handle(record))
-        mock_ingress_deps.enqueue_job.assert_called_once()
-        assert result["success"] is True and result["routed"] == "/v1/runners"
+        mock_ingress_deps.enqueue_ignored.assert_called_once()
+        assert result["success"] is True and result["routed"] == "ignored_events"
 
     def test_handle_workflow_job_cancelled(self, handler, mock_ingress_deps):
-        """Test handling a workflow_job with action=cancelled is ignored.
-
-        Runners are ephemeral and self-terminate, so no termination action needed.
-        """
+        """Test handling a workflow_job with action=cancelled is ignored."""
         body = {
             "action": "cancelled",
-            "workflow_job": {"id": 123, "run_id": 456, "runner_name": "runner-1"},
+            "workflow_job": {"id": 123, "run_id": 456},
             "repository": {"full_name": "org/repo"}
         }
         record = _create_sqs_record(body)
@@ -175,13 +170,10 @@ class TestIngressHandlerHandle:
         assert result["success"] is True and result["routed"] == "ignored_events"
 
     def test_handle_workflow_job_completed(self, handler):
-        """Test handling a workflow_job with action=completed is ignored.
-
-        Runners are ephemeral and self-terminate, so no termination action needed.
-        """
+        """Test handling a workflow_job with action=completed is ignored."""
         body = {
             "action": "completed",
-            "workflow_job": {"id": 123, "run_id": 456, "runner_name": "runner-1"},
+            "workflow_job": {"id": 123, "run_id": 456},
             "repository": {"full_name": "org/repo"}
         }
         record = _create_sqs_record(body)
@@ -198,18 +190,6 @@ class TestIngressHandlerHandle:
         record = _create_sqs_record(body)
         result = run_async(handler.handle(record))
         mock_ingress_deps.enqueue_ignored.assert_called_once()
-        assert result["success"] is True and result["routed"] == "ignored_events"
-
-    def test_handle_workflow_job_no_runner_type(self, handler, mock_ingress_deps):
-        """Test handling a workflow_job with no matching runner type."""
-        mock_ingress_deps.get_runner_type.return_value = (None, None)
-        body = {
-            "action": "queued",
-            "workflow_job": {"id": 123, "run_id": 456, "labels": ["ubuntu-latest"]},
-            "repository": {"full_name": "org/repo"}
-        }
-        record = _create_sqs_record(body)
-        result = run_async(handler.handle(record))
         assert result["success"] is True and result["routed"] == "ignored_events"
 
     def test_handle_workflow_run(self, handler):
@@ -298,18 +278,6 @@ class TestIngressHandlerHandle:
         call_args = mock_ingress_deps.publish_metric.call_args_list[-1]
         expected = ("WebhookIngressProcessingTime", "Milliseconds")
         assert (call_args[0][0], call_args[0][2]) == expected
-
-    def test_handle_enqueue_job_failure(self, handler, mock_ingress_deps):
-        """Test handling when enqueue_job fails."""
-        mock_ingress_deps.enqueue_job.return_value = {"success": False}
-        body = {
-            "action": "queued",
-            "workflow_job": {"id": 123, "run_id": 456, "labels": ["self-hosted"]},
-            "repository": {"full_name": "org/repo"}
-        }
-        record = _create_sqs_record(body)
-        result = run_async(handler.handle(record))
-        assert result["success"] is False
 
     def test_handle_empty_body(self, handler):
         """Test handling an empty body."""

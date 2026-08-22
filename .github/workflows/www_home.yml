@@ -9,13 +9,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on: >-
-      ${{ ( vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "arm", "spot", "runner-{0}"]',
-            github.run_id)) }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,19 +25,11 @@ jobs:
         with:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
+      - name: Install Python dependencies
         run: |
           python3 -m pip install \
             assert-no-inline-directives \
@@ -89,11 +75,7 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/www_home.yml
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install jsonlint
+      - name: Install jsonlint
         run: npm install -g jsonlint
       - name: Linting JSON files
         run: |
@@ -116,11 +98,7 @@ jobs:
         run: |
           TEST=test/www/paths
           MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install jscpd
+      - name: Install jscpd
         run: npm install -g jscpd@4.0.5
       - name: Check for duplicate code in test Python files
         run: |
@@ -131,20 +109,12 @@ jobs:
       - name: Run unit tests
         run: npm test --prefix src/www/paths/home
       - id: terraform
-        if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
         name: Extract Terraform version
         run: |
           TERRAFORM_VERSION=$(grep 'required_version' \
             src/www/common/backend.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-      - if: >-
-          vars.WORKFLOWS_MUST_USE_GITHUB_HOSTED_RUNNERS == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Setup Terraform
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
@@ -219,10 +189,6 @@ on:
       - test/www/paths/home/**
   workflow_dispatch:
     inputs:
-      github_hosted:
-        default: false
-        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
-        type: boolean
       invalidate_cloudfront:
         default: false
         description: Force CloudFront cache invalidation

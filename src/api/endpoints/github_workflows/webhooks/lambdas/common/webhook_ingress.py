@@ -50,12 +50,6 @@ class IngressDeps(Protocol):
     async def check_idempotency(self, delivery_id: str) -> bool:
         """Check if this delivery has already been processed."""
 
-    def get_runner_type(self, labels: list[str]) -> tuple[str | None, ...]:
-        """Determine runner type from job labels."""
-
-    async def enqueue_job(self, job_data: dict[str, Any]) -> dict[str, bool]:
-        """Enqueue a job for processing."""
-
     def enqueue_ignored(self, payload: dict[str, Any], reason: str) -> None:
         """Enqueue an ignored event for archival."""
 
@@ -99,41 +93,6 @@ class IngressHandler:
 
         return None
 
-    async def _route_workflow_job(
-        self, payload: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Route a workflow_job event to the appropriate queue."""
-        action = payload.get("action")
-
-        # Only handle 'queued' action - runners are ephemeral and self-terminate
-        # so we don't need to handle completed/cancelled actions
-        if action != "queued":
-            logger.info("Ignoring workflow_job action '%s'", action)
-            self._deps.enqueue_ignored(payload, f"workflow_job action {action} ignored")
-            return {"success": True, "routed": "ignored_events"}
-
-        job = payload.get("workflow_job", {})
-        job_labels = job.get("labels", [])
-        runner_type_result = self._deps.get_runner_type(job_labels)
-        runner_type = runner_type_result[0] if runner_type_result else None
-
-        if not runner_type:
-            logger.info(
-                "Job labels %s don't match EC2/Fargate", json.dumps(job_labels)
-            )
-            self._deps.enqueue_ignored(payload, "no matching runner type")
-            return {"success": True, "routed": "ignored_events"}
-
-        job_data = {
-            "job_id": job.get("id"),
-            "job_labels": job_labels,
-            "github_repo": payload.get("repository", {}).get("full_name"),
-            "run_id": job.get("run_id"),
-            "runner_type": runner_type,
-        }
-        result = await self._deps.enqueue_job(job_data)
-        return {"success": result.get("success", False), "routed": "/v1/runners"}
-
     def _route_workflow_run(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Handle a workflow_run event."""
         action = payload.get("action")
@@ -141,7 +100,7 @@ class IngressHandler:
         run_id = workflow_run.get("id")
         conclusion = workflow_run.get("conclusion")
         logger.info(
-            "Workflow run %s %s (conclusion=%s) - no cleanup needed with ephemeral runners",
+            "Workflow run %s %s (conclusion=%s)",
             run_id,
             action,
             conclusion,
@@ -152,8 +111,6 @@ class IngressHandler:
         self, github_event: str | None, payload: dict[str, Any]
     ) -> dict[str, Any]:
         """Route an event based on its type."""
-        if github_event == "workflow_job":
-            return await self._route_workflow_job(payload)
         if github_event == "workflow_run":
             return self._route_workflow_run(payload)
         if github_event == "ping":

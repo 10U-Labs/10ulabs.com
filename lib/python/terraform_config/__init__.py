@@ -71,7 +71,7 @@ def parse_lambda_handler_names() -> Dict[str, str]:
     """Parse lambda_handler_names map from shared Terraform module.
 
     Returns:
-        Dict mapping handler keys (e.g., 'ecs_runner') to function names.
+        Dict mapping handler keys (e.g., 'webhook') to function names.
     """
     locals_path = COMMON_MODULE_DIR / "locals.tf"
     with open(locals_path, encoding="utf-8") as f:
@@ -150,11 +150,11 @@ def get_resource_prefix() -> str:
     return parse_locals().get("resource_prefix", "TenULabs")
 
 
-def get_runners_resource_names(prefix: str | None = None) -> Dict[str, str]:
-    """Get all resource names for the runners endpoint.
+def get_webhooks_resource_names(prefix: str | None = None) -> Dict[str, str]:
+    """Get all resource names for the webhooks endpoint.
 
     Computes DynamoDB table names, SQS queue names, etc. from the resource prefix
-    and lambda handler names. This is the single source of truth for runners
+    and lambda handler names. This is the single source of truth for webhooks
     resource naming.
 
     Args:

@@ -1,10 +1,10 @@
-"""Webhook router Lambda handler - routes GitHub webhooks to /v1/runners API.
+"""Webhook router Lambda handler - receives and acknowledges GitHub webhooks.
 
-This is a "dumb forwarder" that:
+This handler:
 1. Validates GitHub webhook signature
 2. Checks idempotency (prevents duplicate processing)
-3. Filters for workflow_job events with action=queued
-4. HTTP POSTs to /v1/runners for routing to appropriate runner endpoint
+3. Acknowledges workflow_run and ping events
+4. Archives every other event to S3
 """
 
 import asyncio
@@ -15,8 +15,6 @@ import json
 import logging
 import os
 import time
-import urllib.request
-import urllib.error
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import unquote
@@ -25,7 +23,6 @@ from botocore.exceptions import ClientError
 
 from common.aws_clients import (
     get_dynamodb_client,
-    get_sqs_client,
     get_ssm_client,
     put_json_to_s3,
 )
@@ -39,7 +36,6 @@ METRICS_NAMESPACE = "WebhookRouter"
 
 cache: dict[str, Any] = {
     "webhook_secret": None,
-    "api_key": None,
     "test_mode": False,
 }
 
@@ -54,70 +50,6 @@ def publish_metric(metric_name: str, value: float, unit: str = "None") -> None:
     if cache["test_mode"]:
         return
     common_publish_metric(METRICS_NAMESPACE, metric_name, value, unit)
-
-
-def get_api_key() -> str:
-    """Get API key from SSM Parameter Store (cached)."""
-    if cache["api_key"]:
-        return cache["api_key"]
-
-    parameter_name = os.environ.get("API_KEY_PARAMETER_NAME")
-    if not parameter_name:
-        raise RuntimeError("API_KEY_PARAMETER_NAME environment variable not set")
-
-    try:
-        response = get_ssm_client().get_parameter(
-            Name=parameter_name, WithDecryption=True
-        )
-        api_key = response.get("Parameter", {}).get("Value", "")
-        cache["api_key"] = api_key
-        return api_key
-    except ClientError as err:
-        logger.error("Failed to retrieve API key: %s", str(err))
-        raise RuntimeError(f"Cannot retrieve API key: {err}") from err
-
-
-async def post_to_runners(job_data: dict[str, Any]) -> dict[str, Any]:
-    """POST job data to /v1/runners endpoint.
-
-    Returns:
-        Result dictionary with success status
-    """
-    api_base_url = os.environ.get("API_BASE_URL", "")
-    if not api_base_url:
-        logger.error("API_BASE_URL not set, cannot forward to runners")
-        return {"success": False, "error": "API base URL not configured"}
-
-    try:
-        api_key = get_api_key()
-    except RuntimeError as err:
-        return {"success": False, "error": str(err)}
-
-    url = f"{api_base_url}/v1/runners"
-    headers = {
-        "Content-Type": "application/json",
-        "x-api-key": api_key,
-    }
-
-    try:
-        request = urllib.request.Request(
-            url,
-            data=json.dumps(job_data).encode("utf-8"),
-            headers=headers,
-            method="POST",
-        )
-        with urllib.request.urlopen(request, timeout=30) as response:
-            logger.info(
-                "Successfully forwarded to /v1/runners: status=%s",
-                response.status,
-            )
-            return {"success": True, "status_code": response.status}
-    except urllib.error.HTTPError as err:
-        logger.error("HTTP error forwarding to /v1/runners: %s", err)
-        return {"success": False, "error": f"HTTP {err.code}", "status_code": err.code}
-    except urllib.error.URLError as err:
-        logger.error("URL error forwarding to /v1/runners: %s", err)
-        return {"success": False, "error": str(err.reason)}
 
 
 async def check_and_record_idempotency(request_id: str) -> bool:
@@ -150,37 +82,6 @@ async def check_and_record_idempotency(request_id: str) -> bool:
             return True
         logger.error("Failed to check idempotency: %s", str(err))
         return False
-
-
-async def enqueue_job(job_data: dict[str, Any]) -> dict[str, Any]:
-    """Enqueue a job to the job queue.
-
-    Returns:
-        Result dictionary with success status
-    """
-    queue_url = os.environ.get("JOB_QUEUE_URL")
-    if not queue_url:
-        logger.error("JOB_QUEUE_URL not set, cannot enqueue job")
-        return {"success": False, "error": "Job queue not configured"}
-
-    try:
-        response = get_sqs_client().send_message(
-            QueueUrl=queue_url, MessageBody=json.dumps(job_data)
-        )
-        logger.info("Enqueued job to SQS: %s", response.get("MessageId"))
-
-        attrs = get_sqs_client().get_queue_attributes(
-            QueueUrl=queue_url, AttributeNames=["ApproximateNumberOfMessages"]
-        )
-        queue_depth = int(
-            attrs.get("Attributes", {}).get("ApproximateNumberOfMessages", "0")
-        )
-        publish_metric("QueueDepth", float(queue_depth), "Count")
-
-        return {"success": True, "message_id": response.get("MessageId")}
-    except ClientError as err:
-        logger.error("Failed to enqueue job: %s", str(err))
-        return {"success": False, "error": str(err)}
 
 
 def archive_ignored_event(event_data: dict[str, Any], reason: str) -> dict[str, Any]:
@@ -238,7 +139,7 @@ def handle_workflow_run(event_data: dict[str, Any]) -> dict[str, Any]:
     conclusion = workflow_run.get("conclusion")
 
     logger.info(
-        "Workflow run %s %s: workflow=%s, conclusion=%s (ephemeral runners self-cleanup)",
+        "Workflow run %s %s: workflow=%s, conclusion=%s",
         run_id,
         action,
         workflow_name,
@@ -309,91 +210,6 @@ def verify_signature(payload_body: str, signature_header: str, secret: str) -> b
     ).hexdigest()
 
     return hmac.compare_digest(computed_signature, github_signature)
-
-
-async def handle_workflow_job(event_data: dict[str, Any]) -> dict[str, Any]:
-    """Handle a workflow_job event.
-
-    This is a dumb forwarder - it does NOT parse labels or determine runner type.
-    It simply forwards the job to /v1/runners which handles routing.
-    """
-    action = event_data.get("action")
-    job = event_data.get("workflow_job", {})
-    job_id = job.get("id")
-    job_name = job.get("name")
-    job_labels = job.get("labels", [])
-    job_status = job.get("status")
-    run_id = job.get("run_id")
-    repo_full_name = event_data.get("repository", {}).get("full_name")
-
-    logger.info(
-        "Received workflow_job event: action=%s, job=%s, status=%s, labels=%s",
-        action,
-        job_name,
-        job_status,
-        json.dumps(job_labels),
-    )
-    logger.info("workflow_job context: repo=%s, run_id=%s", repo_full_name, run_id)
-
-    if action != "queued":
-        logger.info("Ignoring action '%s' (only handle 'queued')", action)
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"message": f"Ignored action: {action}"}),
-        }
-
-    # Forward to /v1/runners - let it determine runner type from labels
-    logger.info(
-        "Forwarding job %s (%s) to /v1/runners",
-        job_id,
-        job_name,
-    )
-
-    job_data = {
-        "job_id": job_id,
-        "job_labels": job_labels,
-        "github_repo": repo_full_name,
-        "run_id": run_id,
-    }
-
-    if cache["test_mode"]:
-        logger.info("Test mode enabled - skipping forward to /v1/runners")
-        return {
-            "statusCode": 200,
-            "body": json.dumps(
-                {
-                    "message": "Test mode - job not forwarded",
-                    "job_id": job_id,
-                    "run_id": run_id,
-                    "test_mode": True,
-                }
-            ),
-        }
-
-    result = await post_to_runners(job_data)
-
-    if result.get("success"):
-        return {
-            "statusCode": 200,
-            "body": json.dumps(
-                {
-                    "message": "Job forwarded to /v1/runners",
-                    "job_id": job_id,
-                    "run_id": run_id,
-                }
-            ),
-        }
-
-    return {
-        "statusCode": 500,
-        "body": json.dumps(
-            {
-                "message": "Failed to forward job to /v1/runners",
-                "error": result.get("error"),
-                "job_id": job_id,
-            }
-        ),
-    }
 
 
 def parse_event_body(event: dict[str, Any]) -> tuple[str, dict[str, Any]]:
@@ -496,9 +312,6 @@ async def process_webhook_event(
     elapsed_ms = (time.time() - start_time) * 1000
     publish_metric("ProcessingTime", elapsed_ms, "Milliseconds")
 
-    if event_type == "workflow_job":
-        return await handle_workflow_job(payload)
-
     if event_type == "workflow_run":
         return handle_workflow_run(payload)
 
@@ -559,20 +372,6 @@ def get_ingress_handler() -> IngressHandler:
             """Check if delivery is duplicate."""
             return await check_and_record_idempotency(delivery_id)
 
-        def get_runner_type(self, _labels: list[str]) -> tuple[str | None, str | None]:
-            """No longer determines runner type - always returns placeholder.
-
-            The /v1/runners endpoint now handles runner type determination.
-            This method returns a placeholder so jobs are forwarded.
-            """
-            # Return a placeholder - actual routing is done by /v1/runners
-            return ("forwarded", "runners")
-
-        async def enqueue_job(self, job_data: dict[str, Any]) -> dict[str, bool]:
-            """Forward job to /v1/runners via HTTP POST."""
-            result = await post_to_runners(job_data)
-            return {"success": result.get("success", False)}
-
         def enqueue_ignored(self, payload: dict[str, Any], reason: str) -> None:
             """Archive ignored event to S3."""
             archive_ignored_event(payload, reason)
@@ -591,7 +390,6 @@ async def async_handler(event: dict[str, Any]) -> dict[str, Any]:
     )
 
     if is_sqs:
-        # This Lambda handles webhook_ingress queue and forwards to /v1/runners
         logger.info("Processing SQS event from webhook_ingress queue")
 
         ingress_handler = get_ingress_handler()

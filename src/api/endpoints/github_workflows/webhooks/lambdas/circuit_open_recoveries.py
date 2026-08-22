@@ -75,7 +75,7 @@ def check_health(function_name: str) -> dict:
             InvocationType='RequestResponse',
             Payload=json.dumps({
                 'httpMethod': 'GET',
-                'path': '/v1/runners/health',
+                'path': '/v1/github-workflows/webhooks',
                 'headers': {}
             })
         )

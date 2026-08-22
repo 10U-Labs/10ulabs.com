@@ -31,8 +31,6 @@ from test_fixtures.integration import (
     Layer6S3WriteCapabilityTests,
     # Factory functions
     create_deployed_naming_convention_tests,
-    create_ecs_runner_lambda_existence_tests,
-    create_ecs_runner_outputs_tests,
     create_kms_policy_test,
     create_lambda_api_gateway_wiring_tests,
     create_lambda_configuration_tests,
@@ -294,22 +292,6 @@ class TestCreateDeployedNamingConventionTestsImport:
     def test_import_is_callable(self):
         """create_deployed_naming_convention_tests is callable."""
         assert callable(create_deployed_naming_convention_tests)
-
-
-class TestCreateEcsRunnerLambdaExistenceTestsImport:
-    """Tests for create_ecs_runner_lambda_existence_tests import."""
-
-    def test_import_is_callable(self):
-        """create_ecs_runner_lambda_existence_tests is callable."""
-        assert callable(create_ecs_runner_lambda_existence_tests)
-
-
-class TestCreateEcsRunnerOutputsTestsImport:
-    """Tests for create_ecs_runner_outputs_tests import."""
-
-    def test_import_is_callable(self):
-        """create_ecs_runner_outputs_tests is callable."""
-        assert callable(create_ecs_runner_outputs_tests)
 
 
 class TestCreateKmsPolicyTestImport:

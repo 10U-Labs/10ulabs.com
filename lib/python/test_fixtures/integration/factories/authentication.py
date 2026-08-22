@@ -11,7 +11,7 @@ def create_layer1_authentication_tests():
     """Create Layer 1 authentication test class.
 
     Returns a test class with standard AWS credential verification tests.
-    Used by ecs_runner, image_for_ecs_runners, and similar endpoints.
+    Used by endpoints that call AWS APIs directly.
 
     Returns:
         Test class with Layer 1 authentication tests
