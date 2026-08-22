@@ -43,7 +43,7 @@ test/
 | Scope | Location | Examples |
 |-------|----------|----------|
 | All tests | `test/conftest.py` | Path setup (already done) |
-| All API tests | `test/api/conftest.py` | Terraform utilities, runner labels |
+| All API tests | `test/api/conftest.py` | Terraform outputs, AWS clients, deployment probes |
 | All backend tests | `test/api/backend/conftest.py` | Config parsing from tfvars/locals |
 | Pre-deployment unit | `test/.../pre_deployment/unit/conftest.py` | Lambda mocks, event factories |
 | Pre-deployment integration | `test/.../pre_deployment/integration/conftest.py` | Layer markers, bootstrap fixtures |
