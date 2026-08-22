@@ -53,9 +53,20 @@ STEP_OUTPUT = re.compile(r"steps\.([A-Za-z0-9_-]+)\.outputs\.")
 TEST_ASSIGNMENT = re.compile(r"^\s*(\w+)=(test/[\w./-]+)\s*$", re.MULTILINE)
 TEST_ARGUMENT = re.compile(r"(?<![=\w])test/[\w./-]+")
 LOCAL_ACTION = "./.github/actions/"
+SRC_ROOT = REPO_ROOT / "src"
+WORKFLOW_LITERAL = re.compile(r"['\"]([\w-]+)\.yml['\"]")
 
 # The controller itself, which is started by every push and names no paths.
 CONTROLLER = "workflowctl"
+
+# The two workflows that bake a machine image. An image build runs for the best
+# part of an hour on an instance sized to compile, and neither of them produces
+# anything a commit needs, so they are started by the endpoint that wants a new
+# image and never by a push.
+DISPATCH_ONLY = (
+    "api_endpoint_v1_runners_ec2_images_post",
+    "api_endpoint_v1_runners_ecs_images_post",
+)
 
 
 @pytest.fixture(scope="module")
@@ -352,6 +363,21 @@ def _push_triggered_workflows() -> dict:
             if listed:
                 triggered[workflow.stem] = listed
     return triggered
+
+
+def _dispatched_by_source() -> set:
+    """Name each workflow a Lambda in this repository starts through the API.
+
+    A handler asks for a run by naming the workflow file, so the literal it
+    passes is the record that something starts that workflow even though no
+    push and no graph edge does.
+    """
+    named: set = set()
+    for source in sorted(SRC_ROOT.rglob("*.py")):
+        for stem in WORKFLOW_LITERAL.findall(source.read_text(encoding="utf-8")):
+            if (WORKFLOWS_DIR / f"{stem}.yml").is_file():
+                named.add(stem)
+    return named
 
 
 class TestGraphKeysMatchWorkflowFiles:
@@ -1084,11 +1110,16 @@ class TestEveryWorkflowCanBeStarted:
     ) -> None:
         """Verify each workflow is either a graph node or triggered by a push.
 
-        The controller starts a workflow only when the graph names it, so a
-        file in neither place is deployed only when somebody presses the
+        The controller starts a workflow only when the graph names it, and a
+        Lambda starts one by naming its file in a dispatch, so a workflow in
+        none of the three places is deployed only when somebody presses the
         button and its steps go unread until they are pressed.
         """
-        started = set(dependency_graph) | set(_push_triggered_workflows())
+        started = (
+            set(dependency_graph)
+            | set(_push_triggered_workflows())
+            | _dispatched_by_source()
+        )
         stranded = sorted(workflow_files - started - {CONTROLLER})
 
         assert not stranded, (
@@ -1116,6 +1147,30 @@ class TestBootstrapCanBeAppliedIntoAnEmptyAccount:
         assert "workflow_dispatch" in triggers, (
             "bootstrap.yml can only be started by a push, so an account with no "
             "state bucket and no OIDC role has no way to deploy it"
+        )
+
+
+class TestAnImageBuildIsOnlyEverAskedFor:
+    """Tests that the two workflows which bake a machine image cost nothing idle."""
+
+    @pytest.mark.parametrize("name", DISPATCH_ONLY)
+    def test_the_workflow_has_no_push_trigger(self, name: str) -> None:
+        """Verify an image build starts only when an endpoint asks for one.
+
+        Both of these run a build on an instance sized to compile and produce
+        an AMI or a container image that no commit is waiting on. They used to
+        name lib/terraform/common in their paths, which every stack reads, so
+        an edit to a shared local started two image builds that nobody wanted
+        and the account was billed for both.
+        """
+        document = yaml.safe_load(
+            (WORKFLOWS_DIR / f"{name}.yml").read_text(encoding="utf-8")
+        )
+        triggers = document.get(True) or document.get("on") or {}
+
+        assert "push" not in triggers, (
+            f"{name}.yml starts on a push, so an edit to a path it names bakes "
+            "an image nothing asked for"
         )
 
 

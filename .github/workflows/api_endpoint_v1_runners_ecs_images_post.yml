@@ -335,21 +335,6 @@ jobs:
             --region "$REGION"
 name: api_endpoint_v1_runners_ecs_images_post
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/actions/verify-oidc-vars/action.yml
-      - .github/workflows/api_endpoint_v1_runners_ecs_images_post.yml
-      - lib/terraform/common/**
-      - src/api/endpoints/runners/ecs/images/post/**
-      - src/api/endpoints/runners/ecs/terraform.tfvars
-      - test/api/conftest.py
-      - test/api/endpoints/conftest.py
-      - test/api/endpoints/runners/ecs/conftest.py
-      - test/api/endpoints/runners/ecs/images/conftest.py
-      - test/api/endpoints/runners/ecs/images/post/**
-      - test/conftest.py
   workflow_dispatch:
     inputs:
       github_hosted:
