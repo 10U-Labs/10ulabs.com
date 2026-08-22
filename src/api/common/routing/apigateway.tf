@@ -6,7 +6,6 @@ locals {
     contact                  = module.common.lambda_handler_names.contact
     ec2_runner               = module.common.lambda_handler_names.ec2_runner
     ecs_runner               = module.common.lambda_handler_names.ecs_runner
-    ecs_task_stops           = module.common.lambda_handler_names.ecs_task_stops
     echo                     = module.common.lambda_handler_names.echo
     github_workflows_retries = module.common.lambda_handler_names.github_workflows_retries
     health                   = module.common.lambda_handler_names.health
@@ -31,7 +30,6 @@ locals {
   contact_arn                  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.contact}/invocations"
   ec2_runner_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ec2_runner}/invocations"
   ecs_runner_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ecs_runner}/invocations"
-  ecs_task_stops_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ecs_task_stops}/invocations"
   echo_arn                     = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.echo}/invocations"
   github_workflows_retries_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.github_workflows_retries}/invocations"
   health_arn                   = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.health}/invocations"
@@ -49,7 +47,6 @@ locals {
     ContactHandlerArn                = local.contact_arn
     EC2RunnerHandlerArn              = local.ec2_runner_arn
     EcsRunnerHandlerArn              = local.ecs_runner_arn
-    EcsTaskStopsHandlerArn           = local.ecs_task_stops_arn
     EchoHandlerArn                   = local.echo_arn
     GithubWorkflowsRetriesHandlerArn = local.github_workflows_retries_arn
     HealthHandlerArn                 = local.health_arn

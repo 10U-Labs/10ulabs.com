@@ -416,153 +416,6 @@
         }
       }
     },
-    "/v1/ecs-task-stops": {
-      "get": {
-        "summary": "List ECS Task Stops",
-        "description": "Returns the 10 most recent ECS task stop events",
-        "operationId": "listEcsTaskStops",
-        "tags": [
-          "/v1/ecs-task-stops"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of recent task stop events",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "items"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "timestamp": {
-                            "type": "string"
-                          },
-                          "task_arn": {
-                            "type": "string"
-                          },
-                          "cluster": {
-                            "type": "string"
-                          },
-                          "stop_reason": {
-                            "type": "string"
-                          },
-                          "exit_code": {
-                            "type": "integer"
-                          }
-                        }
-                      }
-                    },
-                    "count": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${EcsTaskStopsHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      }
-    },
-    "/v1/ecs-task-stops/{limit}": {
-      "get": {
-        "summary": "List ECS Task Stops (Custom Limit)",
-        "description": "Returns the N most recent ECS task stop events",
-        "operationId": "listEcsTaskStopsWithLimit",
-        "tags": [
-          "/v1/ecs-task-stops"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of recent task stop events",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "items"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "timestamp": {
-                            "type": "string"
-                          },
-                          "task_arn": {
-                            "type": "string"
-                          },
-                          "cluster": {
-                            "type": "string"
-                          },
-                          "stop_reason": {
-                            "type": "string"
-                          },
-                          "exit_code": {
-                            "type": "integer"
-                          }
-                        }
-                      }
-                    },
-                    "count": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "description": "Maximum number of records to return"
-          }
-        ],
-        "x-amazon-apigateway-integration": {
-          "uri": "${EcsTaskStopsHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      }
-    },
     "/v1/github-workflows/retries": {
       "get": {
         "summary": "List GitHub Workflow Retries",
@@ -2799,10 +2652,6 @@
       "description": "Contact form submission endpoints"
     },
     {
-      "name": "/v1/ecs-task-stops",
-      "description": "ECS task stop handling endpoints"
-    },
-    {
       "name": "/v1/github-workflows",
       "description": "GitHub workflows endpoints"
     },
@@ -2847,7 +2696,6 @@
       "name": "/v1/",
       "tags": [
         "/v1/contact-submissions",
-        "/v1/ecs-task-stops",
         "/v1/github-workflows",
         "/v1/rack-configurations",
         "/v1/runners",

@@ -28,7 +28,6 @@ locals {
     contact                   = "${local.resource_prefix}ContactHandler"
     ec2_runner                = "${local.resource_prefix}EC2RunnerHandler"
     ecs_runner                = "${local.resource_prefix}EcsRunnerHandler"
-    ecs_task_stops            = "${local.resource_prefix}EcsTaskStopsHandler"
     echo                      = "${local.resource_prefix}DiagnosticsHandler"
     github_workflows_retries  = "${local.resource_prefix}GithubWorkflowsRetriesHandler"
     health                    = "${local.resource_prefix}HealthHandler"
