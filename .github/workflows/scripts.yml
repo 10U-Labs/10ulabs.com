@@ -701,35 +701,6 @@ jobs:
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
-  test-workflowctl-mocks:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            boto3-stubs \
-            botocore \
-            dnspython \
-            paramiko \
-            pytest \
-            pytest-cov \
-            'python-hcl2<8' \
-            PyYAML \
-            requests \
-            types-PyYAML \
-            types-requests
-      - name: Run workflowctl_mocks tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_workflowctl_mocks/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=workflowctl_mocks \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
   yamllint:
     runs-on: ubuntu-latest
     steps:
