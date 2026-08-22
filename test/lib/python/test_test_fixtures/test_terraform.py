@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from test_fixtures.terraform import (
+    create_tf_content_fixture,
     terraform_init,
     terraform_output,
     terraform_output_json,
@@ -211,3 +212,17 @@ class TestTerraformOutputJson:
         terraform_output_json(Path('/another/path'), 'my_output')
         call_args = mock_run.call_args
         assert call_args[1]['cwd'] == '/another/path'
+
+
+class TestCreateTfContentFixture:
+    """Tests for create_tf_content_fixture function."""
+
+    def test_names_the_fixture_after_the_file_it_reads(self):
+        """Test the name is the filename with its dot replaced, plus _content."""
+        assert create_tf_content_fixture('lambda.tf').name == 'lambda_tf_content'
+
+    def test_the_fixture_reads_that_file_under_the_directory_given(self, tmp_path):
+        """Test the fixture returns the text of its file under terraform_dir."""
+        (tmp_path / 'lambda.tf').write_text('resource "aws_lambda_function" "a" {}')
+        fixture = create_tf_content_fixture('lambda.tf')
+        assert fixture.__wrapped__(tmp_path) == 'resource "aws_lambda_function" "a" {}'

@@ -1,4 +1,5 @@
 """Unit tests for test_fixtures.aws module."""
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,6 +8,8 @@ from botocore.exceptions import ClientError
 from test_fixtures.aws import (
     iam_role_exists,
     get_log_group_info,
+    find_lifecycle_rule,
+    stale_delete_markers,
 )
 
 
@@ -866,9 +869,9 @@ class TestApiGatewayInfoFixtureExecution:
         mock_client.get_rest_api.return_value = {
             "endpointConfiguration": {"types": ["REGIONAL"]}
         }
-        mock_client.get_resources.return_value = {
-            "items": [{"path": "/"}, {"path": "/items"}]
-        }
+        mock_client.get_paginator.return_value.paginate.return_value = [
+            {"items": [{"path": "/"}, {"path": "/items"}]}
+        ]
         mock_request.getfixturevalue.side_effect = lambda name: {
             "apigateway_client": mock_client,
             "api_common_routing_outputs": {"api_gateway_id": "abc123"}
@@ -973,3 +976,69 @@ class TestApiKeyFixtureExecution:
         result = api_key_fixture.__wrapped__(mock_request)
         assert result == "secret-key-123"
         mock_client.get_parameter.assert_called_with(Name='/api/key', WithDecryption=True)
+
+
+class TestFindLifecycleRule:
+    """Tests for find_lifecycle_rule helper function."""
+
+    @staticmethod
+    def _client(*rules):
+        """Stub an S3 client whose bucket declares the lifecycle rules given."""
+        client = MagicMock()
+        client.get_bucket_lifecycle_configuration.return_value = {"Rules": list(rules)}
+        return client
+
+    def test_returns_the_rule_whose_id_matches(self):
+        """Test the rule asked for by id is the one that comes back."""
+        wanted = {"ID": "expire-delete-markers", "Status": "Enabled"}
+        found = find_lifecycle_rule(self._client(wanted), "a-bucket", "expire-delete-markers")
+        assert found == wanted
+
+    def test_returns_none_when_no_rule_carries_that_id(self):
+        """Test a bucket declaring no such rule gives None rather than a rule."""
+        other = {"ID": "abort-multipart-uploads", "Status": "Enabled"}
+        found = find_lifecycle_rule(self._client(other), "a-bucket", "expire-delete-markers")
+        assert found is None
+
+    def test_reaches_a_rule_that_is_not_the_first(self):
+        """Test a rule behind another is reached, since AWS promises no order."""
+        wanted = {"ID": "expire-delete-markers", "Status": "Enabled"}
+        first = {"ID": "abort-multipart-uploads", "Status": "Disabled"}
+        found = find_lifecycle_rule(
+            self._client(first, wanted), "a-bucket", "expire-delete-markers"
+        )
+        assert found == wanted
+
+
+class TestStaleDeleteMarkers:
+    """Tests for stale_delete_markers helper function."""
+
+    @staticmethod
+    def _client(*pages):
+        """Stub an S3 client whose list_object_versions paginator yields the pages."""
+        client = MagicMock()
+        client.get_paginator.return_value.paginate.return_value = list(pages)
+        return client
+
+    @staticmethod
+    def _marker(key, **age):
+        """Describe one delete marker written the given interval ago."""
+        return {"Key": key, "LastModified": datetime.now(timezone.utc) - timedelta(**age)}
+
+    def test_returns_the_key_of_a_marker_older_than_the_cutoff(self):
+        """Test a marker the lifecycle rule should have taken away is reported."""
+        pages = self._client({"DeleteMarkers": [self._marker("left-behind", days=30)]})
+        assert stale_delete_markers(pages, "a-bucket") == ["left-behind"]
+
+    def test_omits_a_marker_newer_than_the_cutoff(self):
+        """Test a marker minutes old is the trace of a delete, not something left."""
+        pages = self._client({"DeleteMarkers": [self._marker("just-deleted", minutes=5)]})
+        assert stale_delete_markers(pages, "a-bucket") == []
+
+    def test_reads_every_page_the_paginator_yields(self):
+        """Test a bucket holding more markers than one page reports the later ones."""
+        pages = self._client(
+            {"DeleteMarkers": [self._marker("first-page", days=30)]},
+            {"DeleteMarkers": [self._marker("second-page", days=30)]},
+        )
+        assert stale_delete_markers(pages, "a-bucket") == ["first-page", "second-page"]
