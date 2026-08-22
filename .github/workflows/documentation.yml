@@ -1,0 +1,93 @@
+---
+# Prose
+#
+# Every markdown file here is prose: the conventions in CLAUDE.md, the tenets
+# and notes under docs/, and the session skill under .claude/. None of it
+# deploys and no test tier runs any of it, so this workflow is the only thing
+# that reads it at all. Ported from deltahdl, less that repository's jsonlint
+# job: the JSON here lives under src/ and belongs to the workflows that
+# deploy it.
+concurrency:
+  cancel-in-progress: true
+  group: documentation-${{ github.ref }}
+jobs:
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          npm install -g markdownlint-cli
+          python3 -m pip install \
+            assert-no-inline-directives \
+            assert-no-linter-config-files
+      # Every step from here on carries !cancelled(). Each scans the whole
+      # tree rather than the change, so each can hold a backlog, and a step
+      # the job stopped short of is reported the same way as one that found
+      # nothing: a breach left standing in the first of them hides the rest
+      # for as long as it stands. The job still fails when any of these
+      # fails; what changes is that one run names every breach rather than
+      # the earliest.
+      - if: ${{ !cancelled() }}
+        name: Assert no inline markdownlint disables
+        run: >-
+          assert-no-inline-directives
+          --tools markdownlint
+          --verbose
+          ${{ github.workspace }}
+      - if: ${{ !cancelled() }}
+        name: Assert no markdownlint config files
+        run: >-
+          assert-no-linter-config-files
+          --linters markdownlint
+          --verbose
+          ${{ github.workspace }}
+      # MD013 is the line-length rule, and markdown here is not hard-wrapped:
+      # a paragraph is one line however long it runs. --disable is variadic,
+      # so the glob goes before it.
+      - if: ${{ !cancelled() }}
+        name: Lint Markdown
+        run: markdownlint '**/*.md' --disable MD013
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-no-inline-directives \
+            yamllint
+      - name: Assert no inline lint disables
+        run: >-
+          assert-no-inline-directives
+          --tools yamllint
+          --verbose
+          .github/workflows/documentation.yml
+      - name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
+          python3 -m yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/documentation.yml
+name: documentation
+on:
+  push:
+    branches:
+      - main
+    paths:
+      # Every markdown file in the tree, which is what the lint step reads.
+      # '**/*.md' is the wrong form for a paths filter: '**' is any run of
+      # characters here rather than a run of directories, so it needs a
+      # slash to match and would miss CLAUDE.md and LICENSE.md at the root.
+      - '**.md'
+      - .github/workflows/documentation.yml
+  workflow_dispatch:
+permissions:
+  contents: read

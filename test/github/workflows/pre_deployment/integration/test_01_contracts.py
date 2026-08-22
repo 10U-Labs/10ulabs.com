@@ -38,11 +38,12 @@ WHOLE_TREE_GLOBS = ("lib/python/**", "test/lib/python/**")
 # checked. Adding an entry here is meant to be conspicuous: it is a decision
 # somebody makes, rather than a gap nobody sees.
 UNTRIGGERED = {
-    ".claude/**": "session tooling; nothing in CI reads it",
+    ".claude/**": (
+        "session tooling; nothing in CI reads it. The markdown in it is the "
+        "exception and needs no entry: documentation.yml names every .md in "
+        "the tree, so this covers the rest"
+    ),
     ".gitignore": "read by git, and by no workflow",
-    "CLAUDE.md": "the conventions this repository is worked under; prose",
-    "LICENSE.md": "prose",
-    "docs/**": "prose, including the tenets; no tier runs any of it",
     "etc/eslint.config.mjs": (
         "consulted by nothing. 'npm run lint' is 'eslint .' from "
         "src/www/paths/home/, and a flat config is searched for from the "
