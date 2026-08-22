@@ -638,6 +638,7 @@ on:
       - test/lib/terraform/conftest.py
       - test/lib/terraform/s3_bucket/**
       - test/lib/terraform/write_ahead_queue/**
+      - test/www/__init__.py
       - test/www/common/**
       - test/www/conftest.py
   workflow_dispatch:

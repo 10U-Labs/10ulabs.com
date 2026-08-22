@@ -656,7 +656,9 @@ on:
       - test/__init__.py
       - test/conftest.py
       - test/github/**
+      - test/lib/__init__.py
       - test/lib/python/**
+      - test/lib/terraform/__init__.py
       - test/scripts/**
   workflow_dispatch:
 permissions:
