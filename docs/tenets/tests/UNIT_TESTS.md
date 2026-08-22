@@ -22,7 +22,7 @@ These are the non-negotiable rules for unit tests.
 
 The testing pyramid dictates that unit tests form the base - the number of unit tests should be absurdly larger than integration and e2e tests combined. If a bug could be caught by a unit test but wasn't, that's a failure of test coverage.
 
-```
+```text
         /\
        /  \     E2E tests (few)
       /----\
@@ -44,6 +44,7 @@ The testing pyramid dictates that unit tests form the base - the number of unit 
 **One logical assertion per test. No exceptions.**
 
 Each test must verify exactly one behavior. This ensures:
+
 - When a test fails, you know exactly what broke
 - Tests are independent and can run in any order
 - Test names accurately describe what's being tested
@@ -100,7 +101,7 @@ test('parseLabels handles valid and invalid input', () => {
 
 **One test file per source file. 1:1 mapping.**
 
-```
+```text
 src/api/endpoints/runners/lambdas/
 ├── webhook_router.js
 ├── job_starter.js
@@ -317,6 +318,7 @@ describe('CircuitBreaker', () => {
 **Unit tests must be fast. Milliseconds, not seconds.**
 
 If a test takes more than 100ms, something is wrong:
+
 - You're making real network calls (mock them)
 - You're doing expensive setup (optimize or share via beforeAll)
 - You're testing too much in one test (split it)
@@ -345,7 +347,7 @@ test('fetches GitHub token', async () => {
 **Unit tests must catch these issues before deployment:**
 
 | Issue Type | Must Be Caught By |
-|------------|-------------------|
+| ------------ | ------------------- |
 | Syntax errors | Unit tests (imports fail) |
 | Type mismatches | Unit tests |
 | Null/undefined handling | Unit tests |
@@ -365,7 +367,7 @@ If a bug could have been caught by a unit test, the test suite failed.
 ## Quick Reference
 
 | If you want to test... | Test Type | Location |
-|------------------------|-----------|----------|
+| ------------------------ | ----------- | ---------- |
 | Function returns correct value | Unit | pre_deployment/unit/ |
 | Error is thrown for bad input | Unit | pre_deployment/unit/ |
 | Class method behavior | Unit | pre_deployment/unit/ |

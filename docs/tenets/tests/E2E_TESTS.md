@@ -21,7 +21,7 @@ These are the non-negotiable rules for end-to-end tests.
 
 **E2E tests are few in number. Only test critical user journeys.**
 
-```
+```text
         /\
        /  \     E2E tests (few) ← YOU ARE HERE
       /----\
@@ -33,6 +33,7 @@ These are the non-negotiable rules for end-to-end tests.
 ```
 
 E2E tests are expensive:
+
 - Slow (seconds to minutes, not milliseconds)
 - Flaky (network, timing, external dependencies)
 - Run in production (real resources, real costs)
@@ -167,6 +168,7 @@ def test_can_create_record(client, resource_id):
 **E2E tests verify end-to-end behavior that unit and integration tests cannot catch.**
 
 E2E tests exercise the complete path:
+
 - HTTP request → API Gateway → Lambda → SQS → Lambda → Resource
 
 ```python
@@ -205,13 +207,14 @@ def test_lambda_processes_sqs_message(lambda_client):
 **If an e2e test catches a bug that a unit test should have caught, that's a unit test gap.**
 
 E2E tests should only catch issues that cannot be caught earlier:
+
 - Race conditions in distributed systems
 - Network/timing issues between components
 - Production configuration drift
 - Integration issues between independently-deployed services
 
 | Issue Type | Should Be Caught By |
-|------------|---------------------|
+| ------------ | --------------------- |
 | Logic error in label parsing | Unit test |
 | Missing null check | Unit test |
 | Lambda timeout too short | Post-deployment integration |
@@ -243,6 +246,7 @@ def test_labels_parsed_correctly():
 **E2E tests run as workflow steps, not on schedule.**
 
 E2E tests execute:
+
 - As a step in the deployment workflow
 - After post-deployment integration tests pass
 - Only for the component being deployed
@@ -334,7 +338,7 @@ def test_webhook():
 
 ## Test File Organization
 
-```
+```text
 test/api/endpoints/{endpoint}/e2e/
 ├── conftest.py           # Fixtures for API endpoints, signed payloads
 ├── test_happy_path.py    # Critical happy path journeys
@@ -346,6 +350,7 @@ E2E tests are organized by journey type, not by component.
 ## Fixture Requirements
 
 E2E fixtures must:
+
 1. Create properly signed payloads (real GitHub signature format)
 2. Use test flags to minimize production impact
 3. Provide cleanup utilities for any resources created
@@ -385,6 +390,7 @@ This is a critical distinction. Just because AWS reports a resource is configure
 ### Why This Matters
 
 AWS API responses confirm configuration state. They do NOT confirm:
+
 - DNS propagation completed successfully
 - Nameserver delegation is working
 - Network paths are functioning
@@ -394,7 +400,7 @@ AWS API responses confirm configuration state. They do NOT confirm:
 ### Examples
 
 | What You Want to Verify | Integration Test (AWS API) | E2E Test (Real World) |
-|------------------------|---------------------------|----------------------|
+| ------------------------ | --------------------------- | ---------------------- |
 | DNS record works | Route53 `list_resource_record_sets` returns record | `dns.resolver.resolve()` returns record |
 | API is reachable | API Gateway exists, Lambda attached | HTTP request to endpoint succeeds |
 | IAM role works | Role exists with correct policy | `assume-role-with-web-identity` succeeds |
@@ -432,7 +438,7 @@ Post-deployment integration tests answer: "Did my deployment succeed?"
 E2E tests answer: "Does the user journey work?"
 
 | Post-Deployment Integration | E2E |
-|----------------------------|-----|
+| ---------------------------- | ----- |
 | Lambda exists | Lambda responds to HTTP |
 | SQS queue exists | Messages flow through queue |
 | Lambda has SQS trigger | Trigger actually fires |
@@ -442,7 +448,7 @@ E2E tests answer: "Does the user journey work?"
 ## Quick Reference
 
 | If you want to test... | Test Type | Why |
-|------------------------|-----------|-----|
+| ------------------------ | ----------- | ----- |
 | Label parsing logic | Unit | Pure function, no I/O |
 | Error message format | Unit | Pure function, no I/O |
 | Lambda timeout is 30s | Post-deployment integration | Resource configuration |

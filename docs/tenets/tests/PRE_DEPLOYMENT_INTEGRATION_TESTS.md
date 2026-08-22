@@ -7,7 +7,6 @@ These are the non-negotiable rules for pre-deployment integration tests.
 - [Integration Tests Verify Components Work Together](#integration-tests-verify-components-work-together)
 - [Seven-Layer Testing Model](#seven-layer-testing-model)
 - [Test File Organization](#test-file-organization)
-- [Layer Marker Implementation](#layer-marker-implementation)
 - [Fail Fast with Granular Diagnostics](#fail-fast-with-granular-diagnostics)
 - [Cleanup After Capability Tests](#cleanup-after-capability-tests)
 - [Fixture Usage](#fixture-usage)
@@ -52,7 +51,7 @@ Post-deployment tests answer: "Did deployment succeed?"
 Every deployment must pass through seven layers, in order:
 
 | Layer | Purpose | Example |
-|-------|---------|---------|
+| ------- | --------- | --------- |
 | 1. Contracts | Local files are compatible | openapi.json vars match templatefile() |
 | 2. Authentication | Valid credentials exist | Can call sts:GetCallerIdentity |
 | 3. Authorization | Permission to inspect resources | Can call s3:HeadBucket |
@@ -62,6 +61,7 @@ Every deployment must pass through seven layers, in order:
 | 7. Capability | Can perform required operations | Can call s3:PutObject |
 
 Each layer catches different failure modes:
+
 - Layer 1 fails → local files are incompatible (contract mismatch)
 - Layer 2 fails → credentials invalid or expired
 - Layer 3 fails → credentials valid but lack permission to inspect
@@ -74,7 +74,7 @@ Each layer catches different failure modes:
 
 Tests MUST be organized into exactly seven files by layer:
 
-```
+```text
 test/{module}/pre_deployment/integration/
 ├── test_01_contracts.py       # Layer 1: Local files are compatible
 ├── test_02_authentication.py  # Layer 2: Can authenticate to AWS
@@ -370,6 +370,7 @@ No test artifacts should remain after test execution.
 ## Fixture Usage
 
 Use fixtures to:
+
 1. Create AWS clients once per module
 2. Load configuration from shared config files
 3. Cache resource identifiers discovered in earlier layers
@@ -415,7 +416,7 @@ If layer 4 passes, `terraform apply` will succeed (no unexpected resource confli
 
 Pre-deployment integration tests require a specific position in the workflow:
 
-```
+```text
 1. Lint (pylint, mypy, yamllint, tflint)
 2. Unit tests
 3. Pre-deployment integration tests (layers 1-7)
@@ -427,7 +428,7 @@ Pre-deployment integration tests require a specific position in the workflow:
 ### Why This Order
 
 | Step | Depends On | Reason |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Lint | Nothing | Fast feedback first |
 | Unit tests | Lint | No point running tests if code has errors |
 | Pre-deployment integration | Terraform init | Layer 4 needs state access |
@@ -445,7 +446,7 @@ Pre-deployment integration tests require a specific position in the workflow:
 ## Quick Reference
 
 | If you want to test... | Layer | File |
-|------------------------|-------|------|
+| ------------------------ | ------- | ------ |
 | Template vars match between files | 1. Contracts | test_01_contracts.py |
 | Cross-file configuration consistency | 1. Contracts | test_01_contracts.py |
 | Lambda exports match Terraform refs | 1. Contracts | test_01_contracts.py |
@@ -468,7 +469,7 @@ Pre-deployment integration tests require a specific position in the workflow:
 ## Workflow Reference
 
 | Workflow | Prerequisites to Test | NOT Test (created by this workflow) |
-|----------|----------------------|-------------------------------------|
+| ---------- | ---------------------- | ------------------------------------- |
 | `github_workflows_webhooks` | IAM role from bootstrap, API Gateway from api_common_routing | SQS queues, DynamoDB tables, Lambda functions |
 | `api_common_routing` | S3 buckets from bootstrap, Route53 zone | API Gateway, Lambda functions |
 | `api_operational_health` | API Gateway from api_common_routing | Lambda function |

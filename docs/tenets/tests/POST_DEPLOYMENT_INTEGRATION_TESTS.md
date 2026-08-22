@@ -7,7 +7,6 @@ These are the non-negotiable rules for post-deployment integration tests.
 - [Only Test This Deployment's Resources](#only-test-this-deployments-resources)
 - [Three-Layer Testing Model](#three-layer-testing-model)
 - [Test File Organization](#test-file-organization)
-- [Layer Marker Implementation](#layer-marker-implementation)
 - [Fail Fast with Granular Diagnostics](#fail-fast-with-granular-diagnostics)
 - [Boundary with E2E Tests](#boundary-with-e2e-tests)
 - [No Cleanup Required](#no-cleanup-required)
@@ -33,12 +32,13 @@ E2E tests answer: "Does the user journey work?"
 Every deployed resource must be tested through three layers, in order:
 
 | Layer | Purpose | Example |
-|-------|---------|---------|
+| ------- | --------- | --------- |
 | 1. Existence | Resource was created | Lambda function exists |
 | 2. Configuration | Resource configured correctly | SQS queue has 14-day retention |
 | 3. Wiring | Components connected properly | Lambda has Layer attached, SQS triggers Lambda |
 
 Each layer catches different failure modes:
+
 - Layer 1 fails → terraform didn't create the resource
 - Layer 2 fails → resource exists but misconfigured
 - Layer 3 fails → resources exist and configured, but not connected
@@ -47,7 +47,7 @@ Each layer catches different failure modes:
 
 Tests MUST be organized into exactly three files by layer:
 
-```
+```text
 test/api/endpoints/{endpoint}/post_deployment/integration/
 ├── test_01_existence.py       # Layer 1: All resources exist
 ├── test_02_configuration.py   # Layer 2: All resources configured correctly
@@ -180,7 +180,8 @@ Cryptic errors like "Lambda invocation failed" are unacceptable.
 
 Post-deployment integration tests verify the deployment. E2E tests verify user journeys.
 
-### This belongs in post-deployment integration:
+### This belongs in post-deployment integration
+
 - Lambda exists
 - Lambda has correct timeout
 - Lambda has Layer attached
@@ -189,7 +190,8 @@ Post-deployment integration tests verify the deployment. E2E tests verify user j
 - Lambda has SQS trigger configured
 - Layer contains expected files
 
-### This belongs in e2e tests:
+### This belongs in e2e tests
+
 - Webhook receives HTTP request and returns 200
 - Message flows through SQS to Lambda
 - Label routing correctly identifies runner type
@@ -214,6 +216,7 @@ If a test needs cleanup, it's probably an e2e test.
 ## Fixture Usage
 
 Use fixtures to:
+
 1. Create AWS clients once per module
 2. Cache resource identifiers (queue URLs, ARNs)
 3. Download and cache layer contents for inspection
@@ -242,7 +245,7 @@ def layer_contents(lambda_client):
 ## Quick Reference
 
 | If you want to test... | Layer | File |
-|------------------------|-------|------|
+| ------------------------ | ------- | ------ |
 | Lambda exists | 1. Existence | test_01_existence.py |
 | SQS queue exists | 1. Existence | test_01_existence.py |
 | DynamoDB table exists | 1. Existence | test_01_existence.py |

@@ -16,14 +16,13 @@ This document explains the test infrastructure, where to put common code, and wh
   - [lambda_response/](#lambda_response)
   - [module_utils/](#module_utils)
 - [Check Before You Create](#check-before-you-create)
-- [Layer Marker System](#layer-marker-system)
 - [Static Analysis in Workflows](#static-analysis-in-workflows)
 
 ## Test Hierarchy
 
 Tests follow a cascading conftest.py pattern. Each level inherits from parents and adds specifics.
 
-```
+```text
 test/
 ├── conftest.py                              # Level 0: Path setup (lib/python)
 ├── api/
@@ -41,7 +40,7 @@ test/
 ### Where to Put Common Things
 
 | Scope | Location | Examples |
-|-------|----------|----------|
+| ------- | ---------- | ---------- |
 | All tests | `test/conftest.py` | Path setup (already done) |
 | All API tests | `test/api/conftest.py` | Terraform outputs, AWS clients, deployment probes |
 | All backend tests | `test/api/backend/conftest.py` | Config parsing from tfvars/locals |
@@ -56,7 +55,7 @@ test/
 Shared directories are for codebase-wide utilities, not module-specific code.
 
 | Directory | Scope | Example Contents |
-|-----------|-------|------------------|
+| ----------- | ------- | ------------------ |
 | `lib/python/` | Entire codebase | `boto_mocks/`, `terraform_config/`, `test_fixtures/aws.py` |
 | `test/` root | All tests | `conftest.py` (path setup), codebase-wide test utilities |
 | `test/<module>/` | Module-specific | `test/www/conftest.py`, inline constants beside the tests that read them |
@@ -64,6 +63,7 @@ Shared directories are for codebase-wide utilities, not module-specific code.
 **Key principle:** If a fixture or utility is only used by one module's tests, keep it within that module's test directory. Don't pollute shared directories with module-specific code.
 
 Examples:
+
 - ✅ `lib/python/boto_mocks/` — Used by API, Lambda, and infrastructure tests across the codebase
 - ✅ `test/api/conftest.py` — Terraform utilities used by all API endpoint tests
 - ✅ `test/www/conftest.py` — Fixtures specific to the www tests
@@ -197,6 +197,7 @@ Before writing new fixtures or utilities:
 3. **Check test_fixtures.aws** - Common AWS fixtures are already available
 
 If your fixture is useful beyond your specific test file:
+
 - Put it in the appropriate conftest.py level
 - Or add it to lib/python/ if it's broadly reusable
 
@@ -207,7 +208,7 @@ Linting and type checking must run separately for source and test code.
 ### Required Workflow Steps
 
 | Step Name | Target |
-|-----------|--------|
+| ----------- | -------- |
 | `Run pylint on source` | `lib/python/` and `src/.../lambdas/` |
 | `Run pylint on tests` | `lib/python/`, parent conftest files, and `test/.../endpoint/` (with `PYTHONPATH=lib/python`) |
 | `Run mypy on source` | `lib/python/` and `src/.../lambdas/` |
