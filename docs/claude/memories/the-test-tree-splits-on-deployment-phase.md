@@ -12,7 +12,7 @@ A subsystem that deploys has the same four directories available to it, and the 
     └── e2e/
 ```
 
-The phase is the top split because two of the four tiers presume a deployment: post-deployment integration asks what shape it came out, and end to end asks what a caller receives from it. Neither can be attempted on a bare checkout. The other two run anywhere. Everything under `test/api/` and `test/www/` is laid out this way, and so are `test/bootstrap/` and `test/workflowctl/`.
+The phase is the top split because two of the four tiers presume a deployment: post-deployment integration asks what shape it came out, and end to end asks what a caller receives from it. Neither can be attempted on a bare checkout. The other two run anywhere. Everything under `test/api/` and `test/www/` is laid out this way, and so are `test/bootstrap/` and `test/github/workflows/`.
 
 A tier directory appears when a test exists to put in it and not before. An absent directory is the honest answer, not a gap to fill.
 

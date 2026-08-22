@@ -1,11 +1,12 @@
 ---
 # Non-deploying Python
 #
-# lib/python/ is the shared library every lambda is built from and scripts/
-# holds the one program the deploys shell out to. Neither tree deploys, so
-# neither has a workflow of its own and until this file nothing ran their
-# tests. Every check here is its own job, so a red package reports alongside
-# the others rather than hiding behind the first failing step.
+# lib/python/ is the shared library every lambda is built from, scripts/ holds
+# the one program the deploys shell out to, and .github/ holds the workflow
+# files themselves. None of the three deploys, so none has a workflow of its
+# own and this file is what runs their tests. Every check here is its own job,
+# so a red package reports alongside the others rather than hiding behind the
+# first failing step.
 concurrency:
   cancel-in-progress: true
   group: scripts-${{ github.ref }}
@@ -319,6 +320,31 @@ jobs:
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
+  test-github-workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            paramiko \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run the workflow contract tests
+        run: |
+          BASE=test/github/workflows/pre_deployment
+          PYTHONPATH=lib/python python3 -m pytest \
+            $BASE/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
   test-infra-validation:
     runs-on: ubuntu-latest
     steps:
@@ -732,6 +758,11 @@ on:
     paths:
       # src/ is deliberately absent: naming it would start every job here
       # on every push to a lambda.
+      #
+      # The contract tests read every workflow file, so an edit to any of them
+      # has to start this run. The entry below it is the same file again, and
+      # is what says which workflow these paths belong to.
+      - .github/workflows/**
       - .github/workflows/scripts.yml
       - lib/python/**
       # lib/terraform/common is parsed by lib/python/terraform_config, so a
@@ -739,6 +770,7 @@ on:
       - lib/terraform/common/**
       - scripts/**
       - test/conftest.py
+      - test/github/**
       - test/lib/python/**
       - test/scripts/**
   workflow_dispatch:

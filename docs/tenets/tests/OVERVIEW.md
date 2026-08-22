@@ -59,16 +59,16 @@ Shared directories are for codebase-wide utilities, not module-specific code.
 |-----------|-------|------------------|
 | `lib/python/` | Entire codebase | `boto_mocks/`, `terraform_config/`, `test_fixtures/aws.py` |
 | `test/` root | All tests | `conftest.py` (path setup), codebase-wide test utilities |
-| `test/<module>/` | Module-specific | `test/workflowctl/conftest.py`, inline `SAMPLE_GRAPH` constants |
+| `test/<module>/` | Module-specific | `test/www/conftest.py`, inline constants beside the tests that read them |
 
 **Key principle:** If a fixture or utility is only used by one module's tests, keep it within that module's test directory. Don't pollute shared directories with module-specific code.
 
 Examples:
 - ✅ `lib/python/boto_mocks/` — Used by API, Lambda, and infrastructure tests across the codebase
 - ✅ `test/api/conftest.py` — Terraform utilities used by all API endpoint tests
-- ✅ `test/workflowctl/conftest.py` — Fixtures specific to workflowctl tests
-- ❌ `lib/python/test_fixtures/workflowctl.py` — Wrong: workflowctl-specific code in codebase-wide lib/
-- ❌ `test/workflowctl_fixtures.py` — Wrong: workflowctl-specific code at test/ root level
+- ✅ `test/www/conftest.py` — Fixtures specific to the www tests
+- ❌ `lib/python/test_fixtures/www.py` — Wrong: www-specific code in codebase-wide lib/
+- ❌ `test/www_fixtures.py` — Wrong: www-specific code at test/ root level
 
 ## Reusable Utilities in lib/python/
 
