@@ -14,7 +14,6 @@ EVENTBRIDGE_RULES = [
     "dlq_reprocessor",
     "circuit_open_recoveries",
     "ecs_task_stopped",
-    "ec2_spot_interruption",
     "stale_runner_cleanup_schedule",
 ]
 
@@ -34,7 +33,6 @@ SCHEDULED_RULES = [
 EVENT_PATTERN_RULES = [
     "circuit_open_remediations",
     "ecs_task_stopped",
-    "ec2_spot_interruption",
 ]
 
 
@@ -173,12 +171,6 @@ class TestEventPatternRules:
         has_ecs = '"aws.ecs"' in eventbridge_tf_content
         has_task = '"ECS Task State Change"' in eventbridge_tf_content
         assert has_ecs and has_task
-
-    def test_ec2_spot_interruption_listens_to_ec2(self, eventbridge_tf_content):
-        """Verify EC2 spot interruption rule listens to EC2 events."""
-        has_ec2 = '"aws.ec2"' in eventbridge_tf_content
-        has_spot = '"EC2 Spot Instance Interruption Warning"' in eventbridge_tf_content
-        assert has_ec2 and has_spot
 
 
 class TestEventBridgeNamingConventions:

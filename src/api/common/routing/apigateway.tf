@@ -5,7 +5,6 @@ locals {
     circuit_opens            = module.common.lambda_handler_names.circuit_opens
     contact                  = module.common.lambda_handler_names.contact
     ec2_runner               = module.common.lambda_handler_names.ec2_runner
-    ec2_spot_interruptions   = module.common.lambda_handler_names.ec2_spot_interruptions
     ecs_runner               = module.common.lambda_handler_names.ecs_runner
     ecs_task_stops           = module.common.lambda_handler_names.ecs_task_stops
     echo                     = module.common.lambda_handler_names.echo
@@ -31,7 +30,6 @@ locals {
   circuit_opens_arn            = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.circuit_opens}/invocations"
   contact_arn                  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.contact}/invocations"
   ec2_runner_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ec2_runner}/invocations"
-  ec2_spot_interruptions_arn   = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ec2_spot_interruptions}/invocations"
   ecs_runner_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ecs_runner}/invocations"
   ecs_task_stops_arn           = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ecs_task_stops}/invocations"
   echo_arn                     = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.echo}/invocations"
@@ -50,7 +48,6 @@ locals {
     CircuitOpensHandlerArn           = local.circuit_opens_arn
     ContactHandlerArn                = local.contact_arn
     EC2RunnerHandlerArn              = local.ec2_runner_arn
-    Ec2SpotInterruptionsHandlerArn   = local.ec2_spot_interruptions_arn
     EcsRunnerHandlerArn              = local.ecs_runner_arn
     EcsTaskStopsHandlerArn           = local.ecs_task_stops_arn
     EchoHandlerArn                   = local.echo_arn

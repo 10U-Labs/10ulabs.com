@@ -416,153 +416,6 @@
         }
       }
     },
-    "/v1/ec2-spot-interruptions": {
-      "get": {
-        "summary": "List EC2 Spot Interruptions",
-        "description": "Returns the 10 most recent EC2 Spot Instance interruption events",
-        "operationId": "listEc2SpotInterruptions",
-        "tags": [
-          "/v1/ec2-spot-interruptions"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of recent spot interruption events",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "items"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "timestamp": {
-                            "type": "string"
-                          },
-                          "instance_id": {
-                            "type": "string"
-                          },
-                          "instance_type": {
-                            "type": "string"
-                          },
-                          "availability_zone": {
-                            "type": "string"
-                          },
-                          "action": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    },
-                    "count": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${Ec2SpotInterruptionsHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      }
-    },
-    "/v1/ec2-spot-interruptions/{limit}": {
-      "get": {
-        "summary": "List EC2 Spot Interruptions (Custom Limit)",
-        "description": "Returns the N most recent EC2 Spot Instance interruption events",
-        "operationId": "listEc2SpotInterruptionsWithLimit",
-        "tags": [
-          "/v1/ec2-spot-interruptions"
-        ],
-        "security": [
-          {
-            "api_key": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of recent spot interruption events",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "items"
-                  ],
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "timestamp": {
-                            "type": "string"
-                          },
-                          "instance_id": {
-                            "type": "string"
-                          },
-                          "instance_type": {
-                            "type": "string"
-                          },
-                          "availability_zone": {
-                            "type": "string"
-                          },
-                          "action": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    },
-                    "count": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "description": "Maximum number of records to return"
-          }
-        ],
-        "x-amazon-apigateway-integration": {
-          "uri": "${Ec2SpotInterruptionsHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      }
-    },
     "/v1/ecs-task-stops": {
       "get": {
         "summary": "List ECS Task Stops",
@@ -2946,10 +2799,6 @@
       "description": "Contact form submission endpoints"
     },
     {
-      "name": "/v1/ec2-spot-interruptions",
-      "description": "EC2 Spot interruption handling endpoints"
-    },
-    {
       "name": "/v1/ecs-task-stops",
       "description": "ECS task stop handling endpoints"
     },
@@ -2998,7 +2847,6 @@
       "name": "/v1/",
       "tags": [
         "/v1/contact-submissions",
-        "/v1/ec2-spot-interruptions",
         "/v1/ecs-task-stops",
         "/v1/github-workflows",
         "/v1/rack-configurations",
