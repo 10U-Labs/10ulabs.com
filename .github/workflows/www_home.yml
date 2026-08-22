@@ -3,18 +3,141 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    name: Deploy home page
-    permissions:
-      contents: read
-      id-token: write
+  assert-no-inline-directives:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          fetch-depth: 0
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-no-inline-directives
+      - name: Assert no inline lint disables
+        run: >-
+          assert-no-inline-directives
+          --tools pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
+  assert-no-linter-config-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-no-linter-config-files
+      - name: Assert no linter config files
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+  assert-one-assert-per-pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-one-assert-per-pytest
+      - name: Assert one assert per pytest
+        run: >-
+          assert-one-assert-per-pytest
+          --verbose
+          ${{ github.workspace }}/test
+  copy-paste-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install jscpd
+        run: npm install -g jscpd@4.0.5
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/
+  e2e-tests:
+    if: github.ref == 'refs/heads/main'
+    needs: post-deployment-integration-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install npm dependencies
+        run: |
+          npm ci --prefix src/www/paths/home
+      - name: Install Playwright browsers
+        run: |
+          npx --prefix src/www/paths/home playwright install chromium
+      - env:
+          BASE_URL: https://10ulabs.com
+        name: Run E2E tests
+        run: |
+          npm run test:e2e --prefix src/www/paths/home
+  jsonlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install jsonlint
+        run: npm install -g jsonlint
+      - name: Linting JSON files
+        run: |
+          for file in \
+            src/www/api/openapi.json \
+            src/www/paths/home/components.json \
+            src/www/paths/home/package.json
+          do
+            echo "Validating $file"
+            jsonlint -q "$file"
+          done
+  mypy-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run mypy
+        run: |
+          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
+  post-deployment-integration-tests:
+    if: github.ref == 'refs/heads/main'
+    needs: reconciliation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Verify OIDC variables
         uses: ./.github/actions/verify-oidc-vars
         with:
@@ -32,87 +155,84 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install \
-            assert-no-inline-directives \
-            assert-no-linter-config-files \
-            assert-one-assert-per-pytest \
             boto3 \
             boto3-stubs \
             botocore \
             dnspython \
-            mypy \
-            pylint \
             pytest \
             'python-hcl2<8' \
+            PyYAML \
             requests \
             types-PyYAML \
-            types-requests \
-            yamllint
-      - name: Assert no linter config files
-        run: >-
-          assert-no-linter-config-files
-          --linters pylint,mypy,yamllint
-          --verbose
-          ${{ github.workspace }}
-      - name: Assert no inline lint disables
-        run: >-
-          assert-no-inline-directives
-          --tools pylint,mypy,yamllint
-          --verbose
-          ${{ github.workspace }}/**/*
-      - name: Assert one assert per pytest
-        run: >-
-          assert-one-assert-per-pytest
-          --verbose
-          ${{ github.workspace }}/test
-      - name: Linting YAML files
-        run: |
-          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
-          KEY_ORDERING='key-ordering: enable'
-          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
-          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING"
-          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
-          python3 -m yamllint --strict \
-            --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/www_home.yml
-      - name: Install jsonlint
-        run: npm install -g jsonlint
-      - name: Linting JSON files
-        run: |
-          # Note: tsconfig files use JSONC (JSON with Comments) format
-          # which jsonlint doesn't support, so we skip them here
-          for file in \
-            src/www/api/openapi.json \
-            src/www/paths/home/components.json \
-            src/www/paths/home/package.json
-          do
-            echo "Validating $file"
-            jsonlint -q "$file"
-          done
-      - name: Run pylint
-        run: |
-          TEST=test/www/paths
-          PYTHONPATH=lib/python python3 -m pylint lib/python/ test/ \
-            --fail-on=C,R,W --fail-under=10.0
-      - name: Run mypy
-        run: |
-          TEST=test/www/paths
-          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
-      - name: Install jscpd
-        run: npm install -g jscpd@4.0.5
-      - name: Check for duplicate code in test Python files
-        run: |
-          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
-      - name: Install npm dependencies
-        run: npm ci --prefix src/www/paths/home
-      - name: Run unit tests
-        run: npm test --prefix src/www/paths/home
+            types-requests
       - id: terraform
         name: Extract Terraform version
         run: |
-          TERRAFORM_VERSION=$(grep 'required_version' \
-            src/www/common/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+          TF_FILE=src/www/common/backend.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_FILE \
+            | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
+      - name: Install npm dependencies
+        run: |
+          npm ci --prefix src/www/paths/home
+      - name: Install Playwright browsers
+        run: |
+          npx --prefix src/www/paths/home playwright install chromium
+      - env:
+          BASE_URL: https://10ulabs.com
+        name: Run post-deployment integration tests
+        run: |
+          npm run test:integration --prefix src/www/paths/home
+      - name: Run post-deployment integration tests with pytest
+        run: |
+          TEST=test/www/paths/home
+          PYTHONPATH=lib/python python3 -m pytest \
+            $TEST/post_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+  pre-deployment-integration-tests:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Verify OIDC variables
+        uses: ./.github/actions/verify-oidc-vars
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - id: terraform
+        name: Extract Terraform version
+        run: |
+          TF_FILE=src/www/common/backend.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_FILE \
+            | cut -d'"' -f2 | sed 's/>= //')
           echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -125,6 +245,73 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $TEST/pre_deployment/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
+  pylint-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            pylint \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run pylint
+        run: |
+          PYTHONPATH=lib/python python3 -m pylint lib/python/ test/ \
+            --fail-on=C,R,W --fail-under=10.0
+  reconciliation:
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - pre-deployment-integration-tests
+      - unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Verify OIDC variables
+        uses: ./.github/actions/verify-oidc-vars
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore
+      - id: terraform
+        name: Extract Terraform version
+        run: |
+          TF_FILE=src/www/common/backend.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_FILE \
+            | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
       - name: Get bucket name from common Terraform
         run: |
           terraform -chdir=src/www/common init \
@@ -158,22 +345,41 @@ jobs:
             --fqdn "${{ env.WEBSITE_FQDN }}" \
             --region ${{ vars.AWS_REGION }} \
             --paths "/home/*"
-      - name: Install Playwright browsers
-        run: npx --prefix src/www/paths/home playwright install chromium
-      - env:
-          BASE_URL: https://10ulabs.com
-        name: Run post-deployment integration tests
-        run: npm run test:integration --prefix src/www/paths/home
-      - name: Run post-deployment integration tests with pytest
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install npm dependencies
         run: |
-          TEST=test/www/paths/home
-          PYTHONPATH=lib/python python3 -m pytest \
-            $TEST/post_deployment/integration/ \
-            --confcutdir=test --verbose --pythonwarnings=error
-      - env:
-          BASE_URL: https://10ulabs.com
-        name: Run E2E tests
-        run: npm run test:e2e --prefix src/www/paths/home
+          npm ci --prefix src/www/paths/home
+      - name: Run unit tests
+        run: |
+          npm test --prefix src/www/paths/home
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            yamllint
+      - name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
+          python3 -m yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/www_home.yml
 name: www_home
 on:
   push:

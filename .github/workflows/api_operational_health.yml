@@ -3,12 +3,87 @@ concurrency:
   cancel-in-progress: false
   group: health/terraform.tfstate
 jobs:
-  deploy:
+  assert-no-inline-directives:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-no-inline-directives
+      - name: Assert no inline lint disables
+        run: >-
+          assert-no-inline-directives
+          --tools pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}/**/*
+  assert-no-linter-config-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-no-linter-config-files
+      - name: Assert no linter config files
+        run: >-
+          assert-no-linter-config-files
+          --linters pylint,mypy,yamllint
+          --verbose
+          ${{ github.workspace }}
+  assert-one-assert-per-pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-one-assert-per-pytest
+      - name: Assert one assert per pytest
+        run: >-
+          assert-one-assert-per-pytest
+          --verbose
+          ${{ github.workspace }}/test
+  copy-paste-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install jscpd
+        run: npm install -g jscpd@4.0.5
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/api/operational/health/lambda/
+  copy-paste-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install jscpd
+        run: npm install -g jscpd@4.0.5
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/
+  e2e-tests:
     if: github.ref == 'refs/heads/main'
-    name: Deploy /health endpoint
-    permissions:
-      contents: read
-      id-token: write
+    needs: post-deployment-integration-tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -30,39 +105,405 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install \
-            assert-no-inline-directives \
-            assert-no-linter-config-files \
-            assert-one-assert-per-pytest \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - id: terraform
+        name: Extract Terraform version
+        run: |
+          TF_FILE=src/api/operational/health/backend.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_FILE \
+            | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
+      - name: Run E2E tests
+        run: |
+          BASE=test/api/operational/health
+          PYTHONPATH=lib/python python3 -m pytest \
+            $BASE/post_deployment/e2e/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+  mypy-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
             boto3 \
             boto3-stubs \
             botocore \
             dnspython \
             mypy \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run mypy on source
+        run: |
+          python3 -m mypy \
+            lib/python/ src/api/operational/health/lambda/handler.py
+  mypy-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run mypy on tests
+        run: |
+          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
+  post-deployment-integration-tests:
+    if: github.ref == 'refs/heads/main'
+    needs: reconciliation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Verify OIDC variables
+        uses: ./.github/actions/verify-oidc-vars
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - id: terraform
+        name: Extract Terraform version
+        run: |
+          TF_FILE=src/api/operational/health/backend.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_FILE \
+            | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
+      - name: Run post-deployment integration tests
+        run: |
+          BASE=test/api/operational/health
+          PYTHONPATH=lib/python python3 -m pytest \
+            $BASE/post_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+  pre-deployment-integration-tests:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Verify OIDC variables
+        uses: ./.github/actions/verify-oidc-vars
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - id: terraform
+        name: Extract Terraform version
+        run: |
+          TF_FILE=src/api/operational/health/backend.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_FILE \
+            | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
+      - name: Run pre-deployment integration tests
+        run: |
+          BASE=test/api/operational/health
+          PYTHONPATH=lib/python python3 -m pytest \
+            $BASE/pre_deployment/integration/ \
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
+  pylint-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
             pylint \
             pytest \
             'python-hcl2<8' \
             PyYAML \
             requests \
             types-PyYAML \
-            types-requests \
+            types-requests
+      - name: Run pylint on source
+        run: |
+          python3 -m pylint \
+            lib/python/ src/api/operational/health/lambda/handler.py \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+  pylint-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            pylint \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run pylint on tests
+        run: |
+          PYTHONPATH=lib/python:. python3 -m pylint \
+            lib/python/ test/ \
+            --recursive=y \
+            --fail-on=C,R,W --fail-under=10.0
+  reconciliation:
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - pre-deployment-integration-tests
+      - unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Verify OIDC variables
+        uses: ./.github/actions/verify-oidc-vars
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore
+      - id: terraform
+        name: Extract Terraform version
+        run: |
+          TF_FILE=src/api/operational/health/backend.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_FILE \
+            | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
+      - name: Terraform Init
+        run: |
+          cd src/api/operational/health && \
+            terraform init
+      - name: Terraform Plan
+        run: |
+          cd src/api/operational/health && \
+            terraform plan
+      - name: Terraform Apply
+        run: |
+          cd src/api/operational/health && \
+            terraform apply -auto-approve
+  terraform-format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: terraform
+        name: Extract Terraform version
+        run: |
+          TF_FILE=src/api/operational/health/backend.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_FILE \
+            | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
+      - name: Terraform Format Check
+        run: |
+          cd src/api/operational/health && \
+            terraform fmt -diff -check -recursive
+  tflint:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Verify OIDC variables
+        uses: ./.github/actions/verify-oidc-vars
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          oidc_role_arn: ${{ vars.OIDC_ROLE_ARN }}
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+      - id: terraform
+        name: Extract Terraform version
+        run: |
+          TF_FILE=src/api/operational/health/backend.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_FILE \
+            | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: latest
+      - name: Terraform Init
+        run: |
+          cd src/api/operational/health && \
+            terraform init
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
+        run: |
+          cd src/api/operational/health && \
+            tflint --init && \
+            tflint
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            pytest \
+            'python-hcl2<8' \
+            PyYAML \
+            requests \
+            types-PyYAML \
+            types-requests
+      - name: Run unit tests
+        run: |
+          TEST=test/api/operational/health
+          PYTHONPATH=lib/python python3 -m pytest \
+            $TEST/pre_deployment/unit/ \
+            --confcutdir=test --verbose --pythonwarnings=error
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
             yamllint
-      - name: Assert no linter config files
-        run: >-
-          assert-no-linter-config-files
-          --linters pylint,mypy,yamllint
-          --verbose
-          ${{ github.workspace }}
-      - name: Assert no inline lint disables
-        run: >-
-          assert-no-inline-directives
-          --tools pylint,mypy,yamllint
-          --verbose
-          ${{ github.workspace }}/**/*
-      - name: Assert one assert per pytest
-        run: >-
-          assert-one-assert-per-pytest
-          --verbose
-          ${{ github.workspace }}/test
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -74,91 +515,6 @@ jobs:
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_operational_health.yml
-      - name: Run pylint on source
-        run: |
-          python3 -m pylint \
-            lib/python/ src/api/operational/health/lambda/handler.py \
-            --fail-on=C,R,W \
-            --fail-under=10.0
-      - name: Run pylint on tests
-        run: |
-          PYTHONPATH=lib/python python3 -m pylint \
-            lib/python/ test/ \
-            --recursive=y \
-            --fail-on=C,R,W \
-            --fail-under=10.0
-      - name: Run mypy on source
-        run: |
-          python3 -m mypy \
-            lib/python/ src/api/operational/health/lambda/handler.py
-      - name: Run mypy on tests
-        run: |
-          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
-      - name: Install jscpd
-        run: npm install -g jscpd@4.0.5
-      - name: Check for duplicate code in source Python files
-        run: |
-          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/api/operational/health/lambda/
-      - name: Check for duplicate code in test Python files
-        run: |
-          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
-      - id: terraform
-        name: Extract Terraform version
-        run: |
-          TERRAFORM_VERSION=$(grep 'required_version' \
-            src/api/operational/health/backend.tf | \
-            cut -d'"' -f2 | sed 's/>= //')
-          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ steps.terraform.outputs.version }}
-          terraform_wrapper: false
-      - name: Terraform Format Check
-        run: |
-          cd src/api/operational/health && \
-            terraform fmt -diff -check -recursive
-      - name: Terraform Init
-        run: cd src/api/operational/health && terraform init
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v6
-        with:
-          tflint_version: latest
-      - env:
-          GITHUB_TOKEN: ${{ github.token }}
-        name: Run tflint
-        run: |
-          cd src/api/operational/health && \
-            tflint --init && \
-            tflint
-      - name: Run unit tests
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/api/operational/health/pre_deployment/unit/ \
-            --confcutdir=test --verbose --pythonwarnings=error
-      - name: Run pre-deployment integration tests
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/api/operational/health/pre_deployment/integration/ \
-            --capture=no --confcutdir=test --verbose --pythonwarnings=error
-      - name: Terraform Plan
-        run: |
-          cd src/api/operational/health && \
-            terraform plan
-      - name: Terraform Apply
-        run: cd src/api/operational/health && terraform apply -auto-approve
-      - name: Run post-deployment integration tests
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/api/operational/health/post_deployment/integration/ \
-            --confcutdir=test --verbose --pythonwarnings=error
-      - name: Run E2E tests
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/api/operational/health/post_deployment/e2e/ \
-            --confcutdir=test --verbose --pythonwarnings=error
 name: api_operational_health
 on:
   push:
