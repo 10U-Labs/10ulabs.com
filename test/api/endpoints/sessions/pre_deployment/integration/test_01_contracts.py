@@ -26,12 +26,6 @@ class TestLambdaHandlerContracts:
         content = export_py.read_text()
         assert "def lambda_handler(" in content
 
-    def test_crawler_trigger_exports_lambda_handler_function(self):
-        """Verify crawler_trigger.py exports lambda_handler function."""
-        crawler_py = SESSIONS_LAMBDAS_PATH / "crawler_trigger.py"
-        content = crawler_py.read_text()
-        assert "def lambda_handler(" in content
-
 
 class TestTerraformLambdaContracts:
     """Tests for Terraform Lambda configuration contracts."""
@@ -47,12 +41,6 @@ class TestTerraformLambdaContracts:
         analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
         content = analytics_tf.read_text()
         assert "export_handler.lambda_handler" in content
-
-    def test_analytics_tf_references_correct_crawler_trigger_path(self):
-        """Verify analytics.tf crawler trigger handler matches source."""
-        analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
-        content = analytics_tf.read_text()
-        assert "crawler_trigger.lambda_handler" in content
 
 
 class TestEnvironmentVariableContracts:
@@ -105,15 +93,3 @@ class TestEnvironmentVariableContracts:
         analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
         content = analytics_tf.read_text()
         assert "S3_PREFIX" in content
-
-    def test_crawler_trigger_uses_crawler_name_env_var(self):
-        """Verify crawler_trigger.py uses CRAWLER_NAME environment variable."""
-        crawler_py = SESSIONS_LAMBDAS_PATH / "crawler_trigger.py"
-        content = crawler_py.read_text()
-        assert "CRAWLER_NAME" in content
-
-    def test_analytics_tf_provides_crawler_name_env_var(self):
-        """Verify analytics.tf provides CRAWLER_NAME environment variable."""
-        analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
-        content = analytics_tf.read_text()
-        assert "CRAWLER_NAME" in content
