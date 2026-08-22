@@ -179,7 +179,10 @@ on:
       - .github/workflows/api_endpoint_v1_github_workflows_webhooks.yml
       - lib/terraform/common/**
       - src/api/endpoints/github_workflows/webhooks/**
+      - test/__init__.py
+      - test/api/__init__.py
       - test/api/conftest.py
+      - test/api/endpoints/__init__.py
       - test/api/endpoints/conftest.py
       - test/api/endpoints/github_workflows/webhooks/**
       - test/conftest.py

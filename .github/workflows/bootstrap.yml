@@ -193,6 +193,7 @@ on:
       - .github/workflows/bootstrap.yml
       - lib/terraform/common/**
       - src/bootstrap/**
+      - test/__init__.py
       - test/bootstrap/**
       - test/conftest.py
   workflow_dispatch:

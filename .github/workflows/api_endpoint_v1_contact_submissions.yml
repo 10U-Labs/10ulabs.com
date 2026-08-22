@@ -177,7 +177,10 @@ on:
       - .github/workflows/api_endpoint_v1_contact_submissions.yml
       - lib/terraform/common/**
       - src/api/endpoints/contact_submissions/**
+      - test/__init__.py
+      - test/api/__init__.py
       - test/api/conftest.py
+      - test/api/endpoints/__init__.py
       - test/api/endpoints/conftest.py
       - test/api/endpoints/contact_submissions/**
       - test/conftest.py

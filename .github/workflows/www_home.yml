@@ -183,8 +183,10 @@ on:
       - .github/actions/verify-oidc-vars/action.yml
       - .github/workflows/www_home.yml
       - src/www/paths/home/**
+      - test/__init__.py
       - test/conftest.py
       - test/www/conftest.py
+      - test/www/paths/__init__.py
       - test/www/paths/conftest.py
       - test/www/paths/home/**
   workflow_dispatch:

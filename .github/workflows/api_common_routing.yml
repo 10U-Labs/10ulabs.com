@@ -198,6 +198,9 @@ on:
       - lib/terraform/common/**
       - src/api/common/routing/**
       - src/www/api/**
+      - test/__init__.py
+      - test/api/__init__.py
+      - test/api/common/__init__.py
       - test/api/common/conftest.py
       - test/api/common/routing/**
       - test/api/conftest.py

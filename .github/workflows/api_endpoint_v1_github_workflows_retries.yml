@@ -167,7 +167,10 @@ on:
       - .github/workflows/api_endpoint_v1_github_workflows_retries.yml
       - lib/terraform/common/**
       - src/api/endpoints/github_workflows/retries/**
+      - test/__init__.py
+      - test/api/__init__.py
       - test/api/conftest.py
+      - test/api/endpoints/__init__.py
       - test/api/endpoints/conftest.py
       - test/api/endpoints/github_workflows/retries/**
       - test/conftest.py

@@ -11,6 +11,7 @@ calls.
 
 import ast
 import re
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -30,6 +31,25 @@ CONTROLLER_SOURCE = "src/workflowctl/"
 # Globs that deploy a workflow on any edit anywhere under a whole tree. A
 # workflow names the packages it builds from instead.
 WHOLE_TREE_GLOBS = ("lib/python/**", "test/lib/python/**")
+
+# Files a push is allowed to start nothing for, and the reason each one is.
+# Every other tracked file has to be named by some workflow's paths filter,
+# because that filter is now the only thing deciding whether an edit is
+# checked. Adding an entry here is meant to be conspicuous: it is a decision
+# somebody makes, rather than a gap nobody sees.
+UNTRIGGERED = {
+    ".claude/**": "session tooling; nothing in CI reads it",
+    ".gitignore": "read by git, and by no workflow",
+    "CLAUDE.md": "the conventions this repository is worked under; prose",
+    "LICENSE.md": "prose",
+    "docs/**": "prose, including the tenets; no tier runs any of it",
+    "etc/eslint.config.mjs": (
+        "consulted by nothing. 'npm run lint' is 'eslint .' from "
+        "src/www/paths/home/, and a flat config is searched for from the "
+        "working directory upwards, so a sibling etc/ is never reached; the "
+        "config that run does use is src/www/paths/home/eslint.config.js"
+    ),
+}
 
 # State keys owned by another repository's Terraform. Nothing here applies
 # them, so a read of one of these asks for no workflow of ours. Anything not
@@ -287,6 +307,19 @@ def _workflow_jobs() -> list:
     return found
 
 
+def _tracked_files() -> list:
+    """List every file git tracks, as repository-relative paths."""
+    listed = subprocess.run(
+        ["git", "ls-files", "-z"],
+        capture_output=True,
+        check=True,
+        cwd=REPO_ROOT,
+        text=True,
+    )
+    return sorted(path for path in listed.stdout.split("\0") if path)
+
+
+
 def _declared_dispatch_inputs() -> set:
     """Name every workflow_dispatch input some workflow here accepts."""
     declared: set = set()
@@ -397,6 +430,31 @@ class TestPushTriggeredWorkflows:
 
         assert not unmatched, (
             "Push triggers that miss their own source:\n  " + "\n  ".join(unmatched)
+        )
+
+    def test_every_tracked_file_is_named_by_some_workflow(self) -> None:
+        """Verify a change to any file starts a workflow, or is exempt on purpose.
+
+        A paths filter is the only thing deciding whether an edit starts the
+        run that would check it, so the filters taken together are a claim
+        about the whole tree: every file that matters to something is named by
+        the thing that cares about it. A file no filter names is one whose
+        edits are checked by nothing. It is committed and merged green, and the
+        first sign of trouble is an unrelated push weeks later that starts the
+        workflow the change actually broke, where it fails in a step nobody
+        connects to it.
+        """
+        globs = [
+            glob for paths in _push_triggered_workflows().values() for glob in paths
+        ]
+        unreached = [
+            path for path in _tracked_files()
+            if not any(_matches_glob(glob, path) for glob in globs)
+            and not any(_matches_glob(exempt, path) for exempt in UNTRIGGERED)
+        ]
+
+        assert not unreached, (
+            "Files a push starts nothing for:\n  " + "\n  ".join(unreached)
         )
 
     def test_a_push_triggered_workflow_names_the_modules_it_checks(self) -> None:

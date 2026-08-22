@@ -168,7 +168,10 @@ on:
       - .github/workflows/api_operational_health.yml
       - lib/terraform/common/**
       - src/api/operational/health/**
+      - test/__init__.py
+      - test/api/__init__.py
       - test/api/conftest.py
+      - test/api/operational/__init__.py
       - test/api/operational/conftest.py
       - test/api/operational/health/**
       - test/conftest.py

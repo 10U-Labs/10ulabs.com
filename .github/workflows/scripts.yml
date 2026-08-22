@@ -769,6 +769,7 @@ on:
       # change to it can break the parser whose tests run here.
       - lib/terraform/common/**
       - scripts/**
+      - test/__init__.py
       - test/conftest.py
       - test/github/**
       - test/lib/python/**
