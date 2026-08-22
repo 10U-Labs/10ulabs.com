@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 from botocore.exceptions import ClientError
 
+from boto_mocks import create_client_error
 import test_fixtures.integration as integration_module
 
 
@@ -95,7 +96,7 @@ class TestLayer2IAMAuthorizationTestsExecution:
         """Test test_can_call_iam_get_role_api fails on AccessDenied."""
         instance = integration_module.Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("AccessDenied")
+        mock_client.get_role.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             instance.test_can_call_iam_get_role_api(mock_client, "MyRole")
 
@@ -103,14 +104,14 @@ class TestLayer2IAMAuthorizationTestsExecution:
         """Test test_can_call_iam_get_role_api passes on NoSuchEntity."""
         instance = integration_module.Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
+        mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
         assert instance.test_can_call_iam_get_role_api(mock_client, "MyRole") is None
 
     def test_can_call_iam_get_role_api_reraises_other_errors(self):
         """Test test_can_call_iam_get_role_api re-raises other errors."""
         instance = integration_module.Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("InternalError")
+        mock_client.get_role.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_call_iam_get_role_api(mock_client, "MyRole")
 
@@ -132,7 +133,7 @@ class TestLayer2IAMAuthorizationTestsExecution:
         """Test test_can_list_attached_policies fails on AccessDenied."""
         instance = integration_module.Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.list_attached_role_policies.side_effect = _create_client_error(
+        mock_client.list_attached_role_policies.side_effect = create_client_error(
             "AccessDenied"
         )
         with pytest.raises(pytest.fail.Exception):
@@ -142,7 +143,7 @@ class TestLayer2IAMAuthorizationTestsExecution:
         """Test test_can_list_attached_policies passes on NoSuchEntity."""
         instance = integration_module.Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.list_attached_role_policies.side_effect = _create_client_error(
+        mock_client.list_attached_role_policies.side_effect = create_client_error(
             "NoSuchEntity"
         )
         assert instance.test_can_list_attached_policies(mock_client, "MyRole") is None
@@ -151,7 +152,7 @@ class TestLayer2IAMAuthorizationTestsExecution:
         """Test test_can_list_attached_policies re-raises other errors."""
         instance = integration_module.Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.list_attached_role_policies.side_effect = _create_client_error(
+        mock_client.list_attached_role_policies.side_effect = create_client_error(
             "InternalError"
         )
         with pytest.raises(ClientError):
@@ -172,7 +173,7 @@ class TestLayer2S3AuthorizationTestsExecution:
         """Test test_can_call_s3_head_bucket_api fails on 403."""
         instance = integration_module.Layer2S3AuthorizationTests()
         mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("403")
+        mock_client.head_bucket.side_effect = create_client_error("403")
         with pytest.raises(pytest.fail.Exception):
             instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket")
 
@@ -180,14 +181,14 @@ class TestLayer2S3AuthorizationTestsExecution:
         """Test test_can_call_s3_head_bucket_api passes on 404."""
         instance = integration_module.Layer2S3AuthorizationTests()
         mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("404")
+        mock_client.head_bucket.side_effect = create_client_error("404")
         assert instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket") is None
 
     def test_can_call_s3_head_bucket_api_reraises_other_errors(self):
         """Test test_can_call_s3_head_bucket_api re-raises other errors."""
         instance = integration_module.Layer2S3AuthorizationTests()
         mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("500")
+        mock_client.head_bucket.side_effect = create_client_error("500")
         with pytest.raises(ClientError):
             instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket")
 
@@ -217,7 +218,7 @@ class TestLayer2ECRAuthorizationTestsExecution:
         """Test test_can_call_ecr_describe_repositories_api fails on AccessDeniedException."""
         instance = integration_module.Layer2ECRAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.describe_repositories.side_effect = _create_client_error(
+        mock_client.describe_repositories.side_effect = create_client_error(
             "AccessDeniedException"
         )
         with pytest.raises(pytest.fail.Exception):
@@ -227,7 +228,7 @@ class TestLayer2ECRAuthorizationTestsExecution:
         """Test test_can_call_ecr_describe_repositories_api re-raises other errors."""
         instance = integration_module.Layer2ECRAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.describe_repositories.side_effect = _create_client_error(
+        mock_client.describe_repositories.side_effect = create_client_error(
             "InternalError"
         )
         with pytest.raises(ClientError):
@@ -260,7 +261,7 @@ class TestLayer4TerraformStateExistenceTestsExecution:
         """Test test_state_bucket_exists fails when bucket doesn't exist."""
         instance = integration_module.Layer4TerraformStateExistenceTests()
         mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("404")
+        mock_client.head_bucket.side_effect = create_client_error("404")
         with pytest.raises(pytest.fail.Exception):
             instance.test_state_bucket_exists(mock_client, "my-state-bucket")
 
@@ -268,7 +269,7 @@ class TestLayer4TerraformStateExistenceTestsExecution:
         """Test test_state_bucket_exists re-raises other errors."""
         instance = integration_module.Layer4TerraformStateExistenceTests()
         mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("500")
+        mock_client.head_bucket.side_effect = create_client_error("500")
         with pytest.raises(ClientError):
             instance.test_state_bucket_exists(mock_client, "my-state-bucket")
 
@@ -312,7 +313,7 @@ class TestLayer5S3ConfigurationTestsExecution:
         """Test test_state_bucket_is_encrypted fails when no encryption configured."""
         instance = integration_module.Layer5S3ConfigurationTests()
         mock_client = MagicMock()
-        mock_client.get_bucket_encryption.side_effect = _create_client_error(
+        mock_client.get_bucket_encryption.side_effect = create_client_error(
             "ServerSideEncryptionConfigurationNotFoundError"
         )
         with pytest.raises(pytest.fail.Exception):
@@ -322,7 +323,7 @@ class TestLayer5S3ConfigurationTestsExecution:
         """Test test_state_bucket_is_encrypted re-raises other errors."""
         instance = integration_module.Layer5S3ConfigurationTests()
         mock_client = MagicMock()
-        mock_client.get_bucket_encryption.side_effect = _create_client_error("InternalError")
+        mock_client.get_bucket_encryption.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_state_bucket_is_encrypted(mock_client, "my-bucket")
 
@@ -363,7 +364,7 @@ class TestLayer6S3CapabilityTestsExecution:
         """Test test_can_list_bucket_objects fails on ClientError."""
         instance = integration_module.Layer6S3CapabilityTests()
         mock_client = MagicMock()
-        mock_client.list_objects_v2.side_effect = _create_client_error("AccessDenied")
+        mock_client.list_objects_v2.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             instance.test_can_list_bucket_objects(mock_client, "my-bucket")
 
@@ -378,7 +379,7 @@ class TestLayer6S3CapabilityTestsExecution:
         """Test test_can_get_bucket_location fails on ClientError."""
         instance = integration_module.Layer6S3CapabilityTests()
         mock_client = MagicMock()
-        mock_client.get_bucket_location.side_effect = _create_client_error("AccessDenied")
+        mock_client.get_bucket_location.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             instance.test_can_get_bucket_location(mock_client, "my-bucket")
 
@@ -404,7 +405,7 @@ class TestLayer4IAMRoleExistenceTestsExecution:
         """Test test_iam_role_exists fails when role doesn't exist."""
         instance = integration_module.Layer4IAMRoleExistenceTests()
         mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
+        mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
         with pytest.raises(pytest.fail.Exception):
             instance.test_iam_role_exists(mock_client, "MyRole")
 
@@ -412,7 +413,7 @@ class TestLayer4IAMRoleExistenceTestsExecution:
         """Test test_iam_role_exists re-raises other errors."""
         instance = integration_module.Layer4IAMRoleExistenceTests()
         mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("InternalError")
+        mock_client.get_role.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_iam_role_exists(mock_client, "MyRole")
 
@@ -461,7 +462,7 @@ class TestLayer5IAMConfigurationTestsExecution:
         """Test test_role_has_administrator_access_policy skips on AccessDenied."""
         instance = integration_module.Layer5IAMConfigurationTests()
         mock_client = MagicMock()
-        mock_client.list_attached_role_policies.side_effect = _create_client_error("AccessDenied")
+        mock_client.list_attached_role_policies.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.skip.Exception):
             instance.test_role_has_administrator_access_policy(mock_client, "MyRole")
 
@@ -469,7 +470,7 @@ class TestLayer5IAMConfigurationTestsExecution:
         """Test test_role_has_administrator_access_policy re-raises other errors."""
         instance = integration_module.Layer5IAMConfigurationTests()
         mock_client = MagicMock()
-        mock_client.list_attached_role_policies.side_effect = _create_client_error("InternalError")
+        mock_client.list_attached_role_policies.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_role_has_administrator_access_policy(mock_client, "MyRole")
 
@@ -501,7 +502,7 @@ class TestLayer5IAMConfigurationTestsExecution:
         """Test test_role_has_at_least_one_policy skips on AccessDenied."""
         instance = integration_module.Layer5IAMConfigurationTests()
         mock_client = MagicMock()
-        mock_client.list_attached_role_policies.side_effect = _create_client_error("AccessDenied")
+        mock_client.list_attached_role_policies.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.skip.Exception):
             instance.test_role_has_at_least_one_policy(mock_client, "MyRole")
 
@@ -509,6 +510,6 @@ class TestLayer5IAMConfigurationTestsExecution:
         """Test test_role_has_at_least_one_policy re-raises other errors."""
         instance = integration_module.Layer5IAMConfigurationTests()
         mock_client = MagicMock()
-        mock_client.list_attached_role_policies.side_effect = _create_client_error("InternalError")
+        mock_client.list_attached_role_policies.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_role_has_at_least_one_policy(mock_client, "MyRole")

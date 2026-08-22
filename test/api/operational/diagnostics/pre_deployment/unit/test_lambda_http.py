@@ -5,7 +5,6 @@ from lambda_http import (
     json_response,
     success_response,
     error_response,
-    parse_body,
     is_capacity_error,
 )
 

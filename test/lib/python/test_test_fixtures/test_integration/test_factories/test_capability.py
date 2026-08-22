@@ -2,19 +2,11 @@
 from unittest.mock import MagicMock
 
 import pytest
-from botocore.exceptions import ClientError
 
+from boto_mocks import create_client_error
 from test_fixtures.integration.factories.capability import (
     create_layer6_capability_tests,
 )
-
-
-def _create_client_error(code: str, message: str = "Test error") -> ClientError:
-    """Create a ClientError for testing."""
-    return ClientError(
-        {"Error": {"Code": code, "Message": message}},
-        "TestOperation"
-    )
 
 
 # === create_layer6_capability_tests default capabilities ===
@@ -98,12 +90,12 @@ class TestCreateLayer6CapabilityTestsLambdaTestBehavior:
         mock_client.list_functions.return_value = {"Functions": []}
         assert getattr(instance, "test_can_list_lambda_functions")(mock_client) is None
 
-    def test_fails_on_client_error(self):
+    def test_fails_on_create_client_error(self):
         """test_can_list_lambda_functions fails on ClientError."""
         test_class = create_layer6_capability_tests(frozenset({"lambda"}))
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.list_functions.side_effect = _create_client_error("AccessDenied")
+        mock_client.list_functions.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             getattr(instance, "test_can_list_lambda_functions")(mock_client)
 
@@ -128,12 +120,12 @@ class TestCreateLayer6CapabilityTestsIAMTestBehavior:
         mock_client.list_roles.return_value = {"Roles": []}
         assert getattr(instance, "test_can_list_iam_roles")(mock_client) is None
 
-    def test_fails_on_client_error(self):
+    def test_fails_on_create_client_error(self):
         """test_can_list_iam_roles fails on ClientError."""
         test_class = create_layer6_capability_tests(frozenset({"iam"}))
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.list_roles.side_effect = _create_client_error("AccessDenied")
+        mock_client.list_roles.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             getattr(instance, "test_can_list_iam_roles")(mock_client)
 
@@ -166,12 +158,12 @@ class TestCreateLayer6CapabilityTestsSSMTestBehavior:
         mock_client.describe_parameters.return_value = {"Parameters": []}
         assert getattr(instance, "test_can_describe_ssm_parameters")(mock_client) is None
 
-    def test_fails_on_client_error(self):
+    def test_fails_on_create_client_error(self):
         """test_can_describe_ssm_parameters fails on ClientError."""
         test_class = create_layer6_capability_tests(frozenset({"ssm"}))
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.describe_parameters.side_effect = _create_client_error("AccessDenied")
+        mock_client.describe_parameters.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             getattr(instance, "test_can_describe_ssm_parameters")(mock_client)
 
@@ -204,12 +196,12 @@ class TestCreateLayer6CapabilityTestsDynamoDBTestBehavior:
         mock_client.list_tables.return_value = {"TableNames": []}
         assert getattr(instance, "test_can_list_dynamodb_tables")(mock_client) is None
 
-    def test_fails_on_client_error(self):
+    def test_fails_on_create_client_error(self):
         """test_can_list_dynamodb_tables fails on ClientError."""
         test_class = create_layer6_capability_tests(frozenset({"dynamodb"}))
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.list_tables.side_effect = _create_client_error("AccessDenied")
+        mock_client.list_tables.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             getattr(instance, "test_can_list_dynamodb_tables")(mock_client)
 
@@ -242,12 +234,12 @@ class TestCreateLayer6CapabilityTestsLogsTestBehavior:
         mock_client.describe_log_groups.return_value = {"logGroups": []}
         assert getattr(instance, "test_can_list_log_groups")(mock_client) is None
 
-    def test_fails_on_client_error(self):
+    def test_fails_on_create_client_error(self):
         """test_can_list_log_groups fails on ClientError."""
         test_class = create_layer6_capability_tests(frozenset({"logs"}))
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.describe_log_groups.side_effect = _create_client_error("AccessDenied")
+        mock_client.describe_log_groups.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             getattr(instance, "test_can_list_log_groups")(mock_client)
 
@@ -280,12 +272,12 @@ class TestCreateLayer6CapabilityTestsS3TestBehavior:
         mock_client.list_buckets.return_value = {"Buckets": []}
         assert getattr(instance, "test_can_list_s3_buckets")(mock_client) is None
 
-    def test_fails_on_client_error(self):
+    def test_fails_on_create_client_error(self):
         """test_can_list_s3_buckets fails on ClientError."""
         test_class = create_layer6_capability_tests(frozenset({"s3"}))
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.list_buckets.side_effect = _create_client_error("AccessDenied")
+        mock_client.list_buckets.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             getattr(instance, "test_can_list_s3_buckets")(mock_client)
 

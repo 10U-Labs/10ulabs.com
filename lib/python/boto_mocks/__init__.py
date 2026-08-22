@@ -1,5 +1,5 @@
 """Mock utilities for boto3/botocore testing."""
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 from unittest.mock import MagicMock
 
 from botocore.exceptions import ClientError
@@ -7,13 +7,15 @@ from botocore.exceptions import ClientError
 
 def create_client_error(
     error_code: str,
-    operation_name: str = 'TestOperation'
+    operation_name: str = 'TestOperation',
+    message: Optional[str] = None
 ) -> ClientError:
     """Create a ClientError for testing error handling.
 
     Args:
         error_code: AWS error code (e.g., 'ResourceNotFoundException').
         operation_name: Name of the AWS operation that failed.
+        message: What the error says, for a test that reads the message.
 
     Returns:
         ClientError exception with the specified error code.
@@ -22,7 +24,7 @@ def create_client_error(
         {
             'Error': {
                 'Code': error_code,
-                'Message': f'Test error: {error_code}'
+                'Message': message or f'Test error: {error_code}'
             },
             'ResponseMetadata': {
                 'RequestId': 'test-request-id',

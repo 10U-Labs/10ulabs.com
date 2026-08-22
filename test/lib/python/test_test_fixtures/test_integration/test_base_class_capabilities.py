@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 from botocore.exceptions import ClientError
 
+from boto_mocks import create_client_error
 import test_fixtures.integration as integration_module
 
 
@@ -66,7 +67,7 @@ class TestLayer6IAMCapabilityTestsExecution:
         """Test test_can_list_buckets fails on AccessDenied."""
         instance = integration_module.Layer6IAMCapabilityTests()
         mock_client = MagicMock()
-        mock_client.list_buckets.side_effect = _create_client_error("AccessDenied")
+        mock_client.list_buckets.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             instance.test_can_list_buckets(mock_client)
 
@@ -74,7 +75,7 @@ class TestLayer6IAMCapabilityTestsExecution:
         """Test test_can_list_buckets re-raises other errors."""
         instance = integration_module.Layer6IAMCapabilityTests()
         mock_client = MagicMock()
-        mock_client.list_buckets.side_effect = _create_client_error("InternalError")
+        mock_client.list_buckets.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_list_buckets(mock_client)
 
@@ -89,7 +90,7 @@ class TestLayer6IAMCapabilityTestsExecution:
         """Test test_can_list_roles fails on AccessDenied."""
         instance = integration_module.Layer6IAMCapabilityTests()
         mock_client = MagicMock()
-        mock_client.list_roles.side_effect = _create_client_error("AccessDenied")
+        mock_client.list_roles.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             instance.test_can_list_roles(mock_client)
 
@@ -97,7 +98,7 @@ class TestLayer6IAMCapabilityTestsExecution:
         """Test test_can_list_roles re-raises other errors."""
         instance = integration_module.Layer6IAMCapabilityTests()
         mock_client = MagicMock()
-        mock_client.list_roles.side_effect = _create_client_error("InternalError")
+        mock_client.list_roles.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_list_roles(mock_client)
 
@@ -119,7 +120,7 @@ class TestLayer6S3WriteCapabilityTestsExecution:
         """Test test_can_write_to_bucket fails on AccessDenied."""
         instance = integration_module.Layer6S3WriteCapabilityTests()
         mock_client = MagicMock()
-        mock_client.put_object.side_effect = _create_client_error("AccessDenied")
+        mock_client.put_object.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             instance.test_can_write_to_bucket(mock_client, "my-bucket")
 
@@ -127,7 +128,7 @@ class TestLayer6S3WriteCapabilityTestsExecution:
         """Test test_can_write_to_bucket re-raises other errors."""
         instance = integration_module.Layer6S3WriteCapabilityTests()
         mock_client = MagicMock()
-        mock_client.put_object.side_effect = _create_client_error("InternalError")
+        mock_client.put_object.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_write_to_bucket(mock_client, "my-bucket")
 
@@ -136,7 +137,7 @@ class TestLayer6S3WriteCapabilityTestsExecution:
         instance = integration_module.Layer6S3WriteCapabilityTests()
         mock_client = MagicMock()
         mock_client.put_object.return_value = {}
-        mock_client.delete_object.side_effect = _create_client_error("InternalError")
+        mock_client.delete_object.side_effect = create_client_error("InternalError")
         # Should not raise - cleanup failures are suppressed
         assert instance.test_can_write_to_bucket(mock_client, "my-bucket") is None
 
@@ -154,7 +155,7 @@ class TestLayer6S3WriteCapabilityTestsExecution:
         mock_client = MagicMock()
         mock_client.put_object.return_value = {}
         # First delete call (the actual test) fails, second (cleanup) also fails
-        mock_client.delete_object.side_effect = _create_client_error("AccessDenied")
+        mock_client.delete_object.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             instance.test_can_delete_from_bucket(mock_client, "my-bucket")
 
@@ -163,7 +164,7 @@ class TestLayer6S3WriteCapabilityTestsExecution:
         instance = integration_module.Layer6S3WriteCapabilityTests()
         mock_client = MagicMock()
         mock_client.put_object.return_value = {}
-        mock_client.delete_object.side_effect = _create_client_error("InternalError")
+        mock_client.delete_object.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_delete_from_bucket(mock_client, "my-bucket")
 
@@ -185,7 +186,7 @@ class TestLayer6ECRCapabilityTestsExecution:
         """Test test_can_create_ecr_repository fails on AccessDeniedException."""
         instance = integration_module.Layer6ECRCapabilityTests()
         mock_client = MagicMock()
-        mock_client.create_repository.side_effect = _create_client_error(
+        mock_client.create_repository.side_effect = create_client_error(
             "AccessDeniedException"
         )
         with pytest.raises(pytest.fail.Exception):
@@ -195,7 +196,7 @@ class TestLayer6ECRCapabilityTestsExecution:
         """Test test_can_create_ecr_repository re-raises other errors."""
         instance = integration_module.Layer6ECRCapabilityTests()
         mock_client = MagicMock()
-        mock_client.create_repository.side_effect = _create_client_error("InternalError")
+        mock_client.create_repository.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_create_ecr_repository(mock_client)
 
@@ -204,7 +205,7 @@ class TestLayer6ECRCapabilityTestsExecution:
         instance = integration_module.Layer6ECRCapabilityTests()
         mock_client = MagicMock()
         mock_client.create_repository.return_value = {"repository": {}}
-        mock_client.delete_repository.side_effect = _create_client_error("InternalError")
+        mock_client.delete_repository.side_effect = create_client_error("InternalError")
         # Should not raise - cleanup failures are suppressed
         assert instance.test_can_create_ecr_repository(mock_client) is None
 
@@ -221,7 +222,7 @@ class TestLayer6ECRCapabilityTestsExecution:
         instance = integration_module.Layer6ECRCapabilityTests()
         mock_client = MagicMock()
         mock_client.create_repository.return_value = {"repository": {}}
-        mock_client.delete_repository.side_effect = _create_client_error(
+        mock_client.delete_repository.side_effect = create_client_error(
             "AccessDeniedException"
         )
         with pytest.raises(pytest.fail.Exception):
@@ -232,7 +233,7 @@ class TestLayer6ECRCapabilityTestsExecution:
         instance = integration_module.Layer6ECRCapabilityTests()
         mock_client = MagicMock()
         mock_client.create_repository.return_value = {"repository": {}}
-        mock_client.delete_repository.side_effect = _create_client_error("InternalError")
+        mock_client.delete_repository.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_delete_ecr_repository(mock_client)
 
@@ -320,7 +321,7 @@ class TestLayer2APIGatewayAuthorizationTestsExecution:
         """Test test_can_describe_rest_apis fails on AccessDeniedException."""
         instance = integration_module.Layer2APIGatewayAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.get_rest_apis.side_effect = _create_client_error(
+        mock_client.get_rest_apis.side_effect = create_client_error(
             "AccessDeniedException"
         )
         with pytest.raises(pytest.fail.Exception):
@@ -330,7 +331,7 @@ class TestLayer2APIGatewayAuthorizationTestsExecution:
         """Test test_can_describe_rest_apis re-raises other errors."""
         instance = integration_module.Layer2APIGatewayAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.get_rest_apis.side_effect = _create_client_error("InternalError")
+        mock_client.get_rest_apis.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_describe_rest_apis(mock_client)
 
@@ -369,7 +370,7 @@ class TestLayer2LambdaAndIAMAuthorizationTestsExecution:
         """Test test_can_list_functions fails on AccessDeniedException."""
         instance = integration_module.Layer2LambdaAndIAMAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.list_functions.side_effect = _create_client_error(
+        mock_client.list_functions.side_effect = create_client_error(
             "AccessDeniedException"
         )
         with pytest.raises(pytest.fail.Exception):
@@ -379,7 +380,7 @@ class TestLayer2LambdaAndIAMAuthorizationTestsExecution:
         """Test test_can_list_functions re-raises other errors."""
         instance = integration_module.Layer2LambdaAndIAMAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.list_functions.side_effect = _create_client_error("InternalError")
+        mock_client.list_functions.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_list_functions(mock_client)
 
@@ -394,7 +395,7 @@ class TestLayer2LambdaAndIAMAuthorizationTestsExecution:
         """Test test_can_list_roles fails on AccessDenied."""
         instance = integration_module.Layer2LambdaAndIAMAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.list_roles.side_effect = _create_client_error("AccessDenied")
+        mock_client.list_roles.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             instance.test_can_list_roles(mock_client)
 
@@ -402,7 +403,7 @@ class TestLayer2LambdaAndIAMAuthorizationTestsExecution:
         """Test test_can_list_roles re-raises other errors."""
         instance = integration_module.Layer2LambdaAndIAMAuthorizationTests()
         mock_client = MagicMock()
-        mock_client.list_roles.side_effect = _create_client_error("InternalError")
+        mock_client.list_roles.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_list_roles(mock_client)
 
@@ -450,7 +451,7 @@ class TestLayer4APIBackendPrerequisiteTestsExecution:
         """Test test_api_gateway_exists_in_aws fails when API doesn't exist."""
         instance = integration_module.Layer4APIBackendPrerequisiteTests()
         mock_client = MagicMock()
-        mock_client.get_rest_api.side_effect = _create_client_error("NotFoundException")
+        mock_client.get_rest_api.side_effect = create_client_error("NotFoundException")
         outputs = {"api_gateway_id": "abc123"}
         with pytest.raises(pytest.fail.Exception):
             instance.test_api_gateway_exists_in_aws(mock_client, outputs)
@@ -459,7 +460,7 @@ class TestLayer4APIBackendPrerequisiteTestsExecution:
         """Test test_api_gateway_exists_in_aws re-raises other errors."""
         instance = integration_module.Layer4APIBackendPrerequisiteTests()
         mock_client = MagicMock()
-        mock_client.get_rest_api.side_effect = _create_client_error("InternalError")
+        mock_client.get_rest_api.side_effect = create_client_error("InternalError")
         outputs = {"api_gateway_id": "abc123"}
         with pytest.raises(ClientError):
             instance.test_api_gateway_exists_in_aws(mock_client, outputs)
@@ -546,7 +547,7 @@ class TestLayer6DeploymentCapabilityTestsExecution:
         mock_client.list_functions.return_value = {
             "Functions": [{"FunctionName": "my-function"}]
         }
-        mock_client.get_function_configuration.side_effect = _create_client_error(
+        mock_client.get_function_configuration.side_effect = create_client_error(
             "AccessDeniedException"
         )
         with pytest.raises(pytest.fail.Exception):
@@ -559,7 +560,7 @@ class TestLayer6DeploymentCapabilityTestsExecution:
         mock_client.list_functions.return_value = {
             "Functions": [{"FunctionName": "my-function"}]
         }
-        mock_client.get_function_configuration.side_effect = _create_client_error(
+        mock_client.get_function_configuration.side_effect = create_client_error(
             "InternalError"
         )
         with pytest.raises(ClientError):
@@ -576,7 +577,7 @@ class TestLayer6DeploymentCapabilityTestsExecution:
         """Test test_can_create_log_group_dry_run fails on AccessDeniedException."""
         instance = integration_module.Layer6DeploymentCapabilityTests()
         mock_client = MagicMock()
-        mock_client.describe_log_groups.side_effect = _create_client_error(
+        mock_client.describe_log_groups.side_effect = create_client_error(
             "AccessDeniedException"
         )
         with pytest.raises(pytest.fail.Exception):
@@ -586,7 +587,7 @@ class TestLayer6DeploymentCapabilityTestsExecution:
         """Test test_can_create_log_group_dry_run re-raises other errors."""
         instance = integration_module.Layer6DeploymentCapabilityTests()
         mock_client = MagicMock()
-        mock_client.describe_log_groups.side_effect = _create_client_error("InternalError")
+        mock_client.describe_log_groups.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_create_log_group_dry_run(mock_client)
 
@@ -612,7 +613,7 @@ class TestLayer6DeploymentCapabilityTestsExecution:
         instance = integration_module.Layer6DeploymentCapabilityTests()
         mock_client = MagicMock()
         mock_client.list_roles.return_value = {"Roles": [{"RoleName": "my-role"}]}
-        mock_client.get_role.side_effect = _create_client_error("AccessDenied")
+        mock_client.get_role.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             instance.test_can_get_iam_role_details(mock_client)
 
@@ -621,6 +622,6 @@ class TestLayer6DeploymentCapabilityTestsExecution:
         instance = integration_module.Layer6DeploymentCapabilityTests()
         mock_client = MagicMock()
         mock_client.list_roles.return_value = {"Roles": [{"RoleName": "my-role"}]}
-        mock_client.get_role.side_effect = _create_client_error("InternalError")
+        mock_client.get_role.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_get_iam_role_details(mock_client)

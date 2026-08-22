@@ -553,9 +553,8 @@ class TestApiKeyFixture:
 
 def test_state_bucket_region_fixture():
     """Test that state_bucket_region returns the aws_region."""
-    aws_region = "us-west-2"
-    result = aws_region
-    assert result == "us-west-2"
+    region = "us-west-2"
+    assert region == "us-west-2"
 
 
 # === Direct Fixture Function Execution Tests ===

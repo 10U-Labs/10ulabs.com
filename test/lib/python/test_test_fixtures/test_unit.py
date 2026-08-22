@@ -2,7 +2,6 @@
 import io
 import json
 from functools import partial
-from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock
 

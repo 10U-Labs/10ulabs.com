@@ -2,21 +2,13 @@
 from unittest.mock import MagicMock
 
 import pytest
-from botocore.exceptions import ClientError
 
+from boto_mocks import create_client_error
 from test_fixtures.integration.factories.authentication import (
     create_layer1_authentication_tests,
     create_layer2_s3_authorization_tests,
     create_simple_layer1_authentication_tests,
 )
-
-
-def _create_client_error(code: str, message: str = "Test error") -> ClientError:
-    """Create a ClientError for testing."""
-    return ClientError(
-        {"Error": {"Code": code, "Message": message}},
-        "TestOperation"
-    )
 
 
 # === create_layer1_authentication_tests ===
@@ -88,7 +80,7 @@ class TestCreateLayer1AuthenticationTestsCanCallStsApi:
         test_class = create_layer1_authentication_tests()
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.get_caller_identity.side_effect = _create_client_error(
+        mock_client.get_caller_identity.side_effect = create_client_error(
             "ExpiredToken"
         )
         with pytest.raises(pytest.fail.Exception):

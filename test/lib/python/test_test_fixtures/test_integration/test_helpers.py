@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from botocore.exceptions import ClientError, NoCredentialsError
 
+from boto_mocks import create_client_error
 from test_fixtures.integration.helpers import (
     NO_CREDENTIALS_MESSAGE,
     assert_api_gateway_exists,
@@ -21,14 +22,6 @@ from test_fixtures.integration.helpers import (
     handle_ecr_authorization_error,
     skip_if_api_gateway_unavailable,
 )
-
-
-def _create_client_error(code: str, message: str = "Test error") -> ClientError:
-    """Create a ClientError for testing."""
-    return ClientError(
-        {"Error": {"Code": code, "Message": message}},
-        "TestOperation"
-    )
 
 
 # === check_lambda_function_exists ===
@@ -61,7 +54,7 @@ class TestCheckLambdaFunctionExistsNotFound:
     def test_fails_with_resource_not_found_error(self):
         """check_lambda_function_exists fails with ResourceNotFoundException."""
         mock_client = MagicMock()
-        mock_client.get_function.side_effect = _create_client_error(
+        mock_client.get_function.side_effect = create_client_error(
             "ResourceNotFoundException"
         )
         with pytest.raises(pytest.fail.Exception):
@@ -70,7 +63,7 @@ class TestCheckLambdaFunctionExistsNotFound:
     def test_error_message_contains_function_name(self):
         """check_lambda_function_exists error contains function name."""
         mock_client = MagicMock()
-        mock_client.get_function.side_effect = _create_client_error(
+        mock_client.get_function.side_effect = create_client_error(
             "ResourceNotFoundException"
         )
         with pytest.raises(pytest.fail.Exception, match="MyFunction"):
@@ -79,7 +72,7 @@ class TestCheckLambdaFunctionExistsNotFound:
     def test_error_message_contains_terraform_path(self):
         """check_lambda_function_exists error contains terraform path."""
         mock_client = MagicMock()
-        mock_client.get_function.side_effect = _create_client_error(
+        mock_client.get_function.side_effect = create_client_error(
             "ResourceNotFoundException"
         )
         with pytest.raises(pytest.fail.Exception, match="custom/path"):
@@ -89,7 +82,7 @@ class TestCheckLambdaFunctionExistsNotFound:
 def test_check_lambda_function_exists_other_errors():
     """check_lambda_function_exists reraises non-ResourceNotFoundException errors."""
     mock_client = MagicMock()
-    mock_client.get_function.side_effect = _create_client_error("AccessDenied")
+    mock_client.get_function.side_effect = create_client_error("AccessDenied")
     with pytest.raises(ClientError, match="AccessDenied"):
         check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
 
@@ -120,14 +113,14 @@ class TestCheckIAMRoleExistsNotFound:
     def test_fails_with_no_such_entity_error(self):
         """check_iam_role_exists fails with NoSuchEntity."""
         mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
+        mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
         with pytest.raises(pytest.fail.Exception):
             check_iam_role_exists(mock_client, "MyRole", "terraform/path")
 
     def test_error_message_contains_role_name(self):
         """check_iam_role_exists error contains role name."""
         mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
+        mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
         with pytest.raises(pytest.fail.Exception, match="MyRole"):
             check_iam_role_exists(mock_client, "MyRole", "terraform/path")
 
@@ -135,7 +128,7 @@ class TestCheckIAMRoleExistsNotFound:
 def test_check_iam_role_exists_other_errors():
     """check_iam_role_exists reraises non-NoSuchEntity errors."""
     mock_client = MagicMock()
-    mock_client.get_role.side_effect = _create_client_error("AccessDenied")
+    mock_client.get_role.side_effect = create_client_error("AccessDenied")
     with pytest.raises(ClientError, match="AccessDenied"):
         check_iam_role_exists(mock_client, "MyRole", "terraform/path")
 
@@ -183,7 +176,7 @@ class TestCheckLambdaRoleHasPolicyMissing:
 def test_check_lambda_role_has_policy_role_not_found():
     """check_lambda_role_has_policy skips when role does not exist."""
     mock_client = MagicMock()
-    mock_client.list_role_policies.side_effect = _create_client_error("NoSuchEntity")
+    mock_client.list_role_policies.side_effect = create_client_error("NoSuchEntity")
     with pytest.raises(pytest.skip.Exception):
         check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
 
@@ -191,7 +184,7 @@ def test_check_lambda_role_has_policy_role_not_found():
 def test_check_lambda_role_has_policy_other_errors():
     """check_lambda_role_has_policy reraises non-NoSuchEntity errors."""
     mock_client = MagicMock()
-    mock_client.list_role_policies.side_effect = _create_client_error("AccessDenied")
+    mock_client.list_role_policies.side_effect = create_client_error("AccessDenied")
     with pytest.raises(ClientError, match="AccessDenied"):
         check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
 
@@ -267,8 +260,8 @@ class TestCheckCredentialsValidInvalid:
     def test_fails_when_credentials_invalid(self):
         """check_credentials_valid fails with ClientError."""
         mock_client = MagicMock()
-        mock_client.get_caller_identity.side_effect = _create_client_error(
-            "ExpiredTokenException", "Token has expired"
+        mock_client.get_caller_identity.side_effect = create_client_error(
+            "ExpiredTokenException", message="Token has expired"
         )
         with pytest.raises(pytest.fail.Exception):
             check_credentials_valid(mock_client)
@@ -276,8 +269,8 @@ class TestCheckCredentialsValidInvalid:
     def test_error_message_contains_error_details(self):
         """check_credentials_valid error contains error details."""
         mock_client = MagicMock()
-        mock_client.get_caller_identity.side_effect = _create_client_error(
-            "ExpiredTokenException", "Token has expired"
+        mock_client.get_caller_identity.side_effect = create_client_error(
+            "ExpiredTokenException", message="Token has expired"
         )
         with pytest.raises(pytest.fail.Exception, match="Token has expired"):
             check_credentials_valid(mock_client)
@@ -416,7 +409,7 @@ class TestHandleECRAuthorizationErrorAccessDenied:
 
     def test_fails_on_access_denied(self):
         """handle_ecr_authorization_error fails on AccessDeniedException."""
-        error = _create_client_error("AccessDeniedException")
+        error = create_client_error("AccessDeniedException")
         with pytest.raises(pytest.fail.Exception):
             handle_ecr_authorization_error(
                 error, "ecr:DescribeRepositories", "my-repo"
@@ -424,7 +417,7 @@ class TestHandleECRAuthorizationErrorAccessDenied:
 
     def test_error_message_contains_operation(self):
         """handle_ecr_authorization_error error contains operation."""
-        error = _create_client_error("AccessDeniedException")
+        error = create_client_error("AccessDeniedException")
         with pytest.raises(pytest.fail.Exception, match="ecr:DescribeRepositories"):
             handle_ecr_authorization_error(
                 error, "ecr:DescribeRepositories", "my-repo"
@@ -432,7 +425,7 @@ class TestHandleECRAuthorizationErrorAccessDenied:
 
     def test_error_message_contains_repository_name(self):
         """handle_ecr_authorization_error error contains repository name."""
-        error = _create_client_error("AccessDeniedException")
+        error = create_client_error("AccessDeniedException")
         with pytest.raises(pytest.fail.Exception, match="my-repo"):
             handle_ecr_authorization_error(
                 error, "ecr:DescribeRepositories", "my-repo"
@@ -441,13 +434,13 @@ class TestHandleECRAuthorizationErrorAccessDenied:
 
 def test_handle_ecr_authorization_error_repository_not_found():
     """handle_ecr_authorization_error does not raise on RepositoryNotFoundException."""
-    error = _create_client_error("RepositoryNotFoundException")
+    error = create_client_error("RepositoryNotFoundException")
     assert handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo") is None
 
 
 def test_handle_ecr_authorization_error_other_errors():
     """handle_ecr_authorization_error reraises other errors."""
-    error = _create_client_error("ServiceException")
+    error = create_client_error("ServiceException")
     with pytest.raises(ClientError, match="ServiceException"):
         handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo")
 
@@ -478,21 +471,21 @@ class TestCheckS3HeadBucketPermissionAccessDenied:
     def test_fails_on_403_error(self):
         """check_s3_head_bucket_permission fails on 403 error."""
         mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("403")
+        mock_client.head_bucket.side_effect = create_client_error("403")
         with pytest.raises(pytest.fail.Exception):
             check_s3_head_bucket_permission(mock_client, "my-bucket")
 
     def test_fails_on_access_denied_error(self):
         """check_s3_head_bucket_permission fails on AccessDenied error."""
         mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("AccessDenied")
+        mock_client.head_bucket.side_effect = create_client_error("AccessDenied")
         with pytest.raises(pytest.fail.Exception):
             check_s3_head_bucket_permission(mock_client, "my-bucket")
 
     def test_error_message_contains_bucket_name(self):
         """check_s3_head_bucket_permission error contains bucket name."""
         mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("403")
+        mock_client.head_bucket.side_effect = create_client_error("403")
         with pytest.raises(pytest.fail.Exception, match="my-bucket"):
             check_s3_head_bucket_permission(mock_client, "my-bucket")
 
@@ -500,14 +493,14 @@ class TestCheckS3HeadBucketPermissionAccessDenied:
 def test_check_s3_head_bucket_permission_bucket_not_found():
     """check_s3_head_bucket_permission does not raise on 404 error."""
     mock_client = MagicMock()
-    mock_client.head_bucket.side_effect = _create_client_error("404")
+    mock_client.head_bucket.side_effect = create_client_error("404")
     assert check_s3_head_bucket_permission(mock_client, "my-bucket") is None
 
 
 def test_check_s3_head_bucket_permission_other_errors():
     """check_s3_head_bucket_permission reraises other errors."""
     mock_client = MagicMock()
-    mock_client.head_bucket.side_effect = _create_client_error("ServiceException")
+    mock_client.head_bucket.side_effect = create_client_error("ServiceException")
     with pytest.raises(ClientError, match="ServiceException"):
         check_s3_head_bucket_permission(mock_client, "my-bucket")
 
@@ -563,7 +556,7 @@ class TestCheckStateFileReadableAccessDenied:
     def test_fails_on_403_error(self):
         """check_state_file_readable fails on 403 error."""
         mock_client = MagicMock()
-        mock_client.head_object.side_effect = _create_client_error("403")
+        mock_client.head_object.side_effect = create_client_error("403")
         with pytest.raises(pytest.fail.Exception):
             check_state_file_readable(
                 mock_client, "my-bucket", "state/terraform.tfstate"
@@ -572,7 +565,7 @@ class TestCheckStateFileReadableAccessDenied:
     def test_error_message_contains_state_key(self):
         """check_state_file_readable error contains state key."""
         mock_client = MagicMock()
-        mock_client.head_object.side_effect = _create_client_error("403")
+        mock_client.head_object.side_effect = create_client_error("403")
         with pytest.raises(pytest.fail.Exception, match="state/terraform.tfstate"):
             check_state_file_readable(
                 mock_client, "my-bucket", "state/terraform.tfstate"
@@ -582,7 +575,7 @@ class TestCheckStateFileReadableAccessDenied:
 def test_check_state_file_readable_not_found():
     """check_state_file_readable skips on 404 error."""
     mock_client = MagicMock()
-    mock_client.head_object.side_effect = _create_client_error("404")
+    mock_client.head_object.side_effect = create_client_error("404")
     with pytest.raises(pytest.skip.Exception):
         check_state_file_readable(
             mock_client, "my-bucket", "state/terraform.tfstate"
@@ -592,7 +585,7 @@ def test_check_state_file_readable_not_found():
 def test_check_state_file_readable_other_errors():
     """check_state_file_readable reraises other errors."""
     mock_client = MagicMock()
-    mock_client.head_object.side_effect = _create_client_error("ServiceException")
+    mock_client.head_object.side_effect = create_client_error("ServiceException")
     with pytest.raises(ClientError, match="ServiceException"):
         check_state_file_readable(
             mock_client, "my-bucket", "state/terraform.tfstate"

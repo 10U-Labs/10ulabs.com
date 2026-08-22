@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from botocore.exceptions import ClientError
 
+from boto_mocks import create_client_error
 from test_fixtures.integration.factories.lambda_factories import (
     create_deployed_naming_convention_tests,
     create_lambda_api_gateway_wiring_tests,
@@ -13,14 +14,6 @@ from test_fixtures.integration.factories.lambda_factories import (
     create_lambda_iam_wiring_tests,
     create_naming_convention_tests,
 )
-
-
-def _create_client_error(code: str, message: str = "Test error") -> ClientError:
-    """Create a ClientError for testing."""
-    return ClientError(
-        {"Error": {"Code": code, "Message": message}},
-        "TestOperation"
-    )
 
 
 # === create_lambda_api_gateway_wiring_tests ===
@@ -100,7 +93,7 @@ class TestCreateLambdaApiGatewayWiringTestsExecution:
         test_class = create_lambda_api_gateway_wiring_tests("func_key", "DefaultFunc")
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.get_policy.side_effect = _create_client_error("ResourceNotFoundException")
+        mock_client.get_policy.side_effect = create_client_error("ResourceNotFoundException")
         config = {"func_key": "MyFunction"}
         with pytest.raises(pytest.fail.Exception):
             instance.test_handler_has_api_gateway_permission(mock_client, config)
@@ -110,7 +103,7 @@ class TestCreateLambdaApiGatewayWiringTestsExecution:
         test_class = create_lambda_api_gateway_wiring_tests("func_key", "DefaultFunc")
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.get_policy.side_effect = _create_client_error("ServiceException")
+        mock_client.get_policy.side_effect = create_client_error("ServiceException")
         config = {"func_key": "MyFunction"}
         with pytest.raises(ClientError):
             instance.test_handler_has_api_gateway_permission(mock_client, config)
@@ -480,7 +473,7 @@ class TestCreateLambdaExecutionRoleWiringTestsExecution:
         test_class = create_lambda_execution_role_wiring_tests("lambda_config")
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
+        mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
         with pytest.raises(pytest.skip.Exception):
@@ -491,7 +484,7 @@ class TestCreateLambdaExecutionRoleWiringTestsExecution:
         test_class = create_lambda_execution_role_wiring_tests("lambda_config")
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("ServiceException")
+        mock_client.get_role.side_effect = create_client_error("ServiceException")
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
         with pytest.raises(ClientError):

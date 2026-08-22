@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from botocore.exceptions import ClientError
 
+from boto_mocks import create_client_error
 from test_fixtures.integration.factories.infrastructure import (
     create_kms_policy_test,
     create_lambda_role_existence_test,
@@ -16,18 +17,10 @@ from test_fixtures.integration.factories.infrastructure import (
 )
 
 
-def _create_client_error(code: str, message: str = "Test error") -> ClientError:
-    """Create a ClientError for testing."""
-    return ClientError(
-        {"Error": {"Code": code, "Message": message}},
-        "TestOperation"
-    )
-
-
 def _create_nonexistent_queue_mocks():
     """Create mocks for a non-existent SQS queue scenario."""
     mock_client = MagicMock()
-    mock_client.get_queue_url.side_effect = _create_client_error(
+    mock_client.get_queue_url.side_effect = create_client_error(
         "AWS.SimpleQueueService.NonExistentQueue"
     )
     mock_request = MagicMock()
@@ -39,7 +32,7 @@ def _create_sqs_service_error_mocks():
     """Create mocks for SQS queue service error re-raise scenario."""
     mock_client = MagicMock()
     mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
-    mock_client.get_queue_attributes.side_effect = _create_client_error("ServiceException")
+    mock_client.get_queue_attributes.side_effect = create_client_error("ServiceException")
     mock_request = MagicMock()
     mock_request.getfixturevalue.return_value = "my-queue.fifo"
     return mock_client, mock_request
@@ -288,7 +281,7 @@ class TestCreateSqsFifoQueueTestsHasMethods:
 
 def test_handle_ecr_error_repository_not_found():
     """handle_ecr_error skips on RepositoryNotFoundException."""
-    error = _create_client_error("RepositoryNotFoundException")
+    error = create_client_error("RepositoryNotFoundException")
     with pytest.raises(pytest.skip.Exception):
         handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
@@ -298,26 +291,26 @@ class TestHandleEcrErrorAccessDenied:
 
     def test_fails_on_access_denied(self):
         """handle_ecr_error fails on AccessDeniedException."""
-        error = _create_client_error("AccessDeniedException")
+        error = create_client_error("AccessDeniedException")
         with pytest.raises(pytest.fail.Exception):
             handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
     def test_error_message_contains_operation(self):
         """handle_ecr_error error message contains operation."""
-        error = _create_client_error("AccessDeniedException")
+        error = create_client_error("AccessDeniedException")
         with pytest.raises(pytest.fail.Exception, match="ecr:ListImages"):
             handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
     def test_error_message_contains_repository_name(self):
         """handle_ecr_error error message contains repository name."""
-        error = _create_client_error("AccessDeniedException")
+        error = create_client_error("AccessDeniedException")
         with pytest.raises(pytest.fail.Exception, match="my-repo"):
             handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
 
 def test_handle_ecr_error_other_errors():
     """handle_ecr_error reraises other errors."""
-    error = _create_client_error("ServiceException")
+    error = create_client_error("ServiceException")
     with pytest.raises(ClientError, match="ServiceException"):
         handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
@@ -437,7 +430,7 @@ class TestWwwCommonS3ExistenceS3BucketExistsExecution:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("404")
+        mock_client.head_bucket.side_effect = create_client_error("404")
         outputs = {"bucket_name": "my-bucket"}
         with pytest.raises(pytest.fail.Exception):
             instance.test_s3_bucket_exists(mock_client, outputs)
@@ -447,7 +440,7 @@ class TestWwwCommonS3ExistenceS3BucketExistsExecution:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.head_bucket.side_effect = _create_client_error("500")
+        mock_client.head_bucket.side_effect = create_client_error("500")
         outputs = {"bucket_name": "my-bucket"}
         with pytest.raises(ClientError):
             instance.test_s3_bucket_exists(mock_client, outputs)
@@ -471,7 +464,7 @@ class TestSqsFifoQueueTestsExecution:
         test_class = create_sqs_fifo_queue_tests("queue_name", fail_on_missing=False)
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.get_queue_url.side_effect = _create_client_error(
+        mock_client.get_queue_url.side_effect = create_client_error(
             "AWS.SimpleQueueService.NonExistentQueue"
         )
         mock_request = MagicMock()
@@ -484,7 +477,7 @@ class TestSqsFifoQueueTestsExecution:
         test_class = create_sqs_fifo_queue_tests("queue_name", fail_on_missing=True)
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.get_queue_url.side_effect = _create_client_error(
+        mock_client.get_queue_url.side_effect = create_client_error(
             "AWS.SimpleQueueService.NonExistentQueue"
         )
         mock_request = MagicMock()
@@ -497,7 +490,7 @@ class TestSqsFifoQueueTestsExecution:
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
         mock_client = MagicMock()
-        mock_client.get_queue_url.side_effect = _create_client_error("ServiceException")
+        mock_client.get_queue_url.side_effect = create_client_error("ServiceException")
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "my-queue.fifo"
         with pytest.raises(ClientError):
@@ -603,7 +596,7 @@ class TestSecurityGroupExistenceExecution:
             "outputs_fixture", "security_group_id", "src/api/common/routing"
         )
         mock_client = MagicMock()
-        mock_client.describe_security_groups.side_effect = _create_client_error(
+        mock_client.describe_security_groups.side_effect = create_client_error(
             "InvalidGroup.NotFound"
         )
         mock_request = MagicMock()
@@ -617,7 +610,7 @@ class TestSecurityGroupExistenceExecution:
             "outputs_fixture", "security_group_id", "src/api/common/routing"
         )
         mock_client = MagicMock()
-        mock_client.describe_security_groups.side_effect = _create_client_error("ServiceException")
+        mock_client.describe_security_groups.side_effect = create_client_error("ServiceException")
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"security_group_id": "sg-123"}
         with pytest.raises(ClientError):
@@ -701,7 +694,7 @@ class TestLambdaRoleExistenceExecution:
         """test_lambda_execution_role_exists fails when role doesn't exist."""
         test_func = create_lambda_role_existence_test("role_name_fixture", "terraform/path")
         mock_client = MagicMock()
-        mock_client.get_role.side_effect = _create_client_error("NoSuchEntity")
+        mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "my-role"
         with pytest.raises(pytest.fail.Exception):

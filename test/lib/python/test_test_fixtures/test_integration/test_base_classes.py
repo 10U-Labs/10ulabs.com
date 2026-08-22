@@ -1,9 +1,4 @@
 """Unit tests for test_fixtures.integration.base_classes module."""
-from unittest.mock import MagicMock
-
-import pytest
-from botocore.exceptions import ClientError
-
 # Import module to verify exports without duplicating the full import list
 import test_fixtures.integration as integration_module
 
@@ -41,14 +36,6 @@ Layer6IAMCapabilityTests = _get_class("Layer6IAMCapabilityTests")
 Layer6S3CapabilityTests = _get_class("Layer6S3CapabilityTests")
 Layer6S3WriteCapabilityTests = _get_class("Layer6S3WriteCapabilityTests")
 Layer7DeploymentCapabilityTests = _get_class("Layer7DeploymentCapabilityTests")
-
-
-def _create_client_error(code: str, message: str = "Test error") -> ClientError:
-    """Create a ClientError for testing."""
-    return ClientError(
-        {"Error": {"Code": code, "Message": message}},
-        "TestOperation"
-    )
 
 
 # === Layer1AuthenticationTests ===
