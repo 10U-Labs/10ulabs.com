@@ -6,6 +6,6 @@ Nothing enforces a width. There is no `markdownlint` configuration and no `yamll
 
 Hard wrapping costs something. An edit to the middle of a wrapped paragraph reflows every line after it, so a one-word change shows up as a rewritten block and the real change hides inside the noise. Unwrapped, a paragraph edit touches one line.
 
-The trap is the existing files. Everything under `products/` is wrapped at about seventy columns — `products/gfci-tandem-20a/docs/architecture.md` runs to 67 and `products/gfci-tandem-20a/bom/README.md` to 71 — while the newer documents are not wrapped at all: `docs/tenets/tests/UNIT_TESTS.md` has a 239-character line and `CLAUDE.md` runs to 1,009. Imitating the file next to you reproduces whichever habit that file was written under. Take the width from this note instead.
+The trap was the existing files, and it left with them. Everything wrapped at about seventy columns sat under `products/`, which moved to its own repository, and every markdown file remaining here is unwrapped: `docs/tenets/tests/UNIT_TESTS.md` has a 239-character line and `CLAUDE.md` runs to 1,009. Imitating the file next to you is safe today only because there is nothing wrapped left to imitate, and it stops being safe the first time somebody adds one. Take the width from this note instead.
 
 Related: [tenets-are-generic](tenets-are-generic.md), on the same failure of copying what is already written instead of following the rule that governs it.

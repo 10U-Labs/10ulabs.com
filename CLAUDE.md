@@ -38,7 +38,7 @@ Longer: [tdd-workflow](docs/claude/memories/tdd-workflow.md), [read-test-tenets-
 
 ## Markdown
 
-Markdown is not hard-wrapped. There is no column limit on `.md` files here, and none on the bodies of GitHub issues: write each paragraph as one line and let the reader wrap it. Nothing enforces a width — the repository has no `markdownlint` and no `yamllint` configuration file, and none of the twenty-five workflows runs a markdown linter. Most of the markdown under `products/` was written wrapped at about seventy columns before this was settled, so match this rule rather than the file next to you.
+Markdown is not hard-wrapped. There is no column limit on `.md` files here, and none on the bodies of GitHub issues: write each paragraph as one line and let the reader wrap it. Nothing enforces a width — the repository has no `markdownlint` and no `yamllint` configuration file, and none of the twenty-five workflows runs a markdown linter. The hard-wrapped files that used to sit under `products/` left with it, so nothing here is wrapped now; match this rule rather than the file next to you.
 
 Longer: [markdown-is-not-hard-wrapped](docs/claude/memories/markdown-is-not-hard-wrapped.md).
 
