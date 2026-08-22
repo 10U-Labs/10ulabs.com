@@ -201,13 +201,6 @@ def current_role_name(request):
 
 
 @pytest.fixture(scope="session")
-def ecr_repository_name(request):
-    """Provide the ECR repository name for agents."""
-    config = request.getfixturevalue("shared_config")
-    return config["ecr_repository_name_agents"]
-
-
-@pytest.fixture(scope="session")
 def lambda_client(request):
     """Create a Lambda client."""
     region = request.getfixturevalue("aws_region")

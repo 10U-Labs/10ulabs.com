@@ -38,11 +38,6 @@ def test_ssm_github_pat_name_local_exists(locals_tf_content):
     assert "ssm_github_pat_name" in locals_tf_content
 
 
-def test_agentcore_local_exists(locals_tf_content):
-    """Test that agentcore local exists."""
-    assert "agentcore" in locals_tf_content
-
-
 def test_github_app_local_exists(locals_tf_content):
     """Test that github_app local exists."""
     assert "github_app" in locals_tf_content
@@ -71,11 +66,6 @@ def test_aws_region_output_exists(outputs_tf_content):
 def test_domain_name_output_exists(outputs_tf_content):
     """Test that domain_name output exists."""
     assert 'output "domain_name"' in outputs_tf_content
-
-
-def test_ecr_repository_name_agents_output_exists(outputs_tf_content):
-    """Test that ecr_repository_name_agents output exists."""
-    assert 'output "ecr_repository_name_agents"' in outputs_tf_content
 
 
 def test_github_org_output_exists(outputs_tf_content):
@@ -113,24 +103,9 @@ def test_ssm_github_pat_name_output_exists(outputs_tf_content):
     assert 'output "ssm_github_pat_name"' in outputs_tf_content
 
 
-def test_ssm_github_pat_arn_output_exists(outputs_tf_content):
-    """Test that ssm_github_pat_arn output exists."""
-    assert 'output "ssm_github_pat_arn"' in outputs_tf_content
-
-
 def test_github_app_output_exists(outputs_tf_content):
     """Test that github_app output exists."""
     assert 'output "github_app"' in outputs_tf_content
-
-
-def test_github_app_ssm_arns_output_exists(outputs_tf_content):
-    """Test that github_app_ssm_arns output exists."""
-    assert 'output "github_app_ssm_arns"' in outputs_tf_content
-
-
-def test_agentcore_output_exists(outputs_tf_content):
-    """Test that agentcore output exists."""
-    assert 'output "agentcore"' in outputs_tf_content
 
 
 def test_kms_lambda_key_arn_output_exists(outputs_tf_content):

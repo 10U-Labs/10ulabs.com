@@ -14,10 +14,6 @@ output "domain_name" {
   value = "10ulabs.com"
 }
 
-output "ecr_repository_name_agents" {
-  value = "agents"
-}
-
 output "github_org" {
   value = "10U-Labs"
 }
@@ -46,24 +42,8 @@ output "ssm_github_pat_name" {
   value = local.ssm_github_pat_name
 }
 
-output "ssm_github_pat_arn" {
-  value = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.ssm_github_pat_name}"
-}
-
 output "github_app" {
   value = local.github_app
-}
-
-output "github_app_ssm_arns" {
-  value = {
-    id              = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.github_app.ssm_prefix}/id"
-    installation_id = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.github_app.ssm_prefix}/installation_id"
-    private_key     = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.github_app.ssm_prefix}/private_key"
-  }
-}
-
-output "agentcore" {
-  value = local.agentcore
 }
 
 output "kms_lambda_key_arn" {

@@ -403,16 +403,6 @@ class TestCurrentRoleNameFixture:
         assert result == "my-complex-role-name-123"
 
 
-class TestEcrRepositoryNameFixture:
-    """Tests for ecr_repository_name fixture behavior."""
-
-    def test_ecr_repository_name_extracts_from_config(self):
-        """Test that ecr_repository_name extracts correct key from config."""
-        config = {"ecr_repository_name_agents": "my-agents-repo"}
-        repo_name = config["ecr_repository_name_agents"]
-        assert repo_name == "my-agents-repo"
-
-
 class TestApiGatewayInfoFixture:
     """Tests for api_gateway_info fixture behavior."""
 
@@ -821,18 +811,6 @@ class TestCurrentRoleNameFixtureExecution:
         mock_request.getfixturevalue.return_value = ""
         result = current_role_name.__wrapped__(mock_request)
         assert result == ""
-
-
-class TestEcrRepositoryNameFixtureExecution:
-    """Tests that execute the ecr_repository_name fixture function."""
-
-    def test_ecr_repository_name_extracts_value(self):
-        """Test ecr_repository_name extracts from shared_config."""
-        from test_fixtures.aws import ecr_repository_name
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {"ecr_repository_name_agents": "my-repo"}
-        result = ecr_repository_name.__wrapped__(mock_request)
-        assert result == "my-repo"
 
 
 class TestStateBucketRegionFixtureExecution:
