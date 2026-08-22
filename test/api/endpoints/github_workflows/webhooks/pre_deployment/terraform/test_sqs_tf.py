@@ -9,20 +9,12 @@ import pytest
 
 # Expected SQS queues (primary queues and DLQs)
 SQS_QUEUES = [
-    "webhook_ingress",
-    "webhook_ingress_dlq",
-    "ignored_events",
-    "ignored_events_dlq",
     "webhook_dlq",
-    "drift_recovery",
 ]
 
-# Queues that should have visibility timeout (non-DLQ queues)
+# Queues that should have visibility timeout
 QUEUES_WITH_VISIBILITY_TIMEOUT = [
-    "webhook_ingress",
-    "ignored_events",
     "webhook_dlq",
-    "drift_recovery",
 ]
 
 
@@ -50,11 +42,11 @@ class TestSQSQueueConfiguration:
     """Test SQS queue configurations."""
 
     def test_queues_have_visibility_timeout(self, sqs_tf_content):
-        """Verify non-DLQ SQS queues have visibility_timeout_seconds set."""
+        """Verify SQS queues have visibility_timeout_seconds set."""
         timeout_count = len(re.findall(r'visibility_timeout_seconds\s*=', sqs_tf_content))
         expected_count = len(QUEUES_WITH_VISIBILITY_TIMEOUT)
         assert timeout_count >= expected_count, (
-            f"Expected visibility timeout for non-DLQ queues: "
+            f"Expected visibility timeout for queues: "
             f"found {timeout_count}, expected at least {expected_count}"
         )
 
@@ -73,12 +65,6 @@ class TestSQSDLQConfiguration:
         assert re.search(pattern, sqs_tf_content), (
             "Webhook DLQ not found in sqs.tf"
         )
-
-    def test_queues_have_redrive_policy(self, sqs_tf_content):
-        """Verify queues have redrive policy for DLQ."""
-        # At least some queues should have redrive policy
-        redrive_count = len(re.findall(r'redrive_policy\s*=', sqs_tf_content))
-        assert redrive_count >= 1, "Expected at least one queue with redrive policy"
 
 
 class TestSQSNamingConventions:

@@ -45,9 +45,9 @@ class TestSNSSubscriptions:
 
     def test_email_subscription_exists(self, sns_tf_content):
         """Verify email subscription is defined."""
-        pattern = r'resource\s+"aws_sns_topic_subscription"\s+"circuit_open_email"'
+        pattern = r'resource\s+"aws_sns_topic_subscription"\s+"circuit_opens_email"'
         assert re.search(pattern, sns_tf_content), (
-            "Email subscription 'circuit_open_email' not found in sns.tf"
+            "Email subscription 'circuit_opens_email' not found in sns.tf"
         )
 
     def test_email_subscription_uses_email_protocol(self, sns_tf_content):

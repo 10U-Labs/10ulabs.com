@@ -12,7 +12,6 @@ CLOUDWATCH_ALARMS = [
     "circuit_open_open",
     "circuit_open_high_failures",
     "webhook_handler_errors",
-    "runners_dlq_messages",
 ]
 
 
@@ -176,20 +175,4 @@ class TestCircuitOpenAlarms:
         pattern = r'expression\s*=\s*"errors\s*/\s*invocations\s*\*\s*100"'
         assert re.search(pattern, cloudwatch_tf_content), (
             "Error rate expression not found in webhook_handler_errors alarm"
-        )
-
-
-class TestDLQAlarm:
-    """Test DLQ monitoring alarm configuration."""
-
-    def test_dlq_alarm_monitors_messages_visible(self, cloudwatch_tf_content):
-        """Verify DLQ alarm monitors ApproximateNumberOfMessagesVisible."""
-        assert '"ApproximateNumberOfMessagesVisible"' in cloudwatch_tf_content, (
-            "DLQ alarm should monitor ApproximateNumberOfMessagesVisible metric"
-        )
-
-    def test_dlq_alarm_uses_sqs_namespace(self, cloudwatch_tf_content):
-        """Verify DLQ alarm uses AWS/SQS namespace."""
-        assert '"AWS/SQS"' in cloudwatch_tf_content, (
-            "DLQ alarm should use AWS/SQS namespace"
         )

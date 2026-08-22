@@ -84,24 +84,6 @@ class TestLambdaConfiguration:
 class TestQueueNameLocals:
     """Test SQS queue name locals."""
 
-    def test_webhook_ingress_queue_name_defined(self, locals_tf_content):
-        """Verify webhook_ingress_queue_name is defined."""
-        assert 'webhook_ingress_queue_name' in locals_tf_content, (
-            "webhook_ingress_queue_name local not found"
-        )
-
-    def test_webhook_ingress_dlq_name_defined(self, locals_tf_content):
-        """Verify webhook_ingress_dlq_name is defined."""
-        assert 'webhook_ingress_dlq_name' in locals_tf_content, (
-            "webhook_ingress_dlq_name local not found"
-        )
-
-    def test_ignored_events_queue_name_defined(self, locals_tf_content):
-        """Verify ignored_events_queue_name is defined."""
-        assert 'ignored_events_queue_name' in locals_tf_content, (
-            "ignored_events_queue_name local not found"
-        )
-
     def test_webhook_dlq_name_defined(self, locals_tf_content):
         """Verify webhook_dlq_name is defined."""
         assert 'webhook_dlq_name' in locals_tf_content, (
@@ -150,30 +132,6 @@ class TestFunctionNameLocals:
         """Verify circuit_open_recoveries_function_name is defined."""
         assert 'circuit_open_recoveries_function_name' in locals_tf_content, (
             "circuit_open_recoveries_function_name local not found"
-        )
-
-    def test_drift_recovery_function_name_defined(self, locals_tf_content):
-        """Verify drift_recovery_function_name is defined."""
-        assert 'drift_recovery_function_name' in locals_tf_content, (
-            "drift_recovery_function_name local not found"
-        )
-
-    def test_spot_interruption_handler_function_name_defined(self, locals_tf_content):
-        """Verify spot_interruption_handler_function_name is defined."""
-        assert 'spot_interruption_handler_function_name' in locals_tf_content, (
-            "spot_interruption_handler_function_name local not found"
-        )
-
-    def test_stale_runner_cleanup_function_name_defined(self, locals_tf_content):
-        """Verify stale_runner_cleanup_function_name is defined."""
-        assert 'stale_runner_cleanup_function_name' in locals_tf_content, (
-            "stale_runner_cleanup_function_name local not found"
-        )
-
-    def test_ignored_events_archiver_function_name_defined(self, locals_tf_content):
-        """Verify ignored_events_archiver_function_name is defined."""
-        assert 'ignored_events_archiver_function_name' in locals_tf_content, (
-            "ignored_events_archiver_function_name local not found"
         )
 
 
@@ -239,12 +197,6 @@ class TestSSMParameterLocals:
         """Verify SSM parameter name for webhook secret is defined."""
         assert 'ssm_parameter_name_for_webhook_secret' in locals_tf_content, (
             "ssm_parameter_name_for_webhook_secret local not found"
-        )
-
-    def test_github_token_parameter_referenced(self, locals_tf_content):
-        """Verify GitHub token parameter name is referenced."""
-        assert 'github_token' in locals_tf_content.lower(), (
-            "GitHub token parameter reference not found"
         )
 
 

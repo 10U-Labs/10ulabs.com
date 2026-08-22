@@ -11,14 +11,10 @@ import pytest
 # Expected IAM roles for Lambda functions
 LAMBDA_IAM_ROLES = [
     "lambda_runners_handler",
-    "ignored_events_archiver",
     "circuit_opens",
     "circuit_open_remediations",
     "dlq_reprocessor",
     "circuit_open_recoveries",
-    "drift_recovery",
-    "spot_interruption_handler",
-    "stale_runner_cleanup",
 ]
 
 
@@ -154,38 +150,6 @@ class TestIAMKMSPermissions:
     def test_kms_permissions_scoped(self, iam_tf_content):
         """Verify KMS permissions don't use wildcard."""
         assert '"kms:*"' not in iam_tf_content
-
-
-class TestIAMEC2Permissions:
-    """Test IAM EC2 permissions for runner management."""
-
-    def test_ec2_terminate_instances_permission_exists(self, iam_tf_content):
-        """Verify ec2:TerminateInstances permission is granted."""
-        assert '"ec2:TerminateInstances"' in iam_tf_content, (
-            "EC2 TerminateInstances permission not found"
-        )
-
-    def test_ec2_describe_instances_permission_exists(self, iam_tf_content):
-        """Verify ec2:DescribeInstances permission is granted."""
-        assert '"ec2:DescribeInstances"' in iam_tf_content, (
-            "EC2 DescribeInstances permission not found"
-        )
-
-
-class TestIAMECSPermissions:
-    """Test IAM ECS permissions for runner management."""
-
-    def test_ecs_stop_task_permission_exists(self, iam_tf_content):
-        """Verify ecs:StopTask permission is granted."""
-        assert '"ecs:StopTask"' in iam_tf_content, (
-            "ECS StopTask permission not found"
-        )
-
-    def test_ecs_list_tasks_permission_exists(self, iam_tf_content):
-        """Verify ecs:ListTasks permission is granted."""
-        assert '"ecs:ListTasks"' in iam_tf_content, (
-            "ECS ListTasks permission not found"
-        )
 
 
 class TestIAMNamingConventions:

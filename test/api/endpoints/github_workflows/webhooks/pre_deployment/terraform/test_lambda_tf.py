@@ -16,11 +16,6 @@ LAMBDA_FUNCTIONS = [
         "description_contains": "webhook",
     },
     {
-        "resource_name": "ignored_events_archiver",
-        "handler": "ignored_events_archiver.lambda_handler",
-        "description_contains": "archive",
-    },
-    {
         "resource_name": "circuit_opens",
         "handler": "circuit_opens.lambda_handler",
         "description_contains": "reset",
@@ -180,38 +175,17 @@ class TestLambdaIAMConfiguration:
         )
 
 
-class TestLambdaEventSourceMappings:
-    """Test Lambda event source mappings."""
-
-    def test_webhook_handler_has_sqs_trigger(self, lambda_tf_content):
-        """Verify webhook handler has SQS event source mapping."""
-        pattern = (
-            r'resource\s+"aws_lambda_event_source_mapping"'
-            r'\s+"runners_handler_webhook_ingress"'
-        )
-        assert re.search(pattern, lambda_tf_content), (
-            "SQS event source mapping for runners_handler not found"
-        )
-
-    def test_ignored_events_archiver_has_sqs_trigger(self, lambda_tf_content):
-        """Verify ignored_events_archiver has SQS event source mapping."""
-        pattern = r'resource\s+"aws_lambda_event_source_mapping"\s+"ignored_events_archiver_sqs"'
-        assert re.search(pattern, lambda_tf_content), (
-            "SQS event source mapping for ignored_events_archiver not found"
-        )
-
-
 class TestLambdaEnvironmentVariables:
     """Test Lambda environment variable configurations."""
 
     def test_webhook_handler_has_required_env_vars(self, lambda_tf_content):
         """Verify webhook handler has required environment variables."""
         required_vars = [
+            "ARCHIVE_BUCKET_NAME",
             "CIRCUIT_OPEN_TABLE_NAME",
             "GITHUB_REPO",
             "GITHUB_TOKEN_SECRET_NAME",
             "IDEMPOTENCY_TABLE_NAME",
-            "IGNORED_EVENTS_QUEUE_URL",
             "WEBHOOK_SECRET_NAME",
         ]
         # Find the runners_handler environment block

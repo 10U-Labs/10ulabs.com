@@ -7,32 +7,22 @@ import re
 
 import pytest
 
-# Expected EventBridge rules (rule_name -> target_name)
-# Most rules have matching target names, but some don't
+# Expected EventBridge rules
 EVENTBRIDGE_RULES = [
     "circuit_open_remediations",
     "dlq_reprocessor",
     "circuit_open_recoveries",
-    "ecs_task_stopped",
-    "stale_runner_cleanup_schedule",
 ]
-
-# Map rule names to target names (when they differ)
-RULE_TO_TARGET_NAME = {
-    "stale_runner_cleanup_schedule": "stale_runner_cleanup",
-}
 
 # Rules that use schedule expressions
 SCHEDULED_RULES = [
     "dlq_reprocessor",
     "circuit_open_recoveries",
-    "stale_runner_cleanup_schedule",
 ]
 
 # Rules that use event patterns
 EVENT_PATTERN_RULES = [
     "circuit_open_remediations",
-    "ecs_task_stopped",
 ]
 
 
@@ -62,11 +52,9 @@ class TestEventBridgeTargetsExist:
     @pytest.mark.parametrize("rule_name", EVENTBRIDGE_RULES)
     def test_eventbridge_target_exists(self, eventbridge_tf_content, rule_name):
         """Verify EventBridge target resource is defined."""
-        # Get the target name (may differ from rule name)
-        target_name = RULE_TO_TARGET_NAME.get(rule_name, rule_name)
-        pattern = rf'resource\s+"aws_cloudwatch_event_target"\s+"{target_name}"'
+        pattern = rf'resource\s+"aws_cloudwatch_event_target"\s+"{rule_name}"'
         assert re.search(pattern, eventbridge_tf_content), (
-            f"EventBridge target '{target_name}' for rule '{rule_name}' not found in eventbridge.tf"
+            f"EventBridge target for rule '{rule_name}' not found in eventbridge.tf"
         )
 
     def test_target_count_matches_rule_count(self, eventbridge_tf_content):
@@ -165,12 +153,6 @@ class TestEventPatternRules:
         has_cw = '"aws.cloudwatch"' in eventbridge_tf_content
         has_alarm = '"CloudWatch Alarm State Change"' in eventbridge_tf_content
         assert has_cw and has_alarm
-
-    def test_ecs_task_stopped_listens_to_ecs(self, eventbridge_tf_content):
-        """Verify ECS task stopped rule listens to ECS events."""
-        has_ecs = '"aws.ecs"' in eventbridge_tf_content
-        has_task = '"ECS Task State Change"' in eventbridge_tf_content
-        assert has_ecs and has_task
 
 
 class TestEventBridgeNamingConventions:

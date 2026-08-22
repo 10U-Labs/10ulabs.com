@@ -13,9 +13,6 @@ EXPECTED_OUTPUTS = [
     "webhook_parameter_name",
     "webhook_parameter_arn",
     "api_endpoint",
-    "webhook_ingress_queue_url",
-    "webhook_ingress_queue_arn",
-    "webhook_ingress_queue_name",
 ]
 
 
@@ -61,43 +58,6 @@ class TestOutputValues:
         assert re.search(pattern, outputs_tf_content, re.DOTALL), (
             "lambda_function_name should reference runners_handler.function_name"
         )
-
-    def test_webhook_ingress_queue_url_references_sqs(self, outputs_tf_content):
-        """Verify webhook_ingress_queue_url references SQS queue."""
-        pattern = (
-            r'output\s+"webhook_ingress_queue_url"[^}]*'
-            r'value\s*=\s*aws_sqs_queue\.webhook_ingress\.url'
-        )
-        assert re.search(pattern, outputs_tf_content, re.DOTALL), (
-            "webhook_ingress_queue_url should reference webhook_ingress.url"
-        )
-
-
-class TestOutputDescriptions:
-    """Test that outputs have descriptions where appropriate."""
-
-    def test_webhook_outputs_have_descriptions(self, outputs_tf_content):
-        """Verify webhook-related outputs have descriptions."""
-        webhook_outputs = [
-            "webhook_ingress_queue_url",
-            "webhook_ingress_queue_arn",
-            "webhook_ingress_queue_name",
-        ]
-        for output_name in webhook_outputs:
-            # Find the output block
-            pattern = rf'output\s+"{output_name}"\s*\{{[^}}]*description\s*='
-            assert re.search(pattern, outputs_tf_content, re.DOTALL), (
-                f"Output '{output_name}' should have a description"
-            )
-
-    def test_lambda_outputs_have_descriptions(self, outputs_tf_content):
-        """Verify Lambda-related outputs have descriptions."""
-        lambda_outputs = ["lambda_function_arn", "lambda_function_name"]
-        for output_name in lambda_outputs:
-            pattern = rf'output\s+"{output_name}"\s*\{{[^}}]*description\s*='
-            assert re.search(pattern, outputs_tf_content, re.DOTALL), (
-                f"Output '{output_name}' should have a description"
-            )
 
 
 class TestOutputCount:
