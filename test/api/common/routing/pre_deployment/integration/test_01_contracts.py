@@ -6,11 +6,11 @@ setup these tests are built from still describes things that exist.
 """
 import re
 from pathlib import Path
+from test.api.common.routing.conftest import _add_derived_config
 
 import pytest
 
 from repo_utils import REPO_ROOT
-from test.api.common.routing.conftest import _add_derived_config
 
 ROUTING_SRC = REPO_ROOT / "src" / "api" / "common" / "routing"
 LAMBDAS_DIR = ROUTING_SRC / "lambdas"
