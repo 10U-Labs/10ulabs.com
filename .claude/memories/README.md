@@ -1,8 +1,17 @@
 # Notes for Claude sessions in 10ulabs.com
 
+## Table of Contents
+
+- [What these notes are](#what-these-notes-are)
+- [Working practice](#working-practice)
+- [Issues](#issues)
+- [Tests](#tests)
+
+## What these notes are
+
 `CLAUDE.md` at the repository root carries the standing conventions in short form and is read at the start of every session. These files carry the longer versions: the reasoning, the incidents that produced each rule, and the details needed occasionally rather than constantly. One note per topic, so a session can read the one rule it needs.
 
-A convention learned in a session belongs here — a paragraph in `CLAUDE.md` and a topic file in this directory, linked from both indexes. Keep in the session tool's own memory directory under the home directory only what is true of one machine alone; a rule kept in both places drifts with nothing to signal it, which is why the local copy of the CI rule was deleted when [verification-in-ci-only](verification-in-ci-only.md) was written.
+A convention learned in a session belongs here — a paragraph in `CLAUDE.md` and a topic file in this directory, linked from both indexes and written in the shape the notes around it use. That shape is a top-level heading, a table of contents, and `##` sections named for the questions the note answers, so a session can jump to the one rule it needs instead of reading from the top. Keep in the session tool's own memory directory under the home directory only what is true of one machine alone; a rule kept in both places drifts with nothing to signal it, which is why the local copy of the CI rule was deleted when [verification-in-ci-only](verification-in-ci-only.md) was written.
 
 ## Working practice
 
