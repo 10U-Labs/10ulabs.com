@@ -3,10 +3,8 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from test_fixtures.terraform import (
-    create_tf_content_fixture,
     terraform_init,
     terraform_output,
-    terraform_output_json,
 )
 
 
@@ -147,82 +145,3 @@ class TestTerraformOutput:
         terraform_output(Path('/custom/path'), 'my_output')
         call_args = mock_run.call_args
         assert call_args[1]['cwd'] == '/custom/path'
-
-
-class TestTerraformOutputJson:
-    """Tests for terraform_output_json function."""
-
-    @patch('test_fixtures.terraform.subprocess.run')
-    def test_returns_json_output_on_success(self, mock_run):
-        """Test that terraform_output_json returns JSON on success."""
-        mock_run.return_value = MagicMock(returncode=0, stdout='{"key": "value"}\n')
-        result = terraform_output_json(Path('/test/dir'), 'my_output')
-        assert result == '{"key": "value"}'
-
-    @patch('test_fixtures.terraform.subprocess.run')
-    def test_returns_empty_string_on_failure(self, mock_run):
-        """Test that terraform_output_json returns empty string on failure."""
-        mock_run.return_value = MagicMock(returncode=1, stdout='')
-        result = terraform_output_json(Path('/test/dir'), 'my_output')
-        assert result == ''
-
-    @patch('test_fixtures.terraform.subprocess.run')
-    def test_strips_whitespace_from_output(self, mock_run):
-        """Test that terraform_output_json strips whitespace."""
-        mock_run.return_value = MagicMock(returncode=0, stdout='  {"key": "value"}  \n')
-        result = terraform_output_json(Path('/test/dir'), 'my_output')
-        assert result == '{"key": "value"}'
-
-    @patch('test_fixtures.terraform.subprocess.run')
-    def test_calls_terraform_command(self, mock_run):
-        """Test that terraform_output_json calls terraform command."""
-        mock_run.return_value = MagicMock(returncode=0, stdout='{}')
-        terraform_output_json(Path('/test/dir'), 'my_output')
-        call_args = mock_run.call_args
-        assert call_args[0][0][0] == 'terraform'
-
-    @patch('test_fixtures.terraform.subprocess.run')
-    def test_calls_output_subcommand(self, mock_run):
-        """Test that terraform_output_json calls output subcommand."""
-        mock_run.return_value = MagicMock(returncode=0, stdout='{}')
-        terraform_output_json(Path('/test/dir'), 'my_output')
-        call_args = mock_run.call_args
-        assert call_args[0][0][1] == 'output'
-
-    @patch('test_fixtures.terraform.subprocess.run')
-    def test_uses_json_flag(self, mock_run):
-        """Test that terraform_output_json uses -json flag."""
-        mock_run.return_value = MagicMock(returncode=0, stdout='{}')
-        terraform_output_json(Path('/test/dir'), 'my_output')
-        call_args = mock_run.call_args
-        assert '-json' in call_args[0][0]
-
-    @patch('test_fixtures.terraform.subprocess.run')
-    def test_passes_output_name(self, mock_run):
-        """Test that terraform_output_json passes output name."""
-        mock_run.return_value = MagicMock(returncode=0, stdout='{}')
-        terraform_output_json(Path('/test/dir'), 'complex_output')
-        call_args = mock_run.call_args
-        assert 'complex_output' in call_args[0][0]
-
-    @patch('test_fixtures.terraform.subprocess.run')
-    def test_uses_correct_working_directory(self, mock_run):
-        """Test that terraform_output_json uses correct cwd."""
-        mock_run.return_value = MagicMock(returncode=0, stdout='{}')
-        terraform_output_json(Path('/another/path'), 'my_output')
-        call_args = mock_run.call_args
-        assert call_args[1]['cwd'] == '/another/path'
-
-
-class TestCreateTfContentFixture:
-    """Tests for create_tf_content_fixture function."""
-
-    def test_names_the_fixture_after_the_file_it_reads(self):
-        """Test the name is the filename with its dot replaced, plus _content."""
-        assert create_tf_content_fixture('lambda.tf').name == 'lambda_tf_content'
-
-    def test_the_fixture_reads_that_file_under_the_directory_given(self, tmp_path):
-        """Test the fixture returns the text of its file under terraform_dir."""
-        (tmp_path / 'lambda.tf').write_text('resource "aws_lambda_function" "a" {}')
-        fixture = create_tf_content_fixture('lambda.tf')
-        assert fixture.__wrapped__(tmp_path) == 'resource "aws_lambda_function" "a" {}'

@@ -20,13 +20,9 @@ from terraform_drift import (
     _check_api_gateway_rest_api,
     RESOURCE_CHECKERS,
     RESOURCE_TO_CLIENT,
-    get_supported_resource_types,
     check_resource_exists,
     get_planned_creates,
     _get_name_field,
-    get_terraform_state_resources,
-    is_resource_in_state,
-    find_orphaned_resources,
 )
 
 
@@ -308,28 +304,6 @@ def test_resource_to_client():
         assert resource_type in RESOURCE_TO_CLIENT
 
 
-# === Public API Functions ===
-
-
-class TestGetSupportedResourceTypes:
-    """Tests for get_supported_resource_types function."""
-
-    def test_returns_list_type(self):
-        """get_supported_resource_types returns a list type."""
-        result = get_supported_resource_types()
-        assert isinstance(result, list)
-
-    def test_returns_list_with_correct_length(self):
-        """get_supported_resource_types returns list with same length as RESOURCE_CHECKERS."""
-        result = get_supported_resource_types()
-        assert len(result) == len(RESOURCE_CHECKERS)
-
-    def test_contains_all_types(self):
-        """get_supported_resource_types contains all registered types."""
-        result = get_supported_resource_types()
-        assert set(result) == set(RESOURCE_CHECKERS.keys())
-
-
 class TestCheckResourceExists:
     """Tests for check_resource_exists function."""
 
@@ -523,143 +497,4 @@ class TestGetPlannedCreates:
         })
         mock_run.return_value = MagicMock(stdout=plan_with_missing_name, returncode=0)
         result = get_planned_creates(Path("/tmp/terraform"))
-        assert not result
-
-
-class TestGetTerraformStateResources:
-    """Tests for get_terraform_state_resources function."""
-
-    @patch("terraform_drift.subprocess.run")
-    def test_returns_resource_list(self, mock_run):
-        """get_terraform_state_resources returns list of addresses."""
-        mock_run.return_value = MagicMock(
-            stdout="aws_lambda_function.my_func\naws_iam_role.my_role\n",
-            returncode=0,
-        )
-
-        result = get_terraform_state_resources(Path("/tmp/terraform"))
-
-        assert result == ["aws_lambda_function.my_func", "aws_iam_role.my_role"]
-
-    @patch("terraform_drift.subprocess.run")
-    def test_returns_empty_on_error(self, mock_run):
-        """get_terraform_state_resources returns empty list on error."""
-        mock_run.return_value = MagicMock(stdout="", returncode=1)
-
-        result = get_terraform_state_resources(Path("/tmp/terraform"))
-        assert not result
-
-    @patch("terraform_drift.subprocess.run")
-    def test_filters_empty_lines(self, mock_run):
-        """get_terraform_state_resources filters empty lines."""
-        mock_run.return_value = MagicMock(
-            stdout="aws_lambda_function.my_func\n\n  \naws_iam_role.my_role\n",
-            returncode=0,
-        )
-
-        result = get_terraform_state_resources(Path("/tmp/terraform"))
-        assert result == ["aws_lambda_function.my_func", "aws_iam_role.my_role"]
-
-
-class TestIsResourceInState:
-    """Tests for is_resource_in_state function."""
-
-    @patch("terraform_drift.get_terraform_state_resources")
-    def test_returns_true_when_in_state(self, mock_get_state):
-        """is_resource_in_state returns True when resource is in state."""
-        mock_get_state.return_value = [
-            "aws_lambda_function.my_func",
-            "aws_iam_role.my_role",
-        ]
-
-        result = is_resource_in_state(Path("/tmp"), "aws_lambda_function.my_func")
-        assert result is True
-
-    @patch("terraform_drift.get_terraform_state_resources")
-    def test_returns_false_when_not_in_state(self, mock_get_state):
-        """is_resource_in_state returns False when resource is not in state."""
-        mock_get_state.return_value = ["aws_iam_role.my_role"]
-
-        result = is_resource_in_state(Path("/tmp"), "aws_lambda_function.my_func")
-        assert result is False
-
-
-class TestFindOrphanedResources:
-    """Tests for find_orphaned_resources function."""
-
-    @patch("terraform_drift.check_resource_exists")
-    @patch("terraform_drift.get_planned_creates")
-    def test_finds_orphaned_resources_returns_single_result(
-        self, mock_get_planned, mock_check_exists
-    ):
-        """find_orphaned_resources returns one result when one resource exists in AWS."""
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "MyFunction",
-                "address": "aws_lambda_function.my_func",
-                "values": {},
-            }
-        ]
-        mock_check_exists.return_value = True
-
-        result = find_orphaned_resources(Path("/tmp"), "us-east-2")
-
-        assert len(result) == 1
-
-    @patch("terraform_drift.check_resource_exists")
-    @patch("terraform_drift.get_planned_creates")
-    def test_finds_orphaned_resources_includes_resource_name(
-        self, mock_get_planned, mock_check_exists
-    ):
-        """find_orphaned_resources includes correct resource name in result."""
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "MyFunction",
-                "address": "aws_lambda_function.my_func",
-                "values": {},
-            }
-        ]
-        mock_check_exists.return_value = True
-
-        result = find_orphaned_resources(Path("/tmp"), "us-east-2")
-
-        assert result[0]["name"] == "MyFunction"
-
-    @patch("terraform_drift.check_resource_exists")
-    @patch("terraform_drift.get_planned_creates")
-    def test_finds_orphaned_resources_generates_import_command(
-        self, mock_get_planned, mock_check_exists
-    ):
-        """find_orphaned_resources generates terraform import command in result."""
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "MyFunction",
-                "address": "aws_lambda_function.my_func",
-                "values": {},
-            }
-        ]
-        mock_check_exists.return_value = True
-
-        result = find_orphaned_resources(Path("/tmp"), "us-east-2")
-
-        assert "terraform import" in result[0]["import_command"]
-
-    @patch("terraform_drift.check_resource_exists")
-    @patch("terraform_drift.get_planned_creates")
-    def test_excludes_non_existing_resources(self, mock_get_planned, mock_check_exists):
-        """find_orphaned_resources excludes resources that don't exist."""
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "MyFunction",
-                "address": "aws_lambda_function.my_func",
-                "values": {},
-            }
-        ]
-        mock_check_exists.return_value = False
-
-        result = find_orphaned_resources(Path("/tmp"), "us-east-2")
         assert not result

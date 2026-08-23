@@ -11,7 +11,6 @@ from terraform_config import (
     _resolve_prefix_refs,
     extract_iam_role_names,
     extract_lambda_function_names,
-    extract_sqs_queue_names,
     get_endpoint_local_values,
     get_resource_prefix,
     get_shared_config,
@@ -502,65 +501,6 @@ resource "aws_lambda_function" "my_func" {
         assert len(result) == 1
 
 
-class TestExtractSqsQueueNames:
-    """Tests for extract_sqs_queue_names function."""
-
-    def test_returns_empty_for_nonexistent_file(self):
-        """Test returns empty list when file doesn't exist."""
-        result = extract_sqs_queue_names(Path("/nonexistent/file.tf"))
-        assert not result
-
-    def test_extracts_quoted_name_returns_single_result(self, tmp_path):
-        """Test extracts exactly one queue from file with one queue definition."""
-        (tmp_path / "locals.tf").write_text("")  # Empty locals
-        sqs_file = tmp_path / "sqs.tf"
-        sqs_file.write_text('''
-resource "aws_sqs_queue" "my_queue" {
-  name = "MyQueueName"
-}
-''')
-        result = extract_sqs_queue_names(sqs_file)
-        assert len(result) == 1
-
-    def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path):
-        """Test extracts correct resource name and queue name tuple."""
-        (tmp_path / "locals.tf").write_text("")  # Empty locals
-        sqs_file = tmp_path / "sqs.tf"
-        sqs_file.write_text('''
-resource "aws_sqs_queue" "my_queue" {
-  name = "MyQueueName"
-}
-''')
-        result = extract_sqs_queue_names(sqs_file)
-        assert result[0] == ("my_queue", "MyQueueName")
-
-    def test_extracts_local_reference_returns_single_result(self, tmp_path):
-        """Test extracts exactly one queue when name uses local reference."""
-        locals_file = tmp_path / "locals.tf"
-        locals_file.write_text('locals {\n  queue_name = "LocalQueueName"\n}\n')
-        sqs_file = tmp_path / "sqs.tf"
-        sqs_file.write_text('''
-resource "aws_sqs_queue" "my_queue" {
-  name = local.queue_name
-}
-''')
-        result = extract_sqs_queue_names(sqs_file)
-        assert len(result) == 1
-
-    def test_extracts_local_reference_returns_correct_tuple(self, tmp_path):
-        """Test extracts correct tuple when name uses local reference."""
-        locals_file = tmp_path / "locals.tf"
-        locals_file.write_text('locals {\n  queue_name = "LocalQueueName"\n}\n')
-        sqs_file = tmp_path / "sqs.tf"
-        sqs_file.write_text('''
-resource "aws_sqs_queue" "my_queue" {
-  name = local.queue_name
-}
-''')
-        result = extract_sqs_queue_names(sqs_file)
-        assert result[0] == ("my_queue", "LocalQueueName")
-
-
 class TestResolveLocalInterpolationsMaxIterations:
     """Tests for max iterations edge case in _resolve_local_interpolations."""
 
@@ -760,20 +700,4 @@ resource "aws_lambda_function" "my_func" {
     (tmp_path / "terraform.tfvars").write_text("")
     result = extract_lambda_function_names(lambda_file)
     # Function should not be in result since name couldn't be resolved
-    assert len(result) == 0
-
-
-def test_extract_sqs_queue_names_skips_an_unknown_local(tmp_path):
-    """Test SQS queue with local reference that's not in local_values."""
-    sqs_file = tmp_path / "sqs.tf"
-    # Reference a local that won't be in local_values
-    sqs_file.write_text('''
-resource "aws_sqs_queue" "my_queue" {
-  name = local.undefined_queue_name
-}
-''')
-    # Empty locals.tf so undefined_queue_name won't be found
-    (tmp_path / "locals.tf").write_text('locals {\n  other_var = "value"\n}\n')
-    result = extract_sqs_queue_names(sqs_file)
-    # Queue should not be in result since local reference wasn't found
     assert len(result) == 0

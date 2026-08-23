@@ -20,7 +20,7 @@ Example usage:
 import json
 import subprocess
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, cast
+from typing import Any, Callable, Dict, List, cast
 
 import boto3
 from botocore.exceptions import ClientError
@@ -162,11 +162,6 @@ RESOURCE_TO_CLIENT: Dict[str, str] = {
 }
 
 
-def get_supported_resource_types() -> List[str]:
-    """Get list of resource types that can be checked for drift."""
-    return list(RESOURCE_CHECKERS.keys())
-
-
 def check_resource_exists(
     resource_type: str,
     resource_name: str,
@@ -275,71 +270,3 @@ def _get_name_field(resource_type: str) -> str:
         "aws_api_gateway_rest_api": "id",
     }
     return name_fields.get(resource_type, "name")
-
-
-def get_terraform_state_resources(terraform_dir: Path) -> List[str]:
-    """Get list of resource addresses currently in Terraform state.
-
-    Args:
-        terraform_dir: Path to directory containing Terraform files
-
-    Returns:
-        List of resource addresses (e.g., 'aws_lambda_function.my_func')
-    """
-    result = subprocess.run(
-        ["terraform", "state", "list"],
-        capture_output=True,
-        text=True,
-        cwd=terraform_dir,
-        timeout=60,
-        check=False,
-    )
-    if result.returncode != 0:
-        return []
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
-
-
-def is_resource_in_state(terraform_dir: Path, tf_address: str) -> bool:
-    """Check if a resource is in Terraform state.
-
-    Args:
-        terraform_dir: Path to directory containing Terraform files
-        tf_address: Terraform resource address (e.g., 'aws_lambda_function.my_func')
-
-    Returns:
-        True if the resource is in state, False otherwise.
-    """
-    state_resources = get_terraform_state_resources(terraform_dir)
-    return tf_address in state_resources
-
-
-def find_orphaned_resources(
-    terraform_dir: Path,
-    region: str = "us-east-2",
-) -> List[Dict[str, str]]:
-    """Find resources that exist in AWS but not in Terraform state.
-
-    This detects resources that Terraform plans to create but already exist
-    in AWS - indicating they were created outside of Terraform or the state
-    was lost.
-
-    Args:
-        terraform_dir: Path to directory containing Terraform files
-        region: AWS region to check in
-
-    Returns:
-        List of dicts with keys: type, name, address, import_command
-    """
-    planned = get_planned_creates(terraform_dir)
-    orphaned = []
-
-    for resource in planned:
-        if check_resource_exists(resource["type"], resource["name"], region):
-            orphaned.append({
-                "type": resource["type"],
-                "name": resource["name"],
-                "address": resource["address"],
-                "import_command": f"terraform import {resource['address']} {resource['name']}",
-            })
-
-    return orphaned

@@ -102,7 +102,7 @@ pytest_plugins = ['test_fixtures.aws']
 # - shared_config: Parsed shared Terraform module config
 # - aws_region: AWS region from config
 # - state_bucket_name: Terraform state bucket
-# - sts_client, iam_client, s3_client, ssm_client, kms_client, ecr_client
+# - sts_client, iam_client, s3_client, ssm_client, ecr_client
 # - lambda_client, apigateway_client, dynamodb_client, ses_client, logs_client
 # - caller_identity, current_role_arn, current_role_name
 ```
@@ -111,13 +111,12 @@ The rest of the package is imported rather than loaded as a plugin:
 
 | Module | What it holds |
 | -------- | --------------- |
-| `test_fixtures.terraform` | `terraform_init`, `terraform_output`, `terraform_output_json` |
+| `test_fixtures.terraform` | `terraform_init`, `terraform_output` |
 | `test_fixtures.config` | Config fixtures parsed from a `terraform.tfvars` or a `locals.tf` |
 | `test_fixtures.website` | `create_website_fixtures`, used by both www suites |
 | `test_fixtures.http_endpoint` | Checks on what a live endpoint's error responses give away |
 | `test_fixtures.lambda_lifecycle` | Test factories for the lifecycle rules a Lambda with environment variables needs |
 | `test_fixtures.terraform_tests` | Test factories for remote-state contracts and naming conventions |
-| `test_fixtures.tempfiles` | `write_temporary_file`, for suites that need a file with a given suffix |
 | `test_fixtures.integration` | The base classes of the seven-layer pre-deployment integration model |
 
 ### terraform_config/
@@ -156,7 +155,7 @@ TestOrphanedResources = create_orphaned_resource_tests(
 Validate AWS resource names follow PascalCase:
 
 ```python
-from naming_conventions import is_pascalcase, validate_name
+from naming_conventions import validate_name
 from naming_conventions.test_helpers import (
     create_lambda_function_tests,
     create_iam_role_tests,

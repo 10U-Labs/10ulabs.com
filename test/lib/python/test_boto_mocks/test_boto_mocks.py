@@ -13,7 +13,6 @@ from boto_mocks import (
     create_mock_lambda_with_mappings,
     create_mock_lambda_with_disabled_mappings,
     create_mock_lambda_delete_concurrency_error,
-    setup_mock_ec2_vpc_responses,
 )
 
 
@@ -301,52 +300,3 @@ class TestCreateMockLambdaDeleteConcurrencyError:
             mock.delete_function_concurrency()
         except ClientError as e:
             assert e.response["Error"]["Code"] == "ServiceUnavailable"
-
-
-# === setup_mock_ec2_vpc_responses ===
-
-
-class TestSetupMockEc2VpcResponses:
-    """Tests for setup_mock_ec2_vpc_responses function."""
-
-    def test_configures_describe_security_groups_key(self):
-        """setup_mock_ec2_vpc_responses returns SecurityGroups key."""
-        mock_ec2 = MagicMock()
-        setup_mock_ec2_vpc_responses(mock_ec2)
-        result = mock_ec2.describe_security_groups()
-        assert "SecurityGroups" in result
-
-    def test_configures_describe_security_groups_value(self):
-        """setup_mock_ec2_vpc_responses returns correct group ID."""
-        mock_ec2 = MagicMock()
-        setup_mock_ec2_vpc_responses(mock_ec2)
-        result = mock_ec2.describe_security_groups()
-        assert result["SecurityGroups"][0]["GroupId"] == "sg-test"
-
-    def test_configures_describe_subnets_key(self):
-        """setup_mock_ec2_vpc_responses returns Subnets key."""
-        mock_ec2 = MagicMock()
-        setup_mock_ec2_vpc_responses(mock_ec2)
-        result = mock_ec2.describe_subnets()
-        assert "Subnets" in result
-
-    def test_configures_describe_subnets_count(self):
-        """setup_mock_ec2_vpc_responses returns two subnets."""
-        mock_ec2 = MagicMock()
-        setup_mock_ec2_vpc_responses(mock_ec2)
-        result = mock_ec2.describe_subnets()
-        assert len(result["Subnets"]) == 2
-
-    def test_configures_describe_vpcs_key(self):
-        """setup_mock_ec2_vpc_responses returns Vpcs key."""
-        mock_ec2 = MagicMock()
-        setup_mock_ec2_vpc_responses(mock_ec2)
-        result = mock_ec2.describe_vpcs()
-        assert "Vpcs" in result
-
-    def test_configures_describe_vpcs_value(self):
-        """setup_mock_ec2_vpc_responses returns correct VPC ID."""
-        mock_ec2 = MagicMock()
-        setup_mock_ec2_vpc_responses(mock_ec2)
-        result = mock_ec2.describe_vpcs()
-        assert result["Vpcs"][0]["VpcId"] == "vpc-test"

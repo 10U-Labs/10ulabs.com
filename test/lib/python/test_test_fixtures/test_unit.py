@@ -1,20 +1,10 @@
 """Comprehensive tests for test_fixtures.unit module."""
-import io
-import json
-from functools import partial
-from types import ModuleType
 from unittest.mock import MagicMock
 
-import pytest
-
-from test_fixtures.tempfiles import write_temporary_file
 from test_fixtures.unit import (
     TEST_CONSTANTS,
     ENV_VAR_PRESETS,
-    load_handler_module,
-    parse_lambda_response_payload,
     create_mock_dynamodb_client,
-    assert_no_hardcoded_env_defaults,
 )
 from terraform_config import TEST_AWS_REGION
 
@@ -153,123 +143,6 @@ class TestEnvVarPresets:
         assert ENV_VAR_PRESETS['base']['AWS_REGION'] == TEST_AWS_REGION
 
 
-# === load_handler_module ===
-
-
-class TestLoadHandlerModule:
-    """Tests for load_handler_module function."""
-
-    def test_returns_module_type(self):
-        """load_handler_module returns a ModuleType."""
-        module = load_handler_module(
-            "endpoints/contact_submissions/lambda/handler.py",
-            "test_handler_module"
-        )
-        assert isinstance(module, ModuleType)
-
-    def test_loaded_module_has_name(self):
-        """load_handler_module loaded module has __name__ attribute."""
-        module = load_handler_module(
-            "endpoints/contact_submissions/lambda/handler.py",
-            "test_handler_named"
-        )
-        assert hasattr(module, '__name__')
-
-    def test_loaded_module_name_matches(self):
-        """load_handler_module loaded module has correct name."""
-        module = load_handler_module(
-            "endpoints/contact_submissions/lambda/handler.py",
-            "custom_module_name"
-        )
-        assert module.__name__ == "custom_module_name"
-
-    def test_loaded_module_has_expected_function(self):
-        """load_handler_module loaded module has expected function."""
-        module = load_handler_module(
-            "endpoints/contact_submissions/lambda/handler.py",
-            "test_handler_func"
-        )
-        assert hasattr(module, 'get_header_case_insensitive')
-
-    def test_loaded_function_is_callable(self):
-        """load_handler_module loaded function is callable."""
-        module = load_handler_module(
-            "endpoints/contact_submissions/lambda/handler.py",
-            "test_handler_callable"
-        )
-        assert callable(module.get_header_case_insensitive)
-
-
-# === parse_lambda_response_payload ===
-
-
-class TestParseLambdaResponsePayload:
-    """Tests for parse_lambda_response_payload function."""
-
-    def test_parses_dict_payload(self):
-        """parse_lambda_response_payload parses dict payload."""
-        payload_content = json.dumps({"key": "value"})
-        response = {"Payload": io.BytesIO(payload_content.encode())}
-        result = parse_lambda_response_payload(response)
-        assert result == {"key": "value"}
-
-    def test_parses_nested_dict_payload(self):
-        """parse_lambda_response_payload parses nested dict payload."""
-        payload_content = json.dumps({"outer": {"inner": "value"}})
-        response = {"Payload": io.BytesIO(payload_content.encode())}
-        result = parse_lambda_response_payload(response)
-        assert result == {"outer": {"inner": "value"}}
-
-    def test_parses_list_payload(self):
-        """parse_lambda_response_payload parses list payload."""
-        payload_content = json.dumps([1, 2, 3])
-        response = {"Payload": io.BytesIO(payload_content.encode())}
-        result = parse_lambda_response_payload(response)
-        assert result == [1, 2, 3]
-
-    def test_parses_string_payload(self):
-        """parse_lambda_response_payload parses string payload."""
-        payload_content = json.dumps("hello")
-        response = {"Payload": io.BytesIO(payload_content.encode())}
-        result = parse_lambda_response_payload(response)
-        assert result == "hello"
-
-    def test_parses_number_payload(self):
-        """parse_lambda_response_payload parses number payload."""
-        payload_content = json.dumps(42)
-        response = {"Payload": io.BytesIO(payload_content.encode())}
-        result = parse_lambda_response_payload(response)
-        assert result == 42
-
-    def test_parses_null_payload(self):
-        """parse_lambda_response_payload parses null payload."""
-        payload_content = json.dumps(None)
-        response = {"Payload": io.BytesIO(payload_content.encode())}
-        result = parse_lambda_response_payload(response)
-        assert result is None
-
-    def test_parses_boolean_payload(self):
-        """parse_lambda_response_payload parses boolean payload."""
-        payload_content = json.dumps(True)
-        response = {"Payload": io.BytesIO(payload_content.encode())}
-        result = parse_lambda_response_payload(response)
-        assert result is True
-
-    def test_parses_empty_dict_payload(self):
-        """parse_lambda_response_payload parses empty dict payload."""
-        payload_content = json.dumps({})
-        response = {"Payload": io.BytesIO(payload_content.encode())}
-        result = parse_lambda_response_payload(response)
-        assert result == {}
-
-    def test_parses_empty_list_payload(self):
-        """parse_lambda_response_payload parses empty list payload."""
-        payload_content = json.dumps([])
-        response = {"Payload": io.BytesIO(payload_content.encode())}
-        result = parse_lambda_response_payload(response)
-        assert result == []
-
-
 # === create_mock_dynamodb_client ===
 
 
@@ -340,102 +213,6 @@ class TestCreateMockDynamodbClient:
         assert result == {}
 
 
-# === assert_no_hardcoded_env_defaults ===
-
-
-@pytest.fixture(name="lambda_file_factory")
-def fixture_lambda_file_factory():
-    """Create a temporary lambda file with given content."""
-    return partial(write_temporary_file, suffix=".py")
-
-
-class TestAssertNoHardcodedEnvDefaults:
-    """Tests for assert_no_hardcoded_env_defaults function."""
-
-    def test_passes_for_file_without_hardcoded_defaults(self, lambda_file_factory):
-        """assert_no_hardcoded_env_defaults passes without hardcoded defaults."""
-        content = """
-import os
-value = os.environ.get('MY_VAR')
-other = os.environ['OTHER_VAR']
-"""
-        path = lambda_file_factory(content)
-        assert assert_no_hardcoded_env_defaults(path) is None
-
-    def test_passes_for_empty_file(self, lambda_file_factory):
-        """assert_no_hardcoded_env_defaults passes for empty file."""
-        path = lambda_file_factory("")
-        assert assert_no_hardcoded_env_defaults(path) is None
-
-    def test_passes_for_no_environ_usage(self, lambda_file_factory):
-        """assert_no_hardcoded_env_defaults passes with no environ usage."""
-        content = """
-def handler(event, context):
-    return {'statusCode': 200}
-"""
-        path = lambda_file_factory(content)
-        assert assert_no_hardcoded_env_defaults(path) is None
-
-    def test_fails_for_single_quoted_default(self, lambda_file_factory):
-        """assert_no_hardcoded_env_defaults fails for single-quoted default."""
-        content = "value = os.environ.get('MY_VAR', 'default')"
-        path = lambda_file_factory(content)
-        with pytest.raises(AssertionError):
-            assert_no_hardcoded_env_defaults(path)
-
-    def test_fails_for_double_quoted_default(self, lambda_file_factory):
-        """assert_no_hardcoded_env_defaults fails for double-quoted default."""
-        content = 'value = os.environ.get("MY_VAR", "default")'
-        path = lambda_file_factory(content)
-        with pytest.raises(AssertionError):
-            assert_no_hardcoded_env_defaults(path)
-
-    def test_fails_for_multiple_hardcoded_defaults(self, lambda_file_factory):
-        """assert_no_hardcoded_env_defaults fails for multiple defaults."""
-        content = """
-var1 = os.environ.get('VAR1', 'default1')
-var2 = os.environ.get('VAR2', 'default2')
-"""
-        path = lambda_file_factory(content)
-        with pytest.raises(AssertionError):
-            assert_no_hardcoded_env_defaults(path)
-
-    def test_passes_for_none_default(self, lambda_file_factory):
-        """assert_no_hardcoded_env_defaults passes for None default."""
-        content = "value = os.environ.get('MY_VAR', None)"
-        path = lambda_file_factory(content)
-        assert assert_no_hardcoded_env_defaults(path) is None
-
-    def test_passes_for_integer_default(self, lambda_file_factory):
-        """assert_no_hardcoded_env_defaults passes for integer default."""
-        content = "value = os.environ.get('MY_VAR', 0)"
-        path = lambda_file_factory(content)
-        assert assert_no_hardcoded_env_defaults(path) is None
-
-
-# === Fixture Tests ===
-
-
-class TestMockSqsFixture:
-    """Tests for mock_sqs fixture."""
-
-    def test_mock_sqs_is_magicmock(self, mock_sqs):
-        """mock_sqs fixture provides a MagicMock."""
-        assert isinstance(mock_sqs, MagicMock)
-
-    def test_mock_sqs_has_send_message(self, mock_sqs):
-        """mock_sqs fixture has send_message method."""
-        assert hasattr(mock_sqs, 'send_message')
-
-    def test_mock_sqs_send_message_is_callable(self, mock_sqs):
-        """mock_sqs fixture send_message is callable."""
-        assert callable(mock_sqs.send_message)
-
-    def test_mock_sqs_has_receive_message(self, mock_sqs):
-        """mock_sqs fixture has receive_message method."""
-        assert hasattr(mock_sqs, 'receive_message')
-
-
 class TestMockDynamodbFixture:
     """Tests for mock_dynamodb fixture."""
 
@@ -475,22 +252,6 @@ class TestMockSsmFixture:
         """mock_ssm fixture get_parameter returns test token."""
         result = mock_ssm.get_parameter()
         assert result['Parameter']['Value'] == 'test-token'
-
-
-class TestMockCloudwatchFixture:
-    """Tests for mock_cloudwatch fixture."""
-
-    def test_mock_cloudwatch_is_magicmock(self, mock_cloudwatch):
-        """mock_cloudwatch fixture provides a MagicMock."""
-        assert isinstance(mock_cloudwatch, MagicMock)
-
-    def test_mock_cloudwatch_has_put_metric_data(self, mock_cloudwatch):
-        """mock_cloudwatch fixture has put_metric_data method."""
-        assert hasattr(mock_cloudwatch, 'put_metric_data')
-
-    def test_mock_cloudwatch_put_metric_data_is_callable(self, mock_cloudwatch):
-        """mock_cloudwatch fixture put_metric_data is callable."""
-        assert callable(mock_cloudwatch.put_metric_data)
 
 
 class TestSqsEventFactoryFixture:

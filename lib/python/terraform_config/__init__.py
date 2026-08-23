@@ -372,39 +372,3 @@ def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False
             functions.append((match.group(1), func_name))
 
     return functions
-
-
-def extract_sqs_queue_names(tf_file: Path) -> list:
-    """Extract SQS queue names from a Terraform file.
-
-    Handles quoted strings and local references.
-
-    Args:
-        tf_file: Path to the Terraform file (typically sqs.tf)
-
-    Returns:
-        List of (resource_name, resolved_queue_name) tuples.
-    """
-    if not tf_file.exists():
-        return []
-    with open(tf_file, encoding="utf-8") as f:
-        content = f.read()
-
-    prefix = get_resource_prefix()
-    local_values = get_endpoint_local_values(tf_file.parent)
-    queues = []
-
-    for match in re.finditer(r'resource\s+"aws_sqs_queue"\s+"([^"]+)"\s*\{', content):
-        block_content = extract_brace_block(content, match.end() - 1)
-        name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
-        if name_match:
-            queue_name = _resolve_prefix_refs(name_match.group(1), prefix)
-            queues.append((match.group(1), queue_name))
-        else:
-            local_match = re.search(
-                r'^\s*name\s*=\s*local\.(\w+)', block_content, re.MULTILINE
-            )
-            if local_match and local_match.group(1) in local_values:
-                queues.append((match.group(1), local_values[local_match.group(1)]))
-
-    return queues

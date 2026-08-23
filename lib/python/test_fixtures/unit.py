@@ -3,10 +3,6 @@
 This module provides common test utilities, mock fixtures, and constants
 that are shared across multiple Lambda unit test suites.
 """
-import json
-import re
-from pathlib import Path
-from types import ModuleType
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -36,7 +32,6 @@ from event_factories import (
 )
 from urllib_mocks import create_mock_urllib_response
 from module_utils import reset_module_state, create_lambda_loader
-from repo_utils import REPO_ROOT
 
 # Re-export for backward compatibility with existing tests
 __all__ = [
@@ -67,9 +62,6 @@ __all__ = [
     'TEST_CONSTANTS',
     'ENV_VAR_PRESETS',
     # Helper functions
-    'load_handler_module',
-    'parse_lambda_response_payload',
-    'assert_no_hardcoded_env_defaults',
     'create_lambda_loader',
     'create_mock_dynamodb_client',
 ]
@@ -103,36 +95,6 @@ ENV_VAR_PRESETS = {
 }
 
 
-def load_handler_module(relative_path: str, module_name: str) -> ModuleType:
-    """Load a handler module dynamically from relative path.
-
-    Args:
-        relative_path: Path relative to src/api/ directory
-        module_name: Name for the loaded module
-
-    Returns:
-        Loaded Python module
-    """
-    base_path = REPO_ROOT / "src" / "api"
-    # Get the directory containing the handler
-    handler_dir = base_path / Path(relative_path).parent
-    filename = Path(relative_path).name
-    loader = create_lambda_loader(handler_dir)
-    return loader(filename, module_name)
-
-
-def parse_lambda_response_payload(response: Any) -> Any:
-    """Parse the payload from a Lambda invocation response.
-
-    Args:
-        response: Lambda invocation response dict with 'Payload' key
-
-    Returns:
-        Parsed JSON from the response payload
-    """
-    return json.loads(response['Payload'].read())
-
-
 def create_mock_dynamodb_client(method_name: str, return_value: Any = None) -> MagicMock:
     """Create a mock DynamoDB client with a specified method returning a value.
 
@@ -148,32 +110,6 @@ def create_mock_dynamodb_client(method_name: str, return_value: Any = None) -> M
     mock_client = MagicMock()
     getattr(mock_client, method_name).return_value = return_value
     return mock_client
-
-
-def assert_no_hardcoded_env_defaults(lambda_path: Path) -> None:
-    """Assert Lambda has no hardcoded environment variable defaults.
-
-    Args:
-        lambda_path: Path to the Lambda handler file
-
-    Raises:
-        AssertionError: If hardcoded defaults are found
-    """
-    with open(lambda_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
-    matches = re.findall(os_environ_get_pattern_with_default, content)
-    assert len(matches) == 0
-
-
-# Standalone fixtures for pytest_plugins loading
-@pytest.fixture
-def mock_sqs():
-    """Provide a mock SQS client."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_sqs_client = MagicMock()
-        mock_boto_client.return_value = mock_sqs_client
-        yield mock_sqs_client
 
 
 @pytest.fixture
@@ -195,15 +131,6 @@ def mock_ssm():
         }
         mock_boto_client.return_value = mock_ssm_client
         yield mock_ssm_client
-
-
-@pytest.fixture
-def mock_cloudwatch():
-    """Provide a mock CloudWatch client."""
-    with patch('boto3.client') as mock_boto_client:
-        mock_cw_client = MagicMock()
-        mock_boto_client.return_value = mock_cw_client
-        yield mock_cw_client
 
 
 @pytest.fixture

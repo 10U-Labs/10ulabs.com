@@ -68,13 +68,6 @@ def ssm_client(request):
 
 
 @pytest.fixture(scope="session")
-def kms_client(request):
-    """Create a KMS client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("kms", region_name=region)
-
-
-@pytest.fixture(scope="session")
 def ecr_client(request):
     """Create an ECR client."""
     region = request.getfixturevalue("aws_region")
@@ -222,13 +215,6 @@ def dynamodb_client(request):
 
 
 @pytest.fixture(scope="session")
-def ecs_client(request):
-    """Create an ECS client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("ecs", region_name=region)
-
-
-@pytest.fixture(scope="session")
 def ec2_client(request):
     """Create an EC2 client."""
     region = request.getfixturevalue("aws_region")
@@ -240,13 +226,6 @@ def ses_client(request):
     """Create an SES client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("ses", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def glue_client(request):
-    """Create a Glue client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("glue", region_name=region)
 
 
 @pytest.fixture(scope="session")

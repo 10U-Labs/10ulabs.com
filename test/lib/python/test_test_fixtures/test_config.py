@@ -1,17 +1,27 @@
 """Unit tests for test_fixtures.config module."""
+import tempfile
 from functools import partial
 from pathlib import Path
 from typing import Callable, Dict
 
 import pytest
 
-from test_fixtures.tempfiles import write_temporary_file
 from test_fixtures.config import (
     parse_tfvars_file,
     parse_locals_file,
     create_simple_config,
     create_website_config,
 )
+
+
+def write_temporary_file(content: str, suffix: str) -> Path:
+    """Write content to a temporary file with a suffix and return its path."""
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=suffix, delete=False
+    ) as handle:
+        handle.write(content)
+        handle.flush()
+        return Path(handle.name)
 
 
 @pytest.fixture(name="tfvars_file")

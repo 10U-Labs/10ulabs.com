@@ -18,14 +18,11 @@ from test_fixtures.aws import (
     dynamodb_client,
     ec2_client,
     ecr_client,
-    ecs_client,
     events_client,
     find_lifecycle_rule,
     get_log_group_info,
-    glue_client,
     iam_client,
     iam_role_exists,
-    kms_client,
     lambda_client,
     logs_client,
     s3_client,
@@ -254,12 +251,6 @@ class TestClientFixtures:
         assert mock_boto3.client.call_args[0][0] == "ssm"
 
     @patch("test_fixtures.aws.boto3")
-    def test_kms_client_creates_kms_client(self, mock_boto3):
-        """Test that kms_client creates client with 'kms' service."""
-        mock_boto3.client("kms", region_name="us-east-1")
-        assert mock_boto3.client.call_args[0][0] == "kms"
-
-    @patch("test_fixtures.aws.boto3")
     def test_ecr_client_creates_ecr_client(self, mock_boto3):
         """Test that ecr_client creates client with 'ecr' service."""
         mock_boto3.client("ecr", region_name="us-east-1")
@@ -290,12 +281,6 @@ class TestClientFixtures:
         assert mock_boto3.client.call_args[0][0] == "dynamodb"
 
     @patch("test_fixtures.aws.boto3")
-    def test_ecs_client_creates_ecs_client(self, mock_boto3):
-        """Test that ecs_client creates client with 'ecs' service."""
-        mock_boto3.client("ecs", region_name="us-east-1")
-        assert mock_boto3.client.call_args[0][0] == "ecs"
-
-    @patch("test_fixtures.aws.boto3")
     def test_ec2_client_creates_ec2_client(self, mock_boto3):
         """Test that ec2_client creates client with 'ec2' service."""
         mock_boto3.client("ec2", region_name="us-east-1")
@@ -306,12 +291,6 @@ class TestClientFixtures:
         """Test that ses_client creates client with 'ses' service."""
         mock_boto3.client("ses", region_name="us-east-1")
         assert mock_boto3.client.call_args[0][0] == "ses"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_glue_client_creates_glue_client(self, mock_boto3):
-        """Test that glue_client creates client with 'glue' service."""
-        mock_boto3.client("glue", region_name="us-east-1")
-        assert mock_boto3.client.call_args[0][0] == "glue"
 
     @patch("test_fixtures.aws.boto3")
     def test_events_client_creates_events_client(self, mock_boto3):
@@ -633,14 +612,6 @@ class TestClientFixturesExecution:
         assert mock_boto3.client.call_args[0][0] == "ssm"
 
     @patch("test_fixtures.aws.boto3")
-    def test_kms_client_fixture_creates_client(self, mock_boto3):
-        """Test kms_client fixture creates KMS client with region."""
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        kms_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "kms"
-
-    @patch("test_fixtures.aws.boto3")
     def test_ecr_client_fixture_creates_client(self, mock_boto3):
         """Test ecr_client fixture creates ECR client with region."""
         mock_request = MagicMock()
@@ -681,14 +652,6 @@ class TestClientFixturesExecution:
         assert mock_boto3.client.call_args[0][0] == "dynamodb"
 
     @patch("test_fixtures.aws.boto3")
-    def test_ecs_client_fixture_creates_client(self, mock_boto3):
-        """Test ecs_client fixture creates ECS client with region."""
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        ecs_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "ecs"
-
-    @patch("test_fixtures.aws.boto3")
     def test_ec2_client_fixture_creates_client(self, mock_boto3):
         """Test ec2_client fixture creates EC2 client with region."""
         mock_request = MagicMock()
@@ -703,14 +666,6 @@ class TestClientFixturesExecution:
         mock_request.getfixturevalue.return_value = "us-east-1"
         ses_client.__wrapped__(mock_request)
         assert mock_boto3.client.call_args[0][0] == "ses"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_glue_client_fixture_creates_client(self, mock_boto3):
-        """Test glue_client fixture creates Glue client with region."""
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        glue_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "glue"
 
     @patch("test_fixtures.aws.boto3")
     def test_events_client_fixture_creates_client(self, mock_boto3):
