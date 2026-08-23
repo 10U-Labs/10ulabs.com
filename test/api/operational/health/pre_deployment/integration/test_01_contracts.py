@@ -39,9 +39,9 @@ class TestLambdaHandlerContract:
         )
 
     def test_handler_function_accepts_event_and_context(self):
-        """Verify handler function accepts event and context parameters.
+        """Verify the entry point accepts event and context parameters.
 
-        Lambda runtime calls handler(event, context), so the function
+        Lambda runtime calls lambda_handler(event, context), so the function
         must accept at least two positional parameters.
         """
         handler_path = HEALTH_SRC / "lambda" / "handler.py"
@@ -49,12 +49,12 @@ class TestLambdaHandlerContract:
 
         tree = ast.parse(handler_content)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "handler":
+            if isinstance(node, ast.FunctionDef) and node.name == "lambda_handler":
                 param_count = len(node.args.args)
                 assert param_count >= 2, (
-                    f"handler function must accept at least 2 parameters "
+                    f"lambda_handler function must accept at least 2 parameters "
                     f"(event, context), found {param_count}"
                 )
                 return
 
-        pytest.fail("handler function not found in handler.py")
+        pytest.fail("lambda_handler function not found in handler.py")

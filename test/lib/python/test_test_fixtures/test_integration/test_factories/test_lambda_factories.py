@@ -1,4 +1,5 @@
 """Unit tests for test_fixtures.integration.factories.lambda_factories module."""
+import inspect
 from unittest.mock import MagicMock
 
 import pytest
@@ -595,10 +596,18 @@ class TestCreateLambdaExistenceTestsExecution:
 class TestCreateLambdaConfigurationTestsDemandsHandler:
     """Tests that the factory will not guess which entry point to expect."""
 
-    def test_refuses_to_build_without_expected_handler(self):
+    def test_expected_handler_has_no_default(self):
         """create_lambda_configuration_tests requires expected_handler."""
-        with pytest.raises(TypeError):
-            create_lambda_configuration_tests("func_key", "DefaultFunc")
+        parameters = inspect.signature(create_lambda_configuration_tests).parameters
+        assert parameters["expected_handler"].default is inspect.Parameter.empty
+
+    def test_other_configuration_arguments_keep_their_defaults(self):
+        """Only the handler lost its default, so callers restate nothing else."""
+        parameters = inspect.signature(create_lambda_configuration_tests).parameters
+        assert all(
+            parameters[name].default is not inspect.Parameter.empty
+            for name in ("expected_runtime", "expected_architecture")
+        )
 
 
 class TestCreateLambdaConfigurationTestsReturnsClass:
