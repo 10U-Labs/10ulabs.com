@@ -15,6 +15,11 @@ This document explains the test infrastructure, where to put common code, and wh
   - [event_factories/](#event_factories)
   - [lambda_response/](#lambda_response)
   - [module_utils/](#module_utils)
+  - [test_utils/](#test_utils)
+  - [urllib_mocks/](#urllib_mocks)
+  - [repo_utils/](#repo_utils)
+  - [aws_clients/](#aws_clients)
+  - [lambda_http/](#lambda_http)
 - [Check Before You Create](#check-before-you-create)
 - [Static Analysis in Workflows](#static-analysis-in-workflows)
 
@@ -24,18 +29,29 @@ Tests follow a cascading conftest.py pattern. Each level inherits from parents a
 
 ```text
 test/
-├── conftest.py                              # Level 0: Path setup (lib/python)
+├── conftest.py                              # Level 0: lib/python on sys.path, unit and AWS fixture plugins
 ├── api/
-│   ├── conftest.py                          # Level 1: API fixtures, terraform utilities
-│   └── backend/
-│       ├── conftest.py                      # Level 2: Backend config parsing
-│       ├── pre_deployment/
-│       │   ├── unit/conftest.py             # Level 3: Lambda mocks, event factories
-│       │   └── integration/conftest.py      # Level 3: Layer markers, bootstrap fixtures
-│       └── post_deployment/
-│           ├── integration/conftest.py      # Level 3: AWS clients, layer markers
-│           └── e2e/conftest.py              # Level 3: Endpoint deployment checks
+│   ├── conftest.py                          # Level 1: Terraform outputs, AWS clients, deployment probes
+│   ├── endpoints/
+│   │   ├── conftest.py                      # Level 2: fixtures every endpoint's tests use
+│   │   └── sessions/
+│   │       ├── conftest.py                  # Level 3: paths and config for the one endpoint
+│   │       ├── pre_deployment/
+│   │       │   ├── unit/conftest.py         # Level 4: Lambda loaders, patched environments
+│   │       │   └── integration/conftest.py  # Level 4: layer markers, Terraform directories
+│   │       └── post_deployment/
+│   │           ├── integration/conftest.py  # Level 4: names of the deployed resources
+│   │           └── e2e/conftest.py          # Level 4: endpoint URL and API key
+│   ├── common/                              # the shared routing code, same shape
+│   └── operational/                         # health and diagnostics, same shape
+├── www/                                     # common/ and paths/<path>/, same tier split
+├── bootstrap/                               # pre_deployment/ and post_deployment/ only
+├── lib/                                     # mirrors lib/python/ and lib/terraform/, no tier split
+├── github/
+└── scripts/
 ```
+
+`sessions` is drawn here because it is the plainest of the endpoints. Some of the others add one more level, a conftest.py at the deployment-phase directory itself, for fixtures both tiers of that phase want; `test/api/endpoints/contact_submissions/pre_deployment/conftest.py` is one.
 
 ### Where to Put Common Things
 
@@ -43,10 +59,12 @@ test/
 | ------- | ---------- | ---------- |
 | All tests | `test/conftest.py` | Path setup (already done) |
 | All API tests | `test/api/conftest.py` | Terraform outputs, AWS clients, deployment probes |
-| All backend tests | `test/api/backend/conftest.py` | Config parsing from tfvars/locals |
+| All endpoint tests | `test/api/endpoints/conftest.py` | The resource prefix, the handler-module loader, a mock Lambda context |
+| One endpoint, both phases | `test/api/endpoints/<endpoint>/conftest.py` | That endpoint's source paths and its parsed config |
 | Pre-deployment unit | `test/.../pre_deployment/unit/conftest.py` | Lambda mocks, event factories |
 | Pre-deployment integration | `test/.../pre_deployment/integration/conftest.py` | Layer markers, bootstrap fixtures |
 | Post-deployment integration | `test/.../post_deployment/integration/conftest.py` | Layer markers, AWS service clients |
+| Post-deployment E2E | `test/.../post_deployment/e2e/conftest.py` | The deployed URL and the API key to call it with |
 
 **Rule:** Put fixtures at the highest level where they apply. Don't duplicate.
 
@@ -60,15 +78,15 @@ Shared directories are for codebase-wide utilities, not module-specific code.
 | `test/` root | All tests | `conftest.py` (path setup), codebase-wide test utilities |
 | `test/<module>/` | Module-specific | `test/www/conftest.py`, inline constants beside the tests that read them |
 
-**Key principle:** If a fixture or utility is only used by one module's tests, keep it within that module's test directory. Don't pollute shared directories with module-specific code.
+**Key principle:** what decides where a utility goes is how many suites use it, not which subsystem its name mentions. A helper that only one module's tests call belongs in that module's test directory; one that several call belongs in `lib/python/`, whatever it is about.
 
 Examples:
 
-- ✅ `lib/python/boto_mocks/` — Used by API, Lambda, and infrastructure tests across the codebase
-- ✅ `test/api/conftest.py` — Terraform utilities used by all API endpoint tests
-- ✅ `test/www/conftest.py` — Fixtures specific to the www tests
-- ❌ `lib/python/test_fixtures/www.py` — Wrong: www-specific code in codebase-wide lib/
-- ❌ `test/www_fixtures.py` — Wrong: www-specific code at test/ root level
+- ✅ `lib/python/boto_mocks/` — reached by every test, since `test_fixtures.unit` re-exports it and `test/conftest.py` loads that as a plugin
+- ✅ `lib/python/test_fixtures/website.py` — named after one subsystem and still shared: `test/www/common/` and `test/www/paths/home/` both build their fixtures from it
+- ✅ `test/api/conftest.py` — Terraform outputs and AWS clients used by all API tests
+- ✅ `test/www/conftest.py` — the plugin line the www tests need and nothing else does
+- ❌ `test/www_fixtures.py` — wrong: a module at the `test/` root that only one subsystem's tests import
 
 ## Reusable Utilities in lib/python/
 
@@ -76,19 +94,33 @@ Before creating new fixtures, check if they exist in `lib/python/`. Import via `
 
 ### test_fixtures/
 
-AWS fixtures ready to use via pytest plugin:
+The package a conftest.py loads as a pytest plugin. `test_fixtures.aws` holds the AWS fixtures and `test_fixtures.unit` the Lambda unit-testing ones; `test/conftest.py` loads both for the whole tree, so a suite that wants only these two loads nothing of its own.
 
 ```python
 # In conftest.py
 pytest_plugins = ['test_fixtures.aws']
 
-# Provides these fixtures:
+# Provides these fixtures, among others:
 # - shared_config: Parsed shared Terraform module config
 # - aws_region: AWS region from config
 # - state_bucket_name: Terraform state bucket
 # - sts_client, iam_client, s3_client, ssm_client, kms_client, ecr_client
+# - lambda_client, apigateway_client, dynamodb_client, ses_client, logs_client
 # - caller_identity, current_role_arn, current_role_name
 ```
+
+The rest of the package is imported rather than loaded as a plugin:
+
+| Module | What it holds |
+| -------- | --------------- |
+| `test_fixtures.terraform` | `terraform_init`, `terraform_output`, `terraform_output_json` |
+| `test_fixtures.config` | Config fixtures parsed from a `terraform.tfvars` or a `locals.tf` |
+| `test_fixtures.website` | `create_website_fixtures`, used by both www suites |
+| `test_fixtures.http_endpoint` | Checks on what a live endpoint's error responses give away |
+| `test_fixtures.lambda_lifecycle` | Test factories for the lifecycle rules a Lambda with environment variables needs |
+| `test_fixtures.terraform_tests` | Test factories for remote-state contracts and naming conventions |
+| `test_fixtures.tempfiles` | `write_temporary_file`, for suites that need a file with a given suffix |
+| `test_fixtures.integration` | The base classes of the seven-layer pre-deployment integration model |
 
 ### terraform_config/
 
@@ -188,6 +220,54 @@ def test_something(handler_module):
     reset_module_state(handler_module, boto_client=None, cache={})
 ```
 
+### test_utils/
+
+Assertions and mixin classes that several suites make the same checks with:
+
+```python
+from test_utils import create_endpoint_handler_loader
+from test_utils.aws_assertions import assert_lambda_exists, role_has_permission
+from test_utils.terraform_assertions import get_missing_terraform_files
+from test_utils.existence_tests import AwsResourceExistsTestMixin
+from test_utils.terraform_tests import TerraformFilesExistTestMixin
+```
+
+### urllib_mocks/
+
+Mock responses for handlers that call out with `urllib`:
+
+```python
+from urllib_mocks import create_mock_urllib_response
+```
+
+### repo_utils/
+
+Find the repository root without hard-coding how deep a test file sits:
+
+```python
+from repo_utils import REPO_ROOT, extract_brace_block
+
+TERRAFORM_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
+```
+
+The two packages below are imported by the Lambda handlers themselves rather than by tests, and are here because a test that asserts on a response shape should assert on the same helpers the handler builds it with.
+
+### aws_clients/
+
+Cached boto3 clients for handlers, with a reset for tests that need a fresh one:
+
+```python
+from aws_clients import get_client, get_ssm_client, set_client, reset_clients
+```
+
+### lambda_http/
+
+Build and parse the HTTP shape a handler returns:
+
+```python
+from lambda_http import json_response, success_response, error_response, parse_body
+```
+
 ## Check Before You Create
 
 Before writing new fixtures or utilities:
@@ -209,40 +289,39 @@ Linting and type checking must run separately for source and test code.
 
 | Step Name | Target |
 | ----------- | -------- |
-| `Run pylint on source` | `lib/python/` and `src/.../lambdas/` |
-| `Run pylint on tests` | `lib/python/`, parent conftest files, and `test/.../endpoint/` (with `PYTHONPATH=lib/python`) |
-| `Run mypy on source` | `lib/python/` and `src/.../lambdas/` |
-| `Run mypy on tests` | `lib/python/`, parent conftest files, and `test/.../endpoint/` (with `MYPYPATH=lib/python`) |
+| `Run pylint on source` | `lib/python/` and the workflow's own `src/.../lambda/` or `src/.../lambdas/` |
+| `Run pylint on tests` | `lib/python/` and the whole of `test`, recursively, with `PYTHONPATH=lib/python:scripts` |
+| `Run mypy on source` | `lib/python/` and the same source directory |
+| `Run mypy on tests` | `lib/python/` and the whole of `test/`, with `MYPYPATH=lib/python:scripts` |
+
+The two test passes are the same command in every workflow that has them, because they cover the whole tree rather than the workflow's own directory: whichever run fires is the one that reports a defect in a test file no workflow's paths reach. The two source passes name the directory that workflow deploys, and a workflow whose subsystem has no Python source — `bootstrap.yml`, whose `src/bootstrap/` is Terraform — carries the test passes and omits them.
 
 ### Why Separate Steps?
 
-1. **Different configurations** - Tests need `PYTHONPATH`/`MYPYPATH` set to resolve `lib/python/` imports
+1. **Different configurations** - Tests need `PYTHONPATH`/`MYPYPATH` set to resolve `lib/python/` and `scripts/` imports
 2. **Clear failure attribution** - When a step fails, you immediately know if it's source or test code
 3. **Consistent naming** - All workflows use the same step names for easy identification
 
 ### Example
 
+From `api_endpoint_v1_sessions.yml`, one step per job:
+
 ```yaml
 - name: Run pylint on source
   run: |
-    python3 -m pylint \
-      lib/python/ src/api/endpoints/example/lambdas/ \
-      --fail-on=C,R,W \
-      --fail-under=10.0
+    SRC=src/api/endpoints/sessions
+    python3 -m pylint lib/python/ $SRC/lambda/ --fail-under=10.0
 - name: Run pylint on tests
   run: |
-    PYTHONPATH=lib/python python3 -m pylint \
-      lib/python/ test/conftest.py test/api/conftest.py \
-      test/api/endpoints/conftest.py test/api/endpoints/example/ \
-      --fail-on=C,R,W \
-      --fail-under=10.0
+    PYTHONPATH=lib/python:scripts python3 -m pylint \
+      lib/python/ test \
+      --recursive=y \
+      --fail-on=C,R,W --fail-under=10.0
 - name: Run mypy on source
   run: |
-    python3 -m mypy \
-      lib/python/ src/api/endpoints/example/lambdas/
+    SRC=src/api/endpoints/sessions
+    python3 -m mypy lib/python/ $SRC/lambda/
 - name: Run mypy on tests
   run: |
-    MYPYPATH=lib/python python3 -m mypy \
-      lib/python/ test/conftest.py test/api/conftest.py \
-      test/api/endpoints/conftest.py test/api/endpoints/example/
+    MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
 ```
