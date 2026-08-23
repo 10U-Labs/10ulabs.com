@@ -56,17 +56,6 @@ jobs:
           test/lib/terraform/s3_bucket
           test/lib/terraform/write_ahead_queue
           test/www/common
-  assert-no-test-only-python-definition:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Assert every definition is named outside the tests
-        uses: 10U-Labs/assert-python-definition-is-used@latest
-        with:
-          search-in: lib/python scripts src
-          trees: src/www/common/lambda
-          verbose: "true"
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -93,6 +82,17 @@ jobs:
           test/lib/terraform/s3_bucket
           test/lib/terraform/write_ahead_queue
           test/www/common
+  assert-python-definition-is-used:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Assert every definition is named outside the tests
+        uses: 10U-Labs/assert-python-definition-is-used@latest
+        with:
+          search-in: lib/python scripts src
+          trees: src/www/common/lambda
+          verbose: "true"
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:

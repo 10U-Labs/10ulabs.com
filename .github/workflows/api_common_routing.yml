@@ -53,17 +53,6 @@ jobs:
           src/api/common/routing
           src/www/api
           test/api/common/routing
-  assert-no-test-only-python-definition:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Assert every definition is named outside the tests
-        uses: 10U-Labs/assert-python-definition-is-used@latest
-        with:
-          search-in: lib/python scripts src
-          trees: src/api/common/routing/lambdas
-          verbose: "true"
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -88,6 +77,17 @@ jobs:
           test/api/common/__init__.py
           test/api/common/conftest.py
           test/api/common/routing
+  assert-python-definition-is-used:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Assert every definition is named outside the tests
+        uses: 10U-Labs/assert-python-definition-is-used@latest
+        with:
+          search-in: lib/python scripts src
+          trees: src/api/common/routing/lambdas
+          verbose: "true"
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:

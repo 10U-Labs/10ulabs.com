@@ -51,17 +51,6 @@ jobs:
           --verbose
           src/api/endpoints/contact_submissions
           test/api/endpoints/contact_submissions
-  assert-no-test-only-python-definition:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Assert every definition is named outside the tests
-        uses: 10U-Labs/assert-python-definition-is-used@latest
-        with:
-          search-in: lib/python scripts src
-          trees: src/api/endpoints/contact_submissions/lambda
-          verbose: "true"
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -86,6 +75,17 @@ jobs:
           test/api/endpoints/__init__.py
           test/api/endpoints/conftest.py
           test/api/endpoints/contact_submissions
+  assert-python-definition-is-used:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Assert every definition is named outside the tests
+        uses: 10U-Labs/assert-python-definition-is-used@latest
+        with:
+          search-in: lib/python scripts src
+          trees: src/api/endpoints/contact_submissions/lambda
+          verbose: "true"
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:
