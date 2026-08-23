@@ -144,10 +144,6 @@ class TestEnvVarPresets:
         """ENV_VAR_PRESETS has 'base' key."""
         assert 'base' in ENV_VAR_PRESETS
 
-    def test_has_webhook_router_key(self):
-        """ENV_VAR_PRESETS has 'webhook_router' key."""
-        assert 'webhook_router' in ENV_VAR_PRESETS
-
     def test_base_has_aws_region(self):
         """ENV_VAR_PRESETS base has AWS_REGION key."""
         assert 'AWS_REGION' in ENV_VAR_PRESETS['base']
@@ -155,42 +151,6 @@ class TestEnvVarPresets:
     def test_base_aws_region_matches_test_region(self):
         """ENV_VAR_PRESETS base AWS_REGION matches TEST_AWS_REGION."""
         assert ENV_VAR_PRESETS['base']['AWS_REGION'] == TEST_AWS_REGION
-
-    def test_webhook_router_has_aws_region(self):
-        """ENV_VAR_PRESETS webhook_router has AWS_REGION key."""
-        assert 'AWS_REGION' in ENV_VAR_PRESETS['webhook_router']
-
-    def test_webhook_router_has_api_key_parameter_name(self):
-        """ENV_VAR_PRESETS webhook_router has API_KEY_PARAMETER_NAME key."""
-        assert 'API_KEY_PARAMETER_NAME' in ENV_VAR_PRESETS['webhook_router']
-
-    def test_webhook_router_has_webhook_secret_name(self):
-        """ENV_VAR_PRESETS webhook_router has WEBHOOK_SECRET_NAME key."""
-        assert 'WEBHOOK_SECRET_NAME' in ENV_VAR_PRESETS['webhook_router']
-
-    def test_webhook_router_has_api_base_url(self):
-        """ENV_VAR_PRESETS webhook_router has API_BASE_URL key."""
-        assert 'API_BASE_URL' in ENV_VAR_PRESETS['webhook_router']
-
-    def test_webhook_router_has_idempotency_table_name(self):
-        """ENV_VAR_PRESETS webhook_router has IDEMPOTENCY_TABLE_NAME key."""
-        assert 'IDEMPOTENCY_TABLE_NAME' in ENV_VAR_PRESETS['webhook_router']
-
-    def test_webhook_router_has_job_queue_url(self):
-        """ENV_VAR_PRESETS webhook_router has JOB_QUEUE_URL key."""
-        assert 'JOB_QUEUE_URL' in ENV_VAR_PRESETS['webhook_router']
-
-    def test_webhook_router_api_base_url_is_https(self):
-        """ENV_VAR_PRESETS webhook_router API_BASE_URL starts with https."""
-        assert ENV_VAR_PRESETS['webhook_router']['API_BASE_URL'].startswith('https://')
-
-    def test_webhook_router_job_queue_url_contains_sqs(self):
-        """ENV_VAR_PRESETS webhook_router JOB_QUEUE_URL contains 'sqs'."""
-        assert 'sqs' in ENV_VAR_PRESETS['webhook_router']['JOB_QUEUE_URL']
-
-    def test_webhook_router_job_queue_url_contains_region(self):
-        """ENV_VAR_PRESETS webhook_router JOB_QUEUE_URL contains region."""
-        assert TEST_AWS_REGION in ENV_VAR_PRESETS['webhook_router']['JOB_QUEUE_URL']
 
 
 # === load_handler_module ===
@@ -533,29 +493,6 @@ class TestMockCloudwatchFixture:
         assert callable(mock_cloudwatch.put_metric_data)
 
 
-class TestWorkflowJobEventFactoryFixture:
-    """Tests for workflow_job_event_factory fixture."""
-
-    def test_factory_is_callable(self, workflow_job_event_factory):
-        """workflow_job_event_factory fixture is callable."""
-        assert callable(workflow_job_event_factory)
-
-    def test_factory_returns_dict(self, workflow_job_event_factory):
-        """workflow_job_event_factory creates dict."""
-        result = workflow_job_event_factory()
-        assert isinstance(result, dict)
-
-    def test_factory_result_has_path(self, workflow_job_event_factory):
-        """workflow_job_event_factory result has path."""
-        result = workflow_job_event_factory()
-        assert 'path' in result
-
-    def test_factory_result_has_body(self, workflow_job_event_factory):
-        """workflow_job_event_factory result has body."""
-        result = workflow_job_event_factory()
-        assert 'body' in result
-
-
 class TestSqsEventFactoryFixture:
     """Tests for sqs_event_factory fixture."""
 
@@ -590,38 +527,6 @@ class TestDlqMessageFactoryFixture:
         """dlq_message_factory result has MessageId."""
         result = dlq_message_factory()
         assert 'MessageId' in result
-
-
-class TestCircuitBreakerClosedStateFixture:
-    """Tests for circuit_breaker_closed_state fixture."""
-
-    def test_returns_dict(self, circuit_breaker_closed_state):
-        """circuit_breaker_closed_state fixture returns dict."""
-        assert isinstance(circuit_breaker_closed_state, dict)
-
-    def test_state_is_closed(self, circuit_breaker_closed_state):
-        """circuit_breaker_closed_state has 'closed' state."""
-        assert circuit_breaker_closed_state['state'] == 'closed'
-
-    def test_failure_count_is_zero(self, circuit_breaker_closed_state):
-        """circuit_breaker_closed_state has zero failure_count."""
-        assert circuit_breaker_closed_state['failure_count'] == 0
-
-
-class TestCircuitBreakerOpenStateFixture:
-    """Tests for circuit_breaker_open_state fixture."""
-
-    def test_returns_dict(self, circuit_breaker_open_state):
-        """circuit_breaker_open_state fixture returns dict."""
-        assert isinstance(circuit_breaker_open_state, dict)
-
-    def test_state_is_open(self, circuit_breaker_open_state):
-        """circuit_breaker_open_state has 'open' state."""
-        assert circuit_breaker_open_state['state'] == 'open'
-
-    def test_failure_count_is_five(self, circuit_breaker_open_state):
-        """circuit_breaker_open_state has five failure_count."""
-        assert circuit_breaker_open_state['failure_count'] == 5
 
 
 class TestMockUrllibResponseFactoryFixture:

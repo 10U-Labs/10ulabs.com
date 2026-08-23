@@ -1,59 +1,6 @@
 """Factory functions for creating test events."""
 import json
-import time
 from typing import Any, Callable, Dict, List, Optional
-
-
-def create_workflow_job_event(
-    action: str = 'queued',
-    job_id: int = 123,
-    labels: Optional[List[str]] = None,
-    repo: str = 'test/repo',
-    run_id: int = 456
-) -> Dict[str, Any]:
-    """Create a workflow_job webhook event.
-
-    Args:
-        action: The action type ('queued', 'in_progress', 'completed').
-        job_id: The workflow job ID.
-        labels: List of runner labels. Defaults to ['self-hosted', 'linux'].
-        repo: Repository full name (owner/repo).
-        run_id: The workflow run ID.
-
-    Returns:
-        Dict representing a GitHub workflow_job webhook event.
-    """
-    if labels is None:
-        labels = ['self-hosted', 'linux']
-    return {
-        'path': '/v1/github-workflows/webhooks',
-        'httpMethod': 'POST',
-        'headers': {
-            'X-GitHub-Event': 'workflow_job',
-            'X-Hub-Signature-256': 'sha256=test'
-        },
-        'body': json.dumps({
-            'action': action,
-            'workflow_job': {
-                'id': job_id,
-                'run_id': run_id,
-                'labels': labels,
-                'status': 'queued' if action == 'queued' else 'completed'
-            },
-            'repository': {
-                'full_name': repo
-            }
-        })
-    }
-
-
-def workflow_job_event_factory() -> Callable[..., Dict[str, Any]]:
-    """Return a factory function for creating workflow_job events.
-
-    Returns:
-        Factory function that creates workflow_job webhook events.
-    """
-    return create_workflow_job_event
 
 
 def create_sqs_event(
@@ -121,29 +68,3 @@ def dlq_message_factory() -> Callable[..., Dict[str, Any]]:
         Factory function that creates DLQ messages.
     """
     return create_dlq_message
-
-
-def create_circuit_breaker_closed_state() -> Dict[str, Any]:
-    """Create a closed circuit breaker state.
-
-    Returns:
-        Dict representing a closed circuit breaker state.
-    """
-    return {
-        'state': 'closed',
-        'failure_count': 0,
-        'last_failure_time': None
-    }
-
-
-def create_circuit_breaker_open_state() -> Dict[str, Any]:
-    """Create an open circuit breaker state.
-
-    Returns:
-        Dict representing an open circuit breaker state with current timestamp.
-    """
-    return {
-        'state': 'open',
-        'failure_count': 5,
-        'last_failure_time': time.time()
-    }

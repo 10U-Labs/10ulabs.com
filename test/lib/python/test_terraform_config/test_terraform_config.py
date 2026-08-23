@@ -16,7 +16,6 @@ from terraform_config import (
     get_resource_prefix,
     get_shared_config,
     get_tfvars_values,
-    get_webhooks_resource_names,
     parse_lambda_handler_names,
     parse_locals,
     parse_outputs,
@@ -333,40 +332,6 @@ class TestGetResourcePrefix:
         """Test get_resource_prefix returns non-empty string."""
         result = get_resource_prefix()
         assert len(result) > 0
-
-
-class TestGetWebhooksResourceNames:
-    """Tests for get_webhooks_resource_names function."""
-
-    def test_returns_dict(self):
-        """Test get_webhooks_resource_names returns a dict."""
-        result = get_webhooks_resource_names()
-        assert isinstance(result, dict)
-
-    def test_contains_idempotency_table_key(self):
-        """Test get_webhooks_resource_names contains idempotency_table key."""
-        result = get_webhooks_resource_names()
-        assert "idempotency_table" in result
-
-    def test_contains_circuit_breaker_state_table_key(self):
-        """Test get_webhooks_resource_names contains circuit_breaker_state_table key."""
-        result = get_webhooks_resource_names()
-        assert "circuit_breaker_state_table" in result
-
-    def test_contains_job_queue_key(self):
-        """Test get_webhooks_resource_names contains job_queue key."""
-        result = get_webhooks_resource_names()
-        assert "job_queue" in result
-
-    def test_contains_job_dlq_key(self):
-        """Test get_webhooks_resource_names contains job_dlq key."""
-        result = get_webhooks_resource_names()
-        assert "job_dlq" in result
-
-    def test_custom_prefix_applies_to_circuit_breaker_state_table(self):
-        """Test get_webhooks_resource_names applies custom prefix to circuit_breaker_state_table."""
-        result = get_webhooks_resource_names(prefix="Custom")
-        assert result["circuit_breaker_state_table"].startswith("Custom")
 
 
 class TestGetTfvarsValues:

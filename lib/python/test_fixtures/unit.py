@@ -31,11 +31,8 @@ from boto_mocks import (
     create_mock_lambda_delete_concurrency_error,
 )
 from event_factories import (
-    create_workflow_job_event,
     create_sqs_event,
     create_dlq_message,
-    create_circuit_breaker_closed_state,
-    create_circuit_breaker_open_state,
 )
 from urllib_mocks import create_mock_urllib_response
 from module_utils import reset_module_state, create_lambda_loader
@@ -59,11 +56,8 @@ __all__ = [
     'create_mock_lambda_with_disabled_mappings',
     'create_mock_lambda_delete_concurrency_error',
     # event_factories
-    'create_workflow_job_event',
     'create_sqs_event',
     'create_dlq_message',
-    'create_circuit_breaker_closed_state',
-    'create_circuit_breaker_open_state',
     # urllib_mocks
     'create_mock_urllib_response',
     # module_utils
@@ -105,14 +99,6 @@ TEST_CONSTANTS = {
 ENV_VAR_PRESETS = {
     'base': {
         'AWS_REGION': TEST_AWS_REGION,
-    },
-    'webhook_router': {
-        'AWS_REGION': TEST_AWS_REGION,
-        'API_KEY_PARAMETER_NAME': 'test-api-key-param',
-        'WEBHOOK_SECRET_NAME': 'test-webhook-secret',
-        'API_BASE_URL': 'https://api.test.com/v1',
-        'IDEMPOTENCY_TABLE_NAME': 'test-table',
-        'JOB_QUEUE_URL': f'https://sqs.{TEST_AWS_REGION}.amazonaws.com/123456789012/test-queue',
     },
 }
 
@@ -221,12 +207,6 @@ def mock_cloudwatch():
 
 
 @pytest.fixture
-def workflow_job_event_factory():
-    """Factory for creating workflow job events."""
-    return create_workflow_job_event
-
-
-@pytest.fixture
 def sqs_event_factory():
     """Factory for creating SQS events."""
     return create_sqs_event
@@ -236,18 +216,6 @@ def sqs_event_factory():
 def dlq_message_factory():
     """Factory for creating DLQ messages."""
     return create_dlq_message
-
-
-@pytest.fixture
-def circuit_breaker_closed_state():
-    """Provide a closed circuit breaker state."""
-    return create_circuit_breaker_closed_state()
-
-
-@pytest.fixture
-def circuit_breaker_open_state():
-    """Provide an open circuit breaker state."""
-    return create_circuit_breaker_open_state()
 
 
 @pytest.fixture

@@ -150,41 +150,6 @@ def get_resource_prefix() -> str:
     return parse_locals().get("resource_prefix", "TenULabs")
 
 
-def get_webhooks_resource_names(prefix: str | None = None) -> Dict[str, str]:
-    """Get all resource names for the webhooks endpoint.
-
-    Computes DynamoDB table names, SQS queue names, etc. from the resource prefix
-    and lambda handler names. This is the single source of truth for webhooks
-    resource naming.
-
-    Args:
-        prefix: Resource prefix. If None, reads from shared Terraform module.
-
-    Returns:
-        Dict mapping resource keys to their full names.
-    """
-    if prefix is None:
-        prefix = get_resource_prefix()
-    handler_names = parse_lambda_handler_names()
-    webhook_handler = handler_names.get('webhook', f"{prefix}WebhookHandler")
-    return {
-        # DynamoDB tables (idempotency uses webhook handler name per locals.tf)
-        'idempotency_table': f"{webhook_handler}-idempotency",
-        'circuit_breaker_state_table': f"{prefix}-circuit-breaker-state",
-        'incidents_table': f"{prefix}-incidents",
-        # SQS queues (PascalCase naming convention)
-        'job_queue': f"{webhook_handler}Jobs",
-        'job_dlq': f"{webhook_handler}JobDlq",
-        'webhook_dlq': f"{webhook_handler}Dlq",
-        'drift_recovery_queue': f"{prefix}DriftRecovery.fifo",
-        # New queues for API Gateway → SQS direct integration
-        'webhook_ingress_queue': f"{webhook_handler}Ingress",
-        'webhook_ingress_dlq': f"{webhook_handler}IngressDlq",
-        'ignored_events_queue': f"{webhook_handler}IgnoredEvents",
-        'ignored_events_dlq': f"{webhook_handler}IgnoredEventsDlq",
-    }
-
-
 def _resolve_prefix_refs(value: str, prefix: str) -> str:
     """Resolve resource_prefix references in a Terraform string value."""
     value = value.replace("${module.common.resource_prefix}", prefix)

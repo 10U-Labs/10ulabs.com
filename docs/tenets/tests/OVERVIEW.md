@@ -187,11 +187,8 @@ Create test Lambda event payloads:
 
 ```python
 from event_factories import (
-    create_workflow_job_event,     # GitHub workflow_job webhook
     create_sqs_event,              # SQS trigger event
     create_dlq_message,            # DLQ message format
-    create_circuit_breaker_closed_state,
-    create_circuit_breaker_open_state,
 )
 ```
 
