@@ -3,6 +3,8 @@ name: autopilot
 description: Start or stop the standing reminders that keep an autonomous issue-solving session on the rails. Use when the user says "start autopilot", "go autonomous on the open issues", "stop autopilot", or asks to clear the reminders. Takes "start" or "stop".
 ---
 
+# Autopilot
+
 ## Table of Contents
 
 - [Overview](#overview)
