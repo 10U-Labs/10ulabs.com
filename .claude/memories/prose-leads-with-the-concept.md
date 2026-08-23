@@ -17,6 +17,10 @@
 
 Everything written here is read by somebody who was not in the conversation that produced it and does not have the files open. That covers an issue, a commit message, a comment on an issue and a reply in the session. Write for that reader.
 
+There is a test for whether you did, and it is the one worth running before anything is filed. Read the whole thing back as though seeing it for the first time, and stop at every "the" and every "its". Each one claims the reader already has the thing it points at. Where they do not, the sentence is broken however plain its words are: "a Lambda function that creates its client" invites the reader to work out which client is the function's own, "the shared Python library" names a thing introduced nowhere, and a package whose name appears before anything has said what it is arrives as noise.
+
+Run that pass yourself rather than letting the reader run it. Five separate sentences in one issue were caught this way by the person it was written for, one at a time, and every one of them would have failed the same read at the writer's desk.
+
 ## Lead with what the thing is for
 
 Lead with what the thing is for. A paragraph opens by saying what the thing is and what it does, before any file, function or line is named. Say what a defect costs in ordinary words near the top rather than in the seventh paragraph. Opening with the concept is not a licence to re-establish context the reader already has; leading and restating are different things.
@@ -24,6 +28,8 @@ Lead with what the thing is for. A paragraph opens by saying what the thing is a
 ## Concepts rather than identifiers
 
 Write in concepts, not identifiers. Say what the code does and what goes wrong in plain words, without hedging. An argument about behaviour that only holds while the reader is looking at the file is one the reader cannot check. Identifiers belong where the reader has stopped reading and started working: the change being proposed, the file to edit, the function to delete.
+
+Naming a place is not the same as naming a supporting cast, and a paraphrase of a location is usually vaguer than the location. "A package in the shared Python library" sent a reader looking for a library that has no name here, where `lib/python/` would have told them where to stand. Name a directory once, where the reader needs somewhere to picture, and then use it.
 
 Writing in concepts is not writing in abstractions, and this is the way it goes wrong. Swapping a name for a compound noun makes a sentence vaguer rather than plainer, because a name at least points at something: "a cached-client package sits in the shared Python library" says less than the package's own name would have. The thing a piece of writing is about may be named, once, so the reader knows what is under discussion. What is barred is the supporting cast — the other files, the functions, the line numbers — and the way out of a sentence full of them is to explain the idea in ordinary words, not to replace each name with a category.
 
