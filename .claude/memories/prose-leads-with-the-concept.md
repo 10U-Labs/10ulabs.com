@@ -37,6 +37,8 @@ Writing in concepts is not writing in abstractions, and this is the way it goes 
 
 Use a plain word wherever one exists. Jargon from computer science is not made acceptable by being accurate, and a reader who has to decode the first sentence has been handed the writer's job. Where a term genuinely has no plain equivalent, say what it means in passing the first time it appears.
 
+Jargon is hard to see from the inside, because a word used every day stops feeling like a word that needs explaining. The test is to ask of each noun whether it names something outside this trade, and to treat every no as a word to replace or to explain where it first appears. "Module" is a file. "Handler" is the part of a file that runs when a request arrives. "Importer" is whatever uses the thing. Each of those was written here as though it were ordinary English, in a paragraph whose whole purpose was to be plain.
+
 ## Vagueness is not knowing, dressed up
 
 Every vague sentence written here has had one cause. The writer described a mechanism they had not checked, in words shaped like an explanation. Three came out of a single issue in a single session: a client became "a small helper object", the cost of creating one became "asking for one is not free", and the reason it costs anything became a library that "works out which credentials apply", which was invented. A euphemism, an empty pronoun and a fabricated mechanism are the same failure wearing three coats.
