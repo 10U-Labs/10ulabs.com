@@ -22,7 +22,9 @@ One issue is solved by one commit and one push, and the commit closes its issue 
 
 A push rejected by CI is answered with a follow-up commit. Do not amend and force-push: `main` is published by the time the run reports, and rewriting it discards what was tried. Every static-analysis check here is a job of its own and the jobs run in parallel, so a rejected run names every check that failed rather than the earliest one. Read the run for that list rather than guessing at it: `gh run view <id> --json jobs` gives the failing job names and `gh run view --log-failed` gives their output, and one `pylint` job reports every finding it has, so a single follow-up commit can answer all of it.
 
-Longer: [commit-straight-to-main](docs/claude/memories/commit-straight-to-main.md), [a-rejected-push-is-fixed-forward](docs/claude/memories/a-rejected-push-is-fixed-forward.md).
+The literal `[skip ci]`, brackets included, goes in a commit message only when that push is meant to start nothing. GitHub scans the whole raw message rather than the subject line, so a body that merely names the directive — reporting what an earlier commit did with it — suppresses every workflow its own diff was due to start, which is how `0463bad9` landed 486 `pylint` fixes and nine edited workflow files with no run having read them. Write `skip ci` without the brackets when describing another commit's use of it; quoting the string, indenting it or wrapping it in backticks does not break the match, because the scan reads characters rather than markup.
+
+Longer: [commit-straight-to-main](docs/claude/memories/commit-straight-to-main.md), [a-rejected-push-is-fixed-forward](docs/claude/memories/a-rejected-push-is-fixed-forward.md), [never-write-the-skip-ci-brackets-in-prose](docs/claude/memories/never-write-the-skip-ci-brackets-in-prose.md).
 
 ## Tests
 
