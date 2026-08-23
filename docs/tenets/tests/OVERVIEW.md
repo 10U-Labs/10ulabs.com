@@ -216,14 +216,10 @@ def test_something(handler_module):
 
 ### test_utils/
 
-Assertions and mixin classes that several suites make the same checks with:
+A loader that reaches an endpoint's handler module from the endpoint's own conftest:
 
 ```python
 from test_utils import create_endpoint_handler_loader
-from test_utils.aws_assertions import assert_lambda_exists, role_has_permission
-from test_utils.terraform_assertions import get_missing_terraform_files
-from test_utils.existence_tests import AwsResourceExistsTestMixin
-from test_utils.terraform_tests import TerraformFilesExistTestMixin
 ```
 
 ### urllib_mocks/

@@ -3,11 +3,6 @@ import sys
 
 from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
-from test_utils.aws_assertions import assert_lambda_exists
-from test_utils.terraform_assertions import (
-    get_missing_terraform_files,
-    lambda_handler_exists,
-)
 
 
 def create_endpoint_handler_loader(endpoint_path: str):
@@ -29,8 +24,5 @@ def create_endpoint_handler_loader(endpoint_path: str):
 
 
 __all__ = [
-    'assert_lambda_exists',
     'create_endpoint_handler_loader',
-    'get_missing_terraform_files',
-    'lambda_handler_exists',
 ]
