@@ -18,6 +18,7 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [how-issues-are-written](how-issues-are-written.md) — six fixed sections for the program, two for everything else, plain English, no test owed for a config or a workflow file
 - [an-issue-states-one-solution](an-issue-states-one-solution.md) — a `Proposed Solution` names one change; a fork is asked about before the issue is filed, never published as an either
 - [file-what-the-sweep-turns-up](file-what-the-sweep-turns-up.md) — a defect found while working on something else is filed in the same turn, not named in a reply and left for the user to ask for
+- [an-edge-is-only-a-true-block](an-edge-is-only-a-true-block.md) — a `blocked_by` edge is written only where the work cannot be finished without the other issue; an issue nothing waits on is filed with no edge
 
 ## Tests
 

@@ -33,4 +33,4 @@ Tables are allowed where a table genuinely reads better than a paragraph: a name
 
 Back a claim with a number computed from the repository's own data wherever a number is available, and say how it was computed so a reader can redo it. Prefer bounds that survive new data over exact figures that go stale.
 
-Issue bodies are not hard-wrapped, like all markdown here — see [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md). The tier vocabulary and what each tier is for come from `docs/tenets/tests/` — see [read-test-tenets-first](read-test-tenets-first.md). Where a filed issue goes in the queue, and the `blocked_by` edge it must carry, is in `.claude/skills/autopilot/SKILL.md`.
+Issue bodies are not hard-wrapped, like all markdown here — see [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md). The tier vocabulary and what each tier is for come from `docs/tenets/tests/` — see [read-test-tenets-first](read-test-tenets-first.md). Where a filed issue goes in the queue, and when it carries a `blocked_by` edge at all, is in [an-edge-is-only-a-true-block](an-edge-is-only-a-true-block.md) and in `.claude/skills/autopilot/SKILL.md`.
