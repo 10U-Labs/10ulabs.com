@@ -51,7 +51,7 @@ resource "aws_lambda_function" "spa_routing" {
   filename         = data.archive_file.spa_routing.output_path
   function_name    = "${local.resource_prefix}SpaRouting"
   role             = aws_iam_role.spa_routing.arn
-  handler          = "spa_routing.handler"
+  handler          = "spa_routing.lambda_handler"
   source_code_hash = data.archive_file.spa_routing.output_base64sha256
   runtime          = "python3.12"
   timeout          = 5

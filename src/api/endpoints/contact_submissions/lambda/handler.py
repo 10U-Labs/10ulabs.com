@@ -260,7 +260,7 @@ ROUTE_MAP = {
 }
 
 
-def handler(event, _context):
+def lambda_handler(event, _context):
     """Lambda handler entry point."""
     logger.info("Received contact request: %s", json.dumps(event))
 

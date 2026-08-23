@@ -142,9 +142,9 @@ def test_lambda_handler_exports_match_terraform_references(
 ):
     """Verify Lambda handler exports match Terraform handler references.
 
-    Terraform handler = "catchall.handler" means:
+    Terraform handler = "catchall.lambda_handler" means:
     - File: lambdas/catchall.py
-    - Function: handler()
+    - Function: lambda_handler()
 
     This test verifies that each handler reference in lambda.tf
     corresponds to an actual function export in the Python file.

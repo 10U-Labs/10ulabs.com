@@ -8,7 +8,7 @@ resource "aws_lambda_function" "health_handler" {
   filename         = data.archive_file.health_handler.output_path
   function_name    = var.health_handler_function_name
   role             = aws_iam_role.lambda_health_handler.arn
-  handler          = "handler.handler"
+  handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.health_handler.output_base64sha256
   runtime          = "python3.13"
   architectures    = ["arm64"]

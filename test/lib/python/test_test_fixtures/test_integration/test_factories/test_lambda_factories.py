@@ -592,17 +592,30 @@ class TestCreateLambdaExistenceTestsExecution:
 # === create_lambda_configuration_tests ===
 
 
+class TestCreateLambdaConfigurationTestsDemandsHandler:
+    """Tests that the factory will not guess which entry point to expect."""
+
+    def test_refuses_to_build_without_expected_handler(self):
+        """create_lambda_configuration_tests requires expected_handler."""
+        with pytest.raises(TypeError):
+            create_lambda_configuration_tests("func_key", "DefaultFunc")
+
+
 class TestCreateLambdaConfigurationTestsReturnsClass:
     """Tests for create_lambda_configuration_tests return type."""
 
     def test_returns_class(self):
         """create_lambda_configuration_tests returns a class."""
-        test_class = create_lambda_configuration_tests("func_key", "DefaultFunc")
+        test_class = create_lambda_configuration_tests(
+            "func_key", "DefaultFunc", expected_handler="handler.lambda_handler"
+        )
         assert isinstance(test_class, type)
 
     def test_returns_class_with_name(self):
         """create_lambda_configuration_tests returns TestLambdaConfiguration."""
-        test_class = create_lambda_configuration_tests("func_key", "DefaultFunc")
+        test_class = create_lambda_configuration_tests(
+            "func_key", "DefaultFunc", expected_handler="handler.lambda_handler"
+        )
         assert test_class.__name__ == "TestLambdaConfiguration"
 
 
@@ -611,17 +624,23 @@ class TestCreateLambdaConfigurationTestsHasMethods:
 
     def test_has_test_handler_uses_python_runtime(self):
         """create_lambda_configuration_tests has test_handler_uses_python_runtime."""
-        test_class = create_lambda_configuration_tests("func_key", "DefaultFunc")
+        test_class = create_lambda_configuration_tests(
+            "func_key", "DefaultFunc", expected_handler="handler.lambda_handler"
+        )
         assert hasattr(test_class, "test_handler_uses_python_runtime")
 
     def test_has_test_handler_uses_expected_architecture(self):
         """create_lambda_configuration_tests has test_handler_uses_expected_architecture."""
-        test_class = create_lambda_configuration_tests("func_key", "DefaultFunc")
+        test_class = create_lambda_configuration_tests(
+            "func_key", "DefaultFunc", expected_handler="handler.lambda_handler"
+        )
         assert hasattr(test_class, "test_handler_uses_expected_architecture")
 
     def test_has_test_handler_has_handler_configured(self):
         """create_lambda_configuration_tests has test_handler_has_handler_configured."""
-        test_class = create_lambda_configuration_tests("func_key", "DefaultFunc")
+        test_class = create_lambda_configuration_tests(
+            "func_key", "DefaultFunc", expected_handler="handler.lambda_handler"
+        )
         assert hasattr(test_class, "test_handler_has_handler_configured")
 
 
@@ -631,7 +650,7 @@ class TestCreateLambdaConfigurationTestsExecution:
     def test_handler_uses_python_runtime_success(self):
         """test_handler_uses_python_runtime passes when runtime matches."""
         test_class = create_lambda_configuration_tests(
-            "func_key", "DefaultFunc", expected_runtime="python3.13"
+            "func_key", "DefaultFunc", "handler.lambda_handler", expected_runtime="python3.13"
         )
         instance = test_class()
         mock_client = MagicMock()
@@ -644,7 +663,7 @@ class TestCreateLambdaConfigurationTestsExecution:
     def test_handler_uses_python_runtime_fails_when_different(self):
         """test_handler_uses_python_runtime fails when runtime differs."""
         test_class = create_lambda_configuration_tests(
-            "func_key", "DefaultFunc", expected_runtime="python3.13"
+            "func_key", "DefaultFunc", "handler.lambda_handler", expected_runtime="python3.13"
         )
         instance = test_class()
         mock_client = MagicMock()
@@ -658,7 +677,7 @@ class TestCreateLambdaConfigurationTestsExecution:
     def test_handler_uses_expected_architecture_success(self):
         """test_handler_uses_expected_architecture passes when arch matches."""
         test_class = create_lambda_configuration_tests(
-            "func_key", "DefaultFunc", expected_architecture="arm64"
+            "func_key", "DefaultFunc", "handler.lambda_handler", expected_architecture="arm64"
         )
         instance = test_class()
         mock_client = MagicMock()
@@ -671,7 +690,7 @@ class TestCreateLambdaConfigurationTestsExecution:
     def test_handler_uses_expected_architecture_fails_when_different(self):
         """test_handler_uses_expected_architecture fails when arch differs."""
         test_class = create_lambda_configuration_tests(
-            "func_key", "DefaultFunc", expected_architecture="arm64"
+            "func_key", "DefaultFunc", "handler.lambda_handler", expected_architecture="arm64"
         )
         instance = test_class()
         mock_client = MagicMock()
@@ -685,12 +704,12 @@ class TestCreateLambdaConfigurationTestsExecution:
     def test_handler_has_handler_configured_success(self):
         """test_handler_has_handler_configured passes when handler matches."""
         test_class = create_lambda_configuration_tests(
-            "func_key", "DefaultFunc", expected_handler="handler.handler"
+            "func_key", "DefaultFunc", expected_handler="handler.lambda_handler"
         )
         instance = test_class()
         mock_client = MagicMock()
         mock_client.get_function.return_value = {
-            "Configuration": {"Handler": "handler.handler"}
+            "Configuration": {"Handler": "handler.lambda_handler"}
         }
         config = {"func_key": "MyFunction"}
         assert instance.test_handler_has_handler_configured(mock_client, config) is None
@@ -698,7 +717,7 @@ class TestCreateLambdaConfigurationTestsExecution:
     def test_handler_has_handler_configured_fails_when_different(self):
         """test_handler_has_handler_configured fails when handler differs."""
         test_class = create_lambda_configuration_tests(
-            "func_key", "DefaultFunc", expected_handler="handler.handler"
+            "func_key", "DefaultFunc", expected_handler="handler.lambda_handler"
         )
         instance = test_class()
         mock_client = MagicMock()

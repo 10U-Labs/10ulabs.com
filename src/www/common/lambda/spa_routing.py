@@ -1,7 +1,7 @@
 """Lambda@Edge handler for SPA routing."""
 
 
-def handler(event, _context):
+def lambda_handler(event, _context):
     """Handle viewer-request events for SPA routing.
 
     This function runs at CloudFront edge locations and handles:

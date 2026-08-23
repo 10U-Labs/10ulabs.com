@@ -299,8 +299,8 @@ def create_lambda_existence_tests(
 def create_lambda_configuration_tests(
     function_name_config_key: str,
     default_function_name: str,
+    expected_handler: str,
     expected_runtime: str = "python3.13",
-    expected_handler: str = "handler.handler",
     expected_architecture: str = "arm64",
 ):
     """Create Lambda configuration tests for an endpoint.
@@ -308,8 +308,9 @@ def create_lambda_configuration_tests(
     Args:
         function_name_config_key: Config key for function name
         default_function_name: Default function name if not in config
+        expected_handler: Expected handler path, which has no default because
+            a caller that does not state one asserts a name it never wrote down
         expected_runtime: Expected Python runtime
-        expected_handler: Expected handler path
         expected_architecture: Expected architecture
 
     Returns:

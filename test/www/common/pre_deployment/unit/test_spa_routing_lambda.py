@@ -13,7 +13,7 @@ spa_routing = importlib.util.module_from_spec(spec)
 sys.modules["spa_routing"] = spa_routing
 assert spec.loader is not None, "Module spec has no loader"
 spec.loader.exec_module(spa_routing)
-handler = spa_routing.handler
+handler = spa_routing.lambda_handler
 
 
 def make_event(host="www.example.com", uri="/"):

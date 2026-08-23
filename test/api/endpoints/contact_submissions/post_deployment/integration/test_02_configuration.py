@@ -50,8 +50,8 @@ class TestLambdaConfiguration:
         )
         response = lambda_client.get_function(FunctionName=function_name)
         handler = response["Configuration"]["Handler"]
-        assert handler == "handler.handler", (
-            f"Lambda handler should be handler.handler, got: {handler}"
+        assert handler == "handler.lambda_handler", (
+            f"Lambda handler should be handler.lambda_handler, got: {handler}"
         )
 
     def test_contact_handler_has_10_second_timeout(

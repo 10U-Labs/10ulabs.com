@@ -146,8 +146,8 @@ def test_lambda_handler_file_exists():
 def test_lambda_handler_has_handler_function():
     """Verify Lambda@Edge handler has the expected handler function."""
     handler_content = (SRC_DIR / "lambda" / "spa_routing.py").read_text()
-    assert "def handler(" in handler_content, (
-        "Lambda handler file missing 'def handler(' function"
+    assert "def lambda_handler(" in handler_content, (
+        "Lambda handler file missing 'def lambda_handler(' function"
     )
 
 
@@ -171,6 +171,6 @@ def test_lambda_edge_handler_matches_module():
     lambda_content = _read_file("lambda_edge.tf")
     match = re.search(r'handler\s*=\s*"([^"]+)"', lambda_content)
     handler_config = match.group(1) if match else ""
-    assert handler_config == "spa_routing.handler", (
-        f"Expected handler 'spa_routing.handler', got '{handler_config}'"
+    assert handler_config == "spa_routing.lambda_handler", (
+        f"Expected handler 'spa_routing.lambda_handler', got '{handler_config}'"
     )

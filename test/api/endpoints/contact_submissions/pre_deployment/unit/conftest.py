@@ -50,4 +50,4 @@ def successful_contact_response(request):
         with patch.object(handler, "verify_recaptcha", return_value=True):
             with patch.object(handler, "send_contact_email", return_value=True):
                 with patch.dict("os.environ", {"CONTACT_EMAIL": "contact@test.com"}):
-                    return handler.handler(event, ctx)
+                    return handler.lambda_handler(event, ctx)

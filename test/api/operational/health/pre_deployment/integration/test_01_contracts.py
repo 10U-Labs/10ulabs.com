@@ -19,10 +19,10 @@ class TestLambdaHandlerContract:
     """Layer 1: Verify Lambda handler exports match Terraform references."""
 
     def test_handler_module_exports_handler_function(self):
-        """Verify handler.py exports a function named 'handler'.
+        """Verify handler.py exports a function named 'lambda_handler'.
 
-        lambda.tf references handler = "handler.handler" which means
-        the handler.py module must export a function named 'handler'.
+        lambda.tf references handler = "handler.lambda_handler" which means
+        the handler.py module must export a function named 'lambda_handler'.
         """
         handler_path = HEALTH_SRC / "lambda" / "handler.py"
         handler_content = handler_path.read_text()
@@ -33,9 +33,9 @@ class TestLambdaHandlerContract:
             if isinstance(node, ast.FunctionDef)
         ]
 
-        assert "handler" in function_names, (
-            "handler.py must export a function named 'handler' "
-            "(referenced by lambda.tf as handler = \"handler.handler\")"
+        assert "lambda_handler" in function_names, (
+            "handler.py must export a function named 'lambda_handler' "
+            "(referenced by lambda.tf as handler = \"handler.lambda_handler\")"
         )
 
     def test_handler_function_accepts_event_and_context(self):

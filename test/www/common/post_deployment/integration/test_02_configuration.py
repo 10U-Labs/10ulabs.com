@@ -119,9 +119,9 @@ def test_lambda_edge_memory_is_128mb(spa_routing_lambda_config):
 
 
 def test_lambda_edge_handler_is_correct(spa_routing_lambda_config):
-    """Verify Lambda@Edge handler is spa_routing.handler."""
+    """Verify Lambda@Edge handler is spa_routing.lambda_handler."""
     handler = spa_routing_lambda_config.get("Handler", "")
-    assert handler == "spa_routing.handler"
+    assert handler == "spa_routing.lambda_handler"
 
 
 def test_lambda_edge_has_description(spa_routing_lambda_config):

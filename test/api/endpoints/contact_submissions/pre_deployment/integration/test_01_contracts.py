@@ -29,7 +29,7 @@ def test_lambda_handler_function_exists():
     """Verify Lambda handler.py exports a handler function."""
     handler_path = LAMBDA_DIR / "handler.py"
     content = handler_path.read_text()
-    has_handler = "def handler(" in content
+    has_handler = "def lambda_handler(" in content
     assert has_handler
 
 

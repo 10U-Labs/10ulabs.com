@@ -21,6 +21,7 @@ from test_fixtures.integration import (
 TestLambdaConfiguration = create_lambda_configuration_tests(
     function_name_config_key="health_handler_function_name",
     default_function_name="TenULabsHealthHandler",
+    expected_handler="handler.lambda_handler",
 )
 
 TestCloudWatchLogsConfiguration = create_log_group_configuration_tests(

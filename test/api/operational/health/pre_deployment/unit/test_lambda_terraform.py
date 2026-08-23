@@ -39,7 +39,7 @@ def test_lambda_function_uses_iam_role(health_src_dir):
 def test_lambda_function_handler_is_handler_handler(health_src_dir):
     """Verify Lambda function handler is set correctly."""
     content = (health_src_dir / "lambda.tf").read_text()
-    assert 'handler          = "handler.handler"' in content
+    assert 'handler          = "handler.lambda_handler"' in content
 
 
 def test_lambda_function_runtime_is_python313(health_src_dir):

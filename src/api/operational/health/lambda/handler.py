@@ -33,7 +33,7 @@ ROUTE_MAP = {
 }
 
 
-def handler(event, _context):
+def lambda_handler(event, _context):
     """Lambda handler entry point."""
     path = event.get('path', '')
     method = event.get('httpMethod', '')

@@ -20,7 +20,7 @@ ROUTE_MAP = {
 }
 
 
-def handler(event, _context):
+def lambda_handler(event, _context):
     """Main Lambda handler for routing echo requests."""
     method = event.get('httpMethod', '')
     if method == 'OPTIONS':

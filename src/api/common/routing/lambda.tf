@@ -8,7 +8,7 @@ resource "aws_lambda_function" "catchall_handler" {
   filename         = data.archive_file.catchall_handler.output_path
   function_name    = module.common.lambda_handler_names.catchall
   role             = aws_iam_role.lambda_catchall_handler.arn
-  handler          = "catchall.handler"
+  handler          = "catchall.lambda_handler"
   source_code_hash = data.archive_file.catchall_handler.output_base64sha256
   runtime          = "python3.13"
   architectures    = ["arm64"]
