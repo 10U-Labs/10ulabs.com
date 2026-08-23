@@ -20,7 +20,7 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [four-static-analysis-passes-per-workflow](four-static-analysis-passes-per-workflow.md) — linter and type checker, over source and over tests, four jobs with the same names in every workflow
 - [commit-straight-to-main](commit-straight-to-main.md) — direct commits, no branches and no pull requests, one commit per issue with its closing line
 - [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md) — a failed run is answered with a follow-up commit, never an amended force-push
-- [prose-leads-with-the-concept](prose-leads-with-the-concept.md) — lead with what the thing is for, write in concepts rather than identifiers, one idea to a sentence
+- [prose-leads-with-the-concept](prose-leads-with-the-concept.md) — lead with what the thing is for, write in concepts rather than identifiers, use the exact technical term where no plain word is as precise, one idea to a sentence
 - [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md) — no column limit on `.md` files, on issue bodies or on commit message bodies
 - [never-write-the-skip-ci-brackets-in-prose](never-write-the-skip-ci-brackets-in-prose.md) — a commit message that names the bracketed directive starts no workflow, so prose about it drops the brackets
 

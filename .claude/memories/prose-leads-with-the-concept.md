@@ -5,7 +5,9 @@
 - [Who the reader is](#who-the-reader-is)
 - [Lead with what the thing is for](#lead-with-what-the-thing-is-for)
 - [Concepts rather than identifiers](#concepts-rather-than-identifiers)
-- [No jargon where a plain word will do](#no-jargon-where-a-plain-word-will-do)
+- [Jargon has a plain equivalent, a technical concept does not](#jargon-has-a-plain-equivalent-a-technical-concept-does-not)
+- [Name the subject exactly](#name-the-subject-exactly)
+- [The reader's questions are the test](#the-readers-questions-are-the-test)
 - [Vagueness is not knowing, dressed up](#vagueness-is-not-knowing-dressed-up)
 - [One idea to a sentence](#one-idea-to-a-sentence)
 - [Cut what changes nothing](#cut-what-changes-nothing)
@@ -35,13 +37,29 @@ Naming a place is not the same as naming a supporting cast, and a paraphrase of 
 
 Writing in concepts is not writing in abstractions, and this is the way it goes wrong. Swapping a name for a compound noun makes a sentence vaguer rather than plainer, because a name at least points at something: "a cached-client package sits in the shared Python library" says less than the package's own name would have. The thing a piece of writing is about may be named, once, so the reader knows what is under discussion. What is barred is the supporting cast — the other files, the functions, the line numbers — and the way out of a sentence full of them is to explain the idea in ordinary words, not to replace each name with a category.
 
-## No jargon where a plain word will do
+## Jargon has a plain equivalent, a technical concept does not
 
-Use a plain word wherever one exists. Jargon from computer science is not made acceptable by being accurate, and a reader who has to decode the first sentence has been handed the writer's job. Where a term genuinely has no plain equivalent, say what it means in passing the first time it appears.
+Use a plain word wherever one exists that is exactly as precise. Jargon from computer science is not made acceptable by being accurate, and a reader who has to decode the first sentence has been handed the writer's job.
 
-Jargon is hard to see from the inside, because a word used every day stops feeling like a word that needs explaining. The test is to ask of each noun whether it names something outside this trade, and to treat every no as a word to replace or to explain where it first appears. "Module" is a file. "Handler" is the part of a file that runs when a request arrives. "Importer" is whatever uses the thing. Each of those was written here as though it were ordinary English, in a paragraph whose whole purpose was to be plain.
+The test is not whether a word belongs to this trade, because most of the words worth using do. The test is whether a plain word exists that says the same thing as exactly. Where one does, the term is shorthand and loses: "module" loses to file, "importer" loses to whatever uses the thing, "handler" loses to the part of a file that runs when a request arrives. Each of those was written here as though it were ordinary English, in a paragraph whose whole purpose was to be plain.
+
+Where no plain word is as exact, the term is the name of a real thing and is used, then said in passing the first time it appears. "HTTP status code", "exception" and "Lambda function" are of that kind. The plain-sounding substitutes are not simplifications of them: "the number", "an error" and "an endpoint" each say less than the term, and each sends the reader looking for something the writer did not mean. Reaching for one of those is not obeying this rule, it is breaking it in the other direction.
 
 Ask it of the verbs as well, where a borrowed one smuggles in a mechanism the reader will look for and not find. Python is interpreted and nothing is built, so a client that was "built" invites a search for a build step that does not exist; a line of code ran and returned a new client, and "created" says that. "Spun up", "compiled" and "wired" go the same way. The plain verb is the one that survives somebody asking what it means literally.
+
+## Name the subject exactly
+
+The rule against identifiers bars the supporting cast and never the subject. The thing a piece of writing is about is named, by its real name, in the first sentence that needs it.
+
+Both rules were read together on 2026-08-23 and produced an issue about a Python exception that named neither the exception, nor the library that raises it, nor the code it carries. The route became "an endpoint here", which asked GitHub to cancel a workflow run, though a route asks for nothing and the function serving it does. Its three functions became "three of its functions", which a route does not have. The HTTP status code became "the number", and a status code in the 200s became "one number that means GitHub agreed". Three `if` bodies that no input can execute became "those checks were unreachable", with neither word explained. Six terms removed, six questions back from the reader, and every answer was a term the writer knew and had already read in the source.
+
+## The reader's questions are the test
+
+There is a second pass, and it catches what the cold read above does not. Take each noun phrase in turn and ask what it refers to, answering only from the sentence it sits in. "An endpoint" — the route, or the code serving it? "The number" — which number? "Those checks" — which checks, and unreachable in what sense? A phrase the sentence cannot answer is a term that was removed and has to go back.
+
+Run it as well as the cold read rather than instead of it, because the two fail on different things. The cold read stops at every "the", every "its" and every verb with nobody doing it, and a vague noun goes through it untouched: "the number" carries a definite article, points at something introduced two sentences earlier, and is unreadable all the same.
+
+The same defect over a whole document is a term used repeatedly and defined nowhere. One issue said "the rule" four times and never said what the rule was, then rested a sentence on the omission — what is left is the rule — which cannot be true of something that was never there. Both were found by the reader asking the question this pass asks: what rule?
 
 ## Vagueness is not knowing, dressed up
 
