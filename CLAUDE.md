@@ -40,7 +40,7 @@ Longer: [tdd-workflow](docs/claude/memories/tdd-workflow.md), [read-test-tenets-
 
 ## Markdown
 
-Markdown is not hard-wrapped. There is no column limit on `.md` files here, and none on the bodies of GitHub issues: write each paragraph as one line and let the reader wrap it. Nothing enforces a width. `documentation.yml` runs `markdownlint` over every `.md` file in the tree with MD013, the line-length rule, disabled on its command line, and the repository has no `markdownlint` and no `yamllint` configuration file that could turn it back on. The hard-wrapped files that used to sit under `products/` left with it, so nothing here is wrapped now; match this rule rather than the file next to you.
+Markdown is not hard-wrapped, and neither is the body of a commit message. There is no column limit on `.md` files here, none on the bodies of GitHub issues and none on the paragraphs of a commit: write each paragraph as one line and let the reader wrap it. The subject line is the one thing that stays short, because `git log --oneline` and GitHub both truncate it. Nothing enforces a width. `documentation.yml` runs `markdownlint` over every `.md` file in the tree with MD013, the line-length rule, disabled on its command line, and the repository has no `markdownlint` and no `yamllint` configuration file that could turn it back on; no check reads a commit message at all. The hard-wrapped files that used to sit under `products/` left with it, and every commit up to `84c13b33` was wrapped to about seventy-two columns by the git default rather than by any rule of this repository's, so match this rule rather than the file or the commit next to you.
 
 Longer: [markdown-is-not-hard-wrapped](docs/claude/memories/markdown-is-not-hard-wrapped.md).
 
