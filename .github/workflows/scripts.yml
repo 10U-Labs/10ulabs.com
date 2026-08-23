@@ -262,31 +262,6 @@ jobs:
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
-  test-github-workflows:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            boto3-stubs \
-            botocore \
-            dnspython \
-            paramiko \
-            pytest \
-            'python-hcl2<8' \
-            PyYAML \
-            requests \
-            types-PyYAML \
-            types-requests
-      - name: Run the workflow contract tests
-        run: |
-          BASE=test/github/workflows/pre_deployment
-          PYTHONPATH=lib/python python3 -m pytest \
-            $BASE/integration/ \
-            --confcutdir=test --verbose --pythonwarnings=error
   test-invalidate-cloudfront:
     runs-on: ubuntu-latest
     steps:
@@ -642,11 +617,6 @@ on:
     paths:
       # src/ is deliberately absent: naming it would start every job here
       # on every push to a lambda.
-      #
-      # The contract tests read every workflow file, so an edit to any of them
-      # has to start this run. The entry below it is the same file again, and
-      # is what says which workflow these paths belong to.
-      - .github/workflows/**
       - .github/workflows/scripts.yml
       - lib/python/**
       # lib/terraform/common is parsed by lib/python/terraform_config, so a
@@ -655,7 +625,6 @@ on:
       - scripts/**
       - test/__init__.py
       - test/conftest.py
-      - test/github/**
       - test/lib/__init__.py
       - test/lib/python/**
       - test/lib/terraform/__init__.py

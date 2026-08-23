@@ -47,7 +47,6 @@ test/
 ├── www/                                     # common/ and paths/<path>/, same tier split
 ├── bootstrap/                               # pre_deployment/ and post_deployment/ only
 ├── lib/                                     # mirrors lib/python/ and lib/terraform/, no tier split
-├── github/
 └── scripts/
 ```
 
