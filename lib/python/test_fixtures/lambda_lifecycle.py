@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 
-def extract_block_content(content: str, start_pos: int) -> str:
+def _extract_block_content(content: str, start_pos: int) -> str:
     """Extract content of a Terraform block starting at the given brace position."""
     brace_count = 0
     for i, char in enumerate(content[start_pos:]):
@@ -31,7 +31,7 @@ def extract_block_content(content: str, start_pos: int) -> str:
     return content[start_pos:]
 
 
-def check_lambda_lifecycle_rules(lambda_tf_path: Path) -> None:
+def _check_lambda_lifecycle_rules(lambda_tf_path: Path) -> None:
     """Verify Lambda with environment variables has replace_triggered_by.
 
     Args:
@@ -48,7 +48,7 @@ def check_lambda_lifecycle_rules(lambda_tf_path: Path) -> None:
     for match in re.finditer(lambda_pattern, content):
         resource_name = match.group(1)
         block_start = match.end() - 1
-        block_content = extract_block_content(content, block_start)
+        block_content = _extract_block_content(content, block_start)
 
         has_env_vars = re.search(r"environment\s*\{", block_content)
         if has_env_vars:
@@ -95,7 +95,7 @@ def create_lambda_lifecycle_tests(
             """
             for tf_path in tf_paths:
                 if tf_path.exists():
-                    check_lambda_lifecycle_rules(tf_path)
+                    _check_lambda_lifecycle_rules(tf_path)
 
         def test_terraform_files_configured(self):
             """Verify at least one terraform file is configured for testing."""

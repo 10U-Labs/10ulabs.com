@@ -4,28 +4,28 @@ import pytest
 
 from repo_utils import (
     extract_brace_block,
-    find_repo_root,
+    _find_repo_root,
     _find_repo_root_from_path,
     REPO_ROOT,
 )
 
 
 class TestFindRepoRoot:
-    """Tests for find_repo_root function."""
+    """Tests for _find_repo_root function."""
 
     def test_returns_path(self):
-        """find_repo_root returns a Path object."""
-        result = find_repo_root()
+        """_find_repo_root returns a Path object."""
+        result = _find_repo_root()
         assert isinstance(result, Path)
 
     def test_returns_directory_with_git(self):
-        """find_repo_root returns a directory containing .git."""
-        result = find_repo_root()
+        """_find_repo_root returns a directory containing .git."""
+        result = _find_repo_root()
         assert (result / ".git").exists()
 
     def test_repo_root_constant_matches_function(self):
-        """REPO_ROOT constant matches find_repo_root result."""
-        assert REPO_ROOT == find_repo_root()
+        """REPO_ROOT constant matches _find_repo_root result."""
+        assert REPO_ROOT == _find_repo_root()
 
     def test_raises_runtime_error_when_no_git_directory(self, tmp_path):
         """Test RuntimeError when no .git directory found in any parent."""

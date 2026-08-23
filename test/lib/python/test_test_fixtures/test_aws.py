@@ -13,7 +13,7 @@ from test_fixtures.aws import (
     aws_region,
     backup_client,
     caller_identity,
-    current_role_arn,
+    _current_role_arn,
     current_role_name,
     dynamodb_client,
     ec2_client,
@@ -332,7 +332,7 @@ class TestCallerIdentityFixture:
 
 
 class TestCurrentRoleArnFixture:
-    """Tests for current_role_arn fixture behavior."""
+    """Tests for _current_role_arn fixture behavior."""
 
     def test_converts_assumed_role_arn_to_role_arn(self):
         """Test that assumed-role ARN is converted to role ARN."""
@@ -705,26 +705,26 @@ def test_caller_identity_fixture_execution():
 
 
 class TestCurrentRoleArnFixtureExecution:
-    """Tests that execute the current_role_arn fixture function."""
+    """Tests that execute the _current_role_arn fixture function."""
 
     def test_current_role_arn_converts_assumed_role(self):
-        """Test current_role_arn converts assumed-role ARN to role ARN."""
+        """Test _current_role_arn converts assumed-role ARN to role ARN."""
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {
             "Account": "123456789012",
             "Arn": "arn:aws:sts::123456789012:assumed-role/MyRole/session"
         }
-        result = current_role_arn.__wrapped__(mock_request)
+        result = _current_role_arn.__wrapped__(mock_request)
         assert result == "arn:aws:iam::123456789012:role/MyRole"
 
     def test_current_role_arn_returns_unchanged_for_non_assumed(self):
-        """Test current_role_arn returns unchanged ARN for non-assumed-role."""
+        """Test _current_role_arn returns unchanged ARN for non-assumed-role."""
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {
             "Account": "123456789012",
             "Arn": "arn:aws:iam::123456789012:user/MyUser"
         }
-        result = current_role_arn.__wrapped__(mock_request)
+        result = _current_role_arn.__wrapped__(mock_request)
         assert result == "arn:aws:iam::123456789012:user/MyUser"
 
 

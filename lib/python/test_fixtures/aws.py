@@ -171,7 +171,7 @@ def caller_identity(request):
 
 
 @pytest.fixture(scope="session")
-def current_role_arn(request):
+def _current_role_arn(request):
     """Extract the role ARN from caller identity."""
     identity = request.getfixturevalue("caller_identity")
     arn = identity.get("Arn", "")
@@ -187,7 +187,7 @@ def current_role_arn(request):
 @pytest.fixture(scope="session")
 def current_role_name(request):
     """Extract the role name from the role ARN."""
-    role_arn = request.getfixturevalue("current_role_arn")
+    role_arn = request.getfixturevalue("_current_role_arn")
     if not role_arn:
         return ""
     return role_arn.split("/")[-1]

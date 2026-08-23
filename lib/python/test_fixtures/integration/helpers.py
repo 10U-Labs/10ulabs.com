@@ -84,7 +84,7 @@ def check_lambda_role_has_policy(iam_client, role_name: str, policy_name: str):
         raise
 
 
-def fail_no_credentials():
+def _fail_no_credentials():
     """Fail the test with a standard no-credentials message."""
     pytest.fail(NO_CREDENTIALS_MESSAGE)
 
@@ -101,7 +101,7 @@ def check_credentials_available(sts_client):
     try:
         sts_client.get_caller_identity()
     except NoCredentialsError:
-        fail_no_credentials()
+        _fail_no_credentials()
 
 
 def check_credentials_valid(sts_client):

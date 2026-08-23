@@ -4,7 +4,7 @@ from unittest.mock import patch, mock_open
 import pytest
 
 from test_fixtures.terraform_tests import (
-    get_api_common_routing_outputs,
+    _get_api_common_routing_outputs,
     create_remote_state_contract_tests,
     create_naming_conventions_tests,
     create_remote_state_config_tests,
@@ -12,12 +12,12 @@ from test_fixtures.terraform_tests import (
 
 
 class TestGetApiCommonRoutingOutputs:
-    """Tests for get_api_common_routing_outputs function."""
+    """Tests for _get_api_common_routing_outputs function."""
 
     @patch('test_fixtures.terraform_tests.open', mock_open(read_data=''))
     def test_returns_set(self):
         """Test that function returns a set."""
-        result = get_api_common_routing_outputs()
+        result = _get_api_common_routing_outputs()
         assert isinstance(result, set)
 
     @patch(
@@ -26,7 +26,7 @@ class TestGetApiCommonRoutingOutputs:
     )
     def test_extracts_single_output(self):
         """Test that function extracts a single output name."""
-        result = get_api_common_routing_outputs()
+        result = _get_api_common_routing_outputs()
         assert "foo" in result
 
     @patch('test_fixtures.terraform_tests.open', mock_open(
@@ -34,7 +34,7 @@ class TestGetApiCommonRoutingOutputs:
     ))
     def test_extracts_multiple_outputs(self):
         """Test that function extracts multiple output names."""
-        result = get_api_common_routing_outputs()
+        result = _get_api_common_routing_outputs()
         assert len(result) == 2
 
     @patch('test_fixtures.terraform_tests.open', mock_open(
@@ -42,7 +42,7 @@ class TestGetApiCommonRoutingOutputs:
     ))
     def test_extracts_first_output_from_multiple(self):
         """Test that function extracts first output from multiple."""
-        result = get_api_common_routing_outputs()
+        result = _get_api_common_routing_outputs()
         assert "api_gateway_id" in result
 
     @patch('test_fixtures.terraform_tests.open', mock_open(
@@ -50,20 +50,20 @@ class TestGetApiCommonRoutingOutputs:
     ))
     def test_extracts_second_output_from_multiple(self):
         """Test that function extracts second output from multiple."""
-        result = get_api_common_routing_outputs()
+        result = _get_api_common_routing_outputs()
         assert "lambda_arn" in result
 
     @patch('test_fixtures.terraform_tests.open', mock_open(read_data=''))
     def test_returns_empty_set_for_no_outputs(self):
         """Test that function returns empty set when no outputs defined."""
-        result = get_api_common_routing_outputs()
+        result = _get_api_common_routing_outputs()
         assert result == set()
 
     @patch('test_fixtures.terraform_tests.open', mock_open(read_data='# output "commented" {\n}\n'))
     def test_extracts_commented_output(self):
         """Test that function extracts output even in comments (regex limitation)."""
         # Note: The regex doesn't filter comments, this tests actual behavior
-        result = get_api_common_routing_outputs()
+        result = _get_api_common_routing_outputs()
         assert "commented" in result
 
     @patch('test_fixtures.terraform_tests.open', mock_open(
@@ -71,7 +71,7 @@ class TestGetApiCommonRoutingOutputs:
     ))
     def test_extracts_snake_case_output_names(self):
         """Test that function extracts snake_case output names."""
-        result = get_api_common_routing_outputs()
+        result = _get_api_common_routing_outputs()
         assert "snake_case_name" in result
 
 
@@ -157,7 +157,7 @@ class TestCreateRemoteStateContractTests:
         with pytest.raises(AssertionError):
             instance.test_lambda_file_exists()
 
-    @patch('test_fixtures.terraform_tests.get_api_common_routing_outputs')
+    @patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
     def test_remote_state_references_test_passes_when_all_exist(self, mock_outputs, tmp_path):
         """Test that remote state references test passes when all outputs exist."""
         lambda_file = tmp_path / "lambda.tf"
@@ -167,7 +167,7 @@ class TestCreateRemoteStateContractTests:
         instance = TestClass()
         assert instance.test_all_api_remote_state_references_exist_in_backend_outputs() is None
 
-    @patch('test_fixtures.terraform_tests.get_api_common_routing_outputs')
+    @patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
     def test_remote_state_references_test_fails_when_missing(self, mock_outputs, tmp_path):
         """Test that remote state references test fails when output missing."""
         lambda_file = tmp_path / "lambda.tf"
@@ -178,7 +178,7 @@ class TestCreateRemoteStateContractTests:
         with pytest.raises(AssertionError):
             instance.test_all_api_remote_state_references_exist_in_backend_outputs()
 
-    @patch('test_fixtures.terraform_tests.get_api_common_routing_outputs')
+    @patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
     def test_required_output_test_passes_when_exists(self, mock_outputs, tmp_path):
         """Test that required output test passes when output exists."""
         lambda_file = tmp_path / "lambda.tf"
@@ -190,7 +190,7 @@ class TestCreateRemoteStateContractTests:
         instance = TestClass()
         assert getattr(instance, "test_required_output_output_exists_in_backend")() is None
 
-    @patch('test_fixtures.terraform_tests.get_api_common_routing_outputs')
+    @patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
     def test_required_output_test_fails_when_missing(self, mock_outputs, tmp_path):
         """Test that required output test fails when output missing."""
         lambda_file = tmp_path / "lambda.tf"
@@ -540,7 +540,7 @@ resource "aws_lambda_function" "my_func" {
   }
 }
 ''')
-        with patch('test_fixtures.terraform_tests.get_api_common_routing_outputs') as mock_outputs:
+        with patch('test_fixtures.terraform_tests._get_api_common_routing_outputs') as mock_outputs:
             mock_outputs.return_value = {"api_endpoint", "api_gateway_id"}
             TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
             instance = TestClass()
@@ -552,7 +552,7 @@ resource "aws_lambda_function" "my_func" {
         lambda_file.write_text('''
 API_URL = data.terraform_remote_state.api.outputs.nonexistent_output
 ''')
-        with patch('test_fixtures.terraform_tests.get_api_common_routing_outputs') as mock_outputs:
+        with patch('test_fixtures.terraform_tests._get_api_common_routing_outputs') as mock_outputs:
             mock_outputs.return_value = {"other_output"}
             TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
             instance = TestClass()

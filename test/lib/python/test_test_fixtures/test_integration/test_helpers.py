@@ -17,7 +17,7 @@ from test_fixtures.integration.helpers import (
     check_s3_head_bucket_permission,
     check_service_can_assume_role,
     check_state_file_readable,
-    fail_no_credentials,
+    _fail_no_credentials,
     get_aws_account_id_via_cli,
     handle_ecr_authorization_error,
     skip_if_api_gateway_unavailable,
@@ -189,21 +189,21 @@ def test_check_lambda_role_has_policy_other_errors():
         check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
 
 
-# === fail_no_credentials ===
+# === _fail_no_credentials ===
 
 
 class TestFailNoCredentials:
-    """Tests for fail_no_credentials function."""
+    """Tests for _fail_no_credentials function."""
 
     def test_raises_pytest_fail(self):
-        """fail_no_credentials raises pytest.fail.Exception."""
+        """_fail_no_credentials raises pytest.fail.Exception."""
         with pytest.raises(pytest.fail.Exception):
-            fail_no_credentials()
+            _fail_no_credentials()
 
     def test_error_message_contains_credentials_message(self):
-        """fail_no_credentials error contains NO_CREDENTIALS_MESSAGE."""
+        """_fail_no_credentials error contains NO_CREDENTIALS_MESSAGE."""
         with pytest.raises(pytest.fail.Exception, match="(?i)credentials"):
-            fail_no_credentials()
+            _fail_no_credentials()
 
 
 # === check_credentials_available ===

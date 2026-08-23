@@ -48,7 +48,7 @@ def _parse_map_block(content: str, map_name: str) -> Dict[str, str]:
     return values
 
 
-def parse_locals() -> Dict[str, str]:
+def _parse_locals() -> Dict[str, str]:
     """Parse locals from the shared Terraform module's locals.tf file.
 
     Returns:
@@ -80,7 +80,7 @@ def parse_lambda_handler_names() -> Dict[str, str]:
     raw_values = _parse_map_block(content, "lambda_handler_names")
 
     # Resolve ${local.resource_prefix} references
-    locals_dict = parse_locals()
+    locals_dict = _parse_locals()
     resource_prefix = locals_dict.get("resource_prefix", "")
 
     resolved = {}
@@ -89,7 +89,7 @@ def parse_lambda_handler_names() -> Dict[str, str]:
     return resolved
 
 
-def parse_outputs() -> Dict[str, str]:
+def _parse_outputs() -> Dict[str, str]:
     """Parse outputs from the shared Terraform module's outputs.tf file.
 
     Resolves local.* references using values from locals.tf.
@@ -101,7 +101,7 @@ def parse_outputs() -> Dict[str, str]:
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
 
-    locals_dict = parse_locals()
+    locals_dict = _parse_locals()
     values = {}
 
     # Match outputs with literal string values
@@ -129,8 +129,8 @@ def get_shared_config() -> Dict[str, Any]:
     Returns:
         Dict with all configuration values from the shared module.
     """
-    config: Dict[str, Any] = parse_locals()
-    config.update(parse_outputs())
+    config: Dict[str, Any] = _parse_locals()
+    config.update(_parse_outputs())
     config["lambda_handler_names"] = parse_lambda_handler_names()
     # Derive api_fqdn from domain_name for convenience
     domain_name = config.get("domain_name", "")
@@ -142,12 +142,12 @@ def get_shared_config() -> Dict[str, Any]:
 # Single source of truth for AWS region - derived from Terraform shared module.
 # Use this constant in unit tests for mock data (fake ARNs, URLs, etc.)
 # instead of hardcoding region strings.
-TEST_AWS_REGION = parse_locals().get("aws_region", "us-east-2")
+TEST_AWS_REGION = _parse_locals().get("aws_region", "us-east-2")
 
 
 def get_resource_prefix() -> str:
     """Get the resource prefix from shared Terraform module."""
-    return parse_locals().get("resource_prefix", "TenULabs")
+    return _parse_locals().get("resource_prefix", "TenULabs")
 
 
 def _resolve_prefix_refs(value: str, prefix: str) -> str:

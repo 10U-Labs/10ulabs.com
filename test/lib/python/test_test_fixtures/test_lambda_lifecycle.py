@@ -3,65 +3,65 @@
 import pytest
 
 from test_fixtures.lambda_lifecycle import (
-    extract_block_content,
-    check_lambda_lifecycle_rules,
+    _extract_block_content,
+    _check_lambda_lifecycle_rules,
     create_lambda_lifecycle_tests,
 )
 
 
 class TestExtractBlockContentSimpleBlocks:
-    """Tests for extract_block_content with simple blocks."""
+    """Tests for _extract_block_content with simple blocks."""
 
     def test_extracts_empty_block(self):
         """Test that empty block is extracted correctly."""
         content = "{}"
-        result = extract_block_content(content, 0)
+        result = _extract_block_content(content, 0)
         assert result == "{}"
 
     def test_extracts_block_with_single_key_value(self):
         """Test that block with single key-value is extracted."""
         content = "{ key = value }"
-        result = extract_block_content(content, 0)
+        result = _extract_block_content(content, 0)
         assert result == "{ key = value }"
 
     def test_extracts_block_with_whitespace(self):
         """Test that block with whitespace is extracted."""
         content = "{\n  key = value\n}"
-        result = extract_block_content(content, 0)
+        result = _extract_block_content(content, 0)
         assert result == "{\n  key = value\n}"
 
     def test_extracts_block_from_middle_of_content(self):
         """Test that block starting at non-zero position is extracted."""
         content = "prefix { inner } suffix"
-        result = extract_block_content(content, 7)
+        result = _extract_block_content(content, 7)
         assert result == "{ inner }"
 
     def test_returns_remaining_content_when_unbalanced(self):
         """Test that unbalanced braces return remaining content."""
         content = "{ unclosed"
-        result = extract_block_content(content, 0)
+        result = _extract_block_content(content, 0)
         assert result == "{ unclosed"
 
 
 class TestExtractBlockContentNestedBlocks:
-    """Tests for extract_block_content with nested blocks."""
+    """Tests for _extract_block_content with nested blocks."""
 
     def test_extracts_single_nested_block(self):
         """Test that single nested block is extracted correctly."""
         content = "{ outer { inner } }"
-        result = extract_block_content(content, 0)
+        result = _extract_block_content(content, 0)
         assert result == "{ outer { inner } }"
 
     def test_extracts_deeply_nested_blocks(self):
         """Test that deeply nested blocks are extracted."""
         content = "{ a { b { c } } }"
-        result = extract_block_content(content, 0)
+        result = _extract_block_content(content, 0)
         assert result == "{ a { b { c } } }"
 
     def test_extracts_multiple_nested_blocks_at_same_level(self):
         """Test that multiple nested blocks at same level are extracted."""
         content = "{ first { } second { } }"
-        result = extract_block_content(content, 0)
+        result = _extract_block_content(content, 0)
         assert result == "{ first { } second { } }"
 
     def test_extracts_terraform_style_nested_blocks(self):
@@ -74,18 +74,18 @@ class TestExtractBlockContentNestedBlocks:
     replace_triggered_by = []
   }
 }"""
-        result = extract_block_content(content, 0)
+        result = _extract_block_content(content, 0)
         assert result == content
 
     def test_extracts_inner_block_when_starting_at_inner_position(self):
         """Test that starting at inner block position extracts inner block."""
         content = "outer { inner { data } } end"
-        result = extract_block_content(content, 14)
+        result = _extract_block_content(content, 14)
         assert result == "{ data }"
 
 
 class TestCheckLambdaLifecycleRulesPass:
-    """Tests for check_lambda_lifecycle_rules when Lambda has proper lifecycle rules."""
+    """Tests for _check_lambda_lifecycle_rules when Lambda has proper lifecycle rules."""
 
     def test_passes_for_lambda_with_lifecycle_and_replace_triggered_by(self, tmp_path):
         """Test that Lambda with lifecycle and replace_triggered_by passes."""
@@ -102,7 +102,7 @@ resource "aws_lambda_function" "my_lambda" {
 '''
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
-        assert check_lambda_lifecycle_rules(tf_file) is None
+        assert _check_lambda_lifecycle_rules(tf_file) is None
 
     def test_passes_for_lambda_without_environment_variables(self, tmp_path):
         """Test that Lambda without environment variables passes."""
@@ -114,7 +114,7 @@ resource "aws_lambda_function" "simple_lambda" {
 '''
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
-        assert check_lambda_lifecycle_rules(tf_file) is None
+        assert _check_lambda_lifecycle_rules(tf_file) is None
 
     def test_passes_for_multiple_lambdas_all_with_lifecycle(self, tmp_path):
         """Test that multiple Lambdas with proper lifecycle rules pass."""
@@ -141,13 +141,13 @@ resource "aws_lambda_function" "lambda_two" {
 '''
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
-        assert check_lambda_lifecycle_rules(tf_file) is None
+        assert _check_lambda_lifecycle_rules(tf_file) is None
 
     def test_passes_for_empty_file(self, tmp_path):
         """Test that empty terraform file passes."""
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text("")
-        assert check_lambda_lifecycle_rules(tf_file) is None
+        assert _check_lambda_lifecycle_rules(tf_file) is None
 
     def test_passes_for_file_with_no_lambda_resources(self, tmp_path):
         """Test that file with no Lambda resources passes."""
@@ -158,11 +158,11 @@ resource "aws_s3_bucket" "my_bucket" {
 '''
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
-        assert check_lambda_lifecycle_rules(tf_file) is None
+        assert _check_lambda_lifecycle_rules(tf_file) is None
 
 
 class TestCheckLambdaLifecycleRulesFail:
-    """Tests for check_lambda_lifecycle_rules when Lambda is missing lifecycle rules."""
+    """Tests for _check_lambda_lifecycle_rules when Lambda is missing lifecycle rules."""
 
     def test_fails_for_lambda_with_env_vars_but_no_lifecycle(self, tmp_path):
         """Test that Lambda with env vars but no lifecycle fails."""
@@ -177,7 +177,7 @@ resource "aws_lambda_function" "missing_lifecycle" {
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
         with pytest.raises(AssertionError):
-            check_lambda_lifecycle_rules(tf_file)
+            _check_lambda_lifecycle_rules(tf_file)
 
     def test_fails_for_lambda_with_lifecycle_but_no_replace_triggered_by(self, tmp_path):
         """Test that Lambda with lifecycle but no replace_triggered_by fails."""
@@ -195,7 +195,7 @@ resource "aws_lambda_function" "incomplete_lifecycle" {
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
         with pytest.raises(AssertionError):
-            check_lambda_lifecycle_rules(tf_file)
+            _check_lambda_lifecycle_rules(tf_file)
 
     def test_error_message_contains_resource_name(self, tmp_path):
         """Test that error message contains the resource name."""
@@ -210,7 +210,7 @@ resource "aws_lambda_function" "my_failing_lambda" {
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
         with pytest.raises(AssertionError, match="my_failing_lambda"):
-            check_lambda_lifecycle_rules(tf_file)
+            _check_lambda_lifecycle_rules(tf_file)
 
     def test_error_message_mentions_kms_grants(self, tmp_path):
         """Test that error message mentions KMS grants issue."""
@@ -225,7 +225,7 @@ resource "aws_lambda_function" "bad_lambda" {
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
         with pytest.raises(AssertionError, match="KMS grants"):
-            check_lambda_lifecycle_rules(tf_file)
+            _check_lambda_lifecycle_rules(tf_file)
 
     def test_fails_for_second_lambda_missing_lifecycle(self, tmp_path):
         """Test that second Lambda missing lifecycle fails even if first is correct."""
@@ -250,14 +250,14 @@ resource "aws_lambda_function" "bad_lambda" {
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
         with pytest.raises(AssertionError):
-            check_lambda_lifecycle_rules(tf_file)
+            _check_lambda_lifecycle_rules(tf_file)
 
 
 def test_check_lambda_lifecycle_rules_file_not_found(tmp_path):
     """Test that missing file raises FileNotFoundError."""
     missing_file = tmp_path / "nonexistent.tf"
     with pytest.raises(FileNotFoundError):
-        check_lambda_lifecycle_rules(missing_file)
+        _check_lambda_lifecycle_rules(missing_file)
 
 
 class TestCreateLambdaLifecycleTestsReturnType:

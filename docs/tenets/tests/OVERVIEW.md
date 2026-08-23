@@ -104,7 +104,7 @@ pytest_plugins = ['test_fixtures.aws']
 # - state_bucket_name: Terraform state bucket
 # - sts_client, iam_client, s3_client, ssm_client, ecr_client
 # - lambda_client, apigateway_client, dynamodb_client, ses_client, logs_client
-# - caller_identity, current_role_arn, current_role_name
+# - caller_identity, current_role_name
 ```
 
 The rest of the package is imported rather than loaded as a plugin:
@@ -126,8 +126,6 @@ Parse Terraform configuration as single source of truth:
 ```python
 from terraform_config import (
     get_shared_config,        # Combined locals + outputs + handlers
-    parse_locals,             # Parse locals.tf
-    parse_outputs,            # Parse outputs.tf
     get_tfvars_values,        # Parse terraform.tfvars
     get_resource_prefix,      # Resource naming prefix
     extract_lambda_function_names,  # Lambda names from .tf files

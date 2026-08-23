@@ -16,8 +16,8 @@ from terraform_config import (
     get_shared_config,
     get_tfvars_values,
     parse_lambda_handler_names,
-    parse_locals,
-    parse_outputs,
+    _parse_locals,
+    _parse_outputs,
 )
 
 
@@ -244,21 +244,21 @@ class TestResolveLambdaFunctionName:
 
 # Integration tests using real shared module files
 class TestParseLocals:
-    """Tests for parse_locals function."""
+    """Tests for _parse_locals function."""
 
     def test_returns_dict(self):
-        """Test parse_locals returns a dict."""
-        result = parse_locals()
+        """Test _parse_locals returns a dict."""
+        result = _parse_locals()
         assert isinstance(result, dict)
 
     def test_contains_aws_region(self):
-        """Test parse_locals contains aws_region."""
-        result = parse_locals()
+        """Test _parse_locals contains aws_region."""
+        result = _parse_locals()
         assert "aws_region" in result
 
     def test_contains_resource_prefix(self):
-        """Test parse_locals contains resource_prefix."""
-        result = parse_locals()
+        """Test _parse_locals contains resource_prefix."""
+        result = _parse_locals()
         assert "resource_prefix" in result
 
 
@@ -278,8 +278,8 @@ class TestParseLambdaHandlerNames:
 
 
 def test_parse_outputs_returns_dict():
-    """Test parse_outputs returns a dict."""
-    result = parse_outputs()
+    """Test _parse_outputs returns a dict."""
+    result = _parse_outputs()
     assert isinstance(result, dict)
 
 
@@ -581,8 +581,8 @@ class TestGetTfvarsValuesAdditional:
 class TestGetSharedConfigDomainName:
     """Tests for domain_name handling in get_shared_config."""
 
-    @patch('terraform_config.parse_locals')
-    @patch('terraform_config.parse_outputs')
+    @patch('terraform_config._parse_locals')
+    @patch('terraform_config._parse_outputs')
     @patch('terraform_config.parse_lambda_handler_names')
     def test_sets_api_fqdn_when_domain_name_present(
         self, mock_handlers, mock_outputs, mock_locals
@@ -595,8 +595,8 @@ class TestGetSharedConfigDomainName:
         result = get_shared_config()
         assert result.get("api_fqdn") == "api.example.com"
 
-    @patch('terraform_config.parse_locals')
-    @patch('terraform_config.parse_outputs')
+    @patch('terraform_config._parse_locals')
+    @patch('terraform_config._parse_outputs')
     @patch('terraform_config.parse_lambda_handler_names')
     def test_no_api_fqdn_when_domain_name_empty(
         self, mock_handlers, mock_outputs, mock_locals
@@ -609,8 +609,8 @@ class TestGetSharedConfigDomainName:
         result = get_shared_config()
         assert "api_fqdn" not in result
 
-    @patch('terraform_config.parse_locals')
-    @patch('terraform_config.parse_outputs')
+    @patch('terraform_config._parse_locals')
+    @patch('terraform_config._parse_outputs')
     @patch('terraform_config.parse_lambda_handler_names')
     def test_no_api_fqdn_when_domain_name_missing(
         self, mock_handlers, mock_outputs, mock_locals
