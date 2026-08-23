@@ -6,6 +6,7 @@
 - [Lead with what the thing is for](#lead-with-what-the-thing-is-for)
 - [Concepts rather than identifiers](#concepts-rather-than-identifiers)
 - [No jargon where a plain word will do](#no-jargon-where-a-plain-word-will-do)
+- [Vagueness is not knowing, dressed up](#vagueness-is-not-knowing-dressed-up)
 - [One idea to a sentence](#one-idea-to-a-sentence)
 - [Cut what changes nothing](#cut-what-changes-nothing)
 - [Tables and bullets](#tables-and-bullets)
@@ -29,9 +30,15 @@ Writing in concepts is not writing in abstractions, and this is the way it goes 
 
 Use a plain word wherever one exists. Jargon from computer science is not made acceptable by being accurate, and a reader who has to decode the first sentence has been handed the writer's job. Where a term genuinely has no plain equivalent, say what it means in passing the first time it appears.
 
-A vague stand-in is not a plain word, and reaching for one is the second way this goes wrong. "A small helper object" is worse than the term it was avoiding, because it names nothing and still has to be decoded, and the reader now has to guess at what was too technical to say. Where the real word is the clearest one available, write it and explain it in the same sentence.
+## Vagueness is not knowing, dressed up
 
-Repeat the noun rather than reaching back for it with a pronoun. A reader who has to search backwards to find what "it" or "one" stands for is doing the work the writer skipped, and the search gets harder with every clause in between. The word "one" is the worst of them, because it is a counter as well as a stand-in and a paragraph can easily use it as both: "a client, one per service" and then "asking for one is not free" put two different jobs on the same word two clauses apart.
+Every vague sentence written here has had one cause. The writer described a mechanism they had not checked, in words shaped like an explanation. Three came out of a single issue in a single session: a client became "a small helper object", the cost of creating one became "asking for one is not free", and the reason it costs anything became a library that "works out which credentials apply", which was invented. A euphemism, an empty pronoun and a fabricated mechanism are the same failure wearing three coats.
+
+Write what can be stated concretely. Where it cannot be, find out; where it cannot be found out — the dependency is not on this machine and installing it is barred, see [verification-in-ci-only](verification-in-ci-only.md) — leave the detail out and say only what the repository itself makes true. A sentence about an outside library's internals is almost never load-bearing, and the version that survives the cut is usually the one the reader needed: creating a client takes time, and this package exists so the time is spent once.
+
+The cure is not a longer list of banned words. Each of the three was caught and written down as its own rule, and each time the next sentence failed the same way in a new disguise, because the rules named symptoms and the cause was elsewhere. Ask what is actually known before reaching for a word that sounds like it explains.
+
+Repeat the noun rather than reaching back for it with a pronoun. A reader who has to search backwards to find what "it" or "one" stands for is doing the work the writer skipped, and the search gets harder with every clause in between. The word "one" is the worst of them, because it is a counter as well as a stand-in.
 
 ## One idea to a sentence
 
