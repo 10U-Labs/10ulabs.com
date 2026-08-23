@@ -288,12 +288,12 @@ Linting and type checking must run separately for source and test code.
 
 | Step Name | Target |
 | ----------- | -------- |
-| `Run pylint on source` | `lib/python/` and the workflow's own `src/.../lambda/` or `src/.../lambdas/` |
-| `Run pylint on tests` | `lib/python/` and the whole of `test`, recursively, with `PYTHONPATH=lib/python:scripts` |
-| `Run mypy on source` | `lib/python/` and the same source directory |
-| `Run mypy on tests` | `lib/python/` and the whole of `test/`, with `MYPYPATH=lib/python:scripts` |
+| `Run pylint on source` | the workflow's own `src/.../lambda/` or `src/.../lambdas/`, with `PYTHONPATH=lib/python` |
+| `Run pylint on tests` | the workflow's own test subtree and the `conftest.py` and `__init__.py` above it, recursively, with `PYTHONPATH=lib/python:scripts` |
+| `Run mypy on source` | the same source directory, with `MYPYPATH=lib/python` |
+| `Run mypy on tests` | the same test subtree and files, with `MYPYPATH=lib/python:scripts` |
 
-The two test passes are the same command in every workflow that has them, because they cover the whole tree rather than the workflow's own directory: whichever run fires is the one that reports a defect in a test file no workflow's paths reach. The two source passes name the directory that workflow deploys, and a workflow whose subsystem has no Python source — `bootstrap.yml`, whose `src/bootstrap/` is Terraform — carries the test passes and omits them.
+All four passes name what the workflow's own `paths` list names and nothing else, so a run reports on the subsystem the push touched rather than on a file somewhere else in the tree. `lib/python/` is on `PYTHONPATH` and `MYPYPATH` so the imports resolve, but it is not a target of any of them: `scripts.yml` reads `lib/python/` and the whole of `test` and is the only workflow whose trigger names either. A workflow whose subsystem has no Python source — `bootstrap.yml`, whose `src/bootstrap/` is Terraform — carries the test passes and omits the source ones.
 
 ### Why Separate Steps?
 
@@ -309,18 +309,33 @@ From `api_endpoint_v1_sessions.yml`, one step per job:
 - name: Run pylint on source
   run: |
     SRC=src/api/endpoints/sessions
-    python3 -m pylint lib/python/ $SRC/lambda/ --fail-under=10.0
+    PYTHONPATH=lib/python python3 -m pylint \
+      $SRC/lambda/ \
+      --fail-under=10.0
 - name: Run pylint on tests
   run: |
     PYTHONPATH=lib/python:scripts python3 -m pylint \
-      lib/python/ test \
+      test/__init__.py \
+      test/conftest.py \
+      test/api/__init__.py \
+      test/api/conftest.py \
+      test/api/endpoints/__init__.py \
+      test/api/endpoints/conftest.py \
+      test/api/endpoints/sessions \
       --recursive=y \
       --fail-on=C,R,W --fail-under=10.0
 - name: Run mypy on source
   run: |
     SRC=src/api/endpoints/sessions
-    python3 -m mypy lib/python/ $SRC/lambda/
+    MYPYPATH=lib/python python3 -m mypy $SRC/lambda/
 - name: Run mypy on tests
   run: |
-    MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
+    MYPYPATH=lib/python:scripts python3 -m mypy \
+      test/__init__.py \
+      test/conftest.py \
+      test/api/__init__.py \
+      test/api/conftest.py \
+      test/api/endpoints/__init__.py \
+      test/api/endpoints/conftest.py \
+      test/api/endpoints/sessions
 ```

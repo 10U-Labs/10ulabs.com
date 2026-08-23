@@ -21,7 +21,15 @@ jobs:
           assert-no-inline-directives
           --tools pylint,mypy,yamllint
           --verbose
-          ${{ github.workspace }}/**/*
+          .github/workflows/www_rack_designer.yml
+          .github/actions/verify-oidc-vars/action.yml
+          src/www/paths/rack_designer
+          test/__init__.py
+          test/conftest.py
+          test/www/conftest.py
+          test/www/paths/__init__.py
+          test/www/paths/conftest.py
+          test/www/paths/rack_designer
   assert-no-linter-config-files:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +48,8 @@ jobs:
           assert-no-linter-config-files
           --linters pylint,mypy,yamllint
           --verbose
-          ${{ github.workspace }}
+          src/www/paths/rack_designer
+          test/www/paths/rack_designer
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -58,7 +67,12 @@ jobs:
         run: >-
           assert-one-assert-per-pytest
           --verbose
-          ${{ github.workspace }}/test
+          test/__init__.py
+          test/conftest.py
+          test/www/conftest.py
+          test/www/paths/__init__.py
+          test/www/paths/conftest.py
+          test/www/paths/rack_designer
   reconciliation:
     if: github.ref == 'refs/heads/main'
     needs: unit-tests

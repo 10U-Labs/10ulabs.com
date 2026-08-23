@@ -21,7 +21,16 @@ jobs:
           assert-no-inline-directives
           --tools pylint,mypy,yamllint
           --verbose
-          ${{ github.workspace }}/**/*
+          .github/workflows/api_operational_health.yml
+          .github/actions/verify-oidc-vars/action.yml
+          src/api/operational/health
+          test/__init__.py
+          test/conftest.py
+          test/api/__init__.py
+          test/api/conftest.py
+          test/api/operational/__init__.py
+          test/api/operational/conftest.py
+          test/api/operational/health
   assert-no-linter-config-files:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +49,8 @@ jobs:
           assert-no-linter-config-files
           --linters pylint,mypy,yamllint
           --verbose
-          ${{ github.workspace }}
+          src/api/operational/health
+          test/api/operational/health
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -58,7 +68,13 @@ jobs:
         run: >-
           assert-one-assert-per-pytest
           --verbose
-          ${{ github.workspace }}/test
+          test/__init__.py
+          test/conftest.py
+          test/api/__init__.py
+          test/api/conftest.py
+          test/api/operational/__init__.py
+          test/api/operational/conftest.py
+          test/api/operational/health
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:
@@ -69,7 +85,7 @@ jobs:
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ src/api/operational/health/lambda/
+            src/api/operational/health/lambda/
   copy-paste-tests:
     runs-on: ubuntu-latest
     steps:
@@ -80,7 +96,7 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
+            test/api/operational/health
   e2e-tests:
     if: github.ref == 'refs/heads/main'
     needs: post-deployment-integration-tests
@@ -162,8 +178,8 @@ jobs:
             types-requests
       - name: Run mypy on source
         run: |
-          python3 -m mypy \
-            lib/python/ src/api/operational/health/lambda/handler.py
+          MYPYPATH=lib/python python3 -m mypy \
+            src/api/operational/health/lambda/handler.py
   mypy-tests:
     runs-on: ubuntu-latest
     steps:
@@ -189,7 +205,14 @@ jobs:
             types-requests
       - name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
+          MYPYPATH=lib/python:scripts python3 -m mypy \
+            test/__init__.py \
+            test/conftest.py \
+            test/api/__init__.py \
+            test/api/conftest.py \
+            test/api/operational/__init__.py \
+            test/api/operational/conftest.py \
+            test/api/operational/health
   post-deployment-integration-tests:
     if: github.ref == 'refs/heads/main'
     needs: reconciliation
@@ -326,8 +349,8 @@ jobs:
             types-requests
       - name: Run pylint on source
         run: |
-          python3 -m pylint \
-            lib/python/ src/api/operational/health/lambda/handler.py \
+          PYTHONPATH=lib/python python3 -m pylint \
+            src/api/operational/health/lambda/handler.py \
             --fail-on=C,R,W \
             --fail-under=10.0
   pylint-tests:
@@ -356,7 +379,13 @@ jobs:
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
-            lib/python/ test \
+            test/__init__.py \
+            test/conftest.py \
+            test/api/__init__.py \
+            test/api/conftest.py \
+            test/api/operational/__init__.py \
+            test/api/operational/conftest.py \
+            test/api/operational/health \
             --recursive=y \
             --fail-on=C,R,W --fail-under=10.0
   reconciliation:

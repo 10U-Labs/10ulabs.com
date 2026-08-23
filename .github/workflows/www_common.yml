@@ -21,7 +21,18 @@ jobs:
           assert-no-inline-directives
           --tools pylint,mypy,yamllint
           --verbose
-          ${{ github.workspace }}/**/*
+          .github/workflows/www_common.yml
+          .github/actions/verify-oidc-vars/action.yml
+          src/www/common
+          test/__init__.py
+          test/conftest.py
+          test/lib/terraform/conftest.py
+          test/www/__init__.py
+          test/www/conftest.py
+          test/lib/terraform/common
+          test/lib/terraform/s3_bucket
+          test/lib/terraform/write_ahead_queue
+          test/www/common
   assert-no-linter-config-files:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +51,11 @@ jobs:
           assert-no-linter-config-files
           --linters pylint,mypy,yamllint
           --verbose
-          ${{ github.workspace }}
+          src/www/common
+          test/lib/terraform/common
+          test/lib/terraform/s3_bucket
+          test/lib/terraform/write_ahead_queue
+          test/www/common
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -58,7 +73,15 @@ jobs:
         run: >-
           assert-one-assert-per-pytest
           --verbose
-          ${{ github.workspace }}/test
+          test/__init__.py
+          test/conftest.py
+          test/lib/terraform/conftest.py
+          test/www/__init__.py
+          test/www/conftest.py
+          test/lib/terraform/common
+          test/lib/terraform/s3_bucket
+          test/lib/terraform/write_ahead_queue
+          test/www/common
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:
@@ -80,7 +103,10 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
+            test/lib/terraform/common \
+            test/lib/terraform/s3_bucket \
+            test/lib/terraform/write_ahead_queue \
+            test/www/common
   e2e-tests:
     if: github.ref == 'refs/heads/main'
     needs: post-deployment-integration-tests
@@ -189,7 +215,16 @@ jobs:
             types-requests
       - name: Run mypy on tests
         run: |
-          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
+          MYPYPATH=lib/python:scripts python3 -m mypy \
+            test/__init__.py \
+            test/conftest.py \
+            test/lib/terraform/conftest.py \
+            test/www/__init__.py \
+            test/www/conftest.py \
+            test/lib/terraform/common \
+            test/lib/terraform/s3_bucket \
+            test/lib/terraform/write_ahead_queue \
+            test/www/common
   post-deployment-integration-tests:
     if: github.ref == 'refs/heads/main'
     needs: reconciliation
@@ -356,7 +391,15 @@ jobs:
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
-            lib/python/ test \
+            test/__init__.py \
+            test/conftest.py \
+            test/lib/terraform/conftest.py \
+            test/www/__init__.py \
+            test/www/conftest.py \
+            test/lib/terraform/common \
+            test/lib/terraform/s3_bucket \
+            test/lib/terraform/write_ahead_queue \
+            test/www/common \
             --recursive=y \
             --fail-on=C,R,W --fail-under=10.0
   reconciliation:

@@ -21,7 +21,15 @@ jobs:
           assert-no-inline-directives
           --tools pylint,mypy,yamllint
           --verbose
-          ${{ github.workspace }}/**/*
+          .github/workflows/www_home.yml
+          .github/actions/verify-oidc-vars/action.yml
+          src/www/paths/home
+          test/__init__.py
+          test/conftest.py
+          test/www/conftest.py
+          test/www/paths/__init__.py
+          test/www/paths/conftest.py
+          test/www/paths/home
   assert-no-linter-config-files:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +48,8 @@ jobs:
           assert-no-linter-config-files
           --linters pylint,mypy,yamllint
           --verbose
-          ${{ github.workspace }}
+          src/www/paths/home
+          test/www/paths/home
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -58,7 +67,12 @@ jobs:
         run: >-
           assert-one-assert-per-pytest
           --verbose
-          ${{ github.workspace }}/test
+          test/__init__.py
+          test/conftest.py
+          test/www/conftest.py
+          test/www/paths/__init__.py
+          test/www/paths/conftest.py
+          test/www/paths/home
   copy-paste-tests:
     runs-on: ubuntu-latest
     steps:
@@ -69,7 +83,7 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            lib/python/ test/
+            test/www/paths/home
   e2e-tests:
     if: github.ref == 'refs/heads/main'
     needs: post-deployment-integration-tests
@@ -130,7 +144,13 @@ jobs:
             types-requests
       - name: Run mypy
         run: |
-          MYPYPATH=lib/python:scripts python3 -m mypy lib/python/ test/
+          MYPYPATH=lib/python:scripts python3 -m mypy \
+            test/__init__.py \
+            test/conftest.py \
+            test/www/conftest.py \
+            test/www/paths/__init__.py \
+            test/www/paths/conftest.py \
+            test/www/paths/home
   post-deployment-integration-tests:
     if: github.ref == 'refs/heads/main'
     needs: reconciliation
@@ -271,7 +291,12 @@ jobs:
       - name: Run pylint
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
-            lib/python/ test \
+            test/__init__.py \
+            test/conftest.py \
+            test/www/conftest.py \
+            test/www/paths/__init__.py \
+            test/www/paths/conftest.py \
+            test/www/paths/home \
             --recursive=y \
             --fail-on=C,R,W --fail-under=10.0
   reconciliation:
