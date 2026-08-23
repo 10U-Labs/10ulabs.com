@@ -23,11 +23,11 @@ The four tier files here hold to that. `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRAT
 
 ## The overview file is the other kind
 
-`OVERVIEW.md` beside them is the opposite kind of document and is read the opposite way. It names the conftest levels, the modules under `lib/python/`, the four static-analysis step names and the imports each provides — all of it a description of this suite — so where it and the tree disagree, `OVERVIEW.md` is what is out of date. It already is: its test hierarchy diagram is built around `test/api/backend/`, and there is no such directory. The tree has `test/api/common/`, `test/api/endpoints/` and `test/api/operational/`.
+`OVERVIEW.md` beside them is the opposite kind of document and is read the opposite way. It names the conftest levels, the modules under `lib/python/` and the imports each provides — all of it a description of this suite — so where it and the tree disagree, `OVERVIEW.md` is what is out of date. It has been: its hierarchy diagram went on drawing a directory of the API test tree that had already gone, long after the three that replaced it were in place.
 
 ## Why the overview file is kept
 
-Keeping it is still worth it, because what it indexes — the fixtures in `lib/python/test_fixtures/`, `boto_mocks/`, `terraform_config/`, `naming_conventions/` and the rest — is the answer to "does this already exist", and that is expensive to rediscover. Read it for the inventory, not for the layout, and check what it says against the tree before relying on it.
+Keeping it is still worth it, because what it indexes — the fixtures in `lib/python/test_fixtures/`, `boto_mocks/`, `terraform_config/`, `naming_conventions/` and the rest — is the answer to "does this already exist", and that is expensive to rediscover. Read it for the inventory, not for the layout, and check what it says against the tree before relying on it. It says nothing about where a new thing goes, either: that is a convention rather than a description, so it sits in `CLAUDE.md` and in [test-code-is-placed-by-how-many-suites-use-it](test-code-is-placed-by-how-many-suites-use-it.md) with the rest of them.
 
 ## The failure to watch for
 

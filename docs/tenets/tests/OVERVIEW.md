@@ -1,6 +1,6 @@
 # Test Architecture Overview
 
-This document explains the test infrastructure, where to put common code, and what reusable utilities exist.
+This document is an inventory of this test suite: the levels the tests hang off, and the shared code that already exists so that none of it is written a second time. It describes what is here rather than saying where a new thing goes; that convention is in `CLAUDE.md` and the note it links.
 
 ## Table of Contents
 
@@ -19,8 +19,6 @@ This document explains the test infrastructure, where to put common code, and wh
   - [urllib_mocks/](#urllib_mocks)
   - [repo_utils/](#repo_utils)
   - [lambda_http/](#lambda_http)
-- [Check Before You Create](#check-before-you-create)
-- [Static Analysis in Workflows](#static-analysis-in-workflows)
 
 ## Test Hierarchy
 
@@ -51,7 +49,7 @@ test/
 
 `sessions` is drawn here because it is the plainest of the endpoints. Some of the others add one more level, a conftest.py at the deployment-phase directory itself, for fixtures both tiers of that phase want; `test/api/endpoints/contact_submissions/pre_deployment/conftest.py` is one.
 
-### Where to Put Common Things
+### What Each Level Holds
 
 | Scope | Location | Examples |
 | ------- | ---------- | ---------- |
@@ -64,11 +62,9 @@ test/
 | Post-deployment integration | `test/.../post_deployment/integration/conftest.py` | Layer markers, AWS service clients |
 | Post-deployment E2E | `test/.../post_deployment/e2e/conftest.py` | The deployed URL and the API key to call it with |
 
-**Rule:** Put fixtures at the highest level where they apply. Don't duplicate.
-
 ## Directory Scope
 
-Shared directories are for codebase-wide utilities, not module-specific code.
+Three directories hold code the tests share, and they differ in how far that code reaches.
 
 | Directory | Scope | Example Contents |
 | ----------- | ------- | ------------------ |
@@ -76,19 +72,9 @@ Shared directories are for codebase-wide utilities, not module-specific code.
 | `test/` root | All tests | `conftest.py` (path setup), codebase-wide test utilities |
 | `test/<module>/` | Module-specific | `test/www/conftest.py`, inline constants beside the tests that read them |
 
-**Key principle:** what decides where a utility goes is how many suites use it, not which subsystem its name mentions. A helper that only one module's tests call belongs in that module's test directory; one that several call belongs in `lib/python/`, whatever it is about.
-
-Examples:
-
-- ✅ `lib/python/boto_mocks/` — reached by every test, since `test_fixtures.unit` re-exports it and `test/conftest.py` loads that as a plugin
-- ✅ `lib/python/test_fixtures/website.py` — named after one subsystem and still shared: `test/www/common/` and `test/www/paths/home/` both build their fixtures from it
-- ✅ `test/api/conftest.py` — Terraform outputs and AWS clients used by all API tests
-- ✅ `test/www/conftest.py` — the plugin line the www tests need and nothing else does
-- ❌ `test/www_fixtures.py` — wrong: a module at the `test/` root that only one subsystem's tests import
-
 ## Reusable Utilities in lib/python/
 
-Before creating new fixtures, check if they exist in `lib/python/`. Import via `pytest_plugins` or direct import.
+A package here is either loaded as a pytest plugin or imported directly, and which one is said below.
 
 ### test_fixtures/
 
@@ -246,77 +232,4 @@ Build and parse the HTTP shape a handler returns:
 
 ```python
 from lambda_http import json_response, success_response, error_response, parse_body
-```
-
-## Check Before You Create
-
-Before writing new fixtures or utilities:
-
-1. **Check parent conftest files** - The fixture may already exist at a higher level
-2. **Check lib/python/** - Reusable utilities may already solve your problem
-3. **Check test_fixtures.aws** - Common AWS fixtures are already available
-
-If your fixture is useful beyond your specific test file:
-
-- Put it in the appropriate conftest.py level
-- Or add it to lib/python/ if it's broadly reusable
-
-## Static Analysis in Workflows
-
-Linting and type checking must run separately for source and test code.
-
-### Required Workflow Steps
-
-| Step Name | Target |
-| ----------- | -------- |
-| `Run pylint on source` | the workflow's own `src/.../lambda/` or `src/.../lambdas/`, with `PYTHONPATH=lib/python` |
-| `Run pylint on tests` | the workflow's own test subtree and the `conftest.py` and `__init__.py` above it, recursively, with `PYTHONPATH=lib/python:scripts` |
-| `Run mypy on source` | the same source directory, with `MYPYPATH=lib/python` |
-| `Run mypy on tests` | the same test subtree and files, with `MYPYPATH=lib/python:scripts` |
-
-All four passes name what the workflow's own `paths` list names and nothing else, so a run reports on the subsystem the push touched rather than on a file somewhere else in the tree. `lib/python/` is on `PYTHONPATH` and `MYPYPATH` so the imports resolve, but it is not a target of any of them: `scripts.yml` reads `lib/python/` and the whole of `test` and is the only workflow whose trigger names either. A workflow whose subsystem has no Python source — `bootstrap.yml`, whose `src/bootstrap/` is Terraform — carries the test passes and omits the source ones.
-
-### Why Separate Steps?
-
-1. **Different configurations** - Tests need `PYTHONPATH`/`MYPYPATH` set to resolve `lib/python/` and `scripts/` imports
-2. **Clear failure attribution** - When a step fails, you immediately know if it's source or test code
-3. **Consistent naming** - All workflows use the same step names for easy identification
-
-### Example
-
-From `api_endpoint_v1_sessions.yml`, one step per job:
-
-```yaml
-- name: Run pylint on source
-  run: |
-    SRC=src/api/endpoints/sessions
-    PYTHONPATH=lib/python python3 -m pylint \
-      $SRC/lambda/ \
-      --fail-under=10.0
-- name: Run pylint on tests
-  run: |
-    PYTHONPATH=lib/python:scripts python3 -m pylint \
-      test/__init__.py \
-      test/conftest.py \
-      test/api/__init__.py \
-      test/api/conftest.py \
-      test/api/endpoints/__init__.py \
-      test/api/endpoints/conftest.py \
-      test/api/endpoints/sessions \
-      --recursive=y \
-      --fail-on=C,R,W --fail-under=10.0
-- name: Run mypy on source
-  run: |
-    SRC=src/api/endpoints/sessions
-    MYPYPATH=lib/python python3 -m mypy $SRC/lambda/
-- name: Run mypy on tests
-  run: |
-    MYPYPATH=lib/python:scripts python3 -m mypy \
-      test/__init__.py \
-      test/conftest.py \
-      test/api/__init__.py \
-      test/api/conftest.py \
-      test/api/endpoints/__init__.py \
-      test/api/endpoints/conftest.py \
-      test/api/endpoints/sessions
 ```

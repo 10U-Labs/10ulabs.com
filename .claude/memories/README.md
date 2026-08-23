@@ -17,6 +17,7 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 
 - [verification-in-ci-only](verification-in-ci-only.md) — nothing runs locally; push and read the run, and read the code here instead
 - [find-a-run-by-the-full-hash](find-a-run-by-the-full-hash.md) — `gh run list --commit` returns nothing for a short hash, and says nothing about why
+- [four-static-analysis-passes-per-workflow](four-static-analysis-passes-per-workflow.md) — linter and type checker, over source and over tests, four jobs with the same names in every workflow
 - [commit-straight-to-main](commit-straight-to-main.md) — direct commits, no branches and no pull requests, one commit per issue with its closing line
 - [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md) — a failed run is answered with a follow-up commit, never an amended force-push
 - [prose-leads-with-the-concept](prose-leads-with-the-concept.md) — lead with what the thing is for, write in concepts rather than identifiers, one idea to a sentence
@@ -35,4 +36,5 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [tdd-workflow](tdd-workflow.md) — the test is written before the code, in the same commit
 - [read-test-tenets-first](read-test-tenets-first.md) — read `docs/tenets/tests/` before implementing, and cover every tier the change touches
 - [tenets-are-generic](tenets-are-generic.md) — the four tier files name no tool, language or directory and the repository follows them; `OVERVIEW.md` describes this suite and loses to the tree
+- [test-code-is-placed-by-how-many-suites-use-it](test-code-is-placed-by-how-many-suites-use-it.md) — a fixture goes at the highest level that applies, and a helper is shared by its number of callers rather than by its name
 - [the-test-tree-splits-on-deployment-phase](the-test-tree-splits-on-deployment-phase.md) — `pre_deployment/{unit,integration}` and `post_deployment/{integration,e2e}` for a subsystem that deploys, and nothing of the kind under `test/lib/`
