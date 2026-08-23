@@ -49,15 +49,13 @@ The closing section is called "Proposed Solution" and not "Solution". It is what
 
 ## How to write it
 
-Write in concepts, not identifiers. Say what the code does and what goes wrong in plain words, without hedging. Problem and the three tier sections name no file and no function at all: they are arguments about behaviour, and an argument that only holds while looking at the file is one the reader cannot check. The regression section names a tier and an assertion, which are concepts too. Identifiers belong in Proposed Solution, where the reader has stopped reading and started working, and where naming the one change is the whole job.
+The rules for prose everywhere here — lead with the concept, one idea to a sentence, cut what changes nothing, no bullets inside an argument — are in [prose-leads-with-the-concept](prose-leads-with-the-concept.md). What follows is how they land on the six sections.
+
+Problem and the three tier sections name no file and no function at all. They are arguments about behaviour, and an argument that only holds while looking at the file is one the reader cannot check. The regression section names a tier and an assertion, which are concepts too. Identifiers belong in Proposed Solution, where the reader has stopped reading and started working, and where naming the one change is the whole job.
 
 Assume the reader has not opened the files and will not open them while reading. That makes the issue self-contained; it does not make each section repeat the last. Problem sets the frame — what the code is for, what is wrong with it, what the defect costs — in its first few lines. The five sections after it inherit that frame and do not restate it.
 
-One idea to a sentence. Do not chain subordinate clauses to fit a second idea in. A section is as long as it needs to be and no longer, and a section may be a single sentence — the three tier sections often are, because the honest answer to them is short. Padding a short answer to fill out a header is the failure to watch for.
-
-A detail that changes nothing the reader would do is cut, table or not.
-
-Tables are allowed where a table genuinely reads better than a paragraph: a name-to-name rename mapping, or two measured columns being compared. Bullets are allowed only when enumerating a list of things. Do not use bullets to break up an argument — an argument is prose.
+A section is as long as it needs to be and no longer. A section may be a single sentence, and the three tier sections often are, because the honest answer to them is short. Padding a short answer to fill out a header is the failure to watch for.
 
 ## Related notes
 

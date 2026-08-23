@@ -10,12 +10,13 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [find-a-run-by-the-full-hash](find-a-run-by-the-full-hash.md) — `gh run list --commit` returns nothing for a short hash, and says nothing about why
 - [commit-straight-to-main](commit-straight-to-main.md) — direct commits, no branches and no pull requests, one commit per issue with its closing line
 - [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md) — a failed run is answered with a follow-up commit, never an amended force-push
+- [prose-leads-with-the-concept](prose-leads-with-the-concept.md) — lead with what the thing is for, write in concepts rather than identifiers, one idea to a sentence
 - [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md) — no column limit on `.md` files, on issue bodies or on commit message bodies
 - [never-write-the-skip-ci-brackets-in-prose](never-write-the-skip-ci-brackets-in-prose.md) — a commit message that names the bracketed directive starts no workflow, so prose about it drops the brackets
 
 ## Issues
 
-- [how-issues-are-written](how-issues-are-written.md) — six fixed sections for the program, two for everything else, plain English, no test owed for a config or a workflow file
+- [how-issues-are-written](how-issues-are-written.md) — six fixed sections for the program, two for everything else, identifiers only in the solution, no test owed for a config or a workflow file
 - [an-issue-states-one-solution](an-issue-states-one-solution.md) — a `Proposed Solution` names one change; a fork is asked about before the issue is filed, never published as an either
 - [file-what-the-sweep-turns-up](file-what-the-sweep-turns-up.md) — a defect found while working on something else is filed in the same turn, not named in a reply and left for the user to ask for
 - [an-edge-is-only-a-true-block](an-edge-is-only-a-true-block.md) — a `blocked_by` edge is written only where the work cannot be finished without the other issue; an issue nothing waits on is filed with no edge
@@ -26,7 +27,3 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [read-test-tenets-first](read-test-tenets-first.md) — read `docs/tenets/tests/` before implementing, and cover every tier the change touches
 - [tenets-are-generic](tenets-are-generic.md) — the four tier files name no tool, language or directory and the repository follows them; `OVERVIEW.md` describes this suite and loses to the tree
 - [the-test-tree-splits-on-deployment-phase](the-test-tree-splits-on-deployment-phase.md) — `pre_deployment/{unit,integration}` and `post_deployment/{integration,e2e}` for a subsystem that deploys, and nothing of the kind under `test/lib/`
-
-## The one rule with no note here
-
-Leading with what a thing is for — every paragraph opening with a plain sentence before any file, function or line is named — is in force and is written down in one place only, the `:05` reminder of `.claude/skills/autopilot/SKILL.md`. Delete that reminder and the rule leaves the repository. It belongs in a note here.
