@@ -8,6 +8,7 @@
 - [The regression section](#the-regression-section)
 - [The Proposed Solution](#the-proposed-solution)
 - [How to write it](#how-to-write-it)
+- [An issue on disk goes stale](#an-issue-on-disk-goes-stale)
 - [Related notes](#related-notes)
 
 ## Which sections an issue has
@@ -56,6 +57,14 @@ Problem and the three tier sections name no file and no function at all, beyond 
 Assume the reader has not opened the files and will not open them while reading. That makes the issue self-contained; it does not make each section repeat the last. Problem sets the frame — what the code is for, what is wrong with it, what the defect costs — in its first few lines. The five sections after it inherit that frame and do not restate it.
 
 A section is as long as it needs to be and no longer. A section may be a single sentence, and the three tier sections often are, because the honest answer to them is short. Padding a short answer to fill out a header is the failure to watch for.
+
+## An issue on disk goes stale
+
+An issue is written against the tree as it stood, and the tree moves. Check its claims against the repository before working it or editing it: what it says exists, what it says nothing imports, what it counts, and whether the files its solution names are still the files the change would touch.
+
+Reading #585 this way turned up two false statements and a missing step. It said three of the four Lambda functions wanting a cached client had written their own, which implied a fourth used the shared package, when five functions are deployed, three use clients and all three wrote their own. Its closing paragraph then told the reader to leave four alone. Its solution also missed a documentation file that all three commits it cites as precedent had updated when they deleted a package. None of that was visible from the issue by itself and all of it took one pass over the tree.
+
+Correcting what is wrong is part of picking the issue up rather than a separate errand. Adding a missing step to a `Proposed Solution` is not the same as choosing between two the issue left open, which stays barred — see [an-issue-states-one-solution](an-issue-states-one-solution.md).
 
 ## Related notes
 

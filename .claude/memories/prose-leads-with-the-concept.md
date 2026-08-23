@@ -10,6 +10,7 @@
 - [One idea to a sentence](#one-idea-to-a-sentence)
 - [Cut what changes nothing](#cut-what-changes-nothing)
 - [Tables and bullets](#tables-and-bullets)
+- [Showing a change](#showing-a-change)
 - [Related notes](#related-notes)
 
 ## Who the reader is
@@ -51,6 +52,12 @@ A detail that changes nothing the reader would do is cut, table or not. A word b
 ## Tables and bullets
 
 Tables are allowed where a table genuinely reads better than a paragraph: a name-to-name rename mapping, or two measured columns being compared. Bullets are allowed only when enumerating a list of things. Do not use bullets to break up an argument — an argument is prose.
+
+## Showing a change
+
+A change is shown to the reader rather than described to them. What a command printed does not reach them: the output of a tool call goes to the session and not into the conversation, so a diff read out of a tool result is a diff nobody has seen. Put it in the reply itself, inside a fenced `diff` block, which the terminal colours red and green the way git does.
+
+Quoting the old and new text as block quotes instead was tried three times in one session and failed three times. It loses the colouring, loses the alignment that puts a changed line against the line it replaced, and takes more room to say less. Where a hunk carries long unchanged lines, cut them and say what the marker stands for, so the elision is not read as a deletion.
 
 ## Related notes
 
