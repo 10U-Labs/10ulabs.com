@@ -39,15 +39,13 @@ def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
 
 
 def _add_derived_config(result: Dict[str, str]) -> None:
-    """Add derived configuration values based on prefix and lambda function name."""
+    """Add derived configuration values based on the resource prefix."""
     prefix = result['resource_prefix']
-    lambda_fn = result.get('lambda_function_name', '')
     result['firehose_delivery_stream_name'] = f"{prefix}-CloudWatchLogs"
     result['firehose_role_name'] = f"{prefix}FirehoseCloudWatchLogs"
     result['cloudwatch_logs_firehose_role_name'] = f"{prefix}CloudWatchLogsFirehose"
     # API Gateway CloudWatch role uses PascalCase
     result['api_gateway_cloudwatch_role_name'] = f"{prefix}ApiGatewayCloudwatch"
-    result['lambda_runners_role_name'] = f"{lambda_fn}-ServiceRole"
 
 
 @pytest.fixture(name="config", scope="module")

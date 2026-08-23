@@ -2,7 +2,6 @@
 import json
 from pathlib import Path
 from typing import Any, Dict
-from unittest.mock import patch
 
 import pytest
 
@@ -28,23 +27,6 @@ def openapi_spec() -> Dict[str, Any]:
 def catchall_handler():
     """Load the catchall Lambda handler module."""
     return load_lambda_module("catchall.py", "catchall_handler")
-
-
-@pytest.fixture
-def drift_recovery(config):
-    """Load drift recovery Lambda with test environment."""
-    env_vars = {
-        'AWS_REGION': config['aws_region'],
-        'GITHUB_REPO': config['github_repo'],
-        'GITHUB_TOKEN_PARAMETER_NAME': config['ssm_parameter_name_for_github_pat'],
-        'SNS_TOPIC_ARN': f"arn:aws:sns:{config['aws_region']}:123456789012:test-topic",
-        'MANAGED_VPC_ID': 'vpc-managed123'
-    }
-    with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("drift_recovery.py", "drift_recovery")
-        if hasattr(module, '_clients'):
-            setattr(module, '_clients', {})
-        yield module
 
 
 @pytest.fixture
