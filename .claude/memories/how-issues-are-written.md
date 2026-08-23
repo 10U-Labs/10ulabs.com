@@ -1,5 +1,17 @@
 # How issues are written
 
+## Table of Contents
+
+- [Which sections an issue has](#which-sections-an-issue-has)
+- [What counts as the program](#what-counts-as-the-program)
+- [Answering the tier sections](#answering-the-tier-sections)
+- [The regression section](#the-regression-section)
+- [The Proposed Solution](#the-proposed-solution)
+- [How to write it](#how-to-write-it)
+- [Related notes](#related-notes)
+
+## Which sections an issue has
+
 An issue about the program has six sections, in this order, and every issue about the program has all six even when a section is short.
 
 - **Problem** — what is wrong, stated as a fact about the code with the evidence for it.
@@ -11,6 +23,8 @@ An issue about the program has six sections, in this order, and every issue abou
 
 An issue about anything else has two sections, **Problem** and **Proposed Solution**, and owes no tests at all.
 
+## What counts as the program
+
 The program is the code a test tier can run: `src/`, `lib/python/`, `lib/terraform/` and `scripts/`. A defect there got past tiers that exist and could have failed, and naming which assertion let it through is what turns one bug report into a gap in the suite that can be closed.
 
 The configs in `etc/`, the workflow files in `.github/` and the documentation in `docs/` are not the program. No tier runs them. A test written against one of them opens the file, reads a value back and asserts the value it just read, so it cannot fail for a reason worth knowing and it fails for reasons that are not: it goes red every time somebody renames a step or adds a path.
@@ -21,11 +35,19 @@ Most of the open queue here is of that second kind, which is why the split is by
 
 The line is what the defect is in, not what the fix touches. A change to the program that also edits a config file is a program issue and gets all six. A change confined to config, workflows or docs is not, however much program behaviour it moves.
 
+## Answering the tier sections
+
 Within a program issue, answer each of the three backward-looking sections honestly, including when the honest answer is that the tier does not exist for that part of the program, or that the tier is the wrong home for the question and something else should have caught it. That answer is the finding, not a reason to leave the section out.
+
+## The regression section
 
 The regression section is those three read forwards, and it is where the coverage owed is named. Each entry says which tier the test sits in, what it sets up, and what it asserts, so the test can be written from the issue without rediscovering the defect. It is a separate section from the solution because a fix and the test that would have caught it are separate pieces of work, and an issue that folds the second into the last paragraph of the first tends to ship without it. Name the tier the subsystem actually has — `lib/python/` and `lib/terraform/` have no `pre_deployment/` split, see [the-test-tree-splits-on-deployment-phase](the-test-tree-splits-on-deployment-phase.md).
 
+## The Proposed Solution
+
 The closing section is called "Proposed Solution" and not "Solution". It is what the issue proposes, and whoever picks it up is free to do something else; the name says so before they have read a word of it. It names one change and not a choice between two — see [an-issue-states-one-solution](an-issue-states-one-solution.md).
+
+## How to write it
 
 Write in concepts, not identifiers. Say what the code does and what goes wrong in plain words, without hedging. Problem and the three tier sections name no file and no function at all: they are arguments about behaviour, and an argument that only holds while looking at the file is one the reader cannot check. The regression section names a tier and an assertion, which are concepts too. Identifiers belong in Proposed Solution, where the reader has stopped reading and started working, and where naming the one change is the whole job.
 
@@ -36,5 +58,7 @@ One idea to a sentence. Do not chain subordinate clauses to fit a second idea in
 A detail that changes nothing the reader would do is cut, table or not.
 
 Tables are allowed where a table genuinely reads better than a paragraph: a name-to-name rename mapping, or two measured columns being compared. Bullets are allowed only when enumerating a list of things. Do not use bullets to break up an argument — an argument is prose.
+
+## Related notes
 
 Issue bodies are not hard-wrapped, like all markdown here — see [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md). The tier vocabulary and what each tier is for come from `docs/tenets/tests/` — see [read-test-tenets-first](read-test-tenets-first.md). Where a filed issue goes in the queue, and when it carries a `blocked_by` edge at all, is in [an-edge-is-only-a-true-block](an-edge-is-only-a-true-block.md) and in `.claude/skills/autopilot/SKILL.md`.
