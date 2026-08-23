@@ -51,7 +51,7 @@ The closing section is called "Proposed Solution" and not "Solution". It is what
 
 The rules for prose everywhere here — lead with the concept, one idea to a sentence, cut what changes nothing, no bullets inside an argument — are in [prose-leads-with-the-concept](prose-leads-with-the-concept.md). What follows is how they land on the six sections.
 
-Problem and the three tier sections name no file and no function at all. They are arguments about behaviour, and an argument that only holds while looking at the file is one the reader cannot check. The regression section names a tier and an assertion, which are concepts too. Identifiers belong in Proposed Solution, where the reader has stopped reading and started working, and where naming the one change is the whole job.
+Problem and the three tier sections name no file and no function at all, beyond the one thing the issue is about, which Problem may name once so the reader knows what is under discussion. They are arguments about behaviour, and an argument that only holds while looking at the file is one the reader cannot check. Naming the subject is not a licence to bring its neighbours in with it. The regression section names a tier and an assertion, which are concepts too. Identifiers belong in Proposed Solution, where the reader has stopped reading and started working, and where naming the one change is the whole job.
 
 Assume the reader has not opened the files and will not open them while reading. That makes the issue self-contained; it does not make each section repeat the last. Problem sets the frame — what the code is for, what is wrong with it, what the defect costs — in its first few lines. The five sections after it inherit that frame and do not restate it.
 

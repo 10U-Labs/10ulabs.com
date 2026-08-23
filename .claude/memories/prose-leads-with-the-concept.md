@@ -5,6 +5,7 @@
 - [Who the reader is](#who-the-reader-is)
 - [Lead with what the thing is for](#lead-with-what-the-thing-is-for)
 - [Concepts rather than identifiers](#concepts-rather-than-identifiers)
+- [No jargon where a plain word will do](#no-jargon-where-a-plain-word-will-do)
 - [One idea to a sentence](#one-idea-to-a-sentence)
 - [Cut what changes nothing](#cut-what-changes-nothing)
 - [Tables and bullets](#tables-and-bullets)
@@ -21,6 +22,12 @@ Lead with what the thing is for. A paragraph opens by saying what the thing is a
 ## Concepts rather than identifiers
 
 Write in concepts, not identifiers. Say what the code does and what goes wrong in plain words, without hedging. An argument about behaviour that only holds while the reader is looking at the file is one the reader cannot check. Identifiers belong where the reader has stopped reading and started working: the change being proposed, the file to edit, the function to delete.
+
+Writing in concepts is not writing in abstractions, and this is the way it goes wrong. Swapping a name for a compound noun makes a sentence vaguer rather than plainer, because a name at least points at something: "a cached-client package sits in the shared Python library" says less than the package's own name would have. The thing a piece of writing is about may be named, once, so the reader knows what is under discussion. What is barred is the supporting cast — the other files, the functions, the line numbers — and the way out of a sentence full of them is to explain the idea in ordinary words, not to replace each name with a category.
+
+## No jargon where a plain word will do
+
+Use a plain word wherever one exists. Jargon from computer science is not made acceptable by being accurate, and a reader who has to decode the first sentence has been handed the writer's job. Where a term genuinely has no plain equivalent, say what it means in passing the first time it appears.
 
 ## One idea to a sentence
 
