@@ -20,7 +20,7 @@ These are the non-negotiable rules for unit tests.
 
 **Almost everything wrong should be caught by unit tests.**
 
-The testing pyramid dictates that unit tests form the base - the number of unit tests should be absurdly larger than integration and e2e tests combined. If a bug could be caught by a unit test but wasn't, that's a failure of test coverage.
+The testing pyramid dictates that unit tests form the base: the number of unit tests should be absurdly larger than the integration and end-to-end tests combined. If a defect could have been caught by a unit test and was not, that is a gap in unit coverage, and it is answered by writing the unit test rather than by catching it again higher up.
 
 ```text
         /\
@@ -33,348 +33,112 @@ The testing pyramid dictates that unit tests form the base - the number of unit 
  /______________\
 ```
 
-- Unit tests: Test a single component (function, class, module) in isolation
-- Integration tests: Test how multiple components work together
-- E2E tests: Test full user journeys
+A unit test exercises a single unit — one function, one class, one module — with everything it depends on replaced. An integration test exercises two or more units against each other. An end-to-end test exercises the journey a user takes.
 
-**Rule of thumb**: If you're testing a single component with all dependencies mocked, it's a unit test. If you're testing how two or more components interact, it's an integration test - regardless of whether network calls are involved.
+**Rule of thumb**: if every dependency is replaced and one unit is left running, it is a unit test. If two or more units are running against each other, it is an integration test, whether or not anything leaves the machine.
 
 ## Extreme Atomicity
 
 **One logical assertion per test. No exceptions.**
 
-Each test must verify exactly one behavior. This ensures:
+Each test verifies exactly one behavior. A test that asserts three things reports the first one that fails and says nothing about the other two, so a single run answers one third of the question it appears to answer. Splitting them costs nothing and makes every failure name itself.
 
-- When a test fails, you know exactly what broke
-- Tests are independent and can run in any order
-- Test names accurately describe what's being tested
+Atomicity is also what lets tests run in any order and what keeps a test name honest: a name can describe one behavior accurately, and cannot describe three.
 
-```javascript
-// CORRECT - atomic tests
-describe('parseLabels', () => {
-  test('extracts runner type from labels', () => {
-    const result = parseLabels(['self-hosted', 'ecs', 'linux']);
-    expect(result.runnerType).toBe('ecs');
-  });
-
-  test('extracts architecture from labels', () => {
-    const result = parseLabels(['self-hosted', 'ecs', 'arm64']);
-    expect(result.architecture).toBe('arm64');
-  });
-
-  test('defaults architecture to x64 when not specified', () => {
-    const result = parseLabels(['self-hosted', 'ecs']);
-    expect(result.architecture).toBe('x64');
-  });
-
-  test('throws LabelParseError when runner type missing', () => {
-    expect(() => parseLabels(['self-hosted'])).toThrow(LabelParseError);
-  });
-});
-```
-
-```javascript
-// WRONG - multiple assertions testing different behaviors
-describe('parseLabels', () => {
-  test('parses labels correctly', () => {
-    const result = parseLabels(['self-hosted', 'ecs', 'arm64']);
-    expect(result.runnerType).toBe('ecs');
-    expect(result.architecture).toBe('arm64');
-    expect(result.isSpot).toBe(false);
-    // If architecture assertion fails, you don't know if isSpot is correct
-  });
-});
-```
-
-```javascript
-// WRONG - testing error and success in same test
-test('parseLabels handles valid and invalid input', () => {
-  const valid = parseLabels(['self-hosted', 'ecs']);
-  expect(valid.runnerType).toBe('ecs');
-
-  expect(() => parseLabels([])).toThrow();
-  // These are two different behaviors - split them
-});
-```
+Two shapes break this rule and are worth naming, because both look reasonable while being written. The first asserts several properties of one result, so a failure early in the list hides whether the rest hold. The second asserts the success path and the failure path in the same test, which are two behaviors by definition and belong in two tests.
 
 ## Test File Organization
 
-**One test file per source file. 1:1 mapping.**
+**One test file per source file, in a one-to-one mapping.**
 
-```text
-src/api/endpoints/runners/lambdas/
-├── webhook_router.js
-├── job_starter.js
-└── layer/
-    ├── aws_clients.js
-    ├── runner_labels.js
-    └── webhook_ingress.js
+Each source file has exactly one test file, and that test file covers that source file and nothing else. The test tree mirrors the source tree, so the file holding the tests for a unit is found by knowing where the unit is, and a source file with no test file is visible as a gap rather than hidden inside a file named after something else.
 
-test/api/endpoints/runners/pre_deployment/unit/
-├── webhook_router.test.js       # Tests webhook_router.js
-├── job_starter.test.js          # Tests job_starter.js
-├── aws_clients.test.js          # Tests layer/aws_clients.js
-├── runner_labels.test.js        # Tests layer/runner_labels.js
-└── webhook_ingress.test.js      # Tests layer/webhook_ingress.js
-```
-
-Do NOT organize tests by behavior (test_happy_path.js, test_error_cases.js).
-Do NOT put multiple source files' tests in one test file.
+Do not organize tests by behavior — a file for the happy paths and a file for the error cases — and do not put the tests for two source files in one file. Both destroy the mapping: the first spreads one unit across several files, the second buries several units in one, and in either case nothing shows which unit is untested.
 
 ## Complete Isolation
 
 **Unit tests must have zero external dependencies.**
 
-- No network calls (HTTP, AWS SDK calls)
-- No file system access (except test fixtures)
-- No database connections
-- No environment variable side effects
+Nothing a unit test does may leave the process: no network calls, no calls to a remote service, no database connections, no reads or writes of the file system beyond the fixtures the test itself carries, and no change to process-wide state that outlives the test.
 
-Mock everything external:
+Everything external is replaced, and the test asserts on what the unit asked the replacement to do. That is the assertion this tier can make and the tier above it cannot make cheaply: not that the request succeeded, but that the request the unit constructed was the right one.
 
-```javascript
-// CORRECT - fully mocked
-const { getSQSClient } = require('./aws_clients');
-jest.mock('./aws_clients');
-
-test('enqueues message to job queue', async () => {
-  const mockSend = jest.fn().mockResolvedValue({ MessageId: '123' });
-  getSQSClient.mockReturnValue({ send: mockSend });
-
-  await enqueueJob({ jobId: 'job-1' });
-
-  expect(mockSend).toHaveBeenCalledWith(
-    expect.objectContaining({
-      input: expect.objectContaining({
-        QueueUrl: expect.stringContaining('JobQueue')
-      })
-    })
-  );
-});
-```
-
-```javascript
-// WRONG - real AWS call
-test('enqueues message to job queue', async () => {
-  const client = new SQSClient({ region: 'us-east-1' });
-  await client.send(new SendMessageCommand({...}));
-  // This is an integration test, not a unit test
-});
-```
+A test that reaches a real external dependency is an integration test that has been filed as a unit test. It is slower, it fails when something unrelated is down, and it stops answering the question the unit test was written to answer.
 
 ## Test Every Code Path
 
-**100% branch coverage is the goal.**
+**Full branch coverage is the goal.**
 
-Every `if`, `else`, `try`, `catch`, `switch` case, and early return must have a test.
+Every branch, every loop that may not run, every error path and every early return has a test. A conditional with two arms and one test leaves half the unit unexercised, and the untested half is usually the error path — the one that runs least often in normal operation and is therefore least likely to be noticed when it breaks.
 
-```javascript
-// Source code
-function getRunnerType(labels) {
-  if (labels.includes('ecs')) {
-    return 'ecs';
-  } else if (labels.includes('ec2')) {
-    return 'ec2';
-  } else {
-    throw new LabelValidationError('Unknown runner type');
-  }
-}
-
-// CORRECT - tests all branches
-test('returns ecs when labels include ecs', () => {
-  expect(getRunnerType(['self-hosted', 'ecs'])).toBe('ecs');
-});
-
-test('returns ec2 when labels include ec2', () => {
-  expect(getRunnerType(['self-hosted', 'ec2'])).toBe('ec2');
-});
-
-test('throws when labels have no runner type', () => {
-  expect(() => getRunnerType(['self-hosted'])).toThrow(LabelValidationError);
-});
-```
-
-```javascript
-// WRONG - only tests happy path
-test('returns runner type', () => {
-  expect(getRunnerType(['self-hosted', 'ecs'])).toBe('ecs');
-  // Missing ec2 case and error case
-});
-```
+Testing only the path the code takes when everything goes right is the common failure here, and it is easy to spot: count the branches in the unit, count the tests, and the difference is what is not covered.
 
 ## Descriptive Test Names
 
-**Test names must describe the specific behavior being tested.**
+**A test name states the unit, the condition and the expected result.**
 
-Format: `[function/method] [condition] [expected result]`
+The name is what a failed run shows first, and it should be enough on its own to say what broke. A reader who sees the name and nothing else should know which unit was called, under what condition, and what it was supposed to do.
 
-```javascript
-// CORRECT - descriptive names
-test('parseLabels extracts runner type from labels array', () => {...});
-test('parseLabels throws LabelParseError when labels array is empty', () => {...});
-test('parseLabels defaults architecture to x64 when not specified', () => {...});
-test('validateLabels returns false when runner type is missing', () => {...});
-test('getInstanceType returns t3.medium for small size label', () => {...});
-```
-
-```javascript
-// WRONG - vague names
-test('parseLabels works', () => {...});
-test('parseLabels test 1', () => {...});
-test('error handling', () => {...});
-test('should work correctly', () => {...});
-```
+Names that say a unit "works", names that number themselves, and names that give only a category leave the reader to open the test to find out what failed. That is a cost paid on every failure for a saving paid once when the test was written.
 
 ## Test Error Messages
 
-**When tests fail, the error message must explain the problem.**
+**When a test fails, the failure must explain the problem.**
 
-Use assertion messages and custom matchers:
+An assertion that compares two values reports both, and that is usually enough. An assertion that reduces its subject to true or false reports neither, and a failure then says only that something was not what was expected — which the reader already knew from the fact that the run failed.
 
-```javascript
-// CORRECT - clear failure messages
-test('webhook signature verification rejects tampered payload', () => {
-  const result = verifySignature(tamperedPayload, signature);
-  expect(result).toBe(false);
-  // Jest shows: Expected: false, Received: true
-});
-
-test('job queue URL is constructed correctly', () => {
-  const url = getJobQueueUrl('us-east-1', '123456789');
-  expect(url).toMatch(/sqs\.us-east-1\.amazonaws\.com/);
-  expect(url).toContain('JobQueue');
-});
-```
-
-```javascript
-// WRONG - unhelpful assertion
-test('verifySignature works', () => {
-  expect(verifySignature(payload, sig)).toBeTruthy();
-  // If this fails, you just see "expected truthy, got falsy"
-});
-```
+Assert on the value, not on whether the value is merely present or merely truthy. Where the check is genuinely a predicate, carry a message that names the subject and the expectation, so the run says what was being asked as well as that the answer was wrong.
 
 ## No Test Interdependence
 
 **Each test must be completely independent.**
 
-- Tests must pass when run individually
-- Tests must pass when run in any order
-- Tests must not share mutable state
+Every test passes when run alone, passes in any order, and shares no mutable state with any other test. State that a test needs is built fresh for that test, in setup that runs before each one rather than once for the file.
 
-```javascript
-// CORRECT - independent tests with setup
-describe('CircuitBreaker', () => {
-  let breaker;
-
-  beforeEach(() => {
-    breaker = new CircuitBreaker({ threshold: 3 });
-  });
-
-  test('starts in closed state', () => {
-    expect(breaker.state).toBe('closed');
-  });
-
-  test('opens after threshold failures', () => {
-    breaker.recordFailure();
-    breaker.recordFailure();
-    breaker.recordFailure();
-    expect(breaker.state).toBe('open');
-  });
-
-  test('resets failure count on success', () => {
-    breaker.recordFailure();
-    breaker.recordSuccess();
-    expect(breaker.failureCount).toBe(0);
-  });
-});
-```
-
-```javascript
-// WRONG - tests depend on each other
-describe('CircuitBreaker', () => {
-  const breaker = new CircuitBreaker({ threshold: 3 });
-
-  test('starts closed', () => {
-    expect(breaker.state).toBe('closed');
-  });
-
-  test('records failure', () => {
-    breaker.recordFailure(); // Mutates shared state!
-    expect(breaker.failureCount).toBe(1);
-  });
-
-  test('opens after more failures', () => {
-    // Depends on previous test running first!
-    breaker.recordFailure();
-    breaker.recordFailure();
-    expect(breaker.state).toBe('open');
-  });
-});
-```
+A suite whose tests share a mutable object is a suite where the order of the file is part of the contract, and nothing declares it. Such a suite passes until a test is reordered, skipped, or run on its own to reproduce a failure — which is exactly the moment a reader most needs it to be trustworthy.
 
 ## Fast Execution
 
-**Unit tests must be fast. Milliseconds, not seconds.**
+**Unit tests must be fast: milliseconds, not seconds.**
 
-If a test takes more than 100ms, something is wrong:
+A unit test that takes appreciable time is doing something a unit test should not: reaching something external, building expensive state each time, or covering more than one unit. The slowness is not the defect; it is the symptom that names the defect.
 
-- You're making real network calls (mock them)
-- You're doing expensive setup (optimize or share via beforeAll)
-- You're testing too much in one test (split it)
-
-```javascript
-// CORRECT - fast with mocks
-test('fetches GitHub token from cache', async () => {
-  mockSSM.getParameter.mockResolvedValue({ Parameter: { Value: 'token' }});
-  const token = await getGitHubToken();
-  expect(token).toBe('token');
-  // Runs in <10ms
-});
-```
-
-```javascript
-// WRONG - slow real call
-test('fetches GitHub token', async () => {
-  const token = await getGitHubToken(); // Real SSM call
-  expect(token).toBeDefined();
-  // Takes 200-500ms per test
-});
-```
+Speed is what makes this tier the primary line of defense. A suite that runs in seconds is run on every change; a suite that takes minutes is run when someone remembers, and it stops catching things shortly after that.
 
 ## Pre-Deployment Coverage Requirements
 
-**Unit tests must catch these issues before deployment:**
+Unit tests must catch these before anything deploys.
 
 | Issue Type | Must Be Caught By |
 | ------------ | ------------------- |
-| Syntax errors | Unit tests (imports fail) |
-| Type mismatches | Unit tests |
-| Null/undefined handling | Unit tests |
-| Edge cases (empty arrays, etc.) | Unit tests |
-| Business logic errors | Unit tests |
-| Error handling paths | Unit tests |
-| Input validation | Unit tests |
-| Single-file configuration parsing | Unit tests |
-| Cross-file contract mismatches | Integration tests (local) |
-| AWS resource misconfiguration | Integration tests (AWS) |
-| Missing IAM permissions | Integration tests (AWS) |
-| Network connectivity | E2E tests |
-| Full workflow behavior | E2E tests |
+| Code that cannot be loaded at all | Unit test |
+| A value of the wrong shape passed between units | Unit test |
+| An absent value handled as if it were present | Unit test |
+| An edge case at the boundary of the input | Unit test |
+| A logic error in the rule the unit implements | Unit test |
+| An error path that does not do what it claims | Unit test |
+| Input accepted that should have been rejected | Unit test |
+| A single file parsed or interpreted wrongly | Unit test |
+| Two files that disagree about a shared contract | Pre-deployment integration |
+| A deployed resource configured with the wrong value | Post-deployment integration |
+| A permission the deployment needs and does not hold | Pre-deployment integration |
+| A path between two deployed components that does not carry traffic | E2E |
+| The journey a user takes, end to end | E2E |
 
-If a bug could have been caught by a unit test, the test suite failed.
+If a defect could have been caught by a unit test, the unit suite failed, whichever tier reported it.
 
 ## Quick Reference
 
-| If you want to test... | Test Type | Location |
-| ------------------------ | ----------- | ---------- |
-| Function returns correct value | Unit | pre_deployment/unit/ |
-| Error is thrown for bad input | Unit | pre_deployment/unit/ |
-| Class method behavior | Unit | pre_deployment/unit/ |
-| Mock interactions (call count, args) | Unit | pre_deployment/unit/ |
-| JSON parsing/serialization | Unit | pre_deployment/unit/ |
-| String formatting | Unit | pre_deployment/unit/ |
-| AWS resource exists | Integration | pre_deployment/integration/ or post_deployment/integration/ |
-| IAM permissions work | Integration | pre_deployment/integration/ |
-| Lambda can be invoked | E2E | e2e/ |
-| Full webhook flow works | E2E | e2e/ |
+| If you want to test... | Test Type | Why |
+| ------------------------ | ----------- | ----- |
+| A value returned for a given input | Unit | One unit, nothing external |
+| An error raised for bad input | Unit | One unit, nothing external |
+| The behavior of a method on a class | Unit | One unit, nothing external |
+| What a unit asked a replaced dependency to do | Unit | Observable without the dependency |
+| How structured data is read and written | Unit | Pure transformation |
+| How a value is formatted | Unit | Pure transformation |
+| That a prerequisite of the deployment is present | Pre-deployment integration | Exists before the deployment runs |
+| That the deployment is permitted to do what it must | Pre-deployment integration | Answers whether it can deploy |
+| That a deployed resource holds its intended value | Post-deployment integration | Exists only after deployment |
+| That a request reaches the component meant to serve it | E2E | The full path, from where a user enters |
+| That the effect the user came for actually happens | E2E | The full path, from where a user enters |

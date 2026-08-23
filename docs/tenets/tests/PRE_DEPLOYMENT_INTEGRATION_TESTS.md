@@ -7,470 +7,190 @@ These are the non-negotiable rules for pre-deployment integration tests.
 - [Integration Tests Verify Components Work Together](#integration-tests-verify-components-work-together)
 - [Seven-Layer Testing Model](#seven-layer-testing-model)
 - [Test File Organization](#test-file-organization)
+- [The Seven Layers](#the-seven-layers)
 - [Fail Fast with Granular Diagnostics](#fail-fast-with-granular-diagnostics)
 - [Cleanup After Capability Tests](#cleanup-after-capability-tests)
 - [Fixture Usage](#fixture-usage)
-- [Why Terraform Plan is Not a Workflow Step](#why-terraform-plan-is-not-a-workflow-step)
-- [Workflow Step Ordering](#workflow-step-ordering)
+- [Why Drift Detection Is Not a Separate Step](#why-drift-detection-is-not-a-separate-step)
+- [Step Ordering](#step-ordering)
 - [Quick Reference](#quick-reference)
-- [Workflow Reference](#workflow-reference)
 
 ## Integration Tests Verify Components Work Together
 
-**Integration tests verify that multiple components integrate correctly.**
+**Integration tests verify that two or more components integrate correctly.**
 
-There are two types of pre-deployment integration tests:
+There are two kinds of pre-deployment integration test, and they differ in what they read rather than in how they are written.
 
-### Local Integration Tests (Contract Tests)
+### Contract Tests
 
-Test that local files/components that must work together are compatible:
+A contract test reads two or more files that must agree with each other and asserts that they do. A value declared in one place and consumed in another, a name one file exports and another references, a setting repeated in two configurations: each of these is a contract, and each can be broken by a change to either side alone.
 
-- Do test: Template variables in openapi.json match templatefile() vars in Terraform
-- Do test: Lambda handler exports match what Terraform references
-- Do test: Cross-file configuration consistency
-- Do NOT test: Single-file parsing or structure (that's a unit test)
+What makes it an integration test is that it needs both sides. A test that reads one file and asserts something about that file's own structure is a unit test, however far the file is from being code — the second file is what this tier adds.
 
-These tests catch contract mismatches between files before deployment.
+### Prerequisite Tests
 
-### AWS Integration Tests (Prerequisite Tests)
+A prerequisite test reads the deployed world and asserts that what this deployment depends on is already there and already right. Something an earlier deployment created, a permission this deployment must hold, a resource it references but does not create: each is a precondition, and each fails the deployment if it is missing.
 
-Test that AWS resources created by OTHER workflows exist and are configured correctly:
-
-- Do test: Bootstrap resources that must exist before deployment
-- Do test: IAM permissions required for deployment
-- Do test: External resources referenced by terraform
-- Do NOT test: Resources created by the deployment itself
-
-Resources created by the workflow don't exist yet when pre-deployment tests run.
+The boundary is what created the thing. Anything this deployment creates does not exist yet when these tests run, so asserting on it here can only fail or, worse, pass because a previous run left it behind.
 
 Pre-deployment tests answer: "Can I deploy?"
-Post-deployment tests answer: "Did deployment succeed?"
+Post-deployment tests answer: "Did the deployment succeed?"
 
 ## Seven-Layer Testing Model
 
-Every deployment must pass through seven layers, in order:
+Every deployment passes through seven layers, in order.
 
-| Layer | Purpose | Example |
-| ------- | --------- | --------- |
-| 1. Contracts | Local files are compatible | openapi.json vars match templatefile() |
-| 2. Authentication | Valid credentials exist | Can call sts:GetCallerIdentity |
-| 3. Authorization | Permission to inspect resources | Can call s3:HeadBucket |
-| 4. State | Terraform state matches AWS reality | Resources to create don't already exist |
-| 5. Existence | Resource actually exists | Bucket exists |
-| 6. Configuration | Resource configured correctly | IAM role has required policy |
-| 7. Capability | Can perform required operations | Can call s3:PutObject |
+| Layer | Purpose |
+| ------- | --------- |
+| 1. Contracts | Local files that must agree with each other do agree |
+| 2. Authentication | The identity the deployment runs as is valid |
+| 3. Authorization | That identity is permitted to inspect what comes next |
+| 4. State | The record of what is deployed matches what is actually deployed |
+| 5. Existence | Each prerequisite is present |
+| 6. Configuration | Each prerequisite holds its intended values |
+| 7. Capability | The operations the deployment performs can actually be performed |
 
-Each layer catches different failure modes:
+The order is what makes a failure diagnostic, because each layer assumes every layer beneath it holds. A failure at a layer therefore names one cause rather than a set of them:
 
-- Layer 1 fails → local files are incompatible (contract mismatch)
-- Layer 2 fails → credentials invalid or expired
-- Layer 3 fails → credentials valid but lack permission to inspect
-- Layer 4 fails → state drift - resources exist but not in Terraform state
-- Layer 5 fails → have permission to check, but resource doesn't exist
-- Layer 6 fails → resource exists but misconfigured
-- Layer 7 fails → resource exists and configured, but can't perform operations
+- Layer 1 fails → two files disagree, and nothing beyond this machine has been consulted yet
+- Layer 2 fails → the identity is absent, wrong or expired
+- Layer 3 fails → the identity is valid but not permitted to look
+- Layer 4 fails → the record and the reality have diverged
+- Layer 5 fails → permitted to look, and the thing is not there
+- Layer 6 fails → the thing is there and set up wrongly
+- Layer 7 fails → the thing is there and set up correctly, and the operation still cannot be performed
+
+Reversing any two of these costs the diagnosis. A failure to read a resource without the layer above it means either an invalid identity, a missing permission or a missing resource, and a single failed assertion cannot say which.
 
 ## Test File Organization
 
-Tests MUST be organized into exactly seven files by layer:
+**Exactly one test file per layer, named so that the files sort in layer order.**
 
-```text
-test/{module}/pre_deployment/integration/
-├── test_01_contracts.py       # Layer 1: Local files are compatible
-├── test_02_authentication.py  # Layer 2: Can authenticate to AWS
-├── test_03_authorization.py   # Layer 3: Have permission to inspect prerequisites
-├── test_04_state.py           # Layer 4: Terraform state matches AWS reality
-├── test_05_existence.py       # Layer 5: Prerequisite resources exist
-├── test_06_configuration.py   # Layer 6: Prerequisites configured correctly
-└── test_07_capability.py      # Layer 7: Can perform required operations
-```
+The name carries the layer number and the layer's subject, so a run reports the layer in the name of the file that failed, and the order the files run in is the order the layers are defined in.
 
-Do NOT organize by resource (test_s3.py, test_iam.py, test_dynamodb.py).
-Organizing by resource makes it impossible to know which layer failed.
+Do not organize by resource. A file per resource asks every question about one thing in one place, which means a failure names the thing and not the layer — and the layer is what says whether the fix is a credential, a permission, a missing prerequisite or a misconfigured one.
 
-### Layer 1: Contract Tests (test_01_contracts.py)
+## The Seven Layers
 
-Test that local files that must work together are compatible. No AWS calls.
+### Layer 1: Contracts
 
-```python
-# CORRECT - cross-file contract validation
-import re
+Two or more local files are read and asserted to agree. Nothing outside the machine is consulted, so this layer runs before any identity exists and fails fastest of the seven.
 
-def test_openapi_template_vars_provided_to_templatefile():
-    """Verify all template variables in openapi.json are passed to templatefile."""
-    openapi_content = _read_openapi_json()
-    tf_content = _read_apigateway_tf()
+Keep single-file assertions out of it. A test that reads one file and checks its own structure belongs to the unit tier; putting it here makes the contract layer look covered when the contracts themselves are not tested.
 
-    # Extract ${VarName} from openapi.json
-    template_vars = set(re.findall(r'\$\{(\w+)\}', openapi_content))
+### Layer 2: Authentication
 
-    # Extract variables passed to templatefile in apigateway.tf
-    templatefile_block = _extract_templatefile_block(tf_content)
-    provided_vars = set(re.findall(r'^\s+(\w+)\s+=', templatefile_block, re.MULTILINE))
+The identity the deployment will run as is asserted to be valid, and nothing else. The cheapest question that only a valid identity can answer is the right one to ask, and the answer is discarded — this layer establishes that there is someone to ask on behalf of, not that they may do anything.
 
-    missing = template_vars - provided_vars
-    assert not missing, f"Template vars in openapi.json missing from templatefile(): {missing}"
+Asking whether that identity can reach a particular resource mixes the next two layers into this one, and a failure then no longer means what this layer says it means.
 
-def test_lambda_handler_exports_match_terraform_references():
-    """Verify Lambda handler exports what Terraform expects."""
-    handler_content = _read_handler_py()
-    tf_content = _read_lambda_tf()
+### Layer 3: Authorization
 
-    # Handler must export what Terraform references
-    assert 'def handler(' in handler_content or 'def lambda_handler(' in handler_content
-```
+The identity is asserted to be permitted to inspect the prerequisites, without asserting that any of them exist. That distinction is the whole of this layer: a refusal is a failure here, and an answer saying the thing is absent is not, because being told it is absent is proof of permission to ask.
 
-```python
-# WRONG - this is a unit test (single file)
-def test_openapi_has_paths_section():
-    """Verify openapi.json has paths."""
-    spec = json.load(open('openapi.json'))
-    assert 'paths' in spec  # Single file = unit test
-```
+This is the one layer whose tests must distinguish between two failure responses from the same call, and the distinction has to be explicit. A test that treats every unsuccessful answer alike collapses this layer into the next one.
 
-### Layer 2: Authentication Tests (test_02_authentication.py)
+### Layer 4: State
 
-Test ONLY that credentials are valid. No authorization or resource checks.
+The record of what is deployed is asserted to match what is actually deployed. Anything the deployment intends to create is asserted not to exist yet, because something already there under a name the deployment expects to create is drift, and the deployment will fail on it or adopt it silently.
 
-```python
-# CORRECT - authentication only
-def test_aws_credentials_valid(sts_client):
-    """Verify AWS credentials are valid."""
-    response = sts_client.get_caller_identity()
-    assert response["Account"] is not None
+The failure message names each divergence and the command that reconciles it, since the reader of the failed run is being asked to repair the record rather than the code.
 
-def test_aws_credentials_not_expired(sts_client):
-    """Verify AWS credentials are not expired."""
-    # get_caller_identity succeeds = credentials not expired
-    response = sts_client.get_caller_identity()
-    assert "Arn" in response
-```
+Where there is no prior record at all — the first deployment of a thing — this layer has nothing to compare against and is skipped on that condition, explicitly and with the condition stated.
 
-```python
-# WRONG - mixing authentication with authorization
-def test_aws_credentials_can_access_s3(s3_client):
-    """Verify credentials can access S3."""
-    response = s3_client.list_buckets()  # This is authorization, not authentication
-    assert response is not None
-```
+### Layer 5: Existence
 
-### Layer 3: Authorization Tests (test_03_authorization.py)
+Each prerequisite is asserted to be present, and nothing more. Permission to ask is already established by the layer before, so the answer here is read at face value.
 
-Test that credentials have permission to INSPECT prerequisite resources. Not existence, not capability.
+Reading a value off the thing while checking that it is there merges this layer with the next, and a failure stops saying which of the two happened.
 
-```python
-# CORRECT - authorization to inspect only
-def test_can_describe_iam_role(iam_client, config):
-    """Verify permission to inspect IAM role."""
-    try:
-        iam_client.get_role(RoleName=config["github_actions_role_name"])
-    except iam_client.exceptions.NoSuchEntityException:
-        pass  # Role doesn't exist, but we have permission to check - that's OK here
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "AccessDenied":
-            pytest.fail("No permission to inspect IAM role")
-        raise
+### Layer 6: Configuration
 
-def test_can_describe_s3_bucket(s3_client, config):
-    """Verify permission to inspect S3 bucket."""
-    try:
-        s3_client.head_bucket(Bucket=config["state_bucket_name"])
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "403":
-            pytest.fail("No permission to inspect S3 bucket")
-        # 404 means bucket doesn't exist - but we have permission to check
-        if e.response["Error"]["Code"] != "404":
-            raise
-```
+Each prerequisite is asserted to hold the values this deployment depends on. Existence is already established, so it is not established again — the identifiers found by the previous layer are reused rather than rediscovered.
 
-```python
-# WRONG - checking existence in authorization test
-def test_can_access_state_bucket(s3_client, config):
-    """Verify can access state bucket."""
-    response = s3_client.head_bucket(Bucket=config["state_bucket_name"])
-    assert response is not None  # This fails if bucket doesn't exist - that's Layer 5
-```
+Only the values this deployment actually depends on belong here. Asserting the rest re-tests someone else's deployment and fails this one for a change that cannot affect it.
 
-### Layer 4: State Tests (test_04_state.py)
+### Layer 7: Capability
 
-Test that Terraform state matches AWS reality. Resources Terraform plans to create should not already exist. Uses `terraform_drift` from `lib/python/`.
+The operations this deployment performs are asserted to be performable, by performing the smallest instance of each and undoing it. This is the only pre-deployment layer that writes, and it is the last because everything it needs has been established by the six before it.
 
-```python
-# CORRECT - state validation
-from terraform_config import TEST_AWS_REGION
-from terraform_drift import check_resource_exists, get_planned_creates
-
-def test_no_orphaned_resources():
-    """Verify resources to be created don't already exist in AWS."""
-    creates = get_planned_creates(TERRAFORM_DIR)
-
-    orphaned = []
-    for resource in creates:
-        if check_resource_exists(resource["type"], resource["name"], TEST_AWS_REGION):
-            orphaned.append(resource)
-
-    if orphaned:
-        msg = "\nOrphaned resources detected:\n"
-        for r in orphaned:
-            msg += f"  - {r['type']}: {r['name']}\n"
-            msg += f"    Fix: terraform import {r['address']} {r['name']}\n"
-        pytest.fail(msg)
-```
-
-**Cold state exception:** For bootstrap workflows, skip state tests if no prior state exists:
-
-```python
-@pytest.mark.skipif(
-    not _has_existing_state(),
-    reason="Cold state - no prior Terraform state to validate against"
-)
-def test_no_orphaned_resources():
-    ...
-```
-
-### Layer 5: Existence Tests (test_05_existence.py)
-
-Test that prerequisite resources exist. Assumes authorization passed.
-
-```python
-# CORRECT - existence only
-def test_github_actions_role_exists(iam_client, config):
-    """Verify GitHub Actions IAM role exists."""
-    response = iam_client.get_role(RoleName=config["github_actions_role_name"])
-    assert response["Role"]["RoleName"] == config["github_actions_role_name"]
-
-def test_state_bucket_exists(s3_client, config):
-    """Verify Terraform state bucket exists."""
-    response = s3_client.head_bucket(Bucket=config["state_bucket_name"])
-    assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
-
-def test_api_gateway_exists(apigateway_client, config):
-    """Verify API Gateway exists."""
-    response = apigateway_client.get_rest_api(restApiId=config["api_gateway_id"])
-    assert response["id"] == config["api_gateway_id"]
-```
-
-```python
-# WRONG - mixing existence with configuration
-def test_github_actions_role_exists_with_correct_policy(iam_client, config):
-    """Verify role exists with correct policy."""
-    response = iam_client.get_role(RoleName=config["github_actions_role_name"])
-    policies = iam_client.list_attached_role_policies(RoleName=config["github_actions_role_name"])
-    assert len(policies["AttachedPolicies"]) > 0  # This is configuration, not existence
-```
-
-### Layer 6: Configuration Tests (test_06_configuration.py)
-
-Test that prerequisite resources are configured correctly. Assumes existence passed.
-
-```python
-# CORRECT - configuration only
-def test_github_actions_role_has_required_policy(iam_client, config):
-    """Verify GitHub Actions role has required policy attached."""
-    response = iam_client.list_attached_role_policies(
-        RoleName=config["github_actions_role_name"]
-    )
-    policy_arns = [p["PolicyArn"] for p in response["AttachedPolicies"]]
-    assert config["required_policy_arn"] in policy_arns
-
-def test_state_bucket_versioning_disabled(s3_client, config):
-    """Verify state bucket has versioning disabled."""
-    response = s3_client.get_bucket_versioning(Bucket=config["state_bucket_name"])
-    status = response.get("Status")
-    assert status in ("Suspended", None)
-
-def test_api_gateway_has_github_workflows_webhooks_resource(apigateway_client, config):
-    """Verify API Gateway has /v1/github-workflows/webhooks resource."""
-    response = apigateway_client.get_resources(restApiId=config["api_gateway_id"])
-    paths = [r["path"] for r in response["items"]]
-    assert "/v1/github-workflows/webhooks" in paths
-```
-
-```python
-# WRONG - re-checking existence in configuration test
-def test_state_bucket_versioning(s3_client, config):
-    """Verify state bucket versioning."""
-    s3_client.head_bucket(Bucket=config["state_bucket_name"])  # existence check - unnecessary
-    response = s3_client.get_bucket_versioning(Bucket=config["state_bucket_name"])
-    assert response.get("Status") == "Enabled"
-```
-
-Use fixtures from existence tests. Don't re-verify existence.
-
-### Layer 7: Capability Tests (test_07_capability.py)
-
-Test that you can perform required operations. Assumes configuration passed.
-
-```python
-# CORRECT - capability with cleanup
-def test_can_write_to_state_bucket(s3_client, config):
-    """Verify can write to Terraform state bucket."""
-    test_key = f"test/{uuid.uuid4()}.txt"
-    try:
-        s3_client.put_object(
-            Bucket=config["state_bucket_name"],
-            Key=test_key,
-            Body=b"test"
-        )
-    finally:
-        try:
-            s3_client.delete_object(Bucket=config["state_bucket_name"], Key=test_key)
-        except ClientError:
-            pass
-
-def test_can_assume_deployment_role(sts_client, config):
-    """Verify can assume the deployment IAM role."""
-    response = sts_client.assume_role(
-        RoleArn=config["deployment_role_arn"],
-        RoleSessionName="pre-deployment-test"
-    )
-    assert response["Credentials"]["AccessKeyId"] is not None
-```
-
-```python
-# WRONG - no cleanup
-def test_can_write_to_dynamodb(dynamodb_client, config):
-    """Verify can write to DynamoDB."""
-    dynamodb_client.put_item(
-        TableName=config["table_name"],
-        Item={"id": {"S": "test-item"}}
-    )
-    # Missing cleanup - test artifact remains!
-```
-
-**Always clean up in `finally` blocks.**
+A capability is not implied by a configuration. A permission can read as granted and still be denied in practice by something above it, and this layer is the only one that finds that out before the deployment does.
 
 ## Fail Fast with Granular Diagnostics
 
-Cryptic errors like "AccessDenied: Access Denied" are unacceptable.
+A failure that says only that something was refused is unacceptable.
 
-- Each test must be atomic: one assertion per test
-- Tests must run in layer order (authentication before authorization before state before existence)
-- When a test fails, the developer must know exactly where the chain broke
-- Failure messages must include resource names and expected values
+- Each test is atomic: one assertion per test
+- The layers run in order, and a layer that fails stops the ones above it
+- A failure names the exact link in the chain that broke
+- A failure message carries the name of the thing and the value that was expected
+
+The reader of a failed run was not there when the test was written. What the message must give them is which layer failed, on what, and what it wanted — everything else they can find themselves.
 
 ## Cleanup After Capability Tests
 
-If testing write operations, delete test artifacts in `finally` blocks.
+Anything the capability layer creates is removed, in teardown that runs whether the test passed or failed.
 
-```python
-def test_can_write(client, resource_id):
-    test_id = f"test-{uuid.uuid4()}"
-    try:
-        client.put_item(Id=test_id, Data="test")
-    finally:
-        try:
-            client.delete_item(Id=test_id)
-        except ClientError:
-            pass
-```
-
-No test artifacts should remain after test execution.
+Nothing may be left behind. A leftover from a capability test is indistinguishable from a real thing to the layer that checks for drift, so a test that does not clean up after itself fails a later run of the same suite and looks like a defect in the deployment.
 
 ## Fixture Usage
 
-Use fixtures to:
+Fixtures exist to do three things:
 
-1. Create AWS clients once per module
-2. Load configuration from shared config files
-3. Cache resource identifiers discovered in earlier layers
+1. Build each client or connection once for the file that uses it, rather than once per test
+2. Load configuration from the place the rest of the system loads it from, rather than restating it
+3. Carry forward the identifiers an earlier layer discovered, so a later layer does not rediscover them
 
-```python
-# conftest.py
-@pytest.fixture(scope="module")
-def sts_client(config):
-    return boto3.client("sts", region_name=config["aws_region"])
+The second of those is what keeps the suite honest. A test that hardcodes the value it is asserting on asserts that a constant equals itself; reading it from the same source the deployment reads it from is what makes the assertion mean anything.
 
-@pytest.fixture(scope="module")
-def iam_client(config):
-    return boto3.client("iam", region_name=config["aws_region"])
+## Why Drift Detection Is Not a Separate Step
 
-@pytest.fixture(scope="module")
-def config():
-    """Load configuration from shared config file."""
-    with open("etc/config.json") as f:
-        return json.load(f)
-```
+The state layer replaces a separate drift-detection step run before the deployment.
 
-## Why Terraform Plan is Not a Workflow Step
+It produces the same comparison — what is recorded against what is actually there — and it produces it inside the suite, which buys three things a standalone step does not. A failure names each divergence individually rather than emitting one plan for a reader to scan. A failure carries the command that reconciles each one. And it runs after the identity and permission layers, so a failure to read the world is already ruled out as a cause before the comparison is attempted.
 
-Layer 4 (State) tests replace the need for a separate `terraform plan` step in workflows.
+When this layer passes, the deployment will not fail on something that already exists.
 
-### What Layer 4 Does
+## Step Ordering
 
-- Uses `terraform_drift` library from `lib/python/`
-- Runs `terraform plan` internally to detect planned creates
-- Checks if those resources already exist in AWS
-- Fails if orphaned resources detected (state drift)
-
-### Why This is Better Than a Separate Plan Step
-
-1. **Diagnostics**: Layer 4 tells you exactly which resources have drift
-2. **Actionable**: Failure messages include `terraform import` commands
-3. **Integrated**: Part of the test pyramid, not a separate manual step
-4. **Granular**: Runs after authentication/authorization, so you know credentials work
-
-If layer 4 passes, `terraform apply` will succeed (no unexpected resource conflicts).
-
-## Workflow Step Ordering
-
-Pre-deployment integration tests require a specific position in the workflow:
+Pre-deployment integration tests occupy one position, and it is fixed:
 
 ```text
-1. Lint (pylint, mypy, yamllint, tflint)
+1. Static analysis
 2. Unit tests
 3. Pre-deployment integration tests (layers 1-7)
-4. Terraform apply
+4. The deployment
 5. Post-deployment integration tests
 6. E2E tests
 ```
 
-### Why This Order
+Each step earns its place by what it depends on and by what it costs.
 
 | Step | Depends On | Reason |
 | ------ | ------------ | -------- |
-| Lint | Nothing | Fast feedback first |
-| Unit tests | Lint | No point running tests if code has errors |
-| Pre-deployment integration | Terraform init | Layer 4 needs state access |
-| Terraform apply | Pre-deployment passing | Layer 4 validates no drift |
-| Post-deployment integration | Resources exist | Can't test what doesn't exist |
-| E2E tests | All above | Full system must be deployed |
+| Static analysis | Nothing | Cheapest, so it goes first |
+| Unit tests | Static analysis | No point running code that does not read correctly |
+| Pre-deployment integration | The state record being reachable | The state layer must be able to compare |
+| The deployment | Pre-deployment passing | Nothing deploys onto unmet preconditions |
+| Post-deployment integration | The deployment | Nothing to inspect until it has run |
+| E2E | Post-deployment integration | The journey needs every part of it deployed and correct |
 
-### Key Points
-
-- Pre-deployment tests run BEFORE `terraform apply`
-- Layer 4 requires `terraform init` but NOT `terraform apply`
-- If pre-deployment fails, skip apply (fail fast)
-- Post-deployment and E2E tests run AFTER successful apply
+The two rules that follow from this are that these tests run before the deployment, not after it, and that a failure here skips the deployment rather than proceeding in the hope that it works.
 
 ## Quick Reference
 
-| If you want to test... | Layer | File |
-| ------------------------ | ------- | ------ |
-| Template vars match between files | 1. Contracts | test_01_contracts.py |
-| Cross-file configuration consistency | 1. Contracts | test_01_contracts.py |
-| Lambda exports match Terraform refs | 1. Contracts | test_01_contracts.py |
-| AWS credentials valid | 2. Authentication | test_02_authentication.py |
-| Can call sts:GetCallerIdentity | 2. Authentication | test_02_authentication.py |
-| Can describe IAM role | 3. Authorization | test_03_authorization.py |
-| Can head S3 bucket | 3. Authorization | test_03_authorization.py |
-| Terraform state matches reality | 4. State | test_04_state.py |
-| No orphaned resources | 4. State | test_04_state.py |
-| IAM role exists | 5. Existence | test_05_existence.py |
-| S3 bucket exists | 5. Existence | test_05_existence.py |
-| API Gateway exists | 5. Existence | test_05_existence.py |
-| Role has policy attached | 6. Configuration | test_06_configuration.py |
-| Bucket has versioning | 6. Configuration | test_06_configuration.py |
-| API has required resource | 6. Configuration | test_06_configuration.py |
-| Can write to S3 | 7. Capability | test_07_capability.py |
-| Can assume role | 7. Capability | test_07_capability.py |
-| Can invoke Lambda | 7. Capability | test_07_capability.py |
-
-## Workflow Reference
-
-| Workflow | Prerequisites to Test | NOT Test (created by this workflow) |
-| ---------- | ---------------------- | ------------------------------------- |
-| `github_workflows_webhooks` | IAM role from bootstrap, API Gateway from api_common_routing | SQS queues, DynamoDB tables, Lambda functions |
-| `api_common_routing` | S3 buckets from bootstrap, Route53 zone | API Gateway, Lambda functions |
-| `api_operational_health` | API Gateway from api_common_routing | Lambda function |
-| `image_for_ecs_runners` | ECR repository from bootstrap | Docker image |
+| If you want to test... | Layer |
+| ------------------------ | ------- |
+| Two files agree about a value one declares and the other consumes | 1. Contracts |
+| Two files agree about a name one exports and the other references | 1. Contracts |
+| A setting repeated in two configurations is the same in both | 1. Contracts |
+| The identity the deployment runs as is valid | 2. Authentication |
+| That identity has not expired | 2. Authentication |
+| That identity is permitted to inspect a prerequisite | 3. Authorization |
+| A refusal to inspect is distinguished from an absence | 3. Authorization |
+| The record of what is deployed matches what is deployed | 4. State |
+| Nothing the deployment will create is already there | 4. State |
+| A prerequisite is present | 5. Existence |
+| A prerequisite holds the value this deployment depends on | 6. Configuration |
+| An operation the deployment performs can be performed | 7. Capability |
+| A permission granted in configuration works in practice | 7. Capability |

@@ -7,6 +7,7 @@ These are the non-negotiable rules for post-deployment integration tests.
 - [Only Test This Deployment's Resources](#only-test-this-deployments-resources)
 - [Three-Layer Testing Model](#three-layer-testing-model)
 - [Test File Organization](#test-file-organization)
+- [The Three Layers](#the-three-layers)
 - [Fail Fast with Granular Diagnostics](#fail-fast-with-granular-diagnostics)
 - [Boundary with E2E Tests](#boundary-with-e2e-tests)
 - [No Cleanup Required](#no-cleanup-required)
@@ -15,248 +16,104 @@ These are the non-negotiable rules for post-deployment integration tests.
 
 ## Only Test This Deployment's Resources
 
-**Post-deployment tests ONLY test resources created by THIS workflow.**
+**Post-deployment tests only test what this deployment created.**
 
-- Do test: Resources created by terraform apply
-- Do test: Resource configuration matches expected values
-- Do test: Component wiring (triggers, layers, IAM cross-service)
-- Do NOT test: Full user journeys (those are e2e tests)
-- Do NOT test: Resources created by other workflows
-- Do NOT test: Application logic or business rules (unit tests)
+The subject of this tier is the deployment that just ran: the things it brought into being, the values it set on them, and the connections it made between them. Everything else is out of scope, and each exclusion has its own reason.
+
+The journey a user takes is out of scope because it crosses this deployment and others, and a failure in it does not say which deployment caused it. What another deployment created is out of scope because this run cannot fix it and should not fail for it. The rules the code implements are out of scope because they were settled by the unit tier long before anything was deployed.
 
 Post-deployment tests answer: "Did my deployment succeed?"
 E2E tests answer: "Does the user journey work?"
 
 ## Three-Layer Testing Model
 
-Every deployed resource must be tested through three layers, in order:
+Everything the deployment created is tested through three layers, in order.
 
-| Layer | Purpose | Example |
-| ------- | --------- | --------- |
-| 1. Existence | Resource was created | Lambda function exists |
-| 2. Configuration | Resource configured correctly | SQS queue has 14-day retention |
-| 3. Wiring | Components connected properly | Lambda has Layer attached, SQS triggers Lambda |
+| Layer | Purpose |
+| ------- | --------- |
+| 1. Existence | The thing was created |
+| 2. Configuration | It holds the values the deployment set |
+| 3. Wiring | It is connected to what it was meant to be connected to |
 
-Each layer catches different failure modes:
+Each layer assumes the one beneath it holds, which is what lets a failure name one cause:
 
-- Layer 1 fails → terraform didn't create the resource
-- Layer 2 fails → resource exists but misconfigured
-- Layer 3 fails → resources exist and configured, but not connected
+- Layer 1 fails → the deployment did not create it
+- Layer 2 fails → it was created and set up wrongly
+- Layer 3 fails → it was created and set up correctly, and stands alone
+
+Wiring last is not a matter of taste. A connection between two things cannot be asserted before both are known to exist, and a connection asserted first fails identically whether one end is missing, both are, or the link between them is.
 
 ## Test File Organization
 
-Tests MUST be organized into exactly three files by layer:
+**Exactly one test file per layer, named so that the files sort in layer order.**
 
-```text
-test/api/endpoints/{endpoint}/post_deployment/integration/
-├── test_01_existence.py       # Layer 1: All resources exist
-├── test_02_configuration.py   # Layer 2: All resources configured correctly
-└── test_03_wiring.py          # Layer 3: All components connected properly
-```
+The name carries the layer number and the layer's subject, so a run reports the layer in the name of the file that failed, and the order the files run in is the order the layers are defined in.
 
-Do NOT organize by resource (test_lambda.py, test_sqs.py, test_dynamodb.py).
-Organizing by resource makes it impossible to know which layer failed.
+Do not organize by resource. A file per resource asks all three questions about one thing in one place, so a failure names the thing rather than the layer — and the layer is what says whether the deployment failed to create something, set it up wrongly, or left it unconnected.
 
-### Layer 1: Existence Tests (test_01_existence.py)
+## The Three Layers
 
-Test ONLY that resources exist. No configuration checks.
+### Layer 1: Existence
 
-```python
-# CORRECT - existence only
-def test_webhook_handler_lambda_exists(lambda_client, config):
-    """Verify TenULabsWebhookHandler Lambda exists."""
-    response = lambda_client.get_function(FunctionName="TenULabsWebhookHandler")
-    assert response["Configuration"]["FunctionName"] == "TenULabsWebhookHandler"
+Each thing the deployment created is asserted to be present, and nothing about it is read beyond enough to identify it. This is the cheapest of the three and the one that fails when the deployment did not do its work at all.
 
-def test_runners_layer_exists(lambda_client):
-    """Verify TenULabsRunnersLayer exists."""
-    response = lambda_client.list_layer_versions(LayerName="TenULabsRunnersLayer")
-    assert len(response["LayerVersions"]) > 0
+Reading a value off the thing while establishing that it is there merges this layer into the next, and the failure stops distinguishing "never created" from "created wrongly" — which are different defects with different fixes.
 
-def test_job_queue_exists(sqs_client, config):
-    """Verify job queue exists."""
-    queue_url = sqs_client.get_queue_url(QueueName="TenULabsRunnersJobQueue")
-    assert queue_url["QueueUrl"] is not None
+### Layer 2: Configuration
 
-def test_idempotency_table_exists(dynamodb_client):
-    """Verify idempotency DynamoDB table exists."""
-    response = dynamodb_client.describe_table(TableName="TenULabsRunnersIdempotency")
-    assert response["Table"]["TableName"] == "TenULabsRunnersIdempotency"
-```
+Each thing is asserted to hold the values the deployment set on it. Existence is settled by the layer before, so it is not re-established here: identifiers found earlier are carried forward rather than looked up again.
 
-```python
-# WRONG - mixing existence with configuration
-def test_webhook_handler_lambda_exists_with_correct_timeout(lambda_client):
-    response = lambda_client.get_function(FunctionName="TenULabsWebhookHandler")
-    assert response["Configuration"]["Timeout"] == 30  # This is configuration, not existence
-```
+What belongs here is every value the deployment declares and something else depends on. A setting the deployment specifies and nothing reads is not worth a test; a setting something depends on and the deployment does not specify is a defect in the deployment, not in the test.
 
-### Layer 2: Configuration Tests (test_02_configuration.py)
+### Layer 3: Wiring
 
-Test that resources have correct settings. Assumes existence tests passed.
+Each connection the deployment made is asserted to be in place: one component attached to another, one thing configured to trigger another, one identity permitted to act on another's behalf. Existence and configuration are both settled, so a failure here is a failure of the link and nothing else.
 
-```python
-# CORRECT - configuration only
-def test_job_queue_has_14_day_retention(sqs_client, job_queue_url):
-    """Verify job queue retains messages for 14 days."""
-    attrs = sqs_client.get_queue_attributes(
-        QueueUrl=job_queue_url,
-        AttributeNames=["MessageRetentionPeriod"]
-    )
-    assert attrs["Attributes"]["MessageRetentionPeriod"] == "1209600"
-
-def test_webhook_handler_has_30_second_timeout(lambda_client):
-    """Verify webhook handler timeout is 30 seconds."""
-    response = lambda_client.get_function(FunctionName="TenULabsWebhookHandler")
-    assert response["Configuration"]["Timeout"] == 30
-
-def test_idempotency_table_has_ttl_enabled(dynamodb_client):
-    """Verify idempotency table has TTL on expiration_time."""
-    response = dynamodb_client.describe_time_to_live(
-        TableName="TenULabsRunnersIdempotency"
-    )
-    assert response["TimeToLiveDescription"]["TimeToLiveStatus"] == "ENABLED"
-    assert response["TimeToLiveDescription"]["AttributeName"] == "expiration_time"
-```
-
-```python
-# WRONG - checking existence in configuration test
-def test_job_queue_retention(sqs_client):
-    queue_url = sqs_client.get_queue_url(QueueName="TenULabsRunnersJobQueue")  # existence check
-    attrs = sqs_client.get_queue_attributes(...)
-    assert attrs["Attributes"]["MessageRetentionPeriod"] == "1209600"
-```
-
-Use fixtures to get resource identifiers. Don't re-check existence.
-
-### Layer 3: Wiring Tests (test_03_wiring.py)
-
-Test that components are connected. Assumes existence and configuration passed.
-
-```python
-# CORRECT - wiring only
-def test_webhook_handler_has_runners_layer_attached(lambda_client):
-    """Verify webhook handler has the runners layer attached."""
-    response = lambda_client.get_function_configuration(
-        FunctionName="TenULabsWebhookHandler"
-    )
-    layer_arns = [layer["Arn"] for layer in response.get("Layers", [])]
-    assert any("TenULabsRunnersLayer" in arn for arn in layer_arns)
-
-def test_sqs_handler_triggered_by_job_queue(lambda_client):
-    """Verify SQS handler has job queue as event source."""
-    response = lambda_client.list_event_source_mappings(
-        FunctionName="TenULabsSqsHandler"
-    )
-    sources = [m["EventSourceArn"] for m in response["EventSourceMappings"]]
-    assert any("TenULabsRunnersJobQueue" in arn for arn in sources)
-
-def test_webhook_handler_can_write_to_job_queue(iam_client, lambda_role_arn):
-    """Verify webhook handler role has sqs:SendMessage permission."""
-    # Check IAM policy allows cross-service access
-    ...
-```
-
-```python
-# WRONG - invoking Lambda (that's e2e)
-def test_webhook_handler_processes_events(lambda_client):
-    response = lambda_client.invoke(
-        FunctionName="TenULabsWebhookHandler",
-        Payload=json.dumps({"test": "event"})
-    )
-    assert response["StatusCode"] == 200
-```
+Wiring is asserted by reading what the platform reports about the connection, not by exercising it. Sending something through the connection to see whether it arrives is the tier above, and the difference matters: this layer says the link was declared, and only the tier above says traffic crosses it.
 
 ## Fail Fast with Granular Diagnostics
 
-Cryptic errors like "Lambda invocation failed" are unacceptable.
+A failure that says only that something did not work is unacceptable.
 
-- Each test must be atomic: one assertion per test
-- Tests must run in layer order (existence before configuration before wiring)
-- When a test fails, the developer must know exactly what's wrong
-- Failure messages must include resource names and expected values
+- Each test is atomic: one assertion per test
+- The layers run in order, and a layer that fails stops the ones above it
+- A failure names exactly what is wrong, not merely that something is
+- A failure message carries the name of the thing and the value that was expected
 
 ## Boundary with E2E Tests
 
-Post-deployment integration tests verify the deployment. E2E tests verify user journeys.
+This tier verifies the deployment. The tier above verifies the journey. The line between them is whether anything is put through the system.
 
-### This belongs in post-deployment integration
+Reading what the platform reports about a deployed thing belongs here: that it is there, that it holds a value, that it is attached to something, that it carries the contents it was built with. Putting a request, a message or a call into the system and asserting on what comes out belongs to the tier above — and so does everything that only appears once something is flowing, such as work accepted and lost on the way, a route that sends a request to the wrong place, or a failure-handling mechanism that engages when it should not.
 
-- Lambda exists
-- Lambda has correct timeout
-- Lambda has Layer attached
-- SQS queue exists
-- SQS queue has correct retention
-- Lambda has SQS trigger configured
-- Layer contains expected files
-
-### This belongs in e2e tests
-
-- Webhook receives HTTP request and returns 200
-- Message flows through SQS to Lambda
-- Label routing correctly identifies runner type
-- Circuit breaker opens after failures
-- Full runner provisioning workflow
-
-**Rule of thumb**: If the test invokes a Lambda, sends an HTTP request, or sends a message to SQS, it's an e2e test.
+**Rule of thumb**: if the test causes the deployed system to do work, it is an E2E test.
 
 ## No Cleanup Required
 
-Post-deployment tests MUST NOT create test artifacts. They only inspect what terraform created.
+Post-deployment tests must not create anything. They only read what the deployment produced, so there is nothing to clean up and no state left behind for the next run to trip over.
 
-- Do: Read resource configuration (get_function, describe_table, get_queue_attributes)
-- Do: Verify resource exists (get_function, describe_table, get_queue_url)
-- Do: Check component connections (list_event_source_mappings, get Layers)
-- Do NOT: Write test data to DynamoDB
-- Do NOT: Send test messages to SQS
-- Do NOT: Invoke Lambdas with test payloads
-
-If a test needs cleanup, it's probably an e2e test.
+Reading a thing's configuration, confirming it is present, and reading what it is connected to are all this tier does. Writing data, sending a message, and invoking something with a payload are all outside it — and each one is also the thing that would create a cleanup obligation. A test here that needs cleanup has become an E2E test and belongs in that tier, under that tier's rules.
 
 ## Fixture Usage
 
-Use fixtures to:
+Fixtures exist to do three things:
 
-1. Create AWS clients once per module
-2. Cache resource identifiers (queue URLs, ARNs)
-3. Download and cache layer contents for inspection
+1. Build each client or connection once for the file that uses it, rather than once per test
+2. Carry forward the identifiers discovered by an earlier layer, so a later layer does not rediscover them
+3. Fetch anything expensive once — the contents of a bundle, a large description — and hand it to every test that reads it
 
-```python
-# conftest.py
-@pytest.fixture(scope="module")
-def lambda_client(config):
-    return boto3.client("lambda", region_name=config["aws_region"])
-
-@pytest.fixture(scope="module")
-def job_queue_url(sqs_client):
-    response = sqs_client.get_queue_url(QueueName="TenULabsRunnersJobQueue")
-    return response["QueueUrl"]
-
-@pytest.fixture(scope="module")
-def layer_contents(lambda_client):
-    """Download layer and return file list for inspection."""
-    # Get latest layer version
-    response = lambda_client.list_layer_versions(LayerName="TenULabsRunnersLayer")
-    layer_arn = response["LayerVersions"][0]["LayerVersionArn"]
-    # Download and extract...
-    return file_list
-```
+The second is what keeps the layers separate. Without it, every configuration and wiring test starts by finding the thing again, which quietly re-runs the existence layer inside the layers above it and blurs exactly the distinction this model exists to draw.
 
 ## Quick Reference
 
-| If you want to test... | Layer | File |
-| ------------------------ | ------- | ------ |
-| Lambda exists | 1. Existence | test_01_existence.py |
-| SQS queue exists | 1. Existence | test_01_existence.py |
-| DynamoDB table exists | 1. Existence | test_01_existence.py |
-| Layer exists | 1. Existence | test_01_existence.py |
-| Lambda timeout is 30s | 2. Configuration | test_02_configuration.py |
-| Queue retention is 14 days | 2. Configuration | test_02_configuration.py |
-| Table has TTL enabled | 2. Configuration | test_02_configuration.py |
-| Layer contains file X | 2. Configuration | test_02_configuration.py |
-| Lambda has Layer attached | 3. Wiring | test_03_wiring.py |
-| Lambda has SQS trigger | 3. Wiring | test_03_wiring.py |
-| IAM allows cross-service | 3. Wiring | test_03_wiring.py |
-| HTTP request works | N/A | e2e tests |
-| Message flow works | N/A | e2e tests |
-| Full workflow works | N/A | e2e tests |
+| If you want to test... | Layer |
+| ------------------------ | ------- |
+| A deployed thing was created | 1. Existence |
+| A deployed thing holds a value the deployment set | 2. Configuration |
+| A deployed bundle carries the contents it was built with | 2. Configuration |
+| A component is attached to another | 3. Wiring |
+| One thing is configured to trigger another | 3. Wiring |
+| An identity is permitted to act on another component's behalf | 3. Wiring |
+| A request from outside receives a response | E2E |
+| Work put into the system comes out the other side | E2E |
+| The journey a user takes, end to end | E2E |
