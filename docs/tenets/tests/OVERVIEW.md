@@ -18,7 +18,6 @@ This document explains the test infrastructure, where to put common code, and wh
   - [test_utils/](#test_utils)
   - [urllib_mocks/](#urllib_mocks)
   - [repo_utils/](#repo_utils)
-  - [aws_clients/](#aws_clients)
   - [lambda_http/](#lambda_http)
 - [Check Before You Create](#check-before-you-create)
 - [Static Analysis in Workflows](#static-analysis-in-workflows)
@@ -246,15 +245,7 @@ from repo_utils import REPO_ROOT, extract_brace_block
 TERRAFORM_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
 ```
 
-The two packages below are imported by the Lambda handlers themselves rather than by tests, and are here because a test that asserts on a response shape should assert on the same helpers the handler builds it with.
-
-### aws_clients/
-
-Cached boto3 clients for handlers, with a reset for tests that need a fresh one:
-
-```python
-from aws_clients import get_client, get_ssm_client, set_client, reset_clients
-```
+The package below is imported by the Lambda handlers themselves rather than by tests, and is here because a test that asserts on a response shape should assert on the same helpers the handler builds it with.
 
 ### lambda_http/
 
