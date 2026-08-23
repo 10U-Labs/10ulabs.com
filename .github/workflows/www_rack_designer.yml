@@ -75,7 +75,12 @@ jobs:
           test/www/paths/rack_designer
   reconciliation:
     if: github.ref == 'refs/heads/main'
-    needs: unit-tests
+    needs:
+      - assert-no-inline-directives
+      - assert-no-linter-config-files
+      - assert-one-assert-per-pytest
+      - unit-tests
+      - yamllint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

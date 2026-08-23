@@ -405,8 +405,21 @@ jobs:
   reconciliation:
     if: github.ref == 'refs/heads/main'
     needs:
+      - assert-no-inline-directives
+      - assert-no-linter-config-files
+      - assert-one-assert-per-pytest
+      - assert-python-definition-is-used
+      - copy-paste-source
+      - copy-paste-tests
+      - mypy-source
+      - mypy-tests
       - pre-deployment-integration-tests
+      - pylint-source
+      - pylint-tests
+      - terraform-format
+      - tflint
       - unit-tests
+      - yamllint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
