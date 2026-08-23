@@ -39,6 +39,8 @@ Use a plain word wherever one exists. Jargon from computer science is not made a
 
 Jargon is hard to see from the inside, because a word used every day stops feeling like a word that needs explaining. The test is to ask of each noun whether it names something outside this trade, and to treat every no as a word to replace or to explain where it first appears. "Module" is a file. "Handler" is the part of a file that runs when a request arrives. "Importer" is whatever uses the thing. Each of those was written here as though it were ordinary English, in a paragraph whose whole purpose was to be plain.
 
+Ask it of the verbs as well, where a borrowed one smuggles in a mechanism the reader will look for and not find. Python is interpreted and nothing is built, so a client that was "built" invites a search for a build step that does not exist; a line of code ran and returned a new client, and "created" says that. "Spun up", "compiled" and "wired" go the same way. The plain verb is the one that survives somebody asking what it means literally.
+
 ## Vagueness is not knowing, dressed up
 
 Every vague sentence written here has had one cause. The writer described a mechanism they had not checked, in words shaped like an explanation. Three came out of a single issue in a single session: a client became "a small helper object", the cost of creating one became "asking for one is not free", and the reason it costs anything became a library that "works out which credentials apply", which was invented. A euphemism, an empty pronoun and a fabricated mechanism are the same failure wearing three coats.
