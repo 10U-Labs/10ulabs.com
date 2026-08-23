@@ -2,7 +2,7 @@
 # Prose
 #
 # Every markdown file here is prose: the conventions in CLAUDE.md, the tenets
-# and notes under docs/, and the session skill under .claude/. None of it
+# under docs/, and the notes and session skill under .claude/. None of it
 # deploys and no test tier runs any of it, so this workflow is the only thing
 # that reads it at all. Ported from deltahdl, less that repository's jsonlint
 # job: the JSON here lives under src/ and belongs to the workflows that
@@ -45,10 +45,13 @@ jobs:
           ${{ github.workspace }}
       # MD013 is the line-length rule, and markdown here is not hard-wrapped:
       # a paragraph is one line however long it runs. --disable is variadic,
-      # so the glob goes before it.
+      # so the glob goes before it. --dot is what reaches .claude/, where the
+      # notes and the session skill live: markdownlint skips a directory whose
+      # name begins with a dot unless it is passed, so without it those files
+      # are silently unread while the glob above appears to name them.
       - if: ${{ !cancelled() }}
         name: Lint Markdown
-        run: markdownlint '**/*.md' --disable MD013
+        run: markdownlint '**/*.md' --dot --disable MD013
   yamllint:
     runs-on: ubuntu-latest
     steps:

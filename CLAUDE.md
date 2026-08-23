@@ -1,6 +1,6 @@
 # Working in 10ulabs.com
 
-These are the standing conventions for working in this repository. Each section links the longer write-up behind it, one note per topic under `docs/claude/memories/`; [docs/claude/memories/README.md](docs/claude/memories/README.md) indexes them all.
+These are the standing conventions for working in this repository. Each section links the longer write-up behind it, one note per topic under `.claude/memories/`; [.claude/memories/README.md](.claude/memories/README.md) indexes them all.
 
 ## Verification
 
@@ -12,7 +12,7 @@ A path in one of those filters is not a shell glob and not a directory glob. Git
 
 Find the run by the full forty-character hash from `git rev-parse HEAD`. `gh run list --commit` silently returns an empty list for the short hash `git log --oneline` prints, which is indistinguishable from a run that has not started, so anything that polls should list recent runs and match `headSha` by prefix locally.
 
-Longer: [verification-in-ci-only](docs/claude/memories/verification-in-ci-only.md), [find-a-run-by-the-full-hash](docs/claude/memories/find-a-run-by-the-full-hash.md).
+Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md).
 
 ## Commits
 
@@ -24,7 +24,7 @@ A push rejected by CI is answered with a follow-up commit. Do not amend and forc
 
 The literal `[skip ci]`, brackets included, goes in a commit message only when that push is meant to start nothing. GitHub scans the whole raw message rather than the subject line, so a body that merely names the directive — reporting what an earlier commit did with it — suppresses every workflow its own diff was due to start, which is how `0463bad9` landed 486 `pylint` fixes and nine edited workflow files with no run having read them. Write `skip ci` without the brackets when describing another commit's use of it; quoting the string, indenting it or wrapping it in backticks does not break the match, because the scan reads characters rather than markup.
 
-Longer: [commit-straight-to-main](docs/claude/memories/commit-straight-to-main.md), [a-rejected-push-is-fixed-forward](docs/claude/memories/a-rejected-push-is-fixed-forward.md), [never-write-the-skip-ci-brackets-in-prose](docs/claude/memories/never-write-the-skip-ci-brackets-in-prose.md).
+Longer: [commit-straight-to-main](.claude/memories/commit-straight-to-main.md), [a-rejected-push-is-fixed-forward](.claude/memories/a-rejected-push-is-fixed-forward.md), [never-write-the-skip-ci-brackets-in-prose](.claude/memories/never-write-the-skip-ci-brackets-in-prose.md).
 
 ## Tests
 
@@ -38,13 +38,13 @@ A subsystem that deploys is laid out as `pre_deployment/{unit,integration}` and 
 
 Code under `lib/` deploys nothing of its own and so carries no such split. `test/lib/python/` mirrors the package and stops — `test/lib/python/test_boto_mocks/` holds the tests for `lib/python/boto_mocks/`, with no tier directory in between — and `test/lib/terraform/` names the module and then the one tier it has, as in `test/lib/terraform/s3_bucket/unit/test_s3_bucket_module.py`. Two of the four directories that owe tests are `lib/python/` and `lib/terraform/`, so this is the common case rather than the exception.
 
-Longer: [tdd-workflow](docs/claude/memories/tdd-workflow.md), [read-test-tenets-first](docs/claude/memories/read-test-tenets-first.md), [tenets-are-generic](docs/claude/memories/tenets-are-generic.md), [the-test-tree-splits-on-deployment-phase](docs/claude/memories/the-test-tree-splits-on-deployment-phase.md).
+Longer: [tdd-workflow](.claude/memories/tdd-workflow.md), [read-test-tenets-first](.claude/memories/read-test-tenets-first.md), [tenets-are-generic](.claude/memories/tenets-are-generic.md), [the-test-tree-splits-on-deployment-phase](.claude/memories/the-test-tree-splits-on-deployment-phase.md).
 
 ## Markdown
 
 Markdown is not hard-wrapped, and neither is the body of a commit message. There is no column limit on `.md` files here, none on the bodies of GitHub issues and none on the paragraphs of a commit: write each paragraph as one line and let the reader wrap it. The subject line is the one thing that stays short, because `git log --oneline` and GitHub both truncate it. Nothing enforces a width. `documentation.yml` runs `markdownlint` over every `.md` file in the tree with MD013, the line-length rule, disabled on its command line, and the repository has no `markdownlint` and no `yamllint` configuration file that could turn it back on; no check reads a commit message at all. The hard-wrapped files that used to sit under `products/` left with it, and every commit up to `84c13b33` was wrapped to about seventy-two columns by the git default rather than by any rule of this repository's, so match this rule rather than the file or the commit next to you.
 
-Longer: [markdown-is-not-hard-wrapped](docs/claude/memories/markdown-is-not-hard-wrapped.md).
+Longer: [markdown-is-not-hard-wrapped](.claude/memories/markdown-is-not-hard-wrapped.md).
 
 ## Issues
 
@@ -60,10 +60,10 @@ A filed issue is placed in the queue before the work goes on, and a `blocked_by`
 
 A defect found while working on something else is filed in the same turn it is found, with a `blocked_by` edge if something genuinely waits on it, rather than named in the reply and left for the user to ask for. A reply is not a record and does not outlive the session. Neither of the two reasons for holding one back survives contact: a fork in how to fix it is a reason to ask which branch and then file, since the fork says nothing about whether the defect is real, and a fix that is not yet specifiable is the work rather than a reason to defer it. A sweep that turns up five defects files five issues.
 
-Longer: [how-issues-are-written](docs/claude/memories/how-issues-are-written.md), [an-issue-states-one-solution](docs/claude/memories/an-issue-states-one-solution.md), [file-what-the-sweep-turns-up](docs/claude/memories/file-what-the-sweep-turns-up.md), [an-edge-is-only-a-true-block](docs/claude/memories/an-edge-is-only-a-true-block.md).
+Longer: [how-issues-are-written](.claude/memories/how-issues-are-written.md), [an-issue-states-one-solution](.claude/memories/an-issue-states-one-solution.md), [file-what-the-sweep-turns-up](.claude/memories/file-what-the-sweep-turns-up.md), [an-edge-is-only-a-true-block](.claude/memories/an-edge-is-only-a-true-block.md).
 
 ## Notes
 
-A convention learned in a session belongs in this repository: a paragraph in this file and a topic file under `docs/claude/memories/`, linked from both indexes — or a file under `docs/tenets/` when it says what a kind of work is for rather than how this repository does it. The session tool's local memory directory is one machine's unversioned files, and a rule kept in both places drifts with nothing to signal it, which is why the local copy of the CI rule was deleted when these notes were written. Keep there only what is true of that machine alone.
+A convention learned in a session belongs in this repository: a paragraph in this file and a topic file under `.claude/memories/`, linked from both indexes — or a file under `docs/tenets/` when it says what a kind of work is for rather than how this repository does it. The session tool's own memory directory under the home directory is one machine's unversioned files, and a rule kept in both places drifts with nothing to signal it, which is why the local copy of the CI rule was deleted when these notes were written. Keep there only what is true of that machine alone.
 
 `.claude/skills/autopilot/SKILL.md` is the other half of this and does a different job: this file is read at the start of a turn, and the skill's reminders fire into a session that has gone idle. It carries how to pick the next issue and how to place a new one, and points here for the rules a turn already has in front of it.
