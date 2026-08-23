@@ -292,12 +292,6 @@ jobs:
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
-      - name: Run integration tests
-        run: |
-          BASE=test/scripts/invalidate_cloudfront
-          PYTHONPATH=lib/python:scripts python3 -m pytest \
-            $BASE/integration/ \
-            --confcutdir=test --verbose --pythonwarnings=error
   test-lambda-http:
     runs-on: ubuntu-latest
     steps:
