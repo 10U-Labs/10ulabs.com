@@ -55,11 +55,6 @@ def get_ses_client():
     return _clients['ses']
 
 
-def set_client(name: str, client: Any):
-    """Set a client for testing purposes."""
-    _clients[name] = client
-
-
 CORS_HEADERS = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',

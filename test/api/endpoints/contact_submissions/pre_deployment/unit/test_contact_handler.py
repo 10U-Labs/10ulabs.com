@@ -323,23 +323,12 @@ def test_get_ssm_client_creates_client_when_not_cached(contact_handler):
     with patch("boto3.client") as mock_boto:
         mock_ssm = MagicMock()
         mock_boto.return_value = mock_ssm
-        # Clear cache via set_client with a sentinel then clear it
-        contact_handler.set_client("ssm", None)
         # Force fresh client by patching module dict via vars()
         clients_dict = vars(contact_handler).get("_clients", {})
         clients_dict.pop("ssm", None)
         client = contact_handler.get_ssm_client()
         client_is_not_none = client is not None
         assert client_is_not_none
-
-
-def test_set_client_stores_client_retrievable_via_getter(contact_handler):
-    """Test that set_client stores a client that can be retrieved."""
-    mock_client = MagicMock()
-    # Use set_client to override the ssm client
-    contact_handler.set_client("ssm", mock_client)
-    retrieved = contact_handler.get_ssm_client()
-    assert retrieved is mock_client
 
 
 def test_get_recaptcha_secret_returns_secret_from_ssm(contact_handler):
