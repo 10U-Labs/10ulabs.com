@@ -19,7 +19,9 @@ Everything written here is read by somebody who was not in the conversation that
 
 There is a test for whether you did, and it is the one worth running before anything is filed. Read the whole thing back as though seeing it for the first time, and stop at every "the", every "its", and every verb with nobody doing it. The first two claim the reader already has the thing they point at. The third hides whoever acts: "one function inside that file is named as the entry point" says neither who names it nor how, where the answer was that a line in the deployment settings gives a file name and a function name, and Amazon reads it. Where they do not, the sentence is broken however plain its words are: "a Lambda function that creates its client" invites the reader to work out which client is the function's own, "the shared Python library" names a thing introduced nowhere, and a package whose name appears before anything has said what it is arrives as noise.
 
-Run that pass yourself rather than letting the reader run it. Five separate sentences in one issue were caught this way by the person it was written for, one at a time, and every one of them would have failed the same read at the writer's desk.
+Run that pass over the whole thing after every edit, not over the sentence just changed. An edit breaks references in the paragraphs around it: "`aws_clients` is a place to keep them" read correctly in the draft where it was written, and lost what "them" pointed at when the paragraph above it was rewritten two edits later. A sentence that was right when written does not stay right.
+
+Run the pass yourself rather than letting the reader run it. Nine separate sentences in one issue were caught this way by the person it was written for, one at a time, over nine turns, and every one would have failed the same read at the writer's desk.
 
 ## Lead with what the thing is for
 
