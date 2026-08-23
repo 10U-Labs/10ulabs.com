@@ -27,10 +27,14 @@ The regression section is those three read forwards, and it is where the coverag
 
 The closing section is called "Proposed Solution" and not "Solution". It is what the issue proposes, and whoever picks it up is free to do something else; the name says so before they have read a word of it. It names one change and not a choice between two — see [an-issue-states-one-solution](an-issue-states-one-solution.md).
 
-Write prose in simple, plain, ordinary English. Short sentences, no hedging, no jargon from computer science where a plain word will do. Assume the reader has not opened the files and will not open them while reading: each section opens with a plain sentence saying what the thing is and what it is for, and the identifiers follow it. Problem says what the code is there to do before it says what is wrong with it, and says what the defect costs in ordinary words within the first few lines rather than in the seventh paragraph. A detail that changes nothing the reader would do is cut, table or not. That rule is stated in full in the `:05` reminder of `.claude/skills/autopilot/SKILL.md`, which is the only place it is written down here.
+Write in concepts, not identifiers. Say what the code does and what goes wrong in plain words, without hedging. Problem and the three tier sections name no file and no function at all: they are arguments about behaviour, and an argument that only holds while looking at the file is one the reader cannot check. The regression section names a tier and an assertion, which are concepts too. Identifiers belong in Proposed Solution, where the reader has stopped reading and started working, and where naming the one change is the whole job.
+
+Assume the reader has not opened the files and will not open them while reading. That makes the issue self-contained; it does not make each section repeat the last. Problem sets the frame — what the code is for, what is wrong with it, what the defect costs — in its first few lines. The five sections after it inherit that frame and do not restate it.
+
+One idea to a sentence. Do not chain subordinate clauses to fit a second idea in. A section is as long as it needs to be and no longer, and a section may be a single sentence — the three tier sections often are, because the honest answer to them is short. Padding a short answer to fill out a header is the failure to watch for.
+
+A detail that changes nothing the reader would do is cut, table or not.
 
 Tables are allowed where a table genuinely reads better than a paragraph: a name-to-name rename mapping, or two measured columns being compared. Bullets are allowed only when enumerating a list of things. Do not use bullets to break up an argument — an argument is prose.
-
-Back a claim with a number computed from the repository's own data wherever a number is available, and say how it was computed so a reader can redo it. Prefer bounds that survive new data over exact figures that go stale.
 
 Issue bodies are not hard-wrapped, like all markdown here — see [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md). The tier vocabulary and what each tier is for come from `docs/tenets/tests/` — see [read-test-tenets-first](read-test-tenets-first.md). Where a filed issue goes in the queue, and when it carries a `blocked_by` edge at all, is in [an-edge-is-only-a-true-block](an-edge-is-only-a-true-block.md) and in `.claude/skills/autopilot/SKILL.md`.
