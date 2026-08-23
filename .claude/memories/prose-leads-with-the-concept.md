@@ -29,6 +29,8 @@ Writing in concepts is not writing in abstractions, and this is the way it goes 
 
 Use a plain word wherever one exists. Jargon from computer science is not made acceptable by being accurate, and a reader who has to decode the first sentence has been handed the writer's job. Where a term genuinely has no plain equivalent, say what it means in passing the first time it appears.
 
+A vague stand-in is not a plain word, and reaching for one is the second way this goes wrong. "A small helper object" is worse than the term it was avoiding, because it names nothing and still has to be decoded, and the reader now has to guess at what was too technical to say. Where the real word is the clearest one available, write it and explain it in the same sentence.
+
 ## One idea to a sentence
 
 One idea to a sentence. Do not chain subordinate clauses to fit a second idea in. This replaced an older rule that asked for simple, plain, ordinary English, which turned out to constrain vocabulary and say nothing at all about length. It was satisfied for a long time by long clause-chained sentences built out of short words. A rule about the shape of a sentence is refusable in a way an adjective is not.
