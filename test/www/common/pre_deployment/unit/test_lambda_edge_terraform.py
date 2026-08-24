@@ -104,7 +104,7 @@ def test_lambda_function_us_east_1_provider(src_dir):
 def test_lambda_function_handler_config(src_dir):
     """Verify Lambda function handler configuration."""
     content = (src_dir / "lambda_edge.tf").read_text()
-    assert 'handler          = "spa_routing.lambda_handler"' in content
+    assert 'handler          = "handler.lambda_handler"' in content
 
 
 def test_lambda_function_runtime_python312(src_dir):

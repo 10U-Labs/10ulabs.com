@@ -171,6 +171,6 @@ def test_lambda_edge_handler_matches_module():
     lambda_content = _read_file("lambda_edge.tf")
     match = re.search(r'handler\s*=\s*"([^"]+)"', lambda_content)
     handler_config = match.group(1) if match else ""
-    assert handler_config == "spa_routing.lambda_handler", (
-        f"Expected handler 'spa_routing.lambda_handler', got '{handler_config}'"
+    assert handler_config == "handler.lambda_handler", (
+        f"Expected handler 'handler.lambda_handler', got '{handler_config}'"
     )
