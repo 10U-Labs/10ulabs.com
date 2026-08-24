@@ -116,6 +116,7 @@ from terraform_config import (
     get_resource_prefix,      # Resource naming prefix
     extract_lambda_function_names,  # Lambda names from .tf files
     packaged_lambda_sources,  # Function files a .tf file packages
+    packaged_lambda_archives,  # Archives a .tf file stages packages in
     TEST_AWS_REGION,          # Standard region for test mocks
 )
 ```

@@ -92,7 +92,7 @@ resource "aws_iam_role_policy" "export_permissions" {
 
 data "archive_file" "export_lambda" {
   type        = "zip"
-  output_path = "${path.module}/lambdas/export_lambda.zip"
+  output_path = "${path.module}/.terraform/lambda_packages/export_lambda.zip"
 
   source {
     content  = file("${path.module}/lambda/exporter/handler.py")

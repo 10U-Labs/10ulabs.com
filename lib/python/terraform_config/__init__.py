@@ -395,3 +395,21 @@ def packaged_lambda_sources(tf_file: Path) -> list:
         for packaged in re.findall(pattern, content)
         if packaged.endswith(".py") and ".." not in Path(packaged).parts
     ]
+
+
+def packaged_lambda_archives(tf_file: Path) -> list:
+    """Extract the archives a Terraform file writes its deployment packages to.
+
+    The packaging step builds an archive from the source and the deployment
+    uploads it, so the path it is written to is a staging location rather than
+    anything the deployed function carries.
+
+    Args:
+        tf_file: Path to the Terraform file declaring the package.
+
+    Returns:
+        List of stack-relative paths to the archives it writes.
+    """
+    pattern = r'output_path\s*=\s*"\$\{path\.module\}/([^"]+)"'
+    content = tf_file.read_text(encoding="utf-8")
+    return re.findall(pattern, content)

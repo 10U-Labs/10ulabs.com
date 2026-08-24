@@ -15,6 +15,7 @@ from terraform_config import (
     get_resource_prefix,
     get_shared_config,
     get_tfvars_values,
+    packaged_lambda_archives,
     packaged_lambda_sources,
     parse_lambda_handler_names,
     _parse_locals,
@@ -748,3 +749,51 @@ data "archive_file" "handler" {
 }
 """)
     assert packaged_lambda_sources(tf_file) == ["lambda/handler.py"]
+
+
+def test_packaged_lambda_archives_reads_the_archive_a_package_is_written_to(tmp_path):
+    """Test the archive path a single packaging configuration writes."""
+    tf_file = tmp_path / "lambda.tf"
+    tf_file.write_text("""
+data "archive_file" "handler" {
+  type        = "zip"
+  source_file = "${path.module}/lambda/handler.py"
+  output_path = "${path.module}/.terraform/lambda_packages/handler.zip"
+}
+""")
+    assert packaged_lambda_archives(tf_file) == [
+        ".terraform/lambda_packages/handler.zip"
+    ]
+
+
+def test_packaged_lambda_archives_reads_every_package_a_file_declares(tmp_path):
+    """Test that a file declaring two packages is read as two archives."""
+    tf_file = tmp_path / "lambda.tf"
+    tf_file.write_text("""
+data "archive_file" "tracker" {
+  type        = "zip"
+  output_path = "${path.module}/.terraform/lambda_packages/tracker.zip"
+}
+
+data "archive_file" "exporter" {
+  type        = "zip"
+  output_path = "${path.module}/.terraform/lambda_packages/exporter.zip"
+}
+""")
+    assert packaged_lambda_archives(tf_file) == [
+        ".terraform/lambda_packages/tracker.zip",
+        ".terraform/lambda_packages/exporter.zip",
+    ]
+
+
+def test_packaged_lambda_archives_reads_nothing_from_a_file_that_packages_nothing(
+    tmp_path,
+):
+    """Test that a file declaring no package is read as no archive."""
+    tf_file = tmp_path / "dynamodb.tf"
+    tf_file.write_text("""
+resource "aws_dynamodb_table" "sessions" {
+  name = "sessions"
+}
+""")
+    assert not packaged_lambda_archives(tf_file)
