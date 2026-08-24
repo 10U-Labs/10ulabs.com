@@ -13,7 +13,7 @@ import pytest
 from repo_utils import REPO_ROOT
 
 ROUTING_SRC = REPO_ROOT / "src" / "api" / "common" / "routing"
-LAMBDAS_DIR = ROUTING_SRC / "lambdas"
+LAMBDA_DIR = ROUTING_SRC / "lambda"
 UNIT_CONFTEST = (
     REPO_ROOT / "test" / "api" / "common" / "routing"
     / "pre_deployment" / "unit" / "conftest.py"
@@ -138,12 +138,12 @@ def _extract_function_names_from_py(py_path: Path) -> set[str]:
 
 
 def test_lambda_handler_exports_match_terraform_references(
-    lambda_tf_path: Path, lambdas_dir: Path
+    lambda_tf_path: Path, lambda_dir: Path
 ):
     """Verify Lambda handler exports match Terraform handler references.
 
-    Terraform handler = "catchall.lambda_handler" means:
-    - File: lambdas/catchall.py
+    Terraform handler = "handler.lambda_handler" means:
+    - File: lambda/handler.py
     - Function: lambda_handler()
 
     This test verifies that each handler reference in lambda.tf
@@ -168,7 +168,7 @@ def test_lambda_handler_exports_match_terraform_references(
             continue
 
         expected_module, expected_function = parts
-        py_file = lambdas_dir / f"{expected_module}.py"
+        py_file = lambda_dir / f"{expected_module}.py"
 
         if not py_file.exists():
             errors.append(
@@ -207,9 +207,9 @@ def _lambda_sources_the_unit_setup_opens() -> list[str]:
 @pytest.mark.parametrize("lambda_source", _lambda_sources_the_unit_setup_opens())
 def test_unit_setup_opens_a_lambda_source_that_exists(lambda_source: str):
     """Verify every Lambda source the unit tier's setup opens is on disk."""
-    assert (LAMBDAS_DIR / lambda_source).exists(), (
+    assert (LAMBDA_DIR / lambda_source).exists(), (
         f"The unit tier's setup opens '{lambda_source}', which is not in "
-        f"{LAMBDAS_DIR}. A test requesting that fixture dies with "
+        f"{LAMBDA_DIR}. A test requesting that fixture dies with "
         f"FileNotFoundError."
     )
 

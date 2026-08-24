@@ -86,7 +86,7 @@ jobs:
         uses: 10U-Labs/assert-python-definition-is-used@latest
         with:
           search-in: lib/python scripts src
-          trees: src/api/common/routing/lambdas
+          trees: src/api/common/routing/lambda
           verbose: "true"
   copy-paste-source:
     runs-on: ubuntu-latest
@@ -99,7 +99,7 @@ jobs:
         run: |
           SRC=src/api/common/routing
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            $SRC/lambdas/
+            $SRC/lambda/
   copy-paste-tests:
     runs-on: ubuntu-latest
     steps:
@@ -193,7 +193,7 @@ jobs:
       - name: Run mypy on source
         run: |
           SRC=src/api/common/routing
-          MYPYPATH=lib/python python3 -m mypy $SRC/lambdas/*.py
+          MYPYPATH=lib/python python3 -m mypy $SRC/lambda/*.py
   mypy-tests:
     runs-on: ubuntu-latest
     steps:
@@ -365,7 +365,7 @@ jobs:
         run: |
           SRC=src/api/common/routing
           PYTHONPATH=lib/python python3 -m pylint \
-            $SRC/lambdas/*.py \
+            $SRC/lambda/*.py \
             --fail-under=10.0
   pylint-tests:
     runs-on: ubuntu-latest

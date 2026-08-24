@@ -372,3 +372,26 @@ def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False
             functions.append((match.group(1), func_name))
 
     return functions
+
+
+def packaged_lambda_sources(tf_file: Path) -> list:
+    """Extract the function files a Terraform file packages for deployment.
+
+    A deployment package is built from one or more files, named either as the
+    single file to package or as the content of an entry inside the archive.
+    A file reached by climbing out of the stack is shared library code vendored
+    into the package rather than the deployed function itself, so it is omitted.
+
+    Args:
+        tf_file: Path to the Terraform file declaring the package.
+
+    Returns:
+        List of stack-relative paths to the Python files it packages.
+    """
+    pattern = r'(?:source_file\s*=|content\s*=\s*file\()\s*"\$\{path\.module\}/([^"]+)"'
+    content = tf_file.read_text(encoding="utf-8")
+    return [
+        packaged
+        for packaged in re.findall(pattern, content)
+        if packaged.endswith(".py") and ".." not in Path(packaged).parts
+    ]

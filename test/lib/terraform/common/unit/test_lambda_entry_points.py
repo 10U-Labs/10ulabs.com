@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from repo_utils import REPO_ROOT
+from terraform_config import packaged_lambda_sources
 
 SRC_ROOT = REPO_ROOT / "src"
 ENTRY_POINT_NAME = "lambda_handler"
@@ -59,11 +60,11 @@ def test_entry_point_is_defined_by_the_code_it_names(
     module_name, function_name = setting.rsplit(".", 1)
     stack = (REPO_ROOT / tf_file).parent
     assert any(
-        _defines(source, function_name)
-        for source in stack.rglob(f"{module_name}.py")
-        if ".terraform" not in source.parts
+        _defines(stack / packaged, function_name)
+        for packaged in packaged_lambda_sources(REPO_ROOT / tf_file)
+        if Path(packaged).name == f"{module_name}.py"
     ), (
-        f"{tf_file} is set to enter its function at {setting}, but no "
-        f"{module_name}.py beside it defines {function_name}, so the deployed "
-        f"function has no entry point and answers nothing"
+        f"{tf_file} is set to enter its function at {setting}, but nothing it "
+        f"packages is a {module_name}.py defining {function_name}, so the "
+        f"deployed function has no entry point and answers nothing"
     )

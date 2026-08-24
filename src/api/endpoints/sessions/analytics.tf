@@ -95,15 +95,15 @@ data "archive_file" "export_lambda" {
   output_path = "${path.module}/lambdas/export_lambda.zip"
 
   source {
-    content  = file("${path.module}/lambdas/export_handler.py")
-    filename = "export_handler.py"
+    content  = file("${path.module}/lambda/exporter/handler.py")
+    filename = "handler.py"
   }
 }
 
 resource "aws_lambda_function" "export" {
   function_name    = local.export_function_name
   role             = aws_iam_role.export_lambda.arn
-  handler          = "export_handler.lambda_handler"
+  handler          = "handler.lambda_handler"
   runtime          = "python3.13"
   architectures    = ["arm64"]
   filename         = data.archive_file.export_lambda.output_path

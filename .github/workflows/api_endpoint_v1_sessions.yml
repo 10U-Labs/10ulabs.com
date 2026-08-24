@@ -85,8 +85,8 @@ jobs:
         with:
           search-in: lib/python scripts src
           trees: >-
-            src/api/endpoints/sessions/lambda
-            src/api/endpoints/sessions/lambdas
+            src/api/endpoints/sessions/lambda/exporter
+            src/api/endpoints/sessions/lambda/tracker
           verbose: "true"
   copy-paste-source:
     runs-on: ubuntu-latest
@@ -193,7 +193,8 @@ jobs:
       - name: Run mypy on source
         run: |
           SRC=src/api/endpoints/sessions
-          MYPYPATH=lib/python python3 -m mypy $SRC/lambda/
+          MYPYPATH=lib/python python3 -m mypy $SRC/lambda/exporter/
+          MYPYPATH=lib/python python3 -m mypy $SRC/lambda/tracker/
   mypy-tests:
     runs-on: ubuntu-latest
     steps:
@@ -366,6 +367,7 @@ jobs:
           SRC=src/api/endpoints/sessions
           PYTHONPATH=lib/python python3 -m pylint \
             $SRC/lambda/ \
+            --recursive=y \
             --fail-under=10.0
   pylint-tests:
     runs-on: ubuntu-latest

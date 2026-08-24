@@ -13,7 +13,7 @@ import re
 from repo_utils import REPO_ROOT
 
 DIST_DIR = REPO_ROOT / "src" / "www" / "paths" / "home" / "dist"
-LAMBDA_FILE = REPO_ROOT / "src" / "www" / "common" / "lambda" / "spa_routing.py"
+LAMBDA_FILE = REPO_ROOT / "src" / "www" / "common" / "lambda" / "handler.py"
 
 
 class TestAssetPathAlignment:
@@ -60,7 +60,7 @@ class TestLambdaAssetRewrite:
     """Verify Lambda@Edge rewrites /assets/* to /home/assets/*."""
 
     def test_lambda_file_exists(self):
-        """Verify spa_routing.py Lambda exists."""
+        """Verify the SPA routing Lambda exists."""
         assert LAMBDA_FILE.exists(), (
             f"Lambda file not found at {LAMBDA_FILE}"
         )

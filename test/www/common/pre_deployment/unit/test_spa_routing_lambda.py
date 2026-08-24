@@ -7,7 +7,7 @@ import pytest
 from repo_utils import REPO_ROOT
 
 LAMBDA_DIR = REPO_ROOT / "src" / "www" / "common" / "lambda"
-spec = importlib.util.spec_from_file_location("spa_routing", LAMBDA_DIR / "spa_routing.py")
+spec = importlib.util.spec_from_file_location("spa_routing", LAMBDA_DIR / "handler.py")
 assert spec is not None, "Failed to create module spec"
 spa_routing = importlib.util.module_from_spec(spec)
 sys.modules["spa_routing"] = spa_routing

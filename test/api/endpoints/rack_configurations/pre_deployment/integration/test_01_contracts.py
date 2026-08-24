@@ -12,7 +12,7 @@ from repo_utils import REPO_ROOT
 
 
 RACK_CONFIGURATIONS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "rack_configurations"
-HANDLER_PATH = RACK_CONFIGURATIONS_SRC / "lambdas" / "handler.py"
+HANDLER_PATH = RACK_CONFIGURATIONS_SRC / "lambda" / "handler.py"
 LAMBDA_TF_PATH = RACK_CONFIGURATIONS_SRC / "lambda.tf"
 
 

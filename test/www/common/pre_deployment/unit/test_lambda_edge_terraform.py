@@ -19,9 +19,9 @@ def test_archive_file_type_zip(src_dir):
 
 
 def test_archive_source_file_spa_routing(src_dir):
-    """Verify archive source file is spa_routing.py."""
+    """Verify archive source file is handler.py."""
     content = (src_dir / "lambda_edge.tf").read_text()
-    assert "spa_routing.py" in content
+    assert "lambda/handler.py" in content
 
 
 def test_iam_role_defined(src_dir):

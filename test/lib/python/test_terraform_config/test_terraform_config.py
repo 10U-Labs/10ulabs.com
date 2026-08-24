@@ -15,6 +15,7 @@ from terraform_config import (
     get_resource_prefix,
     get_shared_config,
     get_tfvars_values,
+    packaged_lambda_sources,
     parse_lambda_handler_names,
     _parse_locals,
     _parse_outputs,
@@ -701,3 +702,49 @@ resource "aws_lambda_function" "my_func" {
     result = extract_lambda_function_names(lambda_file)
     # Function should not be in result since name couldn't be resolved
     assert len(result) == 0
+
+
+def test_packaged_lambda_sources_reads_a_single_packaged_file(tmp_path):
+    """Test the form that names one file as the whole package."""
+    tf_file = tmp_path / "lambda.tf"
+    tf_file.write_text("""
+data "archive_file" "handler" {
+  type        = "zip"
+  source_file = "${path.module}/lambda/handler.py"
+}
+""")
+    assert packaged_lambda_sources(tf_file) == ["lambda/handler.py"]
+
+
+def test_packaged_lambda_sources_reads_a_named_archive_entry(tmp_path):
+    """Test the form that names the content of an entry inside the archive."""
+    tf_file = tmp_path / "analytics.tf"
+    tf_file.write_text("""
+data "archive_file" "export" {
+  type = "zip"
+  source {
+    content  = file("${path.module}/lambda/exporter/handler.py")
+    filename = "handler.py"
+  }
+}
+""")
+    assert packaged_lambda_sources(tf_file) == ["lambda/exporter/handler.py"]
+
+
+def test_packaged_lambda_sources_omits_a_file_from_outside_the_stack(tmp_path):
+    """Test that shared library code vendored into the package is omitted."""
+    tf_file = tmp_path / "lambda.tf"
+    tf_file.write_text("""
+data "archive_file" "handler" {
+  type = "zip"
+  source {
+    content  = file("${path.module}/lambda/handler.py")
+    filename = "handler.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/lambda_http/__init__.py")
+    filename = "lambda_http.py"
+  }
+}
+""")
+    assert packaged_lambda_sources(tf_file) == ["lambda/handler.py"]

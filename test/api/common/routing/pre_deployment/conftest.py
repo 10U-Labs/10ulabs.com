@@ -24,7 +24,7 @@ def lambda_tf_path_fixture() -> Path:
     return REPO_ROOT / "src" / "api" / "common" / "routing" / "lambda.tf"
 
 
-@pytest.fixture(name="lambdas_dir")
-def lambdas_dir_fixture() -> Path:
-    """Get the lambdas directory path."""
-    return REPO_ROOT / "src" / "api" / "common" / "routing" / "lambdas"
+@pytest.fixture(name="lambda_dir")
+def lambda_dir_fixture() -> Path:
+    """Get the lambda directory path."""
+    return REPO_ROOT / "src" / "api" / "common" / "routing" / "lambda"

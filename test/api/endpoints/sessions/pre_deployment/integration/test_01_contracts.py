@@ -7,8 +7,8 @@ from repo_utils import REPO_ROOT
 
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
-SESSIONS_LAMBDA_PATH = SESSIONS_SRC_PATH / "lambda"
-SESSIONS_LAMBDAS_PATH = SESSIONS_SRC_PATH / "lambdas"
+SESSIONS_TRACKER_PATH = SESSIONS_SRC_PATH / "lambda" / "tracker"
+SESSIONS_EXPORTER_PATH = SESSIONS_SRC_PATH / "lambda" / "exporter"
 
 
 class TestLambdaHandlerContracts:
@@ -16,13 +16,13 @@ class TestLambdaHandlerContracts:
 
     def test_handler_exports_lambda_handler_function(self):
         """Verify handler.py exports lambda_handler function."""
-        handler_py = SESSIONS_LAMBDA_PATH / "handler.py"
+        handler_py = SESSIONS_TRACKER_PATH / "handler.py"
         content = handler_py.read_text()
         assert "def lambda_handler(" in content
 
     def test_export_handler_exports_lambda_handler_function(self):
-        """Verify export_handler.py exports lambda_handler function."""
-        export_py = SESSIONS_LAMBDAS_PATH / "export_handler.py"
+        """Verify the exporter's handler.py exports lambda_handler function."""
+        export_py = SESSIONS_EXPORTER_PATH / "handler.py"
         content = export_py.read_text()
         assert "def lambda_handler(" in content
 
@@ -40,7 +40,7 @@ class TestTerraformLambdaContracts:
         """Verify analytics.tf export handler matches source file structure."""
         analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
         content = analytics_tf.read_text()
-        assert "export_handler.lambda_handler" in content
+        assert "handler.lambda_handler" in content
 
 
 class TestEnvironmentVariableContracts:
@@ -48,7 +48,7 @@ class TestEnvironmentVariableContracts:
 
     def test_handler_uses_session_events_table_env_var(self):
         """Verify handler.py uses SESSION_EVENTS_TABLE environment variable."""
-        handler_py = SESSIONS_LAMBDA_PATH / "handler.py"
+        handler_py = SESSIONS_TRACKER_PATH / "handler.py"
         content = handler_py.read_text()
         assert "SESSION_EVENTS_TABLE" in content
 
@@ -59,20 +59,20 @@ class TestEnvironmentVariableContracts:
         assert "SESSION_EVENTS_TABLE" in content
 
     def test_export_handler_uses_dynamodb_table_arn_env_var(self):
-        """Verify export_handler.py uses DYNAMODB_TABLE_ARN environment variable."""
-        export_py = SESSIONS_LAMBDAS_PATH / "export_handler.py"
+        """Verify the exporter uses DYNAMODB_TABLE_ARN environment variable."""
+        export_py = SESSIONS_EXPORTER_PATH / "handler.py"
         content = export_py.read_text()
         assert "DYNAMODB_TABLE_ARN" in content
 
     def test_export_handler_uses_s3_bucket_env_var(self):
-        """Verify export_handler.py uses S3_BUCKET environment variable."""
-        export_py = SESSIONS_LAMBDAS_PATH / "export_handler.py"
+        """Verify the exporter uses S3_BUCKET environment variable."""
+        export_py = SESSIONS_EXPORTER_PATH / "handler.py"
         content = export_py.read_text()
         assert "S3_BUCKET" in content
 
     def test_export_handler_uses_s3_prefix_env_var(self):
-        """Verify export_handler.py uses S3_PREFIX environment variable."""
-        export_py = SESSIONS_LAMBDAS_PATH / "export_handler.py"
+        """Verify the exporter uses S3_PREFIX environment variable."""
+        export_py = SESSIONS_EXPORTER_PATH / "handler.py"
         content = export_py.read_text()
         assert "S3_PREFIX" in content
 

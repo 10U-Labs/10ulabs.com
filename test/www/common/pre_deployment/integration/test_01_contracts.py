@@ -139,13 +139,13 @@ def test_s3_bucket_module_source_path_exists():
 
 def test_lambda_handler_file_exists():
     """Verify Lambda@Edge handler file exists."""
-    handler_path = SRC_DIR / "lambda" / "spa_routing.py"
+    handler_path = SRC_DIR / "lambda" / "handler.py"
     assert handler_path.exists(), f"Lambda handler not found: {handler_path}"
 
 
 def test_lambda_handler_has_handler_function():
     """Verify Lambda@Edge handler has the expected handler function."""
-    handler_content = (SRC_DIR / "lambda" / "spa_routing.py").read_text()
+    handler_content = (SRC_DIR / "lambda" / "handler.py").read_text()
     assert "def lambda_handler(" in handler_content, (
         "Lambda handler file missing 'def lambda_handler(' function"
     )
@@ -154,8 +154,8 @@ def test_lambda_handler_has_handler_function():
 def test_lambda_edge_references_handler_file():
     """Verify lambda_edge.tf references the correct handler file."""
     lambda_content = _read_file("lambda_edge.tf")
-    assert "spa_routing.py" in lambda_content, (
-        "lambda_edge.tf does not reference spa_routing.py"
+    assert "lambda/handler.py" in lambda_content, (
+        "lambda_edge.tf does not reference lambda/handler.py"
     )
 
 

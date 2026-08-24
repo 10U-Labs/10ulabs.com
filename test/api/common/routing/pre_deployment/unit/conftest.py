@@ -8,10 +8,10 @@ import pytest
 from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
 
-BACKEND_LAMBDAS_PATH = REPO_ROOT / "src" / "api" / "common" / "routing" / "lambdas"
+BACKEND_LAMBDA_PATH = REPO_ROOT / "src" / "api" / "common" / "routing" / "lambda"
 
 # Create lambda loader for backend lambdas
-load_lambda_module = create_lambda_loader(BACKEND_LAMBDAS_PATH)
+load_lambda_module = create_lambda_loader(BACKEND_LAMBDA_PATH)
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def openapi_spec() -> Dict[str, Any]:
 @pytest.fixture
 def catchall_handler():
     """Load the catchall Lambda handler module."""
-    return load_lambda_module("catchall.py", "catchall_handler")
+    return load_lambda_module("handler.py", "catchall_handler")
 
 
 @pytest.fixture
