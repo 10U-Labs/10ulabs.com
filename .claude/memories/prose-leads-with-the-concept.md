@@ -5,7 +5,7 @@
 - [Who the reader is](#who-the-reader-is)
 - [Lead with what the thing is for](#lead-with-what-the-thing-is-for)
 - [Concepts rather than identifiers](#concepts-rather-than-identifiers)
-- [Jargon has a plain equivalent, a technical concept does not](#jargon-has-a-plain-equivalent-a-technical-concept-does-not)
+- [Use the exact term](#use-the-exact-term)
 - [Name the subject exactly](#name-the-subject-exactly)
 - [The reader's questions are the test](#the-readers-questions-are-the-test)
 - [Vagueness is not knowing, dressed up](#vagueness-is-not-knowing-dressed-up)
@@ -19,7 +19,7 @@
 
 Everything written here is read by somebody who was not in the conversation that produced it and does not have the files open. That covers an issue, a commit message, a comment on an issue and a reply in the session. Write for that reader.
 
-There is a test for whether you did, and it is the one worth running before anything is filed. Read the whole thing back as though seeing it for the first time, and stop at every "the", every "its", and every verb with nobody doing it. The first two claim the reader already has the thing they point at. The third hides whoever acts: "one function inside that file is named as the entry point" says neither who names it nor how, where the answer was that a line in the deployment settings gives a file name and a function name, and Amazon reads it. Where they do not, the sentence is broken however plain its words are: "a Lambda function that creates its client" invites the reader to work out which client is the function's own, "the shared Python library" names a thing introduced nowhere, and a package whose name appears before anything has said what it is arrives as noise.
+There is a test for whether you did, and it is the one worth running before anything is filed. Read the whole thing back as though seeing it for the first time, and stop at every "the", every "its", and every verb with nobody doing it. The first two claim the reader already has the thing they point at. The third hides whoever acts: "one function inside that file is named as the entry point" says neither who names it nor how, where the answer was that a line in the deployment settings gives a file name and a function name, and Amazon reads it. Where they do not, the sentence is broken however ordinary its words are: "a Lambda function that creates its client" invites the reader to work out which client is the function's own, "the shared Python library" names a thing introduced nowhere, and a package whose name appears before anything has said what it is arrives as noise.
 
 Run that pass over the whole thing after every edit, not over the sentence just changed. An edit breaks references in the paragraphs around it: "`aws_clients` is a place to keep them" read correctly in the draft where it was written, and lost what "them" pointed at when the paragraph above it was rewritten two edits later. A sentence that was right when written does not stay right.
 
@@ -27,25 +27,23 @@ Run the pass yourself rather than letting the reader run it. Nine separate sente
 
 ## Lead with what the thing is for
 
-Lead with what the thing is for. A paragraph opens by saying what the thing is and what it does, before any file, function or line is named. Say what a defect costs in ordinary words near the top rather than in the seventh paragraph. Opening with the concept is not a licence to re-establish context the reader already has; leading and restating are different things.
+Lead with what the thing is for. A paragraph opens by saying what the thing is and what it does, before any file, function or line is named. Say what a defect costs near the top rather than in the seventh paragraph. Opening with the concept is not a licence to re-establish context the reader already has; leading and restating are different things.
 
 ## Concepts rather than identifiers
 
-Write in concepts, not identifiers. Say what the code does and what goes wrong in plain words, without hedging. An argument about behaviour that only holds while the reader is looking at the file is one the reader cannot check. Identifiers belong where the reader has stopped reading and started working: the change being proposed, the file to edit, the function to delete.
+Write in concepts, not identifiers. Say what the code does and what goes wrong directly, without hedging. An argument about behaviour that only holds while the reader is looking at the file is one the reader cannot check. Identifiers belong where the reader has stopped reading and started working: the change being proposed, the file to edit, the function to delete.
 
 Naming a place is not the same as naming a supporting cast, and a paraphrase of a location is usually vaguer than the location. "A package in the shared Python library" sent a reader looking for a library that has no name here, where `lib/python/` would have told them where to stand. Name a directory once, where the reader needs somewhere to picture, and then use it.
 
-Writing in concepts is not writing in abstractions, and this is the way it goes wrong. Swapping a name for a compound noun makes a sentence vaguer rather than plainer, because a name at least points at something: "a cached-client package sits in the shared Python library" says less than the package's own name would have. The thing a piece of writing is about may be named, once, so the reader knows what is under discussion. What is barred is the supporting cast — the other files, the functions, the line numbers — and the way out of a sentence full of them is to explain the idea in ordinary words, not to replace each name with a category.
+Writing in concepts is not writing in abstractions, and this is the way it goes wrong. Swapping a name for a compound noun makes a sentence vaguer, not clearer, because a name at least points at something: "a cached-client package sits in the shared Python library" says less than the package's own name would have. The thing a piece of writing is about may be named, once, so the reader knows what is under discussion. What is barred is the supporting cast — the other files, the functions, the line numbers — and the way out of a sentence full of them is to explain the idea, not to replace each name with a category.
 
-## Jargon has a plain equivalent, a technical concept does not
+## Use the exact term
 
-Use a plain word wherever one exists that is exactly as precise. Jargon from computer science is not made acceptable by being accurate, and a reader who has to decode the first sentence has been handed the writer's job.
+A term from computer science is the name of a real thing, and naming the thing is the job. Module, handler, importer, exception, HTTP status code, Lambda function: each of these is written here, by name, wherever it is what the sentence is about, and said in passing the first time it appears. The test a word has to pass is whether it names what the sentence is about, not whether it belongs to this trade.
 
-The test is not whether a word belongs to this trade, because most of the words worth using do. The test is whether a plain word exists that says the same thing as exactly. Where one does, the term is shorthand and loses: "module" loses to file, "importer" loses to whatever uses the thing, "handler" loses to the part of a file that runs when a request arrives. Each of those was written here as though it were ordinary English, in a paragraph whose whole purpose was to be plain.
+This section used to ask the opposite, and the writing got worse for it. It said that a term with a simpler-sounding equivalent was shorthand and lost to that equivalent, so "handler" became "the part of a file that runs when a request arrives", which is four times the length and leaves the reader nothing to search for. The substitute is usually not the same thing either: "the number" for an HTTP status code, "an error" for an exception and "an endpoint" for the Lambda function serving a route each say less than the term, and each sends the reader looking for something the writer did not mean. A sentence that reads as though the writer were avoiding the vocabulary of the subject is obscure, not accessible.
 
-Where no plain word is as exact, the term is the name of a real thing and is used, then said in passing the first time it appears. "HTTP status code", "exception" and "Lambda function" are of that kind. The plain-sounding substitutes are not simplifications of them: "the number", "an error" and "an endpoint" each say less than the term, and each sends the reader looking for something the writer did not mean. Reaching for one of those is not obeying this rule, it is breaking it in the other direction.
-
-Ask it of the verbs as well, where a borrowed one smuggles in a mechanism the reader will look for and not find. Python is interpreted and nothing is built, so a client that was "built" invites a search for a build step that does not exist; a line of code ran and returned a new client, and "created" says that. "Spun up", "compiled" and "wired" go the same way. The plain verb is the one that survives somebody asking what it means literally.
+What is still barred is a word that promises a mechanism the reader will look for and not find, which is a question of what is true rather than of vocabulary. Python is interpreted and nothing is built, so a client that was "built" invites a search for a build step that does not exist; a line of code ran and returned a new client, and "created" says that. "Spun up", "compiled" and "wired" go the same way. The verb to use is the one that survives somebody asking what it means literally.
 
 ## Name the subject exactly
 
@@ -73,7 +71,7 @@ Repeat the noun rather than reaching back for it with a pronoun. A reader who ha
 
 ## One idea to a sentence
 
-One idea to a sentence. Do not chain subordinate clauses to fit a second idea in. This replaced an older rule that asked for simple, plain, ordinary English, which turned out to constrain vocabulary and say nothing at all about length. It was satisfied for a long time by long clause-chained sentences built out of short words. A rule about the shape of a sentence is refusable in a way an adjective is not.
+One idea to a sentence. Do not chain subordinate clauses to fit a second idea in. This replaced an older rule that asked for simple, ordinary English, which turned out to constrain vocabulary and say nothing at all about length. It was satisfied for a long time by long clause-chained sentences built out of short words. A rule about the shape of a sentence is refusable in a way an adjective is not.
 
 ## Cut what changes nothing
 
