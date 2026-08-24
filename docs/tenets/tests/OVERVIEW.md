@@ -55,7 +55,7 @@ test/
 | ------- | ---------- | ---------- |
 | All tests | `test/conftest.py` | Path setup (already done) |
 | All API tests | `test/api/conftest.py` | Terraform outputs, AWS clients, deployment probes |
-| All endpoint tests | `test/api/endpoints/conftest.py` | The resource prefix, the handler-module loader, a mock Lambda context |
+| All endpoint tests | `test/api/endpoints/conftest.py` | Empty; endpoint tests inherit from `test/api/conftest.py` |
 | One endpoint, both phases | `test/api/endpoints/<endpoint>/conftest.py` | That endpoint's source paths and its parsed config |
 | Pre-deployment unit | `test/.../pre_deployment/unit/conftest.py` | Lambda mocks, event factories |
 | Pre-deployment integration | `test/.../pre_deployment/integration/conftest.py` | Layer markers, bootstrap fixtures |

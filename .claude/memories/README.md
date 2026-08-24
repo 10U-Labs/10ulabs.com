@@ -36,5 +36,6 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [tdd-workflow](tdd-workflow.md) — the test is written before the code, in the same commit
 - [read-test-tenets-first](read-test-tenets-first.md) — read `docs/tenets/tests/` before implementing, and cover every tier the change touches
 - [tenets-are-generic](tenets-are-generic.md) — the four tier files name no tool, language or directory and the repository follows them; `OVERVIEW.md` describes this suite and loses to the tree
+- [a-conftest-is-emptied-never-deleted](a-conftest-is-emptied-never-deleted.md) — a `conftest.py` whose last fixture goes is emptied to zero bytes and left in place, so the level stays visible to whoever writes the next one
 - [test-code-is-placed-by-how-many-suites-use-it](test-code-is-placed-by-how-many-suites-use-it.md) — a fixture goes at the highest level that applies, and a helper is shared by its number of callers rather than by its name
 - [the-test-tree-splits-on-deployment-phase](the-test-tree-splits-on-deployment-phase.md) — `pre_deployment/{unit,integration}` and `post_deployment/{integration,e2e}` for a subsystem that deploys, and nothing of the kind under `test/lib/`
