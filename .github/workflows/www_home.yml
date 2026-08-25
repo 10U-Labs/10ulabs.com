@@ -161,9 +161,7 @@ jobs:
             mypy \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - name: Run mypy
         run: |
@@ -204,9 +202,7 @@ jobs:
             dnspython \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - id: terraform
         name: Extract Terraform version
@@ -266,9 +262,7 @@ jobs:
             dnspython \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - id: terraform
         name: Extract Terraform version
@@ -307,9 +301,7 @@ jobs:
             pylint \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - name: Run pylint
         run: |

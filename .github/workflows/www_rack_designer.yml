@@ -183,9 +183,7 @@ jobs:
             dnspython \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - name: Run unit tests
         run: |

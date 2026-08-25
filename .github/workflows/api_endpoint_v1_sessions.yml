@@ -165,9 +165,7 @@ jobs:
             dnspython \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - id: terraform
         name: Extract Terraform version
@@ -210,9 +208,7 @@ jobs:
             mypy \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - name: Run mypy on source
         run: |
@@ -238,9 +234,7 @@ jobs:
             mypy \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - name: Run mypy on tests
         run: |
@@ -282,9 +276,7 @@ jobs:
             dnspython \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - id: terraform
         name: Extract Terraform version
@@ -337,9 +329,7 @@ jobs:
             dnspython \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - id: terraform
         name: Extract Terraform version
@@ -382,9 +372,7 @@ jobs:
             pylint \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - name: Run pylint on source
         run: |
@@ -412,9 +400,7 @@ jobs:
             pylint \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - name: Run pylint on tests
         run: |
@@ -576,9 +562,7 @@ jobs:
             dnspython \
             pytest \
             'python-hcl2<8' \
-            PyYAML \
             requests \
-            types-PyYAML \
             types-requests
       - name: Run unit tests
         run: |
