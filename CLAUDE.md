@@ -138,7 +138,7 @@ Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), 
 
 #### A push starts more than one workflow
 
-A push starts several workflows, because every workflow here is path-filtered and one commit can touch the paths of more than one. The change is done when each workflow that fired is green, not when the first one is. Every check a workflow carries reads only the files that workflow's own `paths` list names, so a run reports on its own subsystem and on nothing else. Read the `paths` filters themselves to see which workflows a given change starts.
+A push starts every workflow whose `paths` filter the commit touches, and the change is done when each of them is green rather than when the first one is.
 
 #### CI is the source of truth
 
