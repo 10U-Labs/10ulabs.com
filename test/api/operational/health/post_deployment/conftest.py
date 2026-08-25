@@ -2,7 +2,7 @@
 import pytest
 
 
-@pytest.fixture(name="api_url", scope="module")
-def api_url_fixture(config):
+@pytest.fixture(scope="module")
+def api_url(config):
     """Build API URL from configuration."""
     return f"https://{config['api_fqdn']}"

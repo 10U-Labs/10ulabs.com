@@ -2,7 +2,7 @@
 import pytest
 
 
-@pytest.fixture(name="module_path")
-def fixture_module_path(modules_dir):
+@pytest.fixture
+def module_path(modules_dir):
     """Provide path to s3_bucket module directory."""
     return modules_dir / "s3_bucket"

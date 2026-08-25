@@ -11,7 +11,7 @@ pytest_plugins = ['test_fixtures.aws']
 DIAGNOSTICS_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
 
 
-@pytest.fixture(name="config", scope="module")
-def config_fixture(shared_config) -> Dict[str, str]:
+@pytest.fixture(scope="module")
+def config(shared_config) -> Dict[str, str]:
     """Load configuration from terraform.tfvars and shared outputs."""
     return create_simple_config(DIAGNOSTICS_SRC / "terraform.tfvars", shared_config)

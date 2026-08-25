@@ -6,8 +6,8 @@ import pytest
 pytest_plugins = ['test_fixtures.website']
 
 
-@pytest.fixture(name="config", scope="module")
-def config_fixture(shared_config) -> Dict[str, str]:
+@pytest.fixture(scope="module")
+def config(shared_config) -> Dict[str, str]:
     """Provide website configuration for tests."""
     result = {}
     result['domain_name'] = shared_config.get('domain_name', '')

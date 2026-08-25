@@ -6,25 +6,25 @@ import pytest
 from repo_utils import REPO_ROOT
 
 
-@pytest.fixture(name="openapi_path")
-def openapi_path_fixture() -> Path:
+@pytest.fixture
+def openapi_path() -> Path:
     """Get the openapi.json path."""
     return REPO_ROOT / "src" / "www" / "api" / "openapi.json"
 
 
-@pytest.fixture(name="apigateway_path")
-def apigateway_path_fixture() -> Path:
+@pytest.fixture
+def apigateway_path() -> Path:
     """Get the apigateway.tf path."""
     return REPO_ROOT / "src" / "api" / "common" / "routing" / "apigateway.tf"
 
 
-@pytest.fixture(name="lambda_tf_path")
-def lambda_tf_path_fixture() -> Path:
+@pytest.fixture
+def lambda_tf_path() -> Path:
     """Get the lambda.tf path."""
     return REPO_ROOT / "src" / "api" / "common" / "routing" / "lambda.tf"
 
 
-@pytest.fixture(name="lambda_dir")
-def lambda_dir_fixture() -> Path:
+@pytest.fixture
+def lambda_dir() -> Path:
     """Get the lambda directory path."""
     return REPO_ROOT / "src" / "api" / "common" / "routing" / "lambda"

@@ -5,14 +5,14 @@ import pytest
 from test_fixtures.aws import get_log_group_info
 
 
-@pytest.fixture(name="website_url", scope="module")
-def website_url_fixture(config):
+@pytest.fixture(scope="module")
+def website_url(config):
     """Provide website URL for tests."""
     return f"https://www.{config['domain_name']}"
 
 
-@pytest.fixture(name="handler_log_group", scope="module")
-def handler_log_group_fixture(logs_client, shared_config):
+@pytest.fixture(scope="module")
+def handler_log_group(logs_client, shared_config):
     """Get the rack configurations handler log group info from CloudWatch."""
     function_name = shared_config.get("lambda_handler_names", {}).get(
         "rack_configurations", "TenULabsRackConfigurationsHandler"
@@ -21,8 +21,8 @@ def handler_log_group_fixture(logs_client, shared_config):
     return get_log_group_info(logs_client, log_group_name)
 
 
-@pytest.fixture(name="test_device_id", scope="module")
-def test_device_id_fixture():
+@pytest.fixture(scope="module")
+def test_device_id():
     """Provide test device ID for tests."""
     return "integration-test-device"
 

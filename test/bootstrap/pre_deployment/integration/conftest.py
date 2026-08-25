@@ -40,8 +40,8 @@ def common_module_dir_fixture() -> Path:
     return REPO_ROOT / "lib" / "terraform" / "common"
 
 
-@pytest.fixture(name="locals_content")
-def locals_content_fixture(bootstrap_dir: Path) -> str:
+@pytest.fixture
+def locals_content(bootstrap_dir: Path) -> str:
     """Read locals.tf content."""
     return (bootstrap_dir / "locals.tf").read_text()
 
@@ -52,36 +52,36 @@ def outputs_content_fixture(bootstrap_dir: Path) -> str:
     return (bootstrap_dir / "outputs.tf").read_text()
 
 
-@pytest.fixture(name="common_outputs")
-def common_outputs_fixture(common_module_dir: Path) -> set[str]:
+@pytest.fixture
+def common_outputs(common_module_dir: Path) -> set[str]:
     """Get output names from common module."""
     content = (common_module_dir / "outputs.tf").read_text()
     return _extract_output_names(content)
 
 
-@pytest.fixture(name="github_oidc_outputs")
-def github_oidc_outputs_fixture(bootstrap_dir: Path) -> set[str]:
+@pytest.fixture
+def github_oidc_outputs(bootstrap_dir: Path) -> set[str]:
     """Get output names from github_oidc module."""
     content = (bootstrap_dir / "modules" / "github_oidc" / "outputs.tf").read_text()
     return _extract_output_names(content)
 
 
-@pytest.fixture(name="domain_outputs")
-def domain_outputs_fixture(bootstrap_dir: Path) -> set[str]:
+@pytest.fixture
+def domain_outputs(bootstrap_dir: Path) -> set[str]:
     """Get output names from domain module."""
     content = (bootstrap_dir / "modules" / "domain" / "outputs.tf").read_text()
     return _extract_output_names(content)
 
 
-@pytest.fixture(name="central_logs_outputs")
-def central_logs_outputs_fixture(bootstrap_dir: Path) -> set[str]:
+@pytest.fixture
+def central_logs_outputs(bootstrap_dir: Path) -> set[str]:
     """Get output names from central_logs module."""
     content = (bootstrap_dir / "modules" / "central_logs" / "outputs.tf").read_text()
     return _extract_output_names(content)
 
 
-@pytest.fixture(name="cloudtrail_outputs")
-def cloudtrail_outputs_fixture(bootstrap_dir: Path) -> set[str]:
+@pytest.fixture
+def cloudtrail_outputs(bootstrap_dir: Path) -> set[str]:
     """Get output names from cloudtrail module."""
     content = (bootstrap_dir / "modules" / "cloudtrail" / "outputs.tf").read_text()
     return _extract_output_names(content)

@@ -48,8 +48,8 @@ def _add_derived_config(result: Dict[str, str]) -> None:
     result['api_gateway_cloudwatch_role_name'] = f"{prefix}ApiGatewayCloudwatch"
 
 
-@pytest.fixture(name="config", scope="module")
-def config_fixture(shared_config) -> Dict[str, Any]:
+@pytest.fixture(scope="module")
+def config(shared_config) -> Dict[str, Any]:
     """Provide merged configuration from terraform files."""
     base = Path(__file__).parent.parent.parent.parent.parent
     tfvars_path = base / "src" / "api" / "common" / "routing" / "terraform.tfvars"
@@ -84,8 +84,8 @@ def sns_client(aws_region):
     return boto3.client('sns', region_name=aws_region)
 
 
-@pytest.fixture(name="dynamodb_client", scope="module")
-def dynamodb_client_fixture(aws_region):
+@pytest.fixture(scope="module")
+def dynamodb_client(aws_region):
     """Provide DynamoDB client for the configured AWS region."""
     return boto3.client('dynamodb', region_name=aws_region)
 

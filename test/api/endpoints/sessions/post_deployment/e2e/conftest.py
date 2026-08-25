@@ -15,19 +15,19 @@ def config_fixture(shared_config):
     }
 
 
-@pytest.fixture(name="api_url", scope="module")
-def api_url_fixture(config):
+@pytest.fixture(scope="module")
+def api_url(config):
     """Provide the API URL for E2E tests."""
     return f"https://{config['api_fqdn']}"
 
 
-@pytest.fixture(name="test_device_id", scope="module")
-def test_device_id_fixture():
+@pytest.fixture(scope="module")
+def test_device_id():
     """Provide a test device ID for E2E tests."""
     return "e2e-test-device"
 
 
-@pytest.fixture(name="test_session_id", scope="module")
-def test_session_id_fixture():
+@pytest.fixture(scope="module")
+def test_session_id():
     """Provide a test session ID for E2E tests."""
     return "e2e-test-session-12345"

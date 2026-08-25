@@ -6,8 +6,8 @@ import pytest
 from test_fixtures.integration import get_aws_account_id_via_cli
 
 
-@pytest.fixture(name="config", scope="module")
-def config_fixture(shared_config) -> Dict[str, str]:
+@pytest.fixture(scope="module")
+def config(shared_config) -> Dict[str, str]:
     """Provide rack designer configuration for tests."""
     result = {
         'aws_region': shared_config['aws_region'],

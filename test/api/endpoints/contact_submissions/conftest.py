@@ -12,8 +12,8 @@ from terraform_config import (
 CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact_submissions"
 
 
-@pytest.fixture(name="config", scope="module")
-def config_fixture(shared_config) -> Dict[str, str]:
+@pytest.fixture(scope="module")
+def config(shared_config) -> Dict[str, str]:
     """Create configuration fixture from shared config."""
     result: Dict[str, str] = {}
     result['aws_region'] = shared_config['aws_region']

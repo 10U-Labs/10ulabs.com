@@ -13,14 +13,14 @@ def api_url_fixture(config):
     return f"https://api.{config['domain_name']}"
 
 
-@pytest.fixture(name="website_url", scope="module")
-def website_url_fixture(config):
+@pytest.fixture(scope="module")
+def website_url(config):
     """Provide the website URL for E2E tests."""
     return f"https://www.{config['domain_name']}"
 
 
-@pytest.fixture(name="test_device_id", scope="module")
-def test_device_id_fixture():
+@pytest.fixture(scope="module")
+def test_device_id():
     """Provide a test device ID for E2E tests."""
     return "e2e-test-device"
 

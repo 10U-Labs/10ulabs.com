@@ -6,7 +6,7 @@ Provides api_url fixture for e2e tests.
 import pytest
 
 
-@pytest.fixture(name="api_url", scope="module")
-def api_url_fixture(config):
+@pytest.fixture(scope="module")
+def api_url(config):
     """Return API URL from config."""
     return f"https://{config['api_fqdn']}"

@@ -37,8 +37,8 @@ def bootstrap_outputs_fixture(bootstrap_initialized):
     }
 
 
-@pytest.fixture(scope="session", name="central_logs_bucket_name")
-def central_logs_bucket_name_fixture(bootstrap_outputs):
+@pytest.fixture(scope="session")
+def central_logs_bucket_name(bootstrap_outputs):
     """Extract the central logs bucket name from its ARN."""
     arn = bootstrap_outputs.get("arn_for_central_logs_bucket", "")
     if not arn:

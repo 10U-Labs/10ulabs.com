@@ -9,8 +9,8 @@ RACK_CONFIGURATIONS_LAMBDA_PATH = RACK_CONFIGURATIONS_SRC_PATH / "lambda"
 load_lambda_module = create_lambda_loader(RACK_CONFIGURATIONS_LAMBDA_PATH)
 
 
-@pytest.fixture(name="handler")
-def handler_fixture():
+@pytest.fixture
+def handler():
     """Provide the handler Lambda module for tests."""
     module = load_lambda_module("handler.py", "handler")
     module.clear_clients()
@@ -23,8 +23,8 @@ def backup_tf_path_fixture():
     return RACK_CONFIGURATIONS_SRC_PATH / "backup.tf"
 
 
-@pytest.fixture(name="backup_tf_content")
-def backup_tf_content_fixture(backup_tf_path):
+@pytest.fixture
+def backup_tf_content(backup_tf_path):
     """Provide the content of the backup.tf file."""
     with open(backup_tf_path, encoding="utf-8") as f:
         return f.read()
