@@ -17,7 +17,7 @@ description: Start or stop the standing reminders that keep an autonomous issue-
 
 ## Overview
 
-Eight recurring reminders, one per standing rule, that fire back into this session while it works through the open issues on `10U-Labs/10ulabs.com` on its own. One reminder per rule, so no rule can be quietly dropped from a merged block of text; staggered across a ten-minute period so they arrive spread out rather than as a wall.
+Seven recurring reminders, one per standing rule, that fire back into this session while it works through the open issues on `10U-Labs/10ulabs.com` on its own. One reminder per rule, so no rule can be quietly dropped from a merged block of text; staggered across a ten-minute period so they arrive spread out rather than as a wall.
 
 The argument is the sub-command, `start` or `stop`. Neither takes anything else — `start` reads its scope out of the repository. If the user names an issue number anyway, they are asking to start rather than to narrow; say the whole open set is in scope and start.
 
@@ -29,24 +29,23 @@ The argument is the sub-command, `start` or `stop`. Neither takes anything else 
 
 #### Create the reminders
 
-Create eight jobs with `CronCreate`, exactly as listed. Use `recurring: true` (the default), and take the prompts verbatim; none of them has anything to substitute. Each `cron` field is a distinct offset within the same ten-minute period. Two reminders can still arrive in the same minute, because a recurring job fires up to a tenth of its period late; that is documented drift, not a job created wrong, and the table is not to be re-spaced over it.
+Create seven jobs with `CronCreate`, exactly as listed. Use `recurring: true` (the default), and take the prompts verbatim; none of them has anything to substitute. Each `cron` field is a distinct offset within the same ten-minute period. Two reminders can still arrive in the same minute, because a recurring job fires up to a tenth of its period late; that is documented drift, not a job created wrong, and the table is not to be re-spaced over it.
 
 | Offset | Cron | Prompt |
 | --- | --- | --- |
 | :01 | `1,11,21,31,41,51 * * * *` | `REMINDER: Continue to solve the open issues autonomously, unless you need human feedback about ANYTHING — not just about the next open issue.` |
 | :03 | `3,13,23,33,43,53 * * * *` | `REMINDER: Issues must be solved through a single commit & push.` |
 | :04 | `4,14,24,34,44,54 * * * *` | `REMINDER: Issues must be solved through a set of indivisible tasks held in Claude Code's native structured task list — TaskCreate one entry per step before starting, TaskUpdate each to in_progress and then completed as it lands. A breakdown kept only in your head is not a breakdown.` |
-| :05 | `5,15,25,35,45,55 * * * *` | `REMINDER: Lead with what the thing is for. Every paragraph — in chat as much as in issues, commits and comments — opens with a sentence saying what the thing is and what it does, before any file, function or line is named. Say what a defect costs near the top, not in the seventh paragraph. Then cut the details that change nothing the reader would do.` |
 | :06 | `6,16,26,36,46,56 * * * *` | `REMINDER: Ensure the entries in Claude Code's native structured task list are indivisible. Read the list back with TaskList; split any entry that cannot be finished in one step.` |
 | :07 | `7,17,27,37,47,57 * * * *` | `REMINDER: Do not do anything but wait while a workflow is running.` |
 | :08 | `8,18,28,38,48,58 * * * *` | `REMINDER: An issue you file is placed before you go back to work, and a blocked_by edge is written only where the block is real. Add one when the issue in hand cannot be finished until the new one is, or when some other open issue cannot. Where nothing waits on it, file it with no edge and move on: an ordering is not a dependency, and an edge written to give an issue a place in the queue is a false statement about the work.` |
 | :09 | `9,19,29,39,49,59 * * * *` | `REMINDER: When you come up against a new problem, file a GitHub issue. A problem in the program — src/, lib/python/, lib/terraform/, scripts/ — gets the sub-headers "Problem", "Why Unit Tests Did Not Catch It?", "Why Integration Tests Did Not Catch It?", "Why E2E Tests Did Not Catch It?", "Why Static Analysis Jobs Did Not Catch It?", "Which Unit, Integration, or E2E Regression Tests or Static Analysis Jobs Would Prevent This from Happening Again?", and "Proposed Solution". A problem in a config, a map, a workflow file or the docs — etc/, .github/, docs/ — gets "Problem" and "Proposed Solution" only, and owes no tests.` |
 
-Then tell the user that eight reminders are running, how many open issues are in scope, and the two limits that come with them: the jobs live in this session only and are gone when it ends, and recurring jobs auto-expire after seven days.
+Then tell the user that seven reminders are running, how many open issues are in scope, and the two limits that come with them: the jobs live in this session only and are gone when it ends, and recurring jobs auto-expire after seven days.
 
 #### Start working
 
-Start in the same turn that created the jobs. Running this skill is starting the work; the eight jobs only keep it on the rails once it is going.
+Start in the same turn that created the jobs. Running this skill is starting the work; the seven jobs only keep it on the rails once it is going.
 
 Read the open issues with `gh issue list`, then read `gh api repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by` for each of them; every entry names the repository its blocker lives in. Follow those entries, and the entries of the issues they reach, until nothing new comes back, and add every open issue found this way to the set. Then take the lowest-numbered issue in the set that no open issue blocks, preferring this repository when two are equally unblocked, and solve it under the standing rules the reminders carry — committing in whichever repository its `Proposed Solution` names, and reading that repository's CI to confirm it.
 
@@ -71,6 +70,6 @@ Remove an edge that should not have been written with `gh api -X DELETE repos/{o
 
 ### Stop
 
-Call `CronList`, then call `CronDelete` once per job it returns — all of them, not only the eight this skill created. "Delete all your reminders" means the session ends with an empty schedule. Call `CronList` again afterwards to confirm it is empty, and report how many jobs were deleted.
+Call `CronList`, then call `CronDelete` once per job it returns — all of them, not only the seven this skill created. "Delete all your reminders" means the session ends with an empty schedule. Call `CronList` again afterwards to confirm it is empty, and report how many jobs were deleted.
 
 `CronList` returning nothing is not a failure; say the schedule was already empty and stop.

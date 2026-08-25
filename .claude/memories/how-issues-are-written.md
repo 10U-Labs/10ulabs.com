@@ -8,7 +8,6 @@
 - [The static analysis section](#the-static-analysis-section)
 - [The regression section](#the-regression-section)
 - [The Proposed Solution](#the-proposed-solution)
-- [How to write it](#how-to-write-it)
 - [An issue on disk goes stale](#an-issue-on-disk-goes-stale)
 - [Related notes](#related-notes)
 
@@ -61,20 +60,6 @@ The regression section is those four read forwards, and it is where the coverage
 ## The Proposed Solution
 
 The closing section is called "Proposed Solution" and not "Solution". It is what the issue proposes, and whoever picks it up is free to do something else; the name says so before they have read a word of it. It names one change and not a choice between two — see [an-issue-states-one-solution](an-issue-states-one-solution.md).
-
-## How to write it
-
-The rules for prose everywhere here — lead with the concept, one idea to a sentence, cut what changes nothing, no bullets inside an argument — are in [prose-leads-with-the-concept](prose-leads-with-the-concept.md). What follows is how they land on the seven sections.
-
-Problem and the four sections that ask what should have caught it name no file and no function at all, beyond the one thing the issue is about, which Problem may name once so the reader knows what is under discussion. They are arguments about behaviour, and an argument that only holds while looking at the file is one the reader cannot check. Naming the subject is not a licence to bring its neighbours in with it.
-
-What that bars is a location — this module, this function, this line — and never a name that is a term of the trade. A `conftest.py` is a kind of file every Python test tree has, and a decorator argument is part of the vocabulary of pytest; both are terms the way handler and exception are terms, and both are written wherever they are what the sentence is about. Writing around one is the failure this bar produces on its own. An issue about a decorator argument in `conftest.py` files called them "the files pytest loads on its own, before running any test beneath them" and called the argument "filed under one name and defined under another", spending two clauses and a subordinate clause on what two names say exactly. The regression section names a tier and an assertion, or a job and the shape it refuses, which are concepts too. Identifiers belong in Proposed Solution, where the reader has stopped reading and started working, and where naming the one change is the whole job.
-
-Assume the reader has not opened the files and will not open them while reading. That makes the issue self-contained. It does not make each section repeat the last, and it does not make Problem a tutorial on its own subject.
-
-Problem opens on the defect. Its first sentence says what is wrong, naming the subject as it says it, and what the code is for, what the defect costs and how it was measured all follow that sentence rather than delaying it — each cut to what judging the defect needs. Explaining the subject first spends the reader's attention on what they arrived with: an issue about pytest fixtures opened by defining a fixture and describing how a test asks for one, and said nothing was wrong until its second paragraph. Where a mechanism genuinely has to be understood before the defect makes sense, it goes under the sentence stating the defect and stops at the part the defect turns on. The six sections after Problem inherit its frame and do not restate it.
-
-A section is as long as it needs to be and no longer. A section may be a single sentence, and the four backward-looking sections often are, because the honest answer to them is short. Padding a short answer to fill out a header is the failure to watch for.
 
 ## An issue on disk goes stale
 

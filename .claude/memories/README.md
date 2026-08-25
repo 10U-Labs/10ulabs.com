@@ -20,13 +20,12 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [four-static-analysis-passes-per-workflow](four-static-analysis-passes-per-workflow.md) — linter and type checker, over source and over tests, four jobs with the same names in every workflow
 - [commit-straight-to-main](commit-straight-to-main.md) — direct commits, no branches and no pull requests, one commit per issue with its closing line
 - [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md) — a failed run is answered with a follow-up commit, never an amended force-push
-- [prose-leads-with-the-concept](prose-leads-with-the-concept.md) — lead with what the thing is for, write in concepts rather than identifiers, use the exact term for the thing being written about, one idea to a sentence
 - [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md) — no column limit on `.md` files, on issue bodies or on commit message bodies
 - [never-write-the-skip-ci-brackets-in-prose](never-write-the-skip-ci-brackets-in-prose.md) — a commit message that names the bracketed directive starts no workflow, so prose about it drops the brackets
 
 ## Issues
 
-- [how-issues-are-written](how-issues-are-written.md) — seven fixed sections for the program, two for everything else, identifiers only in the solution, no test and no static analysis question owed for a config or a workflow file
+- [how-issues-are-written](how-issues-are-written.md) — seven fixed sections for the program, two for everything else, no test and no static analysis question owed for a config or a workflow file
 - [an-issue-states-one-solution](an-issue-states-one-solution.md) — a `Proposed Solution` names one change; a fork is asked about before the issue is filed, never published as an either
 - [file-what-the-sweep-turns-up](file-what-the-sweep-turns-up.md) — a defect found while working on something else is filed in the same turn, not named in a reply and left for the user to ask for
 - [an-edge-is-only-a-true-block](an-edge-is-only-a-true-block.md) — a `blocked_by` edge is written only where the work cannot be finished without the other issue; an issue nothing waits on is filed with no edge
