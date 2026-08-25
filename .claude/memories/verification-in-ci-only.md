@@ -22,7 +22,7 @@ Reading the code locally is the other half of this and is cheap: `grep`, `sed -n
 
 ## When a change is done
 
-A change is not done when the push succeeds. Every workflow here is path-filtered, so one commit can start several, and the change is done when each one that fired is green rather than when the first is — see [find-a-run-by-the-full-hash](find-a-run-by-the-full-hash.md) for the trap in finding them. Every check a workflow carries reads only the files that workflow's own `paths` list names, so a run reports on its own subsystem and on nothing else. `lib/python/` and `test/lib/python/` are read whole by `scripts.yml` alone, which is the only workflow whose trigger names them. `scripts.yml` is the one to look for when nothing deployed: it runs on `lib/python/`, `lib/terraform/common/`, `scripts/`, their tests and its own workflow file.
+A change is not done when the push succeeds. Every workflow here is path-filtered, so one commit can start several, and the change is done when each one that fired is green rather than when the first is — see [find-a-run-by-the-full-hash](find-a-run-by-the-full-hash.md) for the trap in finding them. Every check a workflow carries reads only the files that workflow's own `paths` list names, so a run reports on its own subsystem and on nothing else. `scripts.yml` is the one to look for when nothing deployed: it runs on `scripts/`, on the one suite that covers it and on its own workflow file, and reaches nothing outside those.
 
 ## What follows for TDD
 
