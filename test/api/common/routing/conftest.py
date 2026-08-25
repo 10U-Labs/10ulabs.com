@@ -48,8 +48,8 @@ def _add_derived_config(result: Dict[str, str]) -> None:
     result['api_gateway_cloudwatch_role_name'] = f"{prefix}ApiGatewayCloudwatch"
 
 
-@pytest.fixture(scope="module")
-def config(shared_config) -> Dict[str, Any]:
+@pytest.fixture(name="config", scope="module")
+def config_fixture(shared_config) -> Dict[str, Any]:
     """Provide merged configuration from terraform files."""
     base = Path(__file__).parent.parent.parent.parent.parent
     tfvars_path = base / "src" / "api" / "common" / "routing" / "terraform.tfvars"
