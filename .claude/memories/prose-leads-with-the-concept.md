@@ -89,4 +89,4 @@ Quoting the old and new text as block quotes instead was tried three times in on
 
 ## Related notes
 
-Nothing here is hard-wrapped — see [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md). How these rules land on the six sections of an issue, and which section carries the identifiers, is in [how-issues-are-written](how-issues-are-written.md).
+Nothing here is hard-wrapped — see [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md). How these rules land on the seven sections of an issue, and which section carries the identifiers, is in [how-issues-are-written](how-issues-are-written.md).
