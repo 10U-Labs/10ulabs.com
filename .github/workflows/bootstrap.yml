@@ -66,6 +66,26 @@ jobs:
           test/__init__.py
           test/conftest.py
           test/bootstrap
+  assert-pytest-fixture-name-is-needed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-pytest-fixture-name-is-needed
+      - name: Assert pytest fixture name is needed
+        run: >-
+          assert-pytest-fixture-name-is-needed
+          --verbose
+          test/__init__.py
+          test/conftest.py
+          test/bootstrap
   copy-paste-tests:
     runs-on: ubuntu-latest
     steps:
@@ -367,6 +387,7 @@ jobs:
       - assert-no-inline-directives
       - assert-no-linter-config-files
       - assert-one-assert-per-pytest
+      - assert-pytest-fixture-name-is-needed
       - copy-paste-tests
       - mypy-tests
       - pre-deployment-integration-tests

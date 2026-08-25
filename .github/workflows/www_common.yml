@@ -82,6 +82,32 @@ jobs:
           test/lib/terraform/s3_bucket
           test/lib/terraform/write_ahead_queue
           test/www/common
+  assert-pytest-fixture-name-is-needed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-pytest-fixture-name-is-needed
+      - name: Assert pytest fixture name is needed
+        run: >-
+          assert-pytest-fixture-name-is-needed
+          --verbose
+          test/__init__.py
+          test/conftest.py
+          test/lib/terraform/conftest.py
+          test/www/__init__.py
+          test/www/conftest.py
+          test/lib/terraform/common
+          test/lib/terraform/s3_bucket
+          test/lib/terraform/write_ahead_queue
+          test/www/common
   assert-python-definition-is-used:
     runs-on: ubuntu-latest
     steps:
@@ -419,6 +445,7 @@ jobs:
       - assert-no-inline-directives
       - assert-no-linter-config-files
       - assert-one-assert-per-pytest
+      - assert-pytest-fixture-name-is-needed
       - assert-python-definition-is-used
       - copy-paste-source
       - copy-paste-tests

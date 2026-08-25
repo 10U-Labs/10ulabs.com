@@ -67,6 +67,20 @@ jobs:
           assert-one-assert-per-pytest
           --verbose
           ${{ github.workspace }}/test
+  assert-pytest-fixture-name-is-needed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install assert-pytest-fixture-name-is-needed
+        run: |
+          python3 -m pip install \
+            assert-pytest-fixture-name-is-needed
+      - name: Assert pytest fixture name is needed
+        run: >-
+          assert-pytest-fixture-name-is-needed
+          --verbose
+          ${{ github.workspace }}/test
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:
