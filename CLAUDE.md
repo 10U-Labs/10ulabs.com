@@ -33,7 +33,6 @@
     - [Four static analysis passes per workflow](#four-static-analysis-passes-per-workflow)
     - [Path filters are not shell globs](#path-filters-are-not-shell-globs)
 - [Notes](#notes)
-  - [The autopilot skill is the other half](#the-autopilot-skill-is-the-other-half)
   - [Where a new convention goes](#where-a-new-convention-goes)
 
 ## Overview
@@ -157,10 +156,6 @@ A workflow lints and type-checks its own source and its own tests in four passes
 A path in a workflow's `paths` filter is not a shell glob and not a directory glob. GitHub reads `**` as any run of characters, `/` included, so `**/*.md` needs a slash to match and reaches no file at the root of the repository: it covers `docs/tenets/tests/UNIT_TESTS.md` and misses `CLAUDE.md`. The form that reaches both is `'**.md'`, quoted because a bare `*` opens a YAML alias. This is the opposite of how the same two patterns read in `node`, where `**/` matches zero directories and both forms reach the root, so a filter copied from a lint command covers less than the command does.
 
 ## Notes
-
-### The autopilot skill is the other half
-
-`.claude/skills/autopilot/SKILL.md` is the other half of this and does a different job: this file is read at the start of a turn, and the skill's reminders fire into a session that has gone idle. It carries how to pick the next issue and how to place a new one, and points here for the rules a turn already has in front of it.
 
 ### Where a new convention goes
 
