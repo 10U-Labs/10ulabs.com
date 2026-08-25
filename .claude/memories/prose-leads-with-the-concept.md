@@ -3,7 +3,7 @@
 ## Table of Contents
 
 - [Who the reader is](#who-the-reader-is)
-- [Lead with what the thing is for](#lead-with-what-the-thing-is-for)
+- [Lead with the point](#lead-with-the-point)
 - [Concepts rather than identifiers](#concepts-rather-than-identifiers)
 - [Use the exact term](#use-the-exact-term)
 - [Name the subject exactly](#name-the-subject-exactly)
@@ -25,9 +25,13 @@ Run that pass over the whole thing after every edit, not over the sentence just 
 
 Run the pass yourself rather than letting the reader run it. Nine separate sentences in one issue were caught this way by the person it was written for, one at a time, over nine turns, and every one would have failed the same read at the writer's desk.
 
-## Lead with what the thing is for
+## Lead with the point
 
-Lead with what the thing is for. A paragraph opens by saying what the thing is and what it does, before any file, function or line is named. Say what a defect costs near the top rather than in the seventh paragraph. Opening with the concept is not a licence to re-establish context the reader already has; leading and restating are different things.
+Lead with the point. A paragraph opens on the thing it is there to say, and where that thing is a defect the first sentence says what is wrong, naming the subject as it says it.
+
+This is a rule about order rather than a licence to explain. Background is whatever the reader needs in order to judge the claim, it goes under the claim rather than in front of it, and it is cut to the part the claim turns on. A definition of something the reader already knows is not background at all. An issue about pytest fixtures opened with a hundred words defining a fixture and describing how a test asks for one, and reached the defect in its second paragraph, where every reader who could act on that issue had known the first paragraph for years.
+
+The rule this replaced asked a paragraph to say what the thing is and what it does before naming any file, function or line, which is two rules wearing one coat. Say what a defect costs near the top rather than in the seventh paragraph, and give the reader a subject before pointing at its parts. Neither of those asks for a paragraph of exposition ahead of the point, and read as a single rule that is what it produced.
 
 ## Concepts rather than identifiers
 
@@ -72,6 +76,8 @@ Repeat the noun rather than reaching back for it with a pronoun. A reader who ha
 ## One idea to a sentence
 
 One idea to a sentence. Do not chain subordinate clauses to fit a second idea in. This replaced an older rule that asked for simple, ordinary English, which turned out to constrain vocabulary and say nothing at all about length. It was satisfied for a long time by long clause-chained sentences built out of short words. A rule about the shape of a sentence is refusable in a way an adjective is not.
+
+The shape that breaks it most often qualifies its subject twice before reaching a verb. "Sixty-four fixtures in the files pytest loads on its own, before running any test beneath them, are filed under one name and defined under another for a reason that does not hold in their file" opens an issue with five things at once: how many there are, where they live, when those files are read, what is written on them, and why it is wrong. The reader waits until halfway for a verb and gets a weak one. Each of the five is a sentence, and the first sentence only owed the reader one of them.
 
 ## Cut what changes nothing
 
