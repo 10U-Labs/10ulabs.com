@@ -14,7 +14,7 @@ When a push fails CI, fix it in a follow-up commit. Do not amend and force-push.
 
 ## The tension with the single-push rule
 
-This puts two standing rules in tension, and how the tension resolves is worth stating rather than rediscovering. An issue is meant to be solved in a single push, and verification happens only in CI. Every static-analysis check here is a job of its own — `assert-no-inline-directives`, `assert-no-linter-config-files`, `assert-one-assert-per-pytest`, `copy-paste-source`, `copy-paste-tests`, `mypy-source`, `mypy-tests`, `pylint-source`, `pylint-tests`, `terraform-format`, `tflint` and `yamllint` — and the jobs start together. So a change carrying several independent findings surfaces all of them at once, in one run, and each failing job reports its own conclusion.
+This puts two standing rules in tension, and how the tension resolves is worth stating rather than rediscovering. An issue is meant to be solved in a single push, and verification happens only in CI. Every static-analysis check here is a job of its own — the linter and the type checker over source and over tests, the formatters, the linters for the other languages, the duplicate detector and this repository's own assertion checks — and the jobs start together. So a change carrying several independent findings surfaces all of them at once, in one run, and each failing job reports its own conclusion. The checks are named one by one in the workflow files and nowhere else, because that is the only place a name can be checked against something that runs.
 
 ## Why local linting is not the answer
 
