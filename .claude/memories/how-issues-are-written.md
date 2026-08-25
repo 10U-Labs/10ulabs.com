@@ -21,10 +21,10 @@ An issue about the program has seven sections, in this order, and every issue ab
 - **Why Integration Tests Did Not Catch It?** — the same, for the tier that checks two units agreeing.
 - **Why E2E Tests Did Not Catch It?** — the same, for the tier that makes a caller's journey against the deployed program and judges it on what the caller receives.
 - **Why Static Analysis Jobs Did Not Catch It?** — the same, for the half of CI that reads the source without running it: which job saw the file, and why no rule it carries was broken.
-- **Which Unit, Integration, or E2E regression tests or static analysis jobs would prevent this from happening again?** — the coverage owed, each test named by the tier it belongs to and the assertion it makes, and each job by the shape it would refuse.
+- **Which Unit, Integration, or E2E Regression Tests or Static Analysis Jobs Would Prevent This from Happening Again?** — the coverage owed, each test named by the tier it belongs to and the assertion it makes, and each job by the shape it would refuse.
 - **Proposed Solution** — the one change to make.
 
-The four question headings carry a question mark and the other three do not, because the four ask something and the other three announce something.
+Every heading is in title case. The five that ask something end in a question mark; Problem and Proposed Solution announce something and do not.
 
 An issue about anything else has two sections, **Problem** and **Proposed Solution**, and owes no tests at all.
 
