@@ -4,8 +4,11 @@
 # scripts/ holds the one program the deploys shell out to,
 # invalidate_cloudfront.py. It deploys nothing of its own, so it has no
 # workflow of its own and this file is what reads it and the one suite that
-# covers it. Every check here is its own job, so a red check reports
-# alongside the others rather than hiding behind the first failing step.
+# covers it. Its pytest job runs the root conftest, which loads the two
+# test_fixtures plugin modules, so this workflow also executes eight
+# packages under lib/python/ and reads them and their suites here. Every
+# check here is its own job, so a red check reports alongside the others
+# rather than hiding behind the first failing step.
 concurrency:
   cancel-in-progress: true
   group: scripts-${{ github.ref }}
@@ -30,9 +33,27 @@ jobs:
           --verbose
           .github/workflows/scripts.yml
           scripts
+          lib/python/boto_mocks
+          lib/python/event_factories
+          lib/python/lambda_response
+          lib/python/module_utils
+          lib/python/repo_utils
+          lib/python/terraform_config
+          lib/python/test_fixtures
+          lib/python/urllib_mocks
           test/__init__.py
           test/conftest.py
           test/scripts
+          test/lib/__init__.py
+          test/lib/python/__init__.py
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_event_factories
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_test_fixtures
+          test/lib/python/test_urllib_mocks
   assert-no-linter-config-files:
     runs-on: ubuntu-latest
     steps:
@@ -52,7 +73,23 @@ jobs:
           --linters pylint,mypy,yamllint
           --verbose
           scripts
+          lib/python/boto_mocks
+          lib/python/event_factories
+          lib/python/lambda_response
+          lib/python/module_utils
+          lib/python/repo_utils
+          lib/python/terraform_config
+          lib/python/test_fixtures
+          lib/python/urllib_mocks
           test/scripts
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_event_factories
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_test_fixtures
+          test/lib/python/test_urllib_mocks
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -73,6 +110,16 @@ jobs:
           test/__init__.py
           test/conftest.py
           test/scripts
+          test/lib/__init__.py
+          test/lib/python/__init__.py
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_event_factories
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_test_fixtures
+          test/lib/python/test_urllib_mocks
   assert-pytest-fixture-name-is-needed:
     runs-on: ubuntu-latest
     steps:
@@ -93,6 +140,16 @@ jobs:
           test/__init__.py
           test/conftest.py
           test/scripts
+          test/lib/__init__.py
+          test/lib/python/__init__.py
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_event_factories
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_test_fixtures
+          test/lib/python/test_urllib_mocks
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:
@@ -103,7 +160,15 @@ jobs:
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            scripts/
+            scripts/ \
+            lib/python/boto_mocks \
+            lib/python/event_factories \
+            lib/python/lambda_response \
+            lib/python/module_utils \
+            lib/python/repo_utils \
+            lib/python/terraform_config \
+            lib/python/test_fixtures \
+            lib/python/urllib_mocks
   copy-paste-tests:
     runs-on: ubuntu-latest
     steps:
@@ -114,7 +179,15 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            test/scripts
+            test/scripts \
+            test/lib/python/test_boto_mocks \
+            test/lib/python/test_event_factories \
+            test/lib/python/test_lambda_response \
+            test/lib/python/test_module_utils \
+            test/lib/python/test_repo_utils \
+            test/lib/python/test_terraform_config \
+            test/lib/python/test_test_fixtures \
+            test/lib/python/test_urllib_mocks
   mypy-source:
     runs-on: ubuntu-latest
     steps:
@@ -129,10 +202,23 @@ jobs:
           python3 -m pip install \
             boto3 \
             boto3-stubs \
-            mypy
+            botocore \
+            mypy \
+            pytest \
+            requests \
+            types-requests
       - name: Run mypy on source
         run: |
-          MYPYPATH=scripts python3 -m mypy scripts/
+          MYPYPATH=lib/python:scripts python3 -m mypy \
+            scripts/ \
+            lib/python/boto_mocks \
+            lib/python/event_factories \
+            lib/python/lambda_response \
+            lib/python/module_utils \
+            lib/python/repo_utils \
+            lib/python/terraform_config \
+            lib/python/test_fixtures \
+            lib/python/urllib_mocks
   mypy-tests:
     runs-on: ubuntu-latest
     steps:
@@ -147,14 +233,27 @@ jobs:
           python3 -m pip install \
             boto3 \
             boto3-stubs \
+            botocore \
             mypy \
-            pytest
+            pytest \
+            requests \
+            types-requests
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python:scripts python3 -m mypy \
             test/__init__.py \
             test/conftest.py \
-            test/scripts
+            test/scripts \
+            test/lib/__init__.py \
+            test/lib/python/__init__.py \
+            test/lib/python/test_boto_mocks \
+            test/lib/python/test_event_factories \
+            test/lib/python/test_lambda_response \
+            test/lib/python/test_module_utils \
+            test/lib/python/test_repo_utils \
+            test/lib/python/test_terraform_config \
+            test/lib/python/test_test_fixtures \
+            test/lib/python/test_urllib_mocks
   pylint-source:
     runs-on: ubuntu-latest
     steps:
@@ -168,11 +267,23 @@ jobs:
         run: |
           python3 -m pip install \
             boto3 \
-            pylint
+            botocore \
+            pylint \
+            pytest \
+            requests
       - name: Run pylint on source
         run: |
-          python3 -m pylint \
-            scripts/ --fail-on=C,R,W --fail-under=10.0
+          PYTHONPATH=lib/python python3 -m pylint \
+            scripts/ \
+            lib/python/boto_mocks \
+            lib/python/event_factories \
+            lib/python/lambda_response \
+            lib/python/module_utils \
+            lib/python/repo_utils \
+            lib/python/terraform_config \
+            lib/python/test_fixtures \
+            lib/python/urllib_mocks \
+            --fail-on=C,R,W --fail-under=10.0
   pylint-tests:
     runs-on: ubuntu-latest
     steps:
@@ -186,14 +297,26 @@ jobs:
         run: |
           python3 -m pip install \
             boto3 \
+            botocore \
             pylint \
-            pytest
+            pytest \
+            requests
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
             test/__init__.py \
             test/conftest.py \
             test/scripts \
+            test/lib/__init__.py \
+            test/lib/python/__init__.py \
+            test/lib/python/test_boto_mocks \
+            test/lib/python/test_event_factories \
+            test/lib/python/test_lambda_response \
+            test/lib/python/test_module_utils \
+            test/lib/python/test_repo_utils \
+            test/lib/python/test_terraform_config \
+            test/lib/python/test_test_fixtures \
+            test/lib/python/test_urllib_mocks \
             --recursive=y --fail-on=C,R,W --fail-under=10.0
   test-invalidate-cloudfront:
     runs-on: ubuntu-latest
@@ -251,9 +374,27 @@ on:
       - main
     paths:
       - .github/workflows/scripts.yml
+      - lib/python/boto_mocks/**
+      - lib/python/event_factories/**
+      - lib/python/lambda_response/**
+      - lib/python/module_utils/**
+      - lib/python/repo_utils/**
+      - lib/python/terraform_config/**
+      - lib/python/test_fixtures/**
+      - lib/python/urllib_mocks/**
       - scripts/**
       - test/__init__.py
       - test/conftest.py
+      - test/lib/__init__.py
+      - test/lib/python/__init__.py
+      - test/lib/python/test_boto_mocks/**
+      - test/lib/python/test_event_factories/**
+      - test/lib/python/test_lambda_response/**
+      - test/lib/python/test_module_utils/**
+      - test/lib/python/test_repo_utils/**
+      - test/lib/python/test_terraform_config/**
+      - test/lib/python/test_test_fixtures/**
+      - test/lib/python/test_urllib_mocks/**
       - test/scripts/**
   workflow_dispatch:
 permissions:
