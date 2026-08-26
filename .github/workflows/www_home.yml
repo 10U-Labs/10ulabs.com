@@ -252,7 +252,8 @@ jobs:
           python3 -m pip install \
             boto3 \
             botocore \
-            pytest
+            pytest \
+            requests
       - id: terraform
         name: Extract Terraform version
         run: |
