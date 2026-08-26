@@ -1007,6 +1007,7 @@ on:
       - test/lib/python/test_terraform_drift/**
       - test/lib/python/test_test_fixtures/**
       - test/lib/python/test_urllib_mocks/**
+      - test/lib/terraform/__init__.py
       - test/lib/terraform/common/**
       - test/lib/terraform/conftest.py
       - test/lib/terraform/s3_bucket/**

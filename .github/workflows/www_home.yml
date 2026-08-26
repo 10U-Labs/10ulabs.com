@@ -707,6 +707,7 @@ on:
       - test/lib/python/test_terraform_config/**
       - test/lib/python/test_test_fixtures/**
       - test/lib/python/test_urllib_mocks/**
+      - test/www/__init__.py
       - test/www/conftest.py
       - test/www/paths/__init__.py
       - test/www/paths/conftest.py
