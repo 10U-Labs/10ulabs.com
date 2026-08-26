@@ -29,6 +29,7 @@
     - [Where test code that is not a test goes](#where-test-code-that-is-not-a-test-goes)
   - [Verification](#verification)
     - [A push starts more than one workflow](#a-push-starts-more-than-one-workflow)
+    - [A workflow runs the suites of the packages it executes](#a-workflow-runs-the-suites-of-the-packages-it-executes)
     - [CI is the source of truth](#ci-is-the-source-of-truth)
     - [Finding the run](#finding-the-run)
     - [Four passes read the packages the workflow executes](#four-passes-read-the-packages-the-workflow-executes)
@@ -139,11 +140,15 @@ Test code that is not itself a test — a fixture, a mock factory, a loader — 
 
 ### Verification
 
-Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md), [four-static-analysis-passes-per-workflow](.claude/memories/four-static-analysis-passes-per-workflow.md), [a-workflow-reads-the-library-it-executes](.claude/memories/a-workflow-reads-the-library-it-executes.md).
+Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md), [four-static-analysis-passes-per-workflow](.claude/memories/four-static-analysis-passes-per-workflow.md), [a-workflow-reads-the-library-it-executes](.claude/memories/a-workflow-reads-the-library-it-executes.md), [a-workflow-runs-the-suites-of-the-packages-it-executes](.claude/memories/a-workflow-runs-the-suites-of-the-packages-it-executes.md).
 
 #### A push starts more than one workflow
 
 A push starts every workflow whose `paths` filter the commit touches, and the change is done when each of them is green rather than when the first one is.
+
+#### A workflow runs the suites of the packages it executes
+
+A workflow runs the suite of every package under `lib/python/` that the workflow executes, each in a job of its own named after its package and carrying the `--cov=<package> --cov-branch --cov-report=term-missing --cov-fail-under=100` gate `a2558ccc` gave the ten jobs in `api_common_routing.yml`. What a workflow executes is the same set the static analysis reads. The reason is that the workflow runs the code and the code can make its run red: a defect in a package a workflow imports is reported by that workflow either way, and the job is what makes it reported against the package that broke rather than against whichever of the workflow's own suites reached the broken line first. A workflow that deploys is gated twice over, its `reconciliation` job being what stops an apply over a broken library; a workflow that deploys nothing carries the jobs on the first reason alone, which is the case `scripts.yml` was left in when `39e1ad90` deleted its twelve `test-*` jobs and the ten issues that put them back elsewhere all argued from the deployment gate. A package reached only through another package travels with it, so the workflow that runs the reaching package's suite runs the reached package's suite too: `boto_mocks`, `event_factories` and `urllib_mocks` are imported outside test code by one file only, `lib/python/test_fixtures/unit.py`, and without the corollary their suites would run in no workflow at all. The `paths` filter carries the same set, so an edit to a package starts every workflow that runs its suite.
 
 #### CI is the source of truth
 

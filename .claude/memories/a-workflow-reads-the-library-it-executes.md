@@ -45,7 +45,7 @@ Check the rule against this one. Every deploying workflow names `test/conftest.p
 
 ## Ten workflows reading one package is the rule working
 
-`lib/python/repo_utils` appears in the argument list of ten workflows, and that is the intended state rather than duplication to remove. A workflow's run is a gate on that workflow's deployment, and a green run of some other workflow is not: if `www_home.yml` deployed on the strength of `bootstrap.yml` having linted the library, it would be deploying on a check that could be red, skipped, or triggered by a push that never touched the library. `#612` gives the same answer for the `test-*` jobs, which run the library's own suites in every workflow for the same reason.
+`lib/python/repo_utils` appears in the argument list of ten workflows, and that is the intended state rather than duplication to remove. A workflow's run is a gate on that workflow's deployment, and a green run of some other workflow is not: if `www_home.yml` deployed on the strength of `bootstrap.yml` having linted the library, it would be deploying on a check that could be red, skipped, or triggered by a push that never touched the library. The `test-*` jobs that run the library's own suites are placed by the same argument, written down in [a-workflow-runs-the-suites-of-the-packages-it-executes](a-workflow-runs-the-suites-of-the-packages-it-executes.md).
 
 The cost of the repetition is that adding a package to `lib/python/` means editing every workflow that executes it. That is the cost of each workflow being self-sufficient, and it is paid at the one moment a package is added rather than every time one is changed.
 
@@ -61,4 +61,4 @@ The suite for a package is `test/lib/python/test_<package>`, with the exception 
 
 ## Related notes
 
-The four jobs this rule fills in are [four-static-analysis-passes-per-workflow](four-static-analysis-passes-per-workflow.md). Reading the result is [verification-in-ci-only](verification-in-ci-only.md), and answering a red one is [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md).
+The running half of this rule is [a-workflow-runs-the-suites-of-the-packages-it-executes](a-workflow-runs-the-suites-of-the-packages-it-executes.md): the same set of packages and suites, run as `test-*` jobs instead of read. The four jobs this rule fills in are [four-static-analysis-passes-per-workflow](four-static-analysis-passes-per-workflow.md). Reading the result is [verification-in-ci-only](verification-in-ci-only.md), and answering a red one is [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md).
