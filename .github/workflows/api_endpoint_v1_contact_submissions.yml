@@ -24,6 +24,16 @@ jobs:
           .github/workflows/api_endpoint_v1_contact_submissions.yml
           .github/actions/verify-oidc-vars/action.yml
           src/api/endpoints/contact_submissions
+          lib/python/boto_mocks
+          lib/python/event_factories
+          lib/python/lambda_response
+          lib/python/module_utils
+          lib/python/naming_conventions
+          lib/python/repo_utils
+          lib/python/terraform_config
+          lib/python/terraform_drift
+          lib/python/test_fixtures
+          lib/python/urllib_mocks
           test/__init__.py
           test/conftest.py
           test/api/__init__.py
@@ -31,6 +41,19 @@ jobs:
           test/api/endpoints/__init__.py
           test/api/endpoints/conftest.py
           test/api/endpoints/contact_submissions
+          test/lib/__init__.py
+          test/lib/python/__init__.py
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_event_factories
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_naming_conventions
+          test/lib/python/test_naming_conventions_helpers
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
+          test/lib/python/test_test_fixtures
+          test/lib/python/test_urllib_mocks
   assert-no-linter-config-files:
     runs-on: ubuntu-latest
     steps:
@@ -50,7 +73,28 @@ jobs:
           --linters pylint,mypy,yamllint
           --verbose
           src/api/endpoints/contact_submissions
+          lib/python/boto_mocks
+          lib/python/event_factories
+          lib/python/lambda_response
+          lib/python/module_utils
+          lib/python/naming_conventions
+          lib/python/repo_utils
+          lib/python/terraform_config
+          lib/python/terraform_drift
+          lib/python/test_fixtures
+          lib/python/urllib_mocks
           test/api/endpoints/contact_submissions
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_event_factories
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_naming_conventions
+          test/lib/python/test_naming_conventions_helpers
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
+          test/lib/python/test_test_fixtures
+          test/lib/python/test_urllib_mocks
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -75,6 +119,19 @@ jobs:
           test/api/endpoints/__init__.py
           test/api/endpoints/conftest.py
           test/api/endpoints/contact_submissions
+          test/lib/__init__.py
+          test/lib/python/__init__.py
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_event_factories
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_naming_conventions
+          test/lib/python/test_naming_conventions_helpers
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
+          test/lib/python/test_test_fixtures
+          test/lib/python/test_urllib_mocks
   assert-pytest-fixture-name-is-needed:
     runs-on: ubuntu-latest
     steps:
@@ -99,6 +156,19 @@ jobs:
           test/api/endpoints/__init__.py
           test/api/endpoints/conftest.py
           test/api/endpoints/contact_submissions
+          test/lib/__init__.py
+          test/lib/python/__init__.py
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_event_factories
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_naming_conventions
+          test/lib/python/test_naming_conventions_helpers
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
+          test/lib/python/test_test_fixtures
+          test/lib/python/test_urllib_mocks
   assert-python-definition-is-used:
     runs-on: ubuntu-latest
     steps:
@@ -121,7 +191,17 @@ jobs:
         run: |
           SRC=src/api/endpoints/contact_submissions
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            $SRC/lambda/
+            $SRC/lambda/ \
+            lib/python/boto_mocks \
+            lib/python/event_factories \
+            lib/python/lambda_response \
+            lib/python/module_utils \
+            lib/python/naming_conventions \
+            lib/python/repo_utils \
+            lib/python/terraform_config \
+            lib/python/terraform_drift \
+            lib/python/test_fixtures \
+            lib/python/urllib_mocks
   copy-paste-tests:
     runs-on: ubuntu-latest
     steps:
@@ -132,7 +212,18 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            test/api/endpoints/contact_submissions
+            test/api/endpoints/contact_submissions \
+            test/lib/python/test_boto_mocks \
+            test/lib/python/test_event_factories \
+            test/lib/python/test_lambda_response \
+            test/lib/python/test_module_utils \
+            test/lib/python/test_naming_conventions \
+            test/lib/python/test_naming_conventions_helpers \
+            test/lib/python/test_repo_utils \
+            test/lib/python/test_terraform_config \
+            test/lib/python/test_terraform_drift \
+            test/lib/python/test_test_fixtures \
+            test/lib/python/test_urllib_mocks
   e2e-tests:
     if: github.ref == 'refs/heads/main'
     needs: post-deployment-integration-tests
@@ -198,11 +289,25 @@ jobs:
             boto3 \
             boto3-stubs \
             botocore \
-            mypy
+            mypy \
+            pytest \
+            requests \
+            types-requests
       - name: Run mypy on source
         run: |
           SRC=src/api/endpoints/contact_submissions
-          MYPYPATH=lib/python python3 -m mypy $SRC/lambda/
+          MYPYPATH=lib/python python3 -m mypy \
+            $SRC/lambda/ \
+            lib/python/boto_mocks \
+            lib/python/event_factories \
+            lib/python/lambda_response \
+            lib/python/module_utils \
+            lib/python/naming_conventions \
+            lib/python/repo_utils \
+            lib/python/terraform_config \
+            lib/python/terraform_drift \
+            lib/python/test_fixtures \
+            lib/python/urllib_mocks
   mypy-tests:
     runs-on: ubuntu-latest
     steps:
@@ -231,7 +336,20 @@ jobs:
             test/api/conftest.py \
             test/api/endpoints/__init__.py \
             test/api/endpoints/conftest.py \
-            test/api/endpoints/contact_submissions
+            test/api/endpoints/contact_submissions \
+            test/lib/__init__.py \
+            test/lib/python/__init__.py \
+            test/lib/python/test_boto_mocks \
+            test/lib/python/test_event_factories \
+            test/lib/python/test_lambda_response \
+            test/lib/python/test_module_utils \
+            test/lib/python/test_naming_conventions \
+            test/lib/python/test_naming_conventions_helpers \
+            test/lib/python/test_repo_utils \
+            test/lib/python/test_terraform_config \
+            test/lib/python/test_terraform_drift \
+            test/lib/python/test_test_fixtures \
+            test/lib/python/test_urllib_mocks
   post-deployment-integration-tests:
     if: github.ref == 'refs/heads/main'
     needs: reconciliation
@@ -345,13 +463,26 @@ jobs:
           python3 -m pip install \
             boto3 \
             botocore \
-            pylint
+            pylint \
+            pytest \
+            requests
       - name: Run pylint on source
         run: |
           SRC=src/api/endpoints/contact_submissions
           PYTHONPATH=lib/python python3 -m pylint \
             $SRC/lambda/ \
-            --fail-under=10.0
+            lib/python/boto_mocks \
+            lib/python/event_factories \
+            lib/python/lambda_response \
+            lib/python/module_utils \
+            lib/python/naming_conventions \
+            lib/python/repo_utils \
+            lib/python/terraform_config \
+            lib/python/terraform_drift \
+            lib/python/test_fixtures \
+            lib/python/urllib_mocks \
+            --recursive=y \
+            --fail-on=C,R,W --fail-under=10.0
   pylint-tests:
     runs-on: ubuntu-latest
     steps:
@@ -379,6 +510,19 @@ jobs:
             test/api/endpoints/__init__.py \
             test/api/endpoints/conftest.py \
             test/api/endpoints/contact_submissions \
+            test/lib/__init__.py \
+            test/lib/python/__init__.py \
+            test/lib/python/test_boto_mocks \
+            test/lib/python/test_event_factories \
+            test/lib/python/test_lambda_response \
+            test/lib/python/test_module_utils \
+            test/lib/python/test_naming_conventions \
+            test/lib/python/test_naming_conventions_helpers \
+            test/lib/python/test_repo_utils \
+            test/lib/python/test_terraform_config \
+            test/lib/python/test_terraform_drift \
+            test/lib/python/test_test_fixtures \
+            test/lib/python/test_urllib_mocks \
             --recursive=y \
             --fail-on=C,R,W --fail-under=10.0
   reconciliation:
