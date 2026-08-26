@@ -1,21 +1,3 @@
-"""Shared base classes and factories for 7-layer pre-deployment integration tests.
-
-The 7-layer testing model:
-- Layer 1: Contracts - Local file compatibility (openapi.json + templatefile vars)
-- Layer 2: Authentication - Valid credentials exist
-- Layer 3: Authorization - Permission to inspect resources
-- Layer 4: State - Terraform state matches AWS reality
-- Layer 5: Existence - Required resources exist
-- Layer 6: Configuration - Resources configured correctly
-- Layer 7: Capability - Can perform required operations
-
-Usage:
-    # In your test file:
-    from test_fixtures.integration import Layer2EndpointAuthenticationTests
-
-    class TestAWSAuthentication(Layer2EndpointAuthenticationTests):
-        pass  # Inherits all base tests
-"""
 from test_fixtures.integration.base_classes import (
     Layer1AuthenticationTests,
     Layer1EndpointAuthenticationTests,
@@ -81,14 +63,12 @@ from test_fixtures.integration.helpers import (
 )
 
 __all__ = [
-    # Base classes (7-layer model)
     "Layer2EndpointAuthenticationTests",
     "Layer3APIGatewayAuthorizationTests",
     "Layer3LambdaAndIAMAuthorizationTests",
     "Layer5APIBackendPrerequisiteTests",
     "Layer6APIGatewayRegionalTests",
     "Layer7DeploymentCapabilityTests",
-    # Base classes (legacy naming)
     "Layer1AuthenticationTests",
     "Layer1EndpointAuthenticationTests",
     "Layer2APIGatewayAuthorizationTests",
@@ -110,7 +90,6 @@ __all__ = [
     "Layer6IAMCapabilityTests",
     "Layer6S3CapabilityTests",
     "Layer6S3WriteCapabilityTests",
-    # Factory functions
     "create_deployed_naming_convention_tests",
     "create_kms_policy_test",
     "create_lambda_api_gateway_wiring_tests",
@@ -130,7 +109,6 @@ __all__ = [
     "create_www_common_fixtures",
     "create_www_common_s3_existence_tests",
     "handle_ecr_error",
-    # Helper functions
     "assert_api_gateway_exists",
     "assert_iam_role_name_is_pascalcase",
     "check_iam_role_exists",

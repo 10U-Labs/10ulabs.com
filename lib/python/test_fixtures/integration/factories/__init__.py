@@ -1,7 +1,3 @@
-"""Factory functions for creating test classes.
-
-These functions dynamically create test classes with specific configurations.
-"""
 from test_fixtures.integration.factories.authentication import (
     create_layer1_authentication_tests,
     create_layer2_s3_authorization_tests,

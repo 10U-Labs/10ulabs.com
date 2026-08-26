@@ -1,4 +1,3 @@
-"""AWS fixtures for pytest tests."""
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -10,83 +9,64 @@ from terraform_config import get_shared_config
 
 @pytest.fixture(scope="session")
 def shared_config():
-    """Provide parsed configuration from the shared Terraform module."""
     return get_shared_config()
 
 
 @pytest.fixture(scope="session")
 def aws_region(request):
-    """Provide the AWS region from shared config."""
     config = request.getfixturevalue("shared_config")
     return config["aws_region"]
 
 
 @pytest.fixture(scope="session")
 def ssm_github_pat_name(request):
-    """Provide the SSM parameter name for GitHub PAT."""
     config = request.getfixturevalue("shared_config")
     return config["ssm_github_pat_name"]
 
 
 @pytest.fixture(scope="session")
 def state_bucket_name(request):
-    """Provide the Terraform state bucket name."""
     config = request.getfixturevalue("shared_config")
     return config["name_for_terraform_state_bucket"]
 
 
 @pytest.fixture(scope="session")
 def sts_client(request):
-    """Create an STS client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("sts", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def iam_client(request):
-    """Create an IAM client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("iam", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def s3_client(request):
-    """Create an S3 client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("s3", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def ssm_client(request):
-    """Create an SSM client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("ssm", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def ecr_client(request):
-    """Create an ECR client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("ecr", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def logs_client(request):
-    """Create a CloudWatch Logs client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("logs", region_name=region)
 
 
 def iam_role_exists(client, role_name: str) -> bool:
-    """Check if an IAM role exists.
-
-    Args:
-        client: IAM boto3 client
-        role_name: Name of the IAM role to check
-
-    Returns:
-        True if the role exists, False otherwise
-    """
     try:
         client.get_role(RoleName=role_name)
         return True
@@ -95,15 +75,6 @@ def iam_role_exists(client, role_name: str) -> bool:
 
 
 def get_log_group_info(client, log_group_name: str) -> dict:
-    """Get CloudWatch log group info.
-
-    Args:
-        client: CloudWatch Logs boto3 client
-        log_group_name: Full log group name (e.g., /aws/lambda/MyFunction)
-
-    Returns dict with keys: name, exists, retention.
-    Use this helper in endpoint-specific log group fixtures.
-    """
     response = client.describe_log_groups(
         logGroupNamePrefix=log_group_name,
         limit=1
@@ -118,17 +89,6 @@ def get_log_group_info(client, log_group_name: str) -> dict:
 
 
 def find_lifecycle_rule(client, bucket_name: str, rule_id: str) -> Optional[dict]:
-    """Get a bucket's lifecycle rule by its id.
-
-    Args:
-        client: S3 boto3 client
-        bucket_name: Bucket to read the lifecycle configuration of
-        rule_id: The Id of the wanted rule
-
-    Returns the rule, or None when the bucket declares no such rule. Reach a
-    rule by id rather than by position: AWS does not promise the order it
-    returns rules in.
-    """
     lifecycle = client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
     for rule in lifecycle["Rules"]:
         if rule.get("ID") == rule_id:
@@ -137,18 +97,6 @@ def find_lifecycle_rule(client, bucket_name: str, rule_id: str) -> Optional[dict
 
 
 def stale_delete_markers(client, bucket_name: str, older_than_days: int = 7) -> list:
-    """List delete markers a bucket has kept for longer than the lifecycle rule needs.
-
-    Args:
-        client: S3 boto3 client
-        bucket_name: Bucket to list the versions of
-        older_than_days: Age past which a marker counts as left behind
-
-    A delete of a key that names no version id writes a delete marker, so a
-    marker minutes old is the ordinary trace of a delete that just happened.
-    One that outlives the expire-delete-markers lifecycle rule -- which S3
-    runs once a day -- is a marker nothing is going to take away.
-    """
     cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
     stale: list = []
     paginator = client.get_paginator("list_object_versions")
@@ -161,18 +109,14 @@ def stale_delete_markers(client, bucket_name: str, older_than_days: int = 7) -> 
 
 @pytest.fixture(scope="session")
 def caller_identity(request):
-    """Get the current caller identity."""
     client = request.getfixturevalue("sts_client")
     return client.get_caller_identity()
 
 
 @pytest.fixture(scope="session")
 def _current_role_arn(request):
-    """Extract the role ARN from caller identity."""
     identity = request.getfixturevalue("caller_identity")
     arn = identity.get("Arn", "")
-    # Convert assumed-role ARN to role ARN
-    # arn:aws:sts::123:assumed-role/role-name/session -> arn:aws:iam::123:role/role-name
     if ":assumed-role/" in arn:
         account = identity.get("Account", "")
         role_name = arn.split("/")[1]
@@ -182,7 +126,6 @@ def _current_role_arn(request):
 
 @pytest.fixture(scope="session")
 def current_role_name(request):
-    """Extract the role name from the role ARN."""
     role_arn = request.getfixturevalue("_current_role_arn")
     if not role_arn:
         return ""
@@ -191,72 +134,59 @@ def current_role_name(request):
 
 @pytest.fixture(scope="session")
 def lambda_client(request):
-    """Create a Lambda client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("lambda", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def apigateway_client(request):
-    """Create an API Gateway client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("apigateway", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def dynamodb_client(request):
-    """Create a DynamoDB client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("dynamodb", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def ec2_client(request):
-    """Create an EC2 client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("ec2", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def ses_client(request):
-    """Create an SES client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("ses", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def events_client(request):
-    """Create an EventBridge client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("events", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def scheduler_client(request):
-    """Create an EventBridge Scheduler client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("scheduler", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def backup_client(request):
-    """Create an AWS Backup client."""
     region = request.getfixturevalue("aws_region")
     return boto3.client("backup", region_name=region)
 
 
 @pytest.fixture(scope="session")
 def state_bucket_region(request):
-    """Provide the AWS region for the state bucket."""
     return request.getfixturevalue("aws_region")
 
 
 @pytest.fixture(scope="module")
 def api_gateway_info(request):
-    """Get API Gateway info, handling missing/not-found cases gracefully.
-
-    Requires `apigateway_client` and `api_common_routing_outputs` fixtures.
-    """
     client = request.getfixturevalue("apigateway_client")
     api_common_routing_outputs = request.getfixturevalue("api_common_routing_outputs")
 
@@ -289,20 +219,12 @@ def api_gateway_info(request):
 
 @pytest.fixture(name="api_url", scope="module")
 def api_url_fixture(request):
-    """Provide the API URL from config.
-
-    Requires a 'config' fixture with 'api_fqdn' key.
-    """
     config = request.getfixturevalue("config")
     return f"https://{config['api_fqdn']}"
 
 
 @pytest.fixture(name="api_key", scope="module")
 def api_key_fixture(request):
-    """Retrieve the API key from SSM Parameter Store.
-
-    Requires 'ssm_client' fixture.
-    """
     client = request.getfixturevalue("ssm_client")
     param_response = client.get_parameter(Name='/api/key', WithDecryption=True)
     return param_response['Parameter']['Value'] if param_response else None

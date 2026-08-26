@@ -1,20 +1,7 @@
-"""Repository path utilities."""
-
 from pathlib import Path
 
 
 def _find_repo_root_from_path(start_path: Path) -> Path:
-    """Find the repository root starting from a given path.
-
-    Args:
-        start_path: The path to start searching from.
-
-    Returns:
-        The repository root path.
-
-    Raises:
-        RuntimeError: If no .git directory is found in any parent.
-    """
     for parent in [start_path] + list(start_path.parents):
         if (parent / ".git").exists():
             return parent
@@ -22,7 +9,6 @@ def _find_repo_root_from_path(start_path: Path) -> Path:
 
 
 def _find_repo_root() -> Path:
-    """Find the repository root by looking for .git directory."""
     return _find_repo_root_from_path(Path(__file__).resolve())
 
 
@@ -30,17 +16,6 @@ REPO_ROOT = _find_repo_root()
 
 
 def extract_brace_block(content: str, start_pos: int) -> str:
-    """Extract content of a brace-delimited block starting at the given position.
-
-    Useful for parsing Terraform blocks, JSON objects, or other brace-delimited content.
-
-    Args:
-        content: The full text content to extract from.
-        start_pos: Position of the opening brace in content.
-
-    Returns:
-        The block content including braces, or remaining content if no closing brace found.
-    """
     brace_count = 0
     for i, char in enumerate(content[start_pos:]):
         if char == '{':

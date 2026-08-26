@@ -1,22 +1,9 @@
-"""Shared configuration fixture factories for pytest tests.
-
-Provides factories to create config fixtures from terraform.tfvars files,
-eliminating duplication across endpoint conftest.py files.
-"""
 import re
 from pathlib import Path
 from typing import Dict, Optional
 
 
 def parse_tfvars_file(tfvars_path: Path) -> Dict[str, str]:
-    """Parse a terraform.tfvars file and return key-value pairs.
-
-    Args:
-        tfvars_path: Path to the terraform.tfvars file
-
-    Returns:
-        Dictionary of key-value pairs from the file
-    """
     config: Dict[str, str] = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
@@ -33,17 +20,6 @@ def parse_locals_file(
     locals_path: Path,
     shared_config: Optional[Dict[str, str]] = None
 ) -> Dict[str, str]:
-    """Parse a Terraform locals.tf file and return key-value pairs.
-
-    Handles both quoted string values and module.common.* references.
-
-    Args:
-        locals_path: Path to the locals.tf file
-        shared_config: Optional shared_config for resolving module.common.* refs
-
-    Returns:
-        Dictionary of parsed values
-    """
     config: Dict[str, str] = {}
     with open(locals_path, encoding="utf-8") as f:
         for line in f:
@@ -62,18 +38,6 @@ def parse_locals_file(
 
 
 def create_simple_config(tfvars_path: Path, shared_config: Dict[str, str]) -> Dict[str, str]:
-    """Create a simple config dict from tfvars and shared config.
-
-    This is the standard pattern used by diagnostics, health, and similar
-    endpoints that just need tfvars values plus aws_region and api_fqdn.
-
-    Args:
-        tfvars_path: Path to the terraform.tfvars file
-        shared_config: The shared_config fixture value
-
-    Returns:
-        Merged configuration dictionary
-    """
     result = parse_tfvars_file(tfvars_path)
     result['aws_region'] = shared_config['aws_region']
     result['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
@@ -85,23 +49,9 @@ def create_website_config(
     shared_config: Dict[str, str],
     hosted_zone_id: str = ""
 ) -> Dict[str, str]:
-    """Create a website config dict from locals.tf and shared config.
-
-    Used by www_common tests to build configuration from Terraform locals.
-
-    Args:
-        locals_path: Path to the www/common/locals.tf file
-        shared_config: The shared_config fixture value
-        hosted_zone_id: Route53 hosted zone ID (optional, can be looked up separately)
-
-    Returns:
-        Website configuration dictionary
-    """
     website_locals = parse_locals_file(locals_path, shared_config)
     domain_name = shared_config.get('domain_name', '')
 
-    # Compute resource_prefix: shared prefix + "Website"
-    # This handles the Terraform interpolation: "${module.common.resource_prefix}Website"
     base_prefix = shared_config.get('resource_prefix', '')
     resource_prefix = f"{base_prefix}Website" if base_prefix else ''
 

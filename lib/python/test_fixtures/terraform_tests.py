@@ -1,8 +1,3 @@
-"""Shared test factories for Terraform configuration tests.
-
-Provides factory functions to generate test classes for cross-file contract
-validation and naming convention verification.
-"""
 import re
 from pathlib import Path
 from typing import Optional
@@ -16,7 +11,6 @@ API_BACKEND_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "common" / "routing" / "o
 
 
 def _get_api_common_routing_outputs() -> set:
-    """Extract all output names from api/backend/outputs.tf."""
     with open(API_BACKEND_OUTPUTS_FILE, encoding="utf-8") as f:
         content = f.read()
     pattern = r'output\s+"(\w+)"'
@@ -29,34 +23,16 @@ def create_remote_state_contract_tests(
     lambda_file: str = "lambda.tf",
     required_outputs: Optional[list] = None,
 ):
-    """Create a test class for remote state contract verification.
-
-    Verifies that terraform_remote_state.api.outputs references in the
-    endpoint's lambda.tf exist in api/backend/outputs.tf.
-
-    Args:
-        endpoint_src: Path to the endpoint source directory
-        endpoint_name: Name of the endpoint (for error messages)
-        lambda_file: Name of the lambda file to check (default: lambda.tf)
-        required_outputs: List of backend outputs that must exist
-
-    Returns:
-        Test class with remote state contract verification tests
-    """
     lambda_path = endpoint_src / lambda_file
 
     def get_api_remote_state_references():
-        """Extract all data.terraform_remote_state.api.outputs.X references."""
         with open(lambda_path, encoding="utf-8") as f:
             content = f.read()
         pattern = r'data\.terraform_remote_state\.api\.outputs\.(\w+)'
         return set(re.findall(pattern, content))
 
     class TestRemoteStateContract:
-        """Tests for remote state output contract between endpoint and api backend."""
-
         def test_all_api_remote_state_references_exist_in_backend_outputs(self):
-            """Verify all api remote state references exist in backend outputs."""
             references = get_api_remote_state_references()
             outputs = _get_api_common_routing_outputs()
             missing = references - outputs
@@ -67,10 +43,8 @@ def create_remote_state_contract_tests(
             )
 
         def test_lambda_file_exists(self):
-            """Verify the lambda file exists for remote state analysis."""
             assert lambda_path.exists(), f"{lambda_file} does not exist in endpoint"
 
-    # Dynamically add test methods for each required output
     if required_outputs:
         for output_name in required_outputs:
 
@@ -98,17 +72,6 @@ def create_naming_conventions_tests(
     lambda_file: str = "lambda.tf",
     use_handler_names: bool = False,
 ):
-    """Create test classes for IAM role and Lambda function naming conventions.
-
-    Args:
-        endpoint_src: Path to the endpoint source directory
-        iam_file: Name of the IAM Terraform file
-        lambda_file: Name of the Lambda Terraform file
-        use_handler_names: Whether to use handler names for Lambda functions
-
-    Returns:
-        Tuple of (TestIAMRoleNamingConventions, TestLambdaFunctionNamingConventions)
-    """
     iam_path = endpoint_src / iam_file
     lambda_path = endpoint_src / lambda_file
 
@@ -118,15 +81,12 @@ def create_naming_conventions_tests(
     )
 
     class TestIAMRoleNamingConventions:
-        """Tests for IAM role naming conventions."""
-
         @pytest.mark.parametrize(
             "resource_name,role_name",
             iam_roles if iam_roles else [("NONE", "NONE")],
             ids=[f"iam_role_{r[0]}" for r in iam_roles] if iam_roles else ["no_roles_found"],
         )
         def test_iam_role_name_is_pascalcase(self, resource_name, role_name):
-            """Verify IAM role name uses PascalCase (no dashes or underscores)."""
             if resource_name == "NONE":
                 pytest.fail("No IAM roles found in iam.tf - check Terraform files")
             error = validate_name(role_name)
@@ -135,7 +95,6 @@ def create_naming_conventions_tests(
             )
 
         def test_no_iam_role_names_contain_dashes(self):
-            """Verify no IAM role names contain dashes."""
             violations = [(r, n) for r, n in iam_roles if '-' in n]
             assert len(violations) == 0, (
                 f"Found {len(violations)} IAM roles with dashes:\n"
@@ -143,8 +102,6 @@ def create_naming_conventions_tests(
             )
 
     class TestLambdaFunctionNamingConventions:
-        """Tests for Lambda function naming conventions."""
-
         @pytest.mark.parametrize(
             "resource_name,function_name",
             lambda_functions if lambda_functions else [("NONE", "NONE")],
@@ -152,7 +109,6 @@ def create_naming_conventions_tests(
                  if lambda_functions else ["no_functions_found"]),
         )
         def test_lambda_function_name_is_pascalcase(self, resource_name, function_name):
-            """Verify Lambda function name uses PascalCase (no dashes or underscores)."""
             if resource_name == "NONE":
                 pytest.fail("No Lambda functions found - check Terraform files")
             error = validate_name(function_name)
@@ -162,7 +118,6 @@ def create_naming_conventions_tests(
             )
 
         def test_no_lambda_function_names_contain_dashes(self):
-            """Verify no Lambda function names contain dashes."""
             violations = [(r, n) for r, n in lambda_functions if '-' in n]
             assert len(violations) == 0, (
                 f"Found {len(violations)} Lambda functions with dashes:\n"
@@ -173,31 +128,14 @@ def create_naming_conventions_tests(
 
 
 def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str):
-    """Create tests to verify remote state configuration uses dynamic values.
-
-    Checks that data.tf doesn't use hardcoded bucket names or regions,
-    and uses the correct state key path.
-
-    Args:
-        endpoint_src: Path to the endpoint source directory
-        endpoint_name: Name of the endpoint (for error messages)
-
-    Returns:
-        Test class with remote state configuration tests
-    """
     data_tf_path = endpoint_src / "data.tf"
 
     class TestRemoteStateConfig:
-        """Tests for remote state configuration best practices."""
-
         def test_data_tf_exists(self):
-            """Verify data.tf exists."""
             assert data_tf_path.exists(), f"data.tf not found in {endpoint_name}"
 
         def test_no_hardcoded_bucket_name(self):
-            """Verify remote state uses module.common for bucket name."""
             content = data_tf_path.read_text()
-            # Check for hardcoded bucket patterns (common S3 bucket name patterns)
             hardcoded_patterns = [
                 r'bucket\s*=\s*"[a-z0-9]+-terraform-state',
                 r'bucket\s*=\s*"tenulabs-',
@@ -211,9 +149,7 @@ def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str):
                 )
 
         def test_no_hardcoded_region(self):
-            """Verify remote state uses local.aws_region for region."""
             content = data_tf_path.read_text()
-            # Check for hardcoded region patterns
             hardcoded_region = re.search(
                 r'region\s*=\s*"[a-z]+-[a-z]+-\d+"', content
             )
@@ -223,9 +159,7 @@ def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str):
             )
 
         def test_uses_correct_state_key_pattern(self):
-            """Verify remote state key follows expected pattern."""
             content = data_tf_path.read_text()
-            # The api state should be at "api/terraform.tfstate"
             if 'terraform_remote_state' in content and '"api"' in content:
                 correct_key = re.search(
                     r'key\s*=\s*"api/terraform\.tfstate"', content

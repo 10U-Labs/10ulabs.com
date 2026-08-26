@@ -1,22 +1,3 @@
-"""
-Terraform drift detection module.
-
-This module provides functions to detect when AWS resources exist but are not
-in Terraform state. This catches scenarios where:
-- Resources were created manually outside of Terraform
-- Terraform state was lost or corrupted
-- Resources exist from a previous deployment that wasn't imported
-
-Example usage:
-    from terraform_drift import check_resource_exists, get_planned_creates
-
-    # Check if a specific resource exists
-    exists = check_resource_exists('aws_lambda_function', 'MyFunction', 'us-east-2')
-
-    # Get all resources terraform plans to create
-    creates = get_planned_creates('/path/to/terraform/dir')
-"""
-
 import json
 import subprocess
 from pathlib import Path
@@ -26,12 +7,10 @@ import boto3
 from botocore.exceptions import ClientError
 
 
-# Type alias for resource checker functions
 ResourceChecker = Callable[[Any, str], bool]
 
 
 def _check_lambda(client: Any, name: str) -> bool:
-    """Check if Lambda function exists."""
     try:
         client.get_function(FunctionName=name)
         return True
@@ -40,7 +19,6 @@ def _check_lambda(client: Any, name: str) -> bool:
 
 
 def _check_iam_role(client: Any, name: str) -> bool:
-    """Check if IAM role exists."""
     try:
         client.get_role(RoleName=name)
         return True
@@ -49,7 +27,6 @@ def _check_iam_role(client: Any, name: str) -> bool:
 
 
 def _check_log_group(client: Any, name: str) -> bool:
-    """Check if CloudWatch log group exists."""
     response = client.describe_log_groups(logGroupNamePrefix=name, limit=1)
     for group in response.get("logGroups", []):
         if group.get("logGroupName") == name:
@@ -58,7 +35,6 @@ def _check_log_group(client: Any, name: str) -> bool:
 
 
 def _check_dynamodb_table(client: Any, name: str) -> bool:
-    """Check if DynamoDB table exists."""
     try:
         client.describe_table(TableName=name)
         return True
@@ -67,7 +43,6 @@ def _check_dynamodb_table(client: Any, name: str) -> bool:
 
 
 def _check_s3_bucket(client: Any, name: str) -> bool:
-    """Check if S3 bucket exists."""
     try:
         client.head_bucket(Bucket=name)
         return True
@@ -78,7 +53,6 @@ def _check_s3_bucket(client: Any, name: str) -> bool:
 
 
 def _check_sqs_queue(client: Any, name: str) -> bool:
-    """Check if SQS queue exists."""
     try:
         client.get_queue_url(QueueName=name)
         return True
@@ -87,7 +61,6 @@ def _check_sqs_queue(client: Any, name: str) -> bool:
 
 
 def _check_sns_topic(client: Any, arn: str) -> bool:
-    """Check if SNS topic exists (requires full ARN)."""
     try:
         client.get_topic_attributes(TopicArn=arn)
         return True
@@ -96,7 +69,6 @@ def _check_sns_topic(client: Any, arn: str) -> bool:
 
 
 def _check_ssm_parameter(client: Any, name: str) -> bool:
-    """Check if SSM parameter exists."""
     try:
         client.get_parameter(Name=name)
         return True
@@ -105,7 +77,6 @@ def _check_ssm_parameter(client: Any, name: str) -> bool:
 
 
 def _check_secretsmanager_secret(client: Any, name: str) -> bool:
-    """Check if Secrets Manager secret exists."""
     try:
         client.describe_secret(SecretId=name)
         return True
@@ -114,7 +85,6 @@ def _check_secretsmanager_secret(client: Any, name: str) -> bool:
 
 
 def _check_eventbridge_rule(client: Any, name: str) -> bool:
-    """Check if EventBridge rule exists."""
     try:
         client.describe_rule(Name=name)
         return True
@@ -123,7 +93,6 @@ def _check_eventbridge_rule(client: Any, name: str) -> bool:
 
 
 def _check_api_gateway_rest_api(client: Any, api_id: str) -> bool:
-    """Check if API Gateway REST API exists."""
     try:
         client.get_rest_api(restApiId=api_id)
         return True
@@ -131,7 +100,6 @@ def _check_api_gateway_rest_api(client: Any, api_id: str) -> bool:
         return False
 
 
-# Registry mapping Terraform resource types to their checker functions
 RESOURCE_CHECKERS: Dict[str, ResourceChecker] = {
     "aws_lambda_function": _check_lambda,
     "aws_iam_role": _check_iam_role,
@@ -146,7 +114,6 @@ RESOURCE_CHECKERS: Dict[str, ResourceChecker] = {
     "aws_api_gateway_rest_api": _check_api_gateway_rest_api,
 }
 
-# Mapping from Terraform resource type to boto3 client name
 RESOURCE_TO_CLIENT: Dict[str, str] = {
     "aws_lambda_function": "lambda",
     "aws_iam_role": "iam",
@@ -167,19 +134,6 @@ def check_resource_exists(
     resource_name: str,
     region: str = "us-east-2",
 ) -> bool:
-    """Check if a resource exists in AWS.
-
-    Args:
-        resource_type: Terraform resource type (e.g., 'aws_lambda_function')
-        resource_name: The AWS resource name/identifier
-        region: AWS region to check in
-
-    Returns:
-        True if the resource exists, False otherwise.
-
-    Raises:
-        ValueError: If the resource type is not supported.
-    """
     if resource_type not in RESOURCE_CHECKERS:
         raise ValueError(
             f"Unsupported resource type: {resource_type}. "
@@ -197,16 +151,6 @@ def get_planned_creates(
     terraform_dir: Path,
     timeout: int = 120,
 ) -> List[Dict[str, Any]]:
-    """Run terraform plan and extract resources marked for creation.
-
-    Args:
-        terraform_dir: Path to directory containing Terraform files
-        timeout: Timeout in seconds for terraform plan command
-
-    Returns:
-        List of dicts with keys: type, name, address, values
-        where 'name' is the AWS resource name (not Terraform resource name)
-    """
     result = subprocess.run(
         ["terraform", "plan", "-json", "-input=false"],
         capture_output=True,
@@ -236,10 +180,8 @@ def get_planned_creates(
         if resource_type not in RESOURCE_CHECKERS:
             continue
 
-        # Extract the AWS resource name from planned values
         after_values = change.get("change", {}).get("after", {})
 
-        # Different resource types use different name attributes
         name_field = _get_name_field(resource_type)
         resource_name = after_values.get(name_field, "")
 
@@ -255,7 +197,6 @@ def get_planned_creates(
 
 
 def _get_name_field(resource_type: str) -> str:
-    """Get the attribute name that contains the AWS resource name."""
     name_fields = {
         "aws_lambda_function": "function_name",
         "aws_iam_role": "name",

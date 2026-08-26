@@ -1,25 +1,9 @@
-"""Shared test helpers for Lambda lifecycle configuration tests.
-
-Verifies Lambdas with environment variables have lifecycle rules to handle
-IAM role recreation. This is a regression test for 502 KMS errors when
-IAM roles are recreated and KMS grants become stale.
-
-Usage:
-    from test_fixtures.lambda_lifecycle import create_lambda_lifecycle_tests
-
-    # Creates a test class with the standard lifecycle test
-    TestLambdaLifecycle = create_lambda_lifecycle_tests(
-        endpoint_src=REPO_ROOT / "src" / "api" / "endpoints" / "contact"
-    )
-"""
-
 import re
 from pathlib import Path
 from typing import Optional
 
 
 def _extract_block_content(content: str, start_pos: int) -> str:
-    """Extract content of a Terraform block starting at the given brace position."""
     brace_count = 0
     for i, char in enumerate(content[start_pos:]):
         if char == "{":
@@ -32,15 +16,6 @@ def _extract_block_content(content: str, start_pos: int) -> str:
 
 
 def _check_lambda_lifecycle_rules(lambda_tf_path: Path) -> None:
-    """Verify Lambda with environment variables has replace_triggered_by.
-
-    Args:
-        lambda_tf_path: Path to the lambda.tf file to check
-
-    Raises:
-        AssertionError: If a Lambda with env vars is missing lifecycle rules
-        FileNotFoundError: If lambda.tf doesn't exist
-    """
     with open(lambda_tf_path, encoding="utf-8") as f:
         content = f.read()
 
@@ -69,36 +44,18 @@ def _check_lambda_lifecycle_rules(lambda_tf_path: Path) -> None:
 def create_lambda_lifecycle_tests(
     endpoint_src: Path, tf_files: Optional[list] = None
 ):
-    """Create a test class for Lambda lifecycle configuration tests.
-
-    Args:
-        endpoint_src: Path to the endpoint source directory (e.g., src/api/endpoints/contact)
-        tf_files: Optional list of tf file names to check. Defaults to ["lambda.tf"]
-
-    Returns:
-        Test class with standard Lambda lifecycle tests
-    """
     if tf_files is None:
         tf_files = ["lambda.tf"]
 
     tf_paths = [endpoint_src / tf_file for tf_file in tf_files]
 
     class TestLambdaLifecycle:
-        """Unit tests for Lambda lifecycle configuration."""
-
         def test_lambda_with_env_vars_has_lifecycle_rule(self):
-            """Verify Lambda with environment variables has replace_triggered_by.
-
-            When IAM roles are recreated, KMS grants become stale because they
-            reference the old role ID. Lambdas with environment variables must
-            have a lifecycle rule with replace_triggered_by to handle this.
-            """
             for tf_path in tf_paths:
                 if tf_path.exists():
                     _check_lambda_lifecycle_rules(tf_path)
 
         def test_terraform_files_configured(self):
-            """Verify at least one terraform file is configured for testing."""
             assert len(tf_paths) > 0, "No terraform files configured for testing"
 
     return TestLambdaLifecycle

@@ -1,20 +1,3 @@
-"""
-Terraform configuration parsing module.
-
-This module provides functions to parse values from the shared Terraform module,
-providing a single source of truth for configuration values across tests and tools.
-
-Example usage:
-    from terraform_config import get_shared_config, TEST_AWS_REGION
-
-    config = get_shared_config()
-    region = config['aws_region']
-    bucket = config['name_for_terraform_state_bucket']
-
-    # For unit test mock data (fake ARNs, URLs, etc.):
-    mock_arn = f'arn:aws:sns:{TEST_AWS_REGION}:123456789012:test-topic'
-"""
-
 import re
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -25,15 +8,6 @@ COMMON_MODULE_DIR = _REPO_ROOT / "lib" / "terraform" / "common"
 
 
 def _parse_map_block(content: str, map_name: str) -> Dict[str, str]:
-    """Parse a map/object block from Terraform HCL content.
-
-    Args:
-        content: The full file content.
-        map_name: Name of the map variable to parse.
-
-    Returns:
-        Dict mapping keys to their string values within the map block.
-    """
     pattern = rf'{map_name}\s*=\s*\{{'
     match = re.search(pattern, content)
     if not match:
@@ -49,12 +23,6 @@ def _parse_map_block(content: str, map_name: str) -> Dict[str, str]:
 
 
 def _parse_locals() -> Dict[str, str]:
-    """Parse locals from the shared Terraform module's locals.tf file.
-
-    Returns:
-        Dict mapping local variable names to their string values.
-        Only simple string assignments are parsed (key = "value").
-    """
     locals_path = COMMON_MODULE_DIR / "locals.tf"
     with open(locals_path, encoding="utf-8") as f:
         content = f.read()
@@ -68,18 +36,12 @@ def _parse_locals() -> Dict[str, str]:
 
 
 def parse_lambda_handler_names() -> Dict[str, str]:
-    """Parse lambda_handler_names map from shared Terraform module.
-
-    Returns:
-        Dict mapping handler keys (e.g., 'webhook') to function names.
-    """
     locals_path = COMMON_MODULE_DIR / "locals.tf"
     with open(locals_path, encoding="utf-8") as f:
         content = f.read()
 
     raw_values = _parse_map_block(content, "lambda_handler_names")
 
-    # Resolve ${local.resource_prefix} references
     locals_dict = _parse_locals()
     resource_prefix = locals_dict.get("resource_prefix", "")
 
@@ -90,13 +52,6 @@ def parse_lambda_handler_names() -> Dict[str, str]:
 
 
 def _parse_outputs() -> Dict[str, str]:
-    """Parse outputs from the shared Terraform module's outputs.tf file.
-
-    Resolves local.* references using values from locals.tf.
-
-    Returns:
-        Dict mapping output names to their resolved string values.
-    """
     outputs_path = COMMON_MODULE_DIR / "outputs.tf"
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
@@ -104,13 +59,11 @@ def _parse_outputs() -> Dict[str, str]:
     locals_dict = _parse_locals()
     values = {}
 
-    # Match outputs with literal string values
     literal_pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*"([^"]+)"'
     for match in re.findall(literal_pattern, content):
         output_name, value = match
         values[output_name] = value
 
-    # Match outputs that reference local.* and resolve them
     local_pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*local\.(\w+)'
     for match in re.findall(local_pattern, content):
         output_name, local_name = match
@@ -121,47 +74,29 @@ def _parse_outputs() -> Dict[str, str]:
 
 
 def get_shared_config() -> Dict[str, Any]:
-    """Get all configuration values from the shared Terraform module.
-
-    Combines locals and outputs into a single dict. Output values take
-    precedence over locals if there are naming conflicts.
-
-    Returns:
-        Dict with all configuration values from the shared module.
-    """
     config: Dict[str, Any] = _parse_locals()
     config.update(_parse_outputs())
     config["lambda_handler_names"] = parse_lambda_handler_names()
-    # Derive api_fqdn from domain_name for convenience
     domain_name = config.get("domain_name", "")
     if domain_name:
         config["api_fqdn"] = f"api.{domain_name}"
     return config
 
 
-# Single source of truth for AWS region - derived from Terraform shared module.
-# Use this constant in unit tests for mock data (fake ARNs, URLs, etc.)
-# instead of hardcoding region strings.
 TEST_AWS_REGION = _parse_locals().get("aws_region", "us-east-2")
 
 
 def get_resource_prefix() -> str:
-    """Get the resource prefix from shared Terraform module."""
     return _parse_locals().get("resource_prefix", "TenULabs")
 
 
 def _resolve_prefix_refs(value: str, prefix: str) -> str:
-    """Resolve resource_prefix references in a Terraform string value."""
     value = value.replace("${module.common.resource_prefix}", prefix)
     value = value.replace("${local.resource_prefix}", prefix)
     return value
 
 
 def _resolve_local_interpolations(value: str, local_values: Dict[str, str]) -> str:
-    """Resolve ${local.*} interpolations in a Terraform string value.
-
-    Resolves iteratively to handle nested local references.
-    """
     max_iterations = 10
     for _ in range(max_iterations):
         new_value = value
@@ -174,14 +109,6 @@ def _resolve_local_interpolations(value: str, local_values: Dict[str, str]) -> s
 
 
 def get_tfvars_values(tf_dir: Path) -> Dict[str, Any]:
-    """Parse terraform.tfvars file in the given directory.
-
-    Args:
-        tf_dir: Path to the Terraform directory
-
-    Returns:
-        Dict mapping variable names to their values (strings or lists).
-    """
     tfvars_file = tf_dir / "terraform.tfvars"
     if not tfvars_file.exists():
         return {}
@@ -191,26 +118,21 @@ def get_tfvars_values(tf_dir: Path) -> Dict[str, Any]:
         for line in f:
             line = line.strip()
             if line and not line.startswith("#"):
-                # Parse string values: key = "value"
                 match = re.match(r'(\w+)\s*=\s*"([^"]+)"', line)
                 if match:
                     values[match.group(1)] = match.group(2)
                     continue
-                # Parse list values: key = ["val1", "val2"]
                 list_match = re.match(r'(\w+)\s*=\s*\[([^\]]*)\]', line)
                 if list_match:
                     key = list_match.group(1)
                     list_content = list_match.group(2)
-                    # Extract quoted strings from the list
                     items = re.findall(r'"([^"]+)"', list_content)
                     values[key] = items
     return values
 
 
 def _resolve_all_refs(value: str, prefix: str, handler_names: Dict[str, str]) -> str:
-    """Resolve all module.common references in a Terraform string value."""
     value = _resolve_prefix_refs(value, prefix)
-    # Resolve ${module.common.lambda_handler_names.X} interpolations
     for handler_key, handler_value in handler_names.items():
         value = value.replace(
             f"${{module.common.lambda_handler_names.{handler_key}}}",
@@ -220,18 +142,6 @@ def _resolve_all_refs(value: str, prefix: str, handler_names: Dict[str, str]) ->
 
 
 def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
-    """Extract local values from locals.tf in the given endpoint directory.
-
-    Resolves ${module.common.resource_prefix} and ${local.resource_prefix}
-    references using the shared module's resource_prefix. Also resolves
-    module.common.lambda_handler_names.X references (both direct and interpolated).
-
-    Args:
-        tf_dir: Path to the endpoint's Terraform directory (e.g., src/api/endpoints/foo)
-
-    Returns:
-        Dict mapping local variable names to their resolved string values.
-    """
     locals_file = tf_dir / "locals.tf"
     if not locals_file.exists():
         return {}
@@ -241,11 +151,9 @@ def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
     prefix = get_resource_prefix()
     handler_names = parse_lambda_handler_names()
 
-    # Parse quoted string values and resolve all interpolations
     for match in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', content):
         locals_dict[match.group(1)] = _resolve_all_refs(match.group(2), prefix, handler_names)
 
-    # Parse module.common.lambda_handler_names references (direct, not interpolated)
     for match in re.finditer(r'(\w+)\s*=\s*module\.common\.lambda_handler_names\.(\w+)', content):
         local_name, handler_key = match.groups()
         if handler_key in handler_names:
@@ -255,11 +163,6 @@ def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
 
 
 def _load_tf_file_context(tf_file: Path) -> tuple | None:
-    """Load a Terraform file and gather resolution context.
-
-    Returns:
-        Tuple of (content, prefix, local_values, tfvars_values) or None if file doesn't exist.
-    """
     if not tf_file.exists():
         return None
     with open(tf_file, encoding="utf-8") as f:
@@ -273,17 +176,6 @@ def _load_tf_file_context(tf_file: Path) -> tuple | None:
 
 
 def extract_iam_role_names(tf_file: Path) -> list:
-    """Extract IAM role names from a Terraform file.
-
-    Handles quoted strings (name = "Value"), local references (name = local.var_name),
-    and var references (name = var.var_name via tfvars).
-
-    Args:
-        tf_file: Path to the Terraform file (typically iam.tf)
-
-    Returns:
-        List of (resource_name, resolved_role_name) tuples.
-    """
     ctx = _load_tf_file_context(tf_file)
     if ctx is None:
         return []
@@ -316,23 +208,18 @@ def extract_iam_role_names(tf_file: Path) -> list:
 def _resolve_lambda_function_name(
     block: str, prefix: str, locals_map: Dict, tfvars: Dict, handlers: Dict
 ) -> Optional[str]:
-    """Resolve a Lambda function name from a resource block."""
-    # Try quoted string
     match = re.search(r'^\s*function_name\s*=\s*"([^"]+)"', block, re.MULTILINE)
     if match:
         return _resolve_prefix_refs(match.group(1), prefix)
 
-    # Try local reference
     match = re.search(r'^\s*function_name\s*=\s*local\.(\w+)', block, re.MULTILINE)
     if match and match.group(1) in locals_map:
         return locals_map[match.group(1)]
 
-    # Try var reference
     match = re.search(r'^\s*function_name\s*=\s*var\.(\w+)', block, re.MULTILINE)
     if match and match.group(1) in tfvars:
         return tfvars[match.group(1)]
 
-    # Try module.common.lambda_handler_names reference
     match = re.search(
         r'^\s*function_name\s*=\s*module\.common\.lambda_handler_names\.(\w+)',
         block, re.MULTILINE
@@ -344,18 +231,6 @@ def _resolve_lambda_function_name(
 
 
 def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False) -> list:
-    """Extract Lambda function names from a Terraform file.
-
-    Handles quoted strings, local references, var references (via tfvars),
-    and optionally module.common references.
-
-    Args:
-        tf_file: Path to the Terraform file (typically lambda.tf)
-        use_handler_names: If True, also resolve module.common.lambda_handler_names refs
-
-    Returns:
-        List of (resource_name, resolved_function_name) tuples.
-    """
     ctx = _load_tf_file_context(tf_file)
     if ctx is None:
         return []
@@ -375,19 +250,6 @@ def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False
 
 
 def packaged_lambda_sources(tf_file: Path) -> list:
-    """Extract the function files a Terraform file packages for deployment.
-
-    A deployment package is built from one or more files, named either as the
-    single file to package or as the content of an entry inside the archive.
-    A file reached by climbing out of the stack is shared library code vendored
-    into the package rather than the deployed function itself, so it is omitted.
-
-    Args:
-        tf_file: Path to the Terraform file declaring the package.
-
-    Returns:
-        List of stack-relative paths to the Python files it packages.
-    """
     pattern = r'(?:source_file\s*=|content\s*=\s*file\()\s*"\$\{path\.module\}/([^"]+)"'
     content = tf_file.read_text(encoding="utf-8")
     return [
@@ -398,18 +260,6 @@ def packaged_lambda_sources(tf_file: Path) -> list:
 
 
 def packaged_lambda_archives(tf_file: Path) -> list:
-    """Extract the archives a Terraform file writes its deployment packages to.
-
-    The packaging step builds an archive from the source and the deployment
-    uploads it, so the path it is written to is a staging location rather than
-    anything the deployed function carries.
-
-    Args:
-        tf_file: Path to the Terraform file declaring the package.
-
-    Returns:
-        List of stack-relative paths to the archives it writes.
-    """
     pattern = r'output_path\s*=\s*"\$\{path\.module\}/([^"]+)"'
     content = tf_file.read_text(encoding="utf-8")
     return re.findall(pattern, content)

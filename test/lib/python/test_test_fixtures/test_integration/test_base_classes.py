@@ -1,14 +1,10 @@
-"""Unit tests for test_fixtures.integration.base_classes module."""
-# Import module to verify exports without duplicating the full import list
 import test_fixtures.integration as integration_module
 
 
 def _get_class(name: str):
-    """Get a class from the integration module by name."""
     return getattr(integration_module, name)
 
 
-# Aliases for classes used in tests below - loaded dynamically to avoid jscpd duplicate
 Layer1AuthenticationTests = _get_class("Layer1AuthenticationTests")
 Layer1EndpointAuthenticationTests = _get_class("Layer1EndpointAuthenticationTests")
 Layer2APIGatewayAuthorizationTests = _get_class("Layer2APIGatewayAuthorizationTests")
@@ -38,503 +34,319 @@ Layer6S3WriteCapabilityTests = _get_class("Layer6S3WriteCapabilityTests")
 Layer7DeploymentCapabilityTests = _get_class("Layer7DeploymentCapabilityTests")
 
 
-# === Layer1AuthenticationTests ===
-
-
 class TestLayer1AuthenticationTestsClassExists:
-    """Tests for Layer1AuthenticationTests class existence."""
-
     def test_class_exists(self):
-        """Layer1AuthenticationTests class exists."""
         assert Layer1AuthenticationTests is not None
 
     def test_has_credentials_available_test(self):
-        """Layer1AuthenticationTests has test_aws_credentials_are_available method."""
         assert hasattr(Layer1AuthenticationTests, "test_aws_credentials_are_available")
 
     def test_has_credentials_valid_test(self):
-        """Layer1AuthenticationTests has test_aws_credentials_are_valid method."""
         assert hasattr(Layer1AuthenticationTests, "test_aws_credentials_are_valid")
 
     def test_has_credentials_return_account_test(self):
-        """Layer1AuthenticationTests has test_aws_credentials_return_account method."""
         assert hasattr(Layer1AuthenticationTests, "test_aws_credentials_return_account")
 
     def test_has_credentials_return_arn_test(self):
-        """Layer1AuthenticationTests has test_aws_credentials_return_arn method."""
         assert hasattr(Layer1AuthenticationTests, "test_aws_credentials_return_arn")
 
     def test_has_caller_identity_is_role_test(self):
-        """Layer1AuthenticationTests has test_caller_identity_is_role method."""
         assert hasattr(Layer1AuthenticationTests, "test_caller_identity_is_role")
 
 
-# === Layer2IAMAuthorizationTests ===
-
-
 class TestLayer2IAMAuthorizationTestsClassExists:
-    """Tests for Layer2IAMAuthorizationTests class existence."""
-
     def test_class_exists(self):
-        """Layer2IAMAuthorizationTests class exists."""
         assert Layer2IAMAuthorizationTests is not None
 
     def test_has_can_call_iam_get_role_api_test(self):
-        """Layer2IAMAuthorizationTests has test_can_call_iam_get_role_api method."""
         assert hasattr(Layer2IAMAuthorizationTests, "test_can_call_iam_get_role_api")
 
     def test_has_can_list_attached_policies_test(self):
-        """Layer2IAMAuthorizationTests has test_can_list_attached_policies method."""
         assert hasattr(Layer2IAMAuthorizationTests, "test_can_list_attached_policies")
 
 
-# === Layer2S3AuthorizationTests ===
-
-
 class TestLayer2S3AuthorizationTestsClassExists:
-    """Tests for Layer2S3AuthorizationTests class existence."""
-
     def test_class_exists(self):
-        """Layer2S3AuthorizationTests class exists."""
         assert Layer2S3AuthorizationTests is not None
 
     def test_has_can_call_s3_head_bucket_api_test(self):
-        """Layer2S3AuthorizationTests has test_can_call_s3_head_bucket_api method."""
         assert hasattr(Layer2S3AuthorizationTests, "test_can_call_s3_head_bucket_api")
 
     def test_has_state_bucket_name_configured_test(self):
-        """Layer2S3AuthorizationTests has test_state_bucket_name_configured method."""
         assert hasattr(Layer2S3AuthorizationTests, "test_state_bucket_name_configured")
 
 
-# === Layer2ECRAuthorizationTests ===
-
-
 class TestLayer2ECRAuthorizationTestsClassExists:
-    """Tests for Layer2ECRAuthorizationTests class existence."""
-
     def test_class_exists(self):
-        """Layer2ECRAuthorizationTests class exists."""
         assert Layer2ECRAuthorizationTests is not None
 
     def test_has_can_call_ecr_describe_repositories_api_test(self):
-        """Layer2ECRAuthorizationTests has test_can_call_ecr_describe_repositories_api."""
         assert hasattr(
             Layer2ECRAuthorizationTests, "test_can_call_ecr_describe_repositories_api"
         )
 
     def test_has_ecr_client_is_valid_test(self):
-        """Layer2ECRAuthorizationTests has test_ecr_client_is_valid method."""
         assert hasattr(Layer2ECRAuthorizationTests, "test_ecr_client_is_valid")
 
 
-# === Layer4TerraformStateExistenceTests ===
-
-
 class TestLayer4TerraformStateExistenceTestsClassExists:
-    """Tests for Layer4TerraformStateExistenceTests class existence."""
-
     def test_class_exists(self):
-        """Layer4TerraformStateExistenceTests class exists."""
         assert Layer4TerraformStateExistenceTests is not None
 
     def test_has_state_bucket_exists_test(self):
-        """Layer4TerraformStateExistenceTests has test_state_bucket_exists method."""
         assert hasattr(Layer4TerraformStateExistenceTests, "test_state_bucket_exists")
 
     def test_has_state_bucket_has_name_test(self):
-        """Layer4TerraformStateExistenceTests has test_state_bucket_has_name method."""
         assert hasattr(Layer4TerraformStateExistenceTests, "test_state_bucket_has_name")
 
 
-# === Layer5S3ConfigurationTests ===
-
-
 class TestLayer5S3ConfigurationTestsClassExists:
-    """Tests for Layer5S3ConfigurationTests class existence."""
-
     def test_class_exists(self):
-        """Layer5S3ConfigurationTests class exists."""
         assert Layer5S3ConfigurationTests is not None
 
     def test_has_state_bucket_is_encrypted_test(self):
-        """Layer5S3ConfigurationTests has test_state_bucket_is_encrypted method."""
         assert hasattr(Layer5S3ConfigurationTests, "test_state_bucket_is_encrypted")
 
     def test_has_state_bucket_versioning_disabled_test(self):
-        """Layer5S3ConfigurationTests has test_state_bucket_versioning_disabled method."""
         assert hasattr(
             Layer5S3ConfigurationTests, "test_state_bucket_versioning_disabled"
         )
 
 
-# === Layer6S3CapabilityTests ===
-
-
 class TestLayer6S3CapabilityTestsClassExists:
-    """Tests for Layer6S3CapabilityTests class existence."""
-
     def test_class_exists(self):
-        """Layer6S3CapabilityTests class exists."""
         assert Layer6S3CapabilityTests is not None
 
     def test_has_can_list_bucket_objects_test(self):
-        """Layer6S3CapabilityTests has test_can_list_bucket_objects method."""
         assert hasattr(Layer6S3CapabilityTests, "test_can_list_bucket_objects")
 
     def test_has_can_get_bucket_location_test(self):
-        """Layer6S3CapabilityTests has test_can_get_bucket_location method."""
         assert hasattr(Layer6S3CapabilityTests, "test_can_get_bucket_location")
 
 
-# === Layer4IAMRoleExistenceTests ===
-
-
 class TestLayer4IAMRoleExistenceTestsClassExists:
-    """Tests for Layer4IAMRoleExistenceTests class existence."""
-
     def test_class_exists(self):
-        """Layer4IAMRoleExistenceTests class exists."""
         assert Layer4IAMRoleExistenceTests is not None
 
     def test_has_iam_role_exists_test(self):
-        """Layer4IAMRoleExistenceTests has test_iam_role_exists method."""
         assert hasattr(Layer4IAMRoleExistenceTests, "test_iam_role_exists")
 
     def test_has_current_role_name_is_configured_test(self):
-        """Layer4IAMRoleExistenceTests has test_current_role_name_is_configured."""
         assert hasattr(
             Layer4IAMRoleExistenceTests, "test_current_role_name_is_configured"
         )
 
 
-# === Layer4PrerequisiteExistenceTests ===
-
-
 class TestLayer4PrerequisiteExistenceTestsClassExists:
-    """Tests for Layer4PrerequisiteExistenceTests class existence."""
-
     def test_class_exists(self):
-        """Layer4PrerequisiteExistenceTests class exists."""
         assert Layer4PrerequisiteExistenceTests is not None
 
     def test_inherits_from_layer4_iam_role_existence_tests(self):
-        """Layer4PrerequisiteExistenceTests inherits from Layer4IAMRoleExistenceTests."""
         assert issubclass(
             Layer4PrerequisiteExistenceTests, Layer4IAMRoleExistenceTests
         )
 
     def test_inherits_from_layer4_terraform_state_existence_tests(self):
-        """Layer4PrerequisiteExistenceTests inherits from Layer4TerraformStateExistenceTests."""
         assert issubclass(
             Layer4PrerequisiteExistenceTests, Layer4TerraformStateExistenceTests
         )
 
 
-# === Layer5IAMConfigurationTests ===
-
-
 class TestLayer5IAMConfigurationTestsClassExists:
-    """Tests for Layer5IAMConfigurationTests class existence."""
-
     def test_class_exists(self):
-        """Layer5IAMConfigurationTests class exists."""
         assert Layer5IAMConfigurationTests is not None
 
     def test_has_role_has_administrator_access_policy_test(self):
-        """Layer5IAMConfigurationTests has test_role_has_administrator_access_policy."""
         assert hasattr(
             Layer5IAMConfigurationTests, "test_role_has_administrator_access_policy"
         )
 
     def test_has_role_has_at_least_one_policy_test(self):
-        """Layer5IAMConfigurationTests has test_role_has_at_least_one_policy method."""
         assert hasattr(
             Layer5IAMConfigurationTests, "test_role_has_at_least_one_policy"
         )
 
 
-# === Layer5S3RegionTests ===
-
-
 class TestLayer5S3RegionTestsClassExists:
-    """Tests for Layer5S3RegionTests class existence."""
-
     def test_class_exists(self):
-        """Layer5S3RegionTests class exists."""
         assert Layer5S3RegionTests is not None
 
     def test_has_bucket_in_expected_region_test(self):
-        """Layer5S3RegionTests has test_bucket_in_expected_region method."""
         assert hasattr(Layer5S3RegionTests, "test_bucket_in_expected_region")
 
     def test_has_expected_region_is_configured_test(self):
-        """Layer5S3RegionTests has test_expected_region_is_configured method."""
         assert hasattr(Layer5S3RegionTests, "test_expected_region_is_configured")
 
 
-# === Layer5PrerequisiteConfigurationTests ===
-
-
 class TestLayer5PrerequisiteConfigurationTestsClassExists:
-    """Tests for Layer5PrerequisiteConfigurationTests class existence."""
-
     def test_class_exists(self):
-        """Layer5PrerequisiteConfigurationTests class exists."""
         assert Layer5PrerequisiteConfigurationTests is not None
 
     def test_inherits_from_layer5_iam_configuration_tests(self):
-        """Layer5PrerequisiteConfigurationTests inherits from Layer5IAMConfigurationTests."""
         assert issubclass(
             Layer5PrerequisiteConfigurationTests, Layer5IAMConfigurationTests
         )
 
     def test_inherits_from_layer5_s3_configuration_tests(self):
-        """Layer5PrerequisiteConfigurationTests inherits from Layer5S3ConfigurationTests."""
         assert issubclass(
             Layer5PrerequisiteConfigurationTests, Layer5S3ConfigurationTests
         )
 
     def test_inherits_from_layer5_s3_region_tests(self):
-        """Layer5PrerequisiteConfigurationTests inherits from Layer5S3RegionTests."""
         assert issubclass(Layer5PrerequisiteConfigurationTests, Layer5S3RegionTests)
 
 
-# === Layer6IAMCapabilityTests ===
-
-
 class TestLayer6IAMCapabilityTestsClassExists:
-    """Tests for Layer6IAMCapabilityTests class existence."""
-
     def test_class_exists(self):
-        """Layer6IAMCapabilityTests class exists."""
         assert Layer6IAMCapabilityTests is not None
 
     def test_has_can_list_buckets_test(self):
-        """Layer6IAMCapabilityTests has test_can_list_buckets method."""
         assert hasattr(Layer6IAMCapabilityTests, "test_can_list_buckets")
 
     def test_has_can_list_roles_test(self):
-        """Layer6IAMCapabilityTests has test_can_list_roles method."""
         assert hasattr(Layer6IAMCapabilityTests, "test_can_list_roles")
 
 
-# === Layer6S3WriteCapabilityTests ===
-
-
 class TestLayer6S3WriteCapabilityTestsClassExists:
-    """Tests for Layer6S3WriteCapabilityTests class existence."""
-
     def test_class_exists(self):
-        """Layer6S3WriteCapabilityTests class exists."""
         assert Layer6S3WriteCapabilityTests is not None
 
     def test_has_can_write_to_bucket_test(self):
-        """Layer6S3WriteCapabilityTests has test_can_write_to_bucket method."""
         assert hasattr(Layer6S3WriteCapabilityTests, "test_can_write_to_bucket")
 
     def test_has_can_delete_from_bucket_test(self):
-        """Layer6S3WriteCapabilityTests has test_can_delete_from_bucket method."""
         assert hasattr(Layer6S3WriteCapabilityTests, "test_can_delete_from_bucket")
 
 
-# === Layer6ECRCapabilityTests ===
-
-
 class TestLayer6ECRCapabilityTestsClassExists:
-    """Tests for Layer6ECRCapabilityTests class existence."""
-
     def test_class_exists(self):
-        """Layer6ECRCapabilityTests class exists."""
         assert Layer6ECRCapabilityTests is not None
 
     def test_has_can_create_ecr_repository_test(self):
-        """Layer6ECRCapabilityTests has test_can_create_ecr_repository method."""
         assert hasattr(Layer6ECRCapabilityTests, "test_can_create_ecr_repository")
 
     def test_has_can_delete_ecr_repository_test(self):
-        """Layer6ECRCapabilityTests has test_can_delete_ecr_repository method."""
         assert hasattr(Layer6ECRCapabilityTests, "test_can_delete_ecr_repository")
 
 
-# === Layer1EndpointAuthenticationTests ===
-
-
 class TestLayer1EndpointAuthenticationTestsClassExists:
-    """Tests for Layer1EndpointAuthenticationTests class existence."""
-
     def test_class_exists(self):
-        """Layer1EndpointAuthenticationTests class exists."""
         assert Layer1EndpointAuthenticationTests is not None
 
     def test_has_aws_credentials_are_valid_test(self):
-        """Layer1EndpointAuthenticationTests has test_aws_credentials_are_valid."""
         assert hasattr(
             Layer1EndpointAuthenticationTests, "test_aws_credentials_are_valid"
         )
 
     def test_has_aws_credentials_return_account_id_test(self):
-        """Layer1EndpointAuthenticationTests has test_aws_credentials_return_account_id."""
         assert hasattr(
             Layer1EndpointAuthenticationTests, "test_aws_credentials_return_account_id"
         )
 
     def test_has_aws_credentials_return_arn_test(self):
-        """Layer1EndpointAuthenticationTests has test_aws_credentials_return_arn."""
         assert hasattr(
             Layer1EndpointAuthenticationTests, "test_aws_credentials_return_arn"
         )
 
     def test_has_aws_credentials_arn_has_valid_format_test(self):
-        """Layer1EndpointAuthenticationTests has test_aws_credentials_arn_has_valid_format."""
         assert hasattr(
             Layer1EndpointAuthenticationTests, "test_aws_credentials_arn_has_valid_format"
         )
 
 
-# === Layer2APIGatewayAuthorizationTests ===
-
-
 class TestLayer2APIGatewayAuthorizationTestsClassExists:
-    """Tests for Layer2APIGatewayAuthorizationTests class existence."""
-
     def test_class_exists(self):
-        """Layer2APIGatewayAuthorizationTests class exists."""
         assert Layer2APIGatewayAuthorizationTests is not None
 
     def test_has_can_describe_rest_apis_test(self):
-        """Layer2APIGatewayAuthorizationTests has test_can_describe_rest_apis."""
         assert hasattr(
             Layer2APIGatewayAuthorizationTests, "test_can_describe_rest_apis"
         )
 
     def test_has_can_access_specific_rest_api_test(self):
-        """Layer2APIGatewayAuthorizationTests has test_can_access_specific_rest_api."""
         assert hasattr(
             Layer2APIGatewayAuthorizationTests, "test_can_access_specific_rest_api"
         )
 
 
-# === Layer2LambdaAndIAMAuthorizationTests ===
-
-
 class TestLayer2LambdaAndIAMAuthorizationTestsClassExists:
-    """Tests for Layer2LambdaAndIAMAuthorizationTests class existence."""
-
     def test_class_exists(self):
-        """Layer2LambdaAndIAMAuthorizationTests class exists."""
         assert Layer2LambdaAndIAMAuthorizationTests is not None
 
     def test_has_can_list_functions_test(self):
-        """Layer2LambdaAndIAMAuthorizationTests has test_can_list_functions."""
         assert hasattr(Layer2LambdaAndIAMAuthorizationTests, "test_can_list_functions")
 
     def test_has_can_list_roles_test(self):
-        """Layer2LambdaAndIAMAuthorizationTests has test_can_list_roles."""
         assert hasattr(Layer2LambdaAndIAMAuthorizationTests, "test_can_list_roles")
 
 
-# === Layer4APIBackendPrerequisiteTests ===
-
-
 class TestLayer4APIBackendPrerequisiteTestsClassExists:
-    """Tests for Layer4APIBackendPrerequisiteTests class existence."""
-
     def test_class_exists(self):
-        """Layer4APIBackendPrerequisiteTests class exists."""
         assert Layer4APIBackendPrerequisiteTests is not None
 
     def test_has_api_gateway_id_output_exists_test(self):
-        """Layer4APIBackendPrerequisiteTests has test_api_gateway_id_output_exists."""
         assert hasattr(
             Layer4APIBackendPrerequisiteTests, "test_api_gateway_id_output_exists"
         )
 
     def test_has_api_gateway_exists_in_aws_test(self):
-        """Layer4APIBackendPrerequisiteTests has test_api_gateway_exists_in_aws."""
         assert hasattr(
             Layer4APIBackendPrerequisiteTests, "test_api_gateway_exists_in_aws"
         )
 
 
-# === Layer5APIGatewayRegionalTests ===
-
-
 class TestLayer5APIGatewayRegionalTestsClassExists:
-    """Tests for Layer5APIGatewayRegionalTests class existence."""
-
     def test_class_exists(self):
-        """Layer5APIGatewayRegionalTests class exists."""
         assert Layer5APIGatewayRegionalTests is not None
 
     def test_has_api_gateway_is_regional_test(self):
-        """Layer5APIGatewayRegionalTests has test_api_gateway_is_regional."""
         assert hasattr(Layer5APIGatewayRegionalTests, "test_api_gateway_is_regional")
 
     def test_has_api_gateway_info_has_id_test(self):
-        """Layer5APIGatewayRegionalTests has test_api_gateway_info_has_id."""
         assert hasattr(Layer5APIGatewayRegionalTests, "test_api_gateway_info_has_id")
 
 
-# === Layer6DeploymentCapabilityTests ===
-
-
 class TestLayer6DeploymentCapabilityTestsClassExists:
-    """Tests for Layer6DeploymentCapabilityTests class existence."""
-
     def test_class_exists(self):
-        """Layer6DeploymentCapabilityTests class exists."""
         assert Layer6DeploymentCapabilityTests is not None
 
     def test_has_can_get_lambda_function_configuration_test(self):
-        """Layer6DeploymentCapabilityTests has test_can_get_lambda_function_configuration."""
         assert hasattr(
             Layer6DeploymentCapabilityTests, "test_can_get_lambda_function_configuration"
         )
 
     def test_has_can_create_log_group_dry_run_test(self):
-        """Layer6DeploymentCapabilityTests has test_can_create_log_group_dry_run."""
         assert hasattr(
             Layer6DeploymentCapabilityTests, "test_can_create_log_group_dry_run"
         )
 
     def test_has_can_get_iam_role_details_test(self):
-        """Layer6DeploymentCapabilityTests has test_can_get_iam_role_details."""
         assert hasattr(
             Layer6DeploymentCapabilityTests, "test_can_get_iam_role_details"
         )
 
 
-# === Layer Aliases ===
-
-
 def test_layer2_endpoint_authentication_tests_alias():
-    """Layer2EndpointAuthenticationTests is alias for Layer1EndpointAuthenticationTests."""
     assert Layer2EndpointAuthenticationTests is Layer1EndpointAuthenticationTests
 
 
 def test_layer3_api_gateway_authorization_tests_alias():
-    """Layer3APIGatewayAuthorizationTests is alias for Layer2APIGatewayAuthorizationTests."""
     assert Layer3APIGatewayAuthorizationTests is Layer2APIGatewayAuthorizationTests
 
 
 def test_layer3_lambda_and_iam_authorization_tests_alias():
-    """Layer3LambdaAndIAMAuthorizationTests is alias for Layer2LambdaAndIAMAuthorizationTests."""
     assert (
         Layer3LambdaAndIAMAuthorizationTests is Layer2LambdaAndIAMAuthorizationTests
     )
 
 
 def test_layer5_api_backend_prerequisite_tests_alias():
-    """Layer5APIBackendPrerequisiteTests is alias for Layer4APIBackendPrerequisiteTests."""
     assert Layer5APIBackendPrerequisiteTests is Layer4APIBackendPrerequisiteTests
 
 
 def test_layer6_api_gateway_regional_tests_alias():
-    """Layer6APIGatewayRegionalTests is alias for Layer5APIGatewayRegionalTests."""
     assert Layer6APIGatewayRegionalTests is Layer5APIGatewayRegionalTests
 
 
 def test_layer7_deployment_capability_tests_alias():
-    """Layer7DeploymentCapabilityTests is alias for Layer6DeploymentCapabilityTests."""
     assert Layer7DeploymentCapabilityTests is Layer6DeploymentCapabilityTests

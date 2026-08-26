@@ -1,5 +1,3 @@
-"""Shared test helpers for Terraform drift detection tests across endpoints."""
-
 from pathlib import Path
 
 import pytest
@@ -14,20 +12,8 @@ def create_orphaned_resource_tests(
     terraform_dir: Path,
     region: str = "us-east-2",
 ):
-    """Create test class for detecting orphaned resources using terraform plan.
-
-    Args:
-        terraform_dir: Path to the Terraform directory for this endpoint
-        region: AWS region to check in
-
-    Returns:
-        Test class that checks for orphaned resources.
-    """
     class TestOrphanedResources:
-        """Tests to detect resources that exist in AWS but not in Terraform state."""
-
         def test_terraform_initialized(self):
-            """Verify terraform is initialized in the directory."""
             terraform_lock = terraform_dir / ".terraform.lock.hcl"
             print(f"\nChecking terraform initialization: {terraform_dir}")
             assert terraform_lock.exists(), (
@@ -37,18 +23,11 @@ def create_orphaned_resource_tests(
             print("  Terraform is initialized")
 
         def test_no_orphaned_resources(self):
-            """Verify no resources to be created already exist in AWS.
-
-            This test runs terraform plan to find resources that will be created,
-            then checks if any of them already exist in AWS. If they do, it means
-            the resource was created outside of Terraform and needs to be imported.
-            """
             print("\n" + "=" * 60)
             print("Running terraform plan to detect resources to create...")
             print(f"  Directory: {terraform_dir}")
             print(f"  Region: {region}")
 
-            # Get resources that terraform plans to create
             creates = get_planned_creates(terraform_dir)
 
             print(f"\nFound {len(creates)} resources to create:")
@@ -60,7 +39,6 @@ def create_orphaned_resource_tests(
                 print("=" * 60)
                 return
 
-            # Check each resource to see if it already exists in AWS
             orphaned = []
             for resource in creates:
                 resource_type = resource["type"]

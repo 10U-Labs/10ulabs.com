@@ -1,4 +1,3 @@
-"""Unit tests for terraform_config module."""
 from pathlib import Path
 from unittest.mock import patch
 
@@ -24,10 +23,7 @@ from terraform_config import (
 
 
 class TestParseMapBlock:
-    """Tests for _parse_map_block function."""
-
     def test_parses_simple_map(self):
-        """Test parsing a simple map block."""
         content = '''
         my_map = {
             key1 = "value1"
@@ -38,7 +34,6 @@ class TestParseMapBlock:
         assert result == {"key1": "value1", "key2": "value2"}
 
     def test_returns_empty_dict_when_map_not_found(self):
-        """Test returns empty dict when map doesn't exist."""
         content = '''
         other_map = {
             key1 = "value1"
@@ -48,7 +43,6 @@ class TestParseMapBlock:
         assert not result
 
     def test_handles_nested_braces(self):
-        """Test handles content with nested braces."""
         content = '''
         lambda_handler_names = {
             webhook = "${local.resource_prefix}WebhookHandler"
@@ -62,7 +56,6 @@ class TestParseMapBlock:
         }
 
     def test_handles_empty_map(self):
-        """Test handles empty map block."""
         content = '''
         empty_map = {
         }
@@ -72,45 +65,35 @@ class TestParseMapBlock:
 
 
 class TestResolvePrefixRefs:
-    """Tests for _resolve_prefix_refs function."""
-
     def test_resolves_module_shared_resource_prefix(self):
-        """Test resolves module.common.resource_prefix."""
         value = "${module.common.resource_prefix}MyFunction"
         result = _resolve_prefix_refs(value, "TenULabs")
         assert result == "TenULabsMyFunction"
 
     def test_resolves_local_resource_prefix(self):
-        """Test resolves local.resource_prefix."""
         value = "${local.resource_prefix}MyFunction"
         result = _resolve_prefix_refs(value, "TenULabs")
         assert result == "TenULabsMyFunction"
 
     def test_resolves_multiple_refs(self):
-        """Test resolves multiple references in same string."""
         value = "${local.resource_prefix}-${module.common.resource_prefix}"
         result = _resolve_prefix_refs(value, "Prefix")
         assert result == "Prefix-Prefix"
 
     def test_returns_unchanged_when_no_refs(self):
-        """Test returns unchanged when no references present."""
         value = "StaticValue"
         result = _resolve_prefix_refs(value, "TenULabs")
         assert result == "StaticValue"
 
 
 class TestResolveLocalInterpolations:
-    """Tests for _resolve_local_interpolations function."""
-
     def test_resolves_single_local(self):
-        """Test resolves a single local reference."""
         value = "${local.my_var}"
         local_values = {"my_var": "resolved_value"}
         result = _resolve_local_interpolations(value, local_values)
         assert result == "resolved_value"
 
     def test_resolves_nested_locals(self):
-        """Test resolves nested local references."""
         value = "${local.outer}"
         local_values = {
             "outer": "${local.inner}",
@@ -120,7 +103,6 @@ class TestResolveLocalInterpolations:
         assert result == "final_value"
 
     def test_resolves_deeply_nested_locals(self):
-        """Test resolves deeply nested local references requiring multiple iterations."""
         value = "${local.level1}"
         local_values = {
             "level1": "${local.level2}",
@@ -131,14 +113,12 @@ class TestResolveLocalInterpolations:
         assert result == "final_value"
 
     def test_returns_unchanged_when_local_not_found(self):
-        """Test returns unchanged when local not in dict."""
         value = "${local.missing_var}"
         local_values = {"other_var": "value"}
         result = _resolve_local_interpolations(value, local_values)
         assert result == "${local.missing_var}"
 
     def test_resolves_multiple_locals_in_string(self):
-        """Test resolves multiple locals in same string."""
         value = "${local.prefix}-${local.suffix}"
         local_values = {"prefix": "start", "suffix": "end"}
         result = _resolve_local_interpolations(value, local_values)
@@ -146,33 +126,25 @@ class TestResolveLocalInterpolations:
 
 
 class TestResolveAllRefs:
-    """Tests for _resolve_all_refs function."""
-
     def test_resolves_prefix_and_handler_names(self):
-        """Test resolves both prefix and handler name references."""
         value = "${module.common.resource_prefix}-${module.common.lambda_handler_names.webhook}"
         handler_names = {"webhook": "TenULabsWebhook"}
         result = _resolve_all_refs(value, "TenULabs", handler_names)
         assert result == "TenULabs-TenULabsWebhook"
 
     def test_resolves_only_prefix_when_no_handlers(self):
-        """Test resolves prefix when handler_names is empty."""
         value = "${module.common.resource_prefix}Function"
         result = _resolve_all_refs(value, "TenULabs", {})
         assert result == "TenULabsFunction"
 
     def test_returns_unchanged_when_handler_not_found(self):
-        """Test returns partial resolution when handler not in dict."""
         value = "${module.common.lambda_handler_names.missing}"
         result = _resolve_all_refs(value, "TenULabs", {"webhook": "Handler"})
         assert result == "${module.common.lambda_handler_names.missing}"
 
 
 class TestResolveLambdaFunctionName:
-    """Tests for _resolve_lambda_function_name function."""
-
     def test_resolves_quoted_string(self):
-        """Test resolves function_name from quoted string."""
         block = '''
         function_name = "${module.common.resource_prefix}MyFunction"
         runtime       = "python3.11"
@@ -181,7 +153,6 @@ class TestResolveLambdaFunctionName:
         assert result == "TenULabsMyFunction"
 
     def test_resolves_local_reference(self):
-        """Test resolves function_name from local reference."""
         block = '''
         function_name = local.handler_name
         runtime       = "python3.11"
@@ -191,7 +162,6 @@ class TestResolveLambdaFunctionName:
         assert result == "MyHandler"
 
     def test_resolves_var_reference(self):
-        """Test resolves function_name from var reference."""
         block = '''
         function_name = var.lambda_name
         runtime       = "python3.11"
@@ -201,7 +171,6 @@ class TestResolveLambdaFunctionName:
         assert result == "VarHandler"
 
     def test_resolves_module_shared_handler_reference(self):
-        """Test resolves function_name from module.common.lambda_handler_names."""
         block = '''
         function_name = module.common.lambda_handler_names.webhook
         runtime       = "python3.11"
@@ -211,7 +180,6 @@ class TestResolveLambdaFunctionName:
         assert result == "TenULabsWebhookHandler"
 
     def test_returns_none_when_no_function_name(self):
-        """Test returns None when function_name not found."""
         block = '''
         runtime = "python3.11"
         handler = "index.handler"
@@ -220,7 +188,6 @@ class TestResolveLambdaFunctionName:
         assert result is None
 
     def test_returns_none_for_local_not_in_map(self):
-        """Test returns None when local reference not in map."""
         block = '''
         function_name = local.missing_name
         '''
@@ -228,7 +195,6 @@ class TestResolveLambdaFunctionName:
         assert result is None
 
     def test_returns_none_for_var_not_in_tfvars(self):
-        """Test returns None when var reference not in tfvars."""
         block = '''
         function_name = var.missing_name
         '''
@@ -236,7 +202,6 @@ class TestResolveLambdaFunctionName:
         assert result is None
 
     def test_returns_none_for_handler_not_in_map(self):
-        """Test returns None when handler reference not in map."""
         block = '''
         function_name = module.common.lambda_handler_names.missing
         '''
@@ -244,121 +209,90 @@ class TestResolveLambdaFunctionName:
         assert result is None
 
 
-# Integration tests using real shared module files
 class TestParseLocals:
-    """Tests for _parse_locals function."""
-
     def test_returns_dict(self):
-        """Test _parse_locals returns a dict."""
         result = _parse_locals()
         assert isinstance(result, dict)
 
     def test_contains_aws_region(self):
-        """Test _parse_locals contains aws_region."""
         result = _parse_locals()
         assert "aws_region" in result
 
     def test_contains_resource_prefix(self):
-        """Test _parse_locals contains resource_prefix."""
         result = _parse_locals()
         assert "resource_prefix" in result
 
 
 class TestParseLambdaHandlerNames:
-    """Tests for parse_lambda_handler_names function."""
-
     def test_returns_dict(self):
-        """Test parse_lambda_handler_names returns a dict."""
         result = parse_lambda_handler_names()
         assert isinstance(result, dict)
 
     def test_values_do_not_contain_unresolved_local_resource_prefix(self):
-        """Test handler name values do not contain unresolved local.resource_prefix."""
         result = parse_lambda_handler_names()
         unresolved_values = [v for v in result.values() if "${local.resource_prefix}" in v]
         assert not unresolved_values
 
 
 def test_parse_outputs_returns_dict():
-    """Test _parse_outputs returns a dict."""
     result = _parse_outputs()
     assert isinstance(result, dict)
 
 
 class TestGetSharedConfig:
-    """Tests for get_shared_config function."""
-
     def test_returns_dict(self):
-        """Test get_shared_config returns a dict."""
         result = get_shared_config()
         assert isinstance(result, dict)
 
     def test_contains_lambda_handler_names_key(self):
-        """Test get_shared_config includes lambda_handler_names key."""
         result = get_shared_config()
         assert "lambda_handler_names" in result
 
     def test_lambda_handler_names_is_dict(self):
-        """Test get_shared_config lambda_handler_names value is a dict."""
         result = get_shared_config()
         assert isinstance(result["lambda_handler_names"], dict)
 
     def test_omits_aws_account_id(self):
-        """Test get_shared_config carries no account identifier."""
         result = get_shared_config()
         assert "aws_account_id" not in result
 
 
 class TestTestAwsRegion:
-    """Tests for TEST_AWS_REGION constant."""
-
     def test_is_string(self):
-        """Test TEST_AWS_REGION is a string."""
         assert isinstance(TEST_AWS_REGION, str)
 
     def test_is_valid_region_format(self):
-        """Test TEST_AWS_REGION matches AWS region format."""
         assert TEST_AWS_REGION.startswith("us-") or TEST_AWS_REGION.startswith("eu-")
 
 
 class TestGetResourcePrefix:
-    """Tests for get_resource_prefix function."""
-
     def test_returns_string(self):
-        """Test get_resource_prefix returns a string."""
         result = get_resource_prefix()
         assert isinstance(result, str)
 
     def test_returns_non_empty(self):
-        """Test get_resource_prefix returns non-empty string."""
         result = get_resource_prefix()
         assert len(result) > 0
 
 
 class TestGetTfvarsValues:
-    """Tests for get_tfvars_values function."""
-
     def test_returns_empty_for_nonexistent_dir(self):
-        """Test returns empty dict for nonexistent directory."""
         result = get_tfvars_values(Path("/nonexistent/path"))
         assert not result
 
     def test_parses_string_values(self, tmp_path):
-        """Test parses string values from tfvars."""
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('my_var = "my_value"\n')
         result = get_tfvars_values(tmp_path)
         assert result == {"my_var": "my_value"}
 
     def test_parses_list_values(self, tmp_path):
-        """Test parses list values from tfvars."""
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('my_list = ["a", "b", "c"]\n')
         result = get_tfvars_values(tmp_path)
         assert result == {"my_list": ["a", "b", "c"]}
 
     def test_ignores_comments(self, tmp_path):
-        """Test ignores comment lines."""
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('# This is a comment\nmy_var = "value"\n')
         result = get_tfvars_values(tmp_path)
@@ -366,22 +300,17 @@ class TestGetTfvarsValues:
 
 
 class TestGetEndpointLocalValues:
-    """Tests for get_endpoint_local_values function."""
-
     def test_returns_empty_for_nonexistent_file(self):
-        """Test returns empty dict when locals.tf doesn't exist."""
         result = get_endpoint_local_values(Path("/nonexistent/path"))
         assert not result
 
     def test_parses_local_values(self, tmp_path):
-        """Test parses local values from locals.tf."""
         locals_file = tmp_path / "locals.tf"
         locals_file.write_text('locals {\n  my_local = "my_value"\n}\n')
         result = get_endpoint_local_values(tmp_path)
         assert result.get("my_local") == "my_value"
 
     def test_parses_module_shared_handler_reference(self, tmp_path):
-        """Test parses module.common.lambda_handler_names references."""
         locals_file = tmp_path / "locals.tf"
         locals_file.write_text(
             'locals {\n  handler = module.common.lambda_handler_names.webhook\n}\n'
@@ -395,15 +324,11 @@ class TestGetEndpointLocalValues:
 
 
 class TestExtractIamRoleNames:
-    """Tests for extract_iam_role_names function."""
-
     def test_returns_empty_for_nonexistent_file(self):
-        """Test returns empty list when file doesn't exist."""
         result = extract_iam_role_names(Path("/nonexistent/file.tf"))
         assert not result
 
     def test_extracts_quoted_name_returns_single_result(self, tmp_path):
-        """Test extracts exactly one role from file with one role definition."""
         iam_file = tmp_path / "iam.tf"
         iam_file.write_text('''
 resource "aws_iam_role" "my_role" {
@@ -415,7 +340,6 @@ resource "aws_iam_role" "my_role" {
         assert len(result) == 1
 
     def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path):
-        """Test extracts correct resource name and role name tuple."""
         iam_file = tmp_path / "iam.tf"
         iam_file.write_text('''
 resource "aws_iam_role" "my_role" {
@@ -427,7 +351,6 @@ resource "aws_iam_role" "my_role" {
         assert result[0] == ("my_role", "MyRoleName")
 
     def test_extracts_var_reference_name(self, tmp_path):
-        """Test extracts role name from var reference when in tfvars."""
         iam_file = tmp_path / "iam.tf"
         iam_file.write_text('''
 resource "aws_iam_role" "my_role" {
@@ -442,7 +365,6 @@ resource "aws_iam_role" "my_role" {
         assert result[0] == ("my_role", "VarRoleName")
 
     def test_extracts_local_reference_name(self, tmp_path):
-        """Test extracts role name from local reference."""
         iam_file = tmp_path / "iam.tf"
         iam_file.write_text('''
 resource "aws_iam_role" "my_role" {
@@ -457,15 +379,11 @@ resource "aws_iam_role" "my_role" {
 
 
 class TestExtractLambdaFunctionNames:
-    """Tests for extract_lambda_function_names function."""
-
     def test_returns_empty_for_nonexistent_file(self):
-        """Test returns empty list when file doesn't exist."""
         result = extract_lambda_function_names(Path("/nonexistent/file.tf"))
         assert not result
 
     def test_extracts_quoted_name_returns_single_result(self, tmp_path):
-        """Test extracts exactly one function from file with one function definition."""
         lambda_file = tmp_path / "lambda.tf"
         lambda_file.write_text('''
 resource "aws_lambda_function" "my_func" {
@@ -478,7 +396,6 @@ resource "aws_lambda_function" "my_func" {
         assert len(result) == 1
 
     def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path):
-        """Test extracts correct resource name and function name tuple."""
         lambda_file = tmp_path / "lambda.tf"
         lambda_file.write_text('''
 resource "aws_lambda_function" "my_func" {
@@ -491,7 +408,6 @@ resource "aws_lambda_function" "my_func" {
         assert result[0] == ("my_func", "MyFunctionName")
 
     def test_with_use_handler_names_returns_single_result(self, tmp_path):
-        """Test with use_handler_names=True returns exactly one result."""
         lambda_file = tmp_path / "lambda.tf"
         lambda_file.write_text('''
 resource "aws_lambda_function" "my_func" {
@@ -504,38 +420,26 @@ resource "aws_lambda_function" "my_func" {
 
 
 class TestResolveLocalInterpolationsMaxIterations:
-    """Tests for max iterations edge case in _resolve_local_interpolations."""
-
     def test_handles_circular_reference_without_infinite_loop(self):
-        """Test handles circular reference by stopping at max iterations."""
-        # Create a circular reference that never resolves
         value = "${local.a}"
         local_values = {
             "a": "${local.b}",
-            "b": "${local.a}",  # Circular!
+            "b": "${local.a}",
         }
-        # Should not hang - returns after max iterations
         result = _resolve_local_interpolations(value, local_values)
-        # Result will alternate but won't be fully resolved
         assert result in ["${local.a}", "${local.b}"]
 
     def test_handles_deep_nesting_beyond_resolution(self):
-        """Test handles nesting deeper than max iterations."""
-        # Create nesting that requires > 10 iterations
         value = "${local.level0}"
         local_values = {f"level{i}": f"${{local.level{i+1}}}" for i in range(15)}
         local_values["level15"] = "final"
 
         result = _resolve_local_interpolations(value, local_values)
-        # Should stop before fully resolving due to max iterations
         assert "${local." in result or result == "final"
 
 
 class TestGetTfvarsValuesAdditional:
-    """Additional tests for get_tfvars_values function."""
-
     def test_parses_string_values(self, tmp_path):
-        """Test parses string values from tfvars file."""
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('region = "us-east-1"\n')
 
@@ -543,7 +447,6 @@ class TestGetTfvarsValuesAdditional:
         assert result.get("region") == "us-east-1"
 
     def test_parses_list_values(self, tmp_path):
-        """Test parses list values from tfvars file."""
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('tags = ["tag1", "tag2"]\n')
 
@@ -551,7 +454,6 @@ class TestGetTfvarsValuesAdditional:
         assert result.get("tags") == ["tag1", "tag2"]
 
     def test_skips_comments_and_empty_lines(self, tmp_path):
-        """Test skips comments and empty lines."""
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('# comment\n\nregion = "us-east-1"\n')
 
@@ -559,7 +461,6 @@ class TestGetTfvarsValuesAdditional:
         assert result.get("region") == "us-east-1"
 
     def test_skips_non_matching_number_lines(self, tmp_path):
-        """Test skips lines with number assignments."""
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('some_number = 42\nregion = "us-east-1"\n')
 
@@ -567,7 +468,6 @@ class TestGetTfvarsValuesAdditional:
         assert "some_number" not in result
 
     def test_parses_string_after_skipping_number(self, tmp_path):
-        """Test parses string values after skipping non-matching lines."""
         tfvars_file = tmp_path / "terraform.tfvars"
         tfvars_file.write_text('some_number = 42\nregion = "us-east-1"\n')
 
@@ -575,21 +475,17 @@ class TestGetTfvarsValuesAdditional:
         assert result.get("region") == "us-east-1"
 
     def test_returns_empty_dict_when_file_missing(self, tmp_path):
-        """Test returns empty dict when tfvars file doesn't exist."""
         result = get_tfvars_values(tmp_path)
         assert not result
 
 
 class TestGetSharedConfigDomainName:
-    """Tests for domain_name handling in get_shared_config."""
-
     @patch('terraform_config._parse_locals')
     @patch('terraform_config._parse_outputs')
     @patch('terraform_config.parse_lambda_handler_names')
     def test_sets_api_fqdn_when_domain_name_present(
         self, mock_handlers, mock_outputs, mock_locals
     ):
-        """Test sets api_fqdn when domain_name is present."""
         mock_locals.return_value = {"domain_name": "example.com"}
         mock_outputs.return_value = {}
         mock_handlers.return_value = {}
@@ -603,7 +499,6 @@ class TestGetSharedConfigDomainName:
     def test_no_api_fqdn_when_domain_name_empty(
         self, mock_handlers, mock_outputs, mock_locals
     ):
-        """Test does not set api_fqdn when domain_name is empty."""
         mock_locals.return_value = {"domain_name": ""}
         mock_outputs.return_value = {}
         mock_handlers.return_value = {}
@@ -617,7 +512,6 @@ class TestGetSharedConfigDomainName:
     def test_no_api_fqdn_when_domain_name_missing(
         self, mock_handlers, mock_outputs, mock_locals
     ):
-        """Test does not set api_fqdn when domain_name key is missing."""
         mock_locals.return_value = {}
         mock_outputs.return_value = {}
         mock_handlers.return_value = {}
@@ -627,10 +521,7 @@ class TestGetSharedConfigDomainName:
 
 
 class TestResolveLocalInterpolationsMaxIterationsExhaustion:
-    """Tests for exhausting max iterations in _resolve_local_interpolations."""
-
     def test_exhausts_max_iterations_leaves_unresolved_reference(self):
-        """Test that unresolved reference remains after max iterations."""
         value = "${local.a}"
         local_values = {"a": "x${local.a}y"}
 
@@ -638,7 +529,6 @@ class TestResolveLocalInterpolationsMaxIterationsExhaustion:
         assert "${local.a}" in result
 
     def test_exhausts_max_iterations_adds_prefix_each_iteration(self):
-        """Test that prefix is added on each iteration."""
         value = "${local.a}"
         local_values = {"a": "x${local.a}y"}
 
@@ -646,7 +536,6 @@ class TestResolveLocalInterpolationsMaxIterationsExhaustion:
         assert result.count("x") == 10
 
     def test_exhausts_max_iterations_adds_suffix_each_iteration(self):
-        """Test that suffix is added on each iteration."""
         value = "${local.a}"
         local_values = {"a": "x${local.a}y"}
 
@@ -655,25 +544,20 @@ class TestResolveLocalInterpolationsMaxIterationsExhaustion:
 
 
 def test_get_endpoint_local_values_skips_an_unknown_handler(tmp_path):
-    """Test that handler references not in handler_names are skipped."""
     locals_file = tmp_path / "locals.tf"
-    # Reference a handler that won't be in the mocked handler_names
     locals_file.write_text(
         'locals {\n  handler = module.common.lambda_handler_names.nonexistent\n}\n'
     )
     with patch("terraform_config.parse_lambda_handler_names") as mock_handlers:
-        mock_handlers.return_value = {"webhook": "WebhookHandler"}  # No "nonexistent"
+        mock_handlers.return_value = {"webhook": "WebhookHandler"}
         with patch("terraform_config.get_resource_prefix") as mock_prefix:
             mock_prefix.return_value = "TenULabs"
             result = get_endpoint_local_values(tmp_path)
-    # The "handler" key should not be in result since "nonexistent" wasn't found
     assert "handler" not in result
 
 
 def test_extract_iam_role_names_skips_an_unresolvable_expression(tmp_path):
-    """Test role with name expression that doesn't match any pattern."""
     iam_file = tmp_path / "iam.tf"
-    # Use an expression that won't match quoted, local, or var patterns
     iam_file.write_text('''
 resource "aws_iam_role" "my_role" {
   name = data.aws_caller_identity.current.account_id
@@ -683,14 +567,11 @@ resource "aws_iam_role" "my_role" {
     (tmp_path / "locals.tf").write_text("")
     (tmp_path / "terraform.tfvars").write_text("")
     result = extract_iam_role_names(iam_file)
-    # Role should not be extracted since name doesn't match any pattern
     assert len(result) == 0
 
 
 def test_extract_lambda_function_names_skips_an_unresolvable_name(tmp_path):
-    """Test Lambda function with function_name that can't be resolved."""
     lambda_file = tmp_path / "lambda.tf"
-    # Use an expression that doesn't match any resolution pattern
     lambda_file.write_text('''
 resource "aws_lambda_function" "my_func" {
   function_name = data.aws_caller_identity.current.account_id
@@ -701,12 +582,10 @@ resource "aws_lambda_function" "my_func" {
     (tmp_path / "locals.tf").write_text("")
     (tmp_path / "terraform.tfvars").write_text("")
     result = extract_lambda_function_names(lambda_file)
-    # Function should not be in result since name couldn't be resolved
     assert len(result) == 0
 
 
 def test_packaged_lambda_sources_reads_a_single_packaged_file(tmp_path):
-    """Test the form that names one file as the whole package."""
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text("""
 data "archive_file" "handler" {
@@ -718,7 +597,6 @@ data "archive_file" "handler" {
 
 
 def test_packaged_lambda_sources_reads_a_named_archive_entry(tmp_path):
-    """Test the form that names the content of an entry inside the archive."""
     tf_file = tmp_path / "analytics.tf"
     tf_file.write_text("""
 data "archive_file" "export" {
@@ -733,7 +611,6 @@ data "archive_file" "export" {
 
 
 def test_packaged_lambda_sources_omits_a_file_from_outside_the_stack(tmp_path):
-    """Test that shared library code vendored into the package is omitted."""
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text("""
 data "archive_file" "handler" {
@@ -752,7 +629,6 @@ data "archive_file" "handler" {
 
 
 def test_packaged_lambda_archives_reads_the_archive_a_package_is_written_to(tmp_path):
-    """Test the archive path a single packaging configuration writes."""
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text("""
 data "archive_file" "handler" {
@@ -767,7 +643,6 @@ data "archive_file" "handler" {
 
 
 def test_packaged_lambda_archives_reads_every_package_a_file_declares(tmp_path):
-    """Test that a file declaring two packages is read as two archives."""
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text("""
 data "archive_file" "tracker" {
@@ -789,7 +664,6 @@ data "archive_file" "exporter" {
 def test_packaged_lambda_archives_reads_nothing_from_a_file_that_packages_nothing(
     tmp_path,
 ):
-    """Test that a file declaring no package is read as no archive."""
     tf_file = tmp_path / "dynamodb.tf"
     tf_file.write_text("""
 resource "aws_dynamodb_table" "sessions" {
