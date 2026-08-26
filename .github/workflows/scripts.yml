@@ -6,9 +6,10 @@
 # workflow of its own and this file is what reads it and the one suite that
 # covers it. Its pytest job runs the root conftest, which loads the two
 # test_fixtures plugin modules, so this workflow also executes eight
-# packages under lib/python/ and reads them and their suites here. Every
-# check here is its own job, so a red check reports alongside the others
-# rather than hiding behind the first failing step.
+# packages under lib/python/ and reads them and their suites here, and
+# gates each of the eight on its own suite. Every check here is its own
+# job, so a red check reports alongside the others rather than hiding
+# behind the first failing step.
 concurrency:
   cancel-in-progress: true
   group: scripts-${{ github.ref }}
@@ -318,6 +319,58 @@ jobs:
             test/lib/python/test_test_fixtures \
             test/lib/python/test_urllib_mocks \
             --recursive=y --fail-on=C,R,W --fail-under=10.0
+  test-boto-mocks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run boto_mocks tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_boto_mocks/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=boto_mocks \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-event-factories:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run event_factories tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_event_factories/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=event_factories \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
   test-invalidate-cloudfront:
     runs-on: ubuntu-latest
     steps:
@@ -340,6 +393,162 @@ jobs:
             $BASE/unit/ \
             --confcutdir=test --verbose --pythonwarnings=error \
             --cov=invalidate_cloudfront \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-lambda-response:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run lambda_response tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_lambda_response/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=lambda_response \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-module-utils:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run module_utils tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_module_utils/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=module_utils \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-repo-utils:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run repo_utils tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_repo_utils/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=repo_utils \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-terraform-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run terraform_config tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_terraform_config/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=terraform_config \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-test-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run test_fixtures tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_test_fixtures/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=test_fixtures \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-urllib-mocks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run urllib_mocks tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_urllib_mocks/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=urllib_mocks \
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
