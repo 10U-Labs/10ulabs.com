@@ -5,8 +5,6 @@ import pytest
 from repo_utils import REPO_ROOT
 from test_fixtures.config import create_simple_config
 
-# Use shared fixtures (provides logs_client, aws_region, shared_config, etc.)
-pytest_plugins = ['test_fixtures.aws']
 
 DIAGNOSTICS_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
 

@@ -8,7 +8,6 @@ import requests
 from repo_utils import REPO_ROOT
 from test_fixtures.terraform import terraform_init, terraform_output
 
-pytest_plugins = ['test_fixtures.aws']
 
 # Common directory constants
 API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"

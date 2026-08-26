@@ -12,7 +12,7 @@ Bootstrap is self-bootstrapping - it creates its own prerequisites. Layers 5-7
 OTHER workflows, which don't exist for bootstrap. Therefore, these layers are
 not applicable here.
 
-Note: pytest_plugins are loaded from test/bootstrap/conftest.py (parent conftest)
+Note: pytest_plugins are loaded from test/conftest.py (the root conftest)
 """
 import re
 from pathlib import Path
