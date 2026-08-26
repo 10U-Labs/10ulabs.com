@@ -70,7 +70,7 @@ Three directories hold code the tests share, and they differ in how far that cod
 | ----------- | ------- | ------------------ |
 | `lib/python/` | Entire codebase | `boto_mocks/`, `terraform_config/`, `test_fixtures/aws.py` |
 | `test/` root | All tests | `conftest.py` (path setup), codebase-wide test utilities |
-| `test/<module>/` | Module-specific | `test/www/conftest.py`, inline constants beside the tests that read them |
+| `test/<module>/` | Module-specific | `test/api/conftest.py`, inline constants beside the tests that read them |
 
 ## Reusable Utilities in lib/python/
 
