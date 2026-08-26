@@ -78,7 +78,7 @@ A package here is either loaded as a pytest plugin or imported directly, and whi
 
 ### test_fixtures/
 
-The package a conftest.py loads as a pytest plugin. `test_fixtures.aws` holds the AWS fixtures and `test_fixtures.unit` the Lambda unit-testing ones; `test/conftest.py` loads both for the whole tree, so a suite that wants only these two loads nothing of its own.
+The package a conftest.py loads as a pytest plugin. `test_fixtures.aws` holds the AWS fixtures and is the only module here loaded that way; `test/conftest.py` loads it for the whole tree, so a suite that wants only those loads nothing of its own.
 
 ```python
 # Loaded for the whole tree by test/conftest.py
@@ -103,6 +103,7 @@ The rest of the package is imported rather than loaded as a plugin:
 | `test_fixtures.lambda_lifecycle` | Test factories for the lifecycle rules a Lambda with environment variables needs |
 | `test_fixtures.terraform_tests` | Test factories for remote-state contracts and naming conventions |
 | `test_fixtures.integration` | The base classes of the seven-layer pre-deployment integration model |
+| `test_fixtures.unit` | `TEST_CONSTANTS`, `create_mock_dynamodb_client`, and re-exports of the shared library's unit-test helpers |
 
 ### terraform_config/
 

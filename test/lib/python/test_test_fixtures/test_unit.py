@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 
 from test_fixtures.unit import (
     TEST_CONSTANTS,
-    ENV_VAR_PRESETS,
     create_mock_dynamodb_client,
 )
 from terraform_config import TEST_AWS_REGION
@@ -124,25 +123,6 @@ class TestTestConstantsValues:
         assert TEST_CONSTANTS['aws_region'] == TEST_AWS_REGION
 
 
-# === ENV_VAR_PRESETS ===
-
-
-class TestEnvVarPresets:
-    """Tests for ENV_VAR_PRESETS dictionary."""
-
-    def test_has_base_key(self):
-        """ENV_VAR_PRESETS has 'base' key."""
-        assert 'base' in ENV_VAR_PRESETS
-
-    def test_base_has_aws_region(self):
-        """ENV_VAR_PRESETS base has AWS_REGION key."""
-        assert 'AWS_REGION' in ENV_VAR_PRESETS['base']
-
-    def test_base_aws_region_matches_test_region(self):
-        """ENV_VAR_PRESETS base AWS_REGION matches TEST_AWS_REGION."""
-        assert ENV_VAR_PRESETS['base']['AWS_REGION'] == TEST_AWS_REGION
-
-
 # === create_mock_dynamodb_client ===
 
 
@@ -211,111 +191,3 @@ class TestCreateMockDynamodbClient:
         mock = create_mock_dynamodb_client("get_item", None)
         result = mock.get_item()
         assert result == {}
-
-
-class TestMockDynamodbFixture:
-    """Tests for mock_dynamodb fixture."""
-
-    def test_mock_dynamodb_is_magicmock(self, mock_dynamodb):
-        """mock_dynamodb fixture provides a MagicMock."""
-        assert isinstance(mock_dynamodb, MagicMock)
-
-    def test_mock_dynamodb_has_get_item(self, mock_dynamodb):
-        """mock_dynamodb fixture has get_item method."""
-        assert hasattr(mock_dynamodb, 'get_item')
-
-    def test_mock_dynamodb_get_item_is_callable(self, mock_dynamodb):
-        """mock_dynamodb fixture get_item is callable."""
-        assert callable(mock_dynamodb.get_item)
-
-    def test_mock_dynamodb_has_put_item(self, mock_dynamodb):
-        """mock_dynamodb fixture has put_item method."""
-        assert hasattr(mock_dynamodb, 'put_item')
-
-
-class TestMockSsmFixture:
-    """Tests for mock_ssm fixture."""
-
-    def test_mock_ssm_is_magicmock(self, mock_ssm):
-        """mock_ssm fixture provides a MagicMock."""
-        assert isinstance(mock_ssm, MagicMock)
-
-    def test_mock_ssm_has_get_parameter(self, mock_ssm):
-        """mock_ssm fixture has get_parameter method."""
-        assert hasattr(mock_ssm, 'get_parameter')
-
-    def test_mock_ssm_get_parameter_is_callable(self, mock_ssm):
-        """mock_ssm fixture get_parameter is callable."""
-        assert callable(mock_ssm.get_parameter)
-
-    def test_mock_ssm_get_parameter_returns_test_token(self, mock_ssm):
-        """mock_ssm fixture get_parameter returns test token."""
-        result = mock_ssm.get_parameter()
-        assert result['Parameter']['Value'] == 'test-token'
-
-
-class TestSqsEventFactoryFixture:
-    """Tests for sqs_event_factory fixture."""
-
-    def test_factory_is_callable(self, sqs_event_factory):
-        """sqs_event_factory fixture is callable."""
-        assert callable(sqs_event_factory)
-
-    def test_factory_returns_dict(self, sqs_event_factory):
-        """sqs_event_factory creates dict."""
-        result = sqs_event_factory()
-        assert isinstance(result, dict)
-
-    def test_factory_result_has_records(self, sqs_event_factory):
-        """sqs_event_factory result has Records."""
-        result = sqs_event_factory()
-        assert 'Records' in result
-
-
-class TestDlqMessageFactoryFixture:
-    """Tests for dlq_message_factory fixture."""
-
-    def test_factory_is_callable(self, dlq_message_factory):
-        """dlq_message_factory fixture is callable."""
-        assert callable(dlq_message_factory)
-
-    def test_factory_returns_dict(self, dlq_message_factory):
-        """dlq_message_factory creates dict."""
-        result = dlq_message_factory()
-        assert isinstance(result, dict)
-
-    def test_factory_result_has_message_id(self, dlq_message_factory):
-        """dlq_message_factory result has MessageId."""
-        result = dlq_message_factory()
-        assert 'MessageId' in result
-
-
-class TestMockUrllibResponseFactoryFixture:
-    """Tests for mock_urllib_response_factory fixture."""
-
-    def test_factory_is_callable(self, mock_urllib_response_factory):
-        """mock_urllib_response_factory fixture is callable."""
-        assert callable(mock_urllib_response_factory)
-
-    def test_factory_creates_response_with_status(self, mock_urllib_response_factory):
-        """mock_urllib_response_factory creates response with status."""
-        response = mock_urllib_response_factory(status=200)
-        assert response.status == 200
-
-    def test_factory_creates_response_with_body(self, mock_urllib_response_factory):
-        """mock_urllib_response_factory creates readable body."""
-        response = mock_urllib_response_factory(json_data={"key": "value"})
-        body = response.read().decode()
-        assert body == '{"key": "value"}'
-
-    def test_factory_creates_response_with_read_value(self, mock_urllib_response_factory):
-        """mock_urllib_response_factory creates response with raw bytes."""
-        response = mock_urllib_response_factory(read_value=b'raw bytes')
-        body = response.read()
-        assert body == b'raw bytes'
-
-    def test_factory_response_is_context_manager(self, mock_urllib_response_factory):
-        """mock_urllib_response_factory creates context manager response."""
-        response = mock_urllib_response_factory()
-        with response as ctx:
-            assert ctx is response

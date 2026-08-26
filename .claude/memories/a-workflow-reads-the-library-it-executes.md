@@ -36,10 +36,10 @@ The rule exists so the hole cannot reopen. Under it the library is read by every
 `lib/python/test_fixtures/` holds seventeen modules and `test/lib/python/test_test_fixtures/` holds twenty test files covering them. Every deploying workflow executes it, and no workflow says so: the execution is not written in the workflow at all — `test/conftest.py` carries
 
 ```python
-pytest_plugins = ['test_fixtures.unit', 'test_fixtures.aws']
+pytest_plugins = ['test_fixtures.aws']
 ```
 
-at module level, and pytest loads both modules before the first test in any suite below `test/`. A defect in `test_fixtures.aws` can make a whole tier report the wrong answer in every workflow at once, and under the narrow reading of "its own source" no workflow was reading either module.
+at module level, and pytest loads that module before the first test in any suite below `test/`. A defect in `test_fixtures.aws` can make a whole tier report the wrong answer in every workflow at once, and under the narrow reading of "its own source" no workflow was reading it. `test_fixtures.unit` sat on that line beside it until the commit closing `#567` deleted the last of its fixtures; it is imported by name now rather than loaded as a plugin, and the argument held for it too while it was there.
 
 Check the rule against this one. Every deploying workflow names `test/conftest.py` in its test passes already, so the file that does the importing was being read while the modules it imports were not.
 
