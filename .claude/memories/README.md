@@ -18,6 +18,7 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [verification-in-ci-only](verification-in-ci-only.md) — nothing runs locally; push and read the run, and read the code here instead
 - [find-a-run-by-the-full-hash](find-a-run-by-the-full-hash.md) — `gh run list --commit` returns nothing for a short hash, and says nothing about why
 - [four-static-analysis-passes-per-workflow](four-static-analysis-passes-per-workflow.md) — linter and type checker, over source and over tests, four jobs with the same names in every workflow
+- [a-workflow-reads-the-library-it-executes](a-workflow-reads-the-library-it-executes.md) — the four passes name the `lib/python/` packages the workflow runs and the suites covering them, in every workflow that runs them
 - [commit-straight-to-main](commit-straight-to-main.md) — direct commits, no branches and no pull requests, one commit per issue with its closing line
 - [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md) — a failed run is answered with a follow-up commit, never an amended force-push
 - [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md) — no column limit on `.md` files, on issue bodies or on commit message bodies

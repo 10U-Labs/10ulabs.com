@@ -5,7 +5,7 @@
 - [The four passes](#the-four-passes)
 - [Why source and tests are split](#why-source-and-tests-are-split)
 - [Each pass reads its own subsystem](#each-pass-reads-its-own-subsystem)
-- [The two subsystems that differ](#the-two-subsystems-that-differ)
+- [The subsystem that differs](#the-subsystem-that-differs)
 - [What one of them looks like](#what-one-of-them-looks-like)
 - [Related notes](#related-notes)
 
@@ -15,10 +15,10 @@ Every subsystem that has Python is linted and type-checked by its own workflow, 
 
 | Step name | What it reads |
 | ----------- | --------------- |
-| `Run pylint on source` | the workflow's own Lambda source directory, with the shared library on the import path |
-| `Run pylint on tests` | the workflow's own test subtree, recursively, with the shared library and the scripts directory on the import path |
-| `Run mypy on source` | the same source directory, with the shared library on the type path |
-| `Run mypy on tests` | the same test subtree, with the shared library and the scripts directory on the type path |
+| `Run pylint on source` | the workflow's own Lambda source directory and the shared-library packages the workflow executes, with the shared library on the import path |
+| `Run pylint on tests` | the workflow's own test subtree and the `test/lib/python/` suites covering the packages it executes, recursively, with the shared library and the scripts directory on the import path |
+| `Run mypy on source` | the same targets, with the shared library on the type path |
+| `Run mypy on tests` | the same targets, with the shared library and the scripts directory on the type path |
 
 Adding a subsystem means adding all four. A workflow with three of them has a half of one tool nobody is watching, and nothing else in the repository will notice.
 
@@ -30,13 +30,13 @@ The two halves need different settings. Tests import the shared library and the 
 
 A pass names what its own workflow's path filter names, and nothing else in the tree. That is what keeps a run a report on the subsystem the push touched — a workflow that widened its passes to the whole repository would fail on a file its own trigger does not watch, and would go red for a change it never saw.
 
-The shared library is the case to be careful with. The test passes put it on the import path so the imports resolve, and that is all: it is on the path, not among the targets. It is read as code by the one workflow whose trigger names it, which owns it along with the scripts directory and the whole test tree and names all three across its four passes.
+The shared library is inside that sentence rather than an exception to it. A workflow's `paths` filter names every `lib/python/` package the workflow executes and every `test/lib/python/` suite covering one, so those packages are its own subsystem too and its passes name them: the source passes read the packages, the test passes read the suites. The filter and the argument lists carry the same set, which is the check to run when either is edited. That rule is [a-workflow-reads-the-library-it-executes](a-workflow-reads-the-library-it-executes.md), which also has the history of what happened when one workflow read the library for everybody.
 
-## The two subsystems that differ
+## The subsystem that differs
 
-A subsystem whose source is Terraform rather than Python carries the two test passes and omits the source ones, because there is no Python source to read. Bootstrap is the one that is like this.
+A subsystem whose source is Terraform rather than Python still carries all four passes. There is no Lambda source directory for the source passes to name, and what they name instead is the shared-library packages the workflow executes — bootstrap is like this, and its `Run pylint on source` step is a list of `lib/python/` packages and nothing else.
 
-The scripts workflow is the other, and is the exception described above: its source is the shared library and the scripts directory, so the thing every other workflow merely puts on a path is what this one lints.
+The scripts workflow is the one that differs. It deploys nothing, so it has no subsystem directory under `src/` and no deployment job, and its source passes read `scripts/` — the one program the deploys shell out to. `39e1ad90` scoped it to that under `#607`; before then it was also the one workflow reading the shared library, which is the arrangement the rule linked above replaced.
 
 ## What one of them looks like
 
@@ -48,7 +48,17 @@ From the sessions endpoint's workflow, the whole of two of the four jobs:
     SRC=src/api/endpoints/sessions
     PYTHONPATH=lib/python python3 -m pylint \
       $SRC/lambda/ \
-      --fail-under=10.0
+      lib/python/boto_mocks \
+      lib/python/event_factories \
+      lib/python/lambda_response \
+      lib/python/module_utils \
+      lib/python/naming_conventions \
+      lib/python/repo_utils \
+      lib/python/terraform_config \
+      lib/python/test_fixtures \
+      lib/python/urllib_mocks \
+      --recursive=y \
+      --fail-on=C,R,W --fail-under=10.0
 - name: Run pylint on tests
   run: |
     PYTHONPATH=lib/python:scripts python3 -m pylint \
@@ -59,12 +69,24 @@ From the sessions endpoint's workflow, the whole of two of the four jobs:
       test/api/endpoints/__init__.py \
       test/api/endpoints/conftest.py \
       test/api/endpoints/sessions \
+      test/lib/__init__.py \
+      test/lib/python/__init__.py \
+      test/lib/python/test_boto_mocks \
+      test/lib/python/test_event_factories \
+      test/lib/python/test_lambda_response \
+      test/lib/python/test_module_utils \
+      test/lib/python/test_naming_conventions \
+      test/lib/python/test_naming_conventions_helpers \
+      test/lib/python/test_repo_utils \
+      test/lib/python/test_terraform_config \
+      test/lib/python/test_test_fixtures \
+      test/lib/python/test_urllib_mocks \
       --recursive=y \
       --fail-on=C,R,W --fail-under=10.0
 ```
 
-The test pass lists the package and configuration files above its own subtree by name. Those files run in every suite below them, so a workflow that skipped them would leave the code its own tests are built on unread by anything.
+Three kinds of path are in those lists. The source pass names the workflow's own Lambda directory and then the nine shared-library packages this endpoint executes. The test pass names the package and configuration files above its own subtree by name — those run in every suite below them, so a workflow that skipped them would leave the code its own tests are built on unread by anything — then its own subtree, then the `test/lib/python/` suite for each of those nine packages.
 
 ## Related notes
 
-Reading the result of these is [verification-in-ci-only](verification-in-ci-only.md), and answering a red one is [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md).
+What the four passes read beyond the workflow's own directories is [a-workflow-reads-the-library-it-executes](a-workflow-reads-the-library-it-executes.md). Reading the result of these is [verification-in-ci-only](verification-in-ci-only.md), and answering a red one is [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md).

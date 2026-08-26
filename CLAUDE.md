@@ -31,6 +31,7 @@
     - [A push starts more than one workflow](#a-push-starts-more-than-one-workflow)
     - [CI is the source of truth](#ci-is-the-source-of-truth)
     - [Finding the run](#finding-the-run)
+    - [Four passes read the packages the workflow executes](#four-passes-read-the-packages-the-workflow-executes)
     - [Four static analysis passes per workflow](#four-static-analysis-passes-per-workflow)
     - [Path filters are not shell globs](#path-filters-are-not-shell-globs)
 - [Notes](#notes)
@@ -138,7 +139,7 @@ Test code that is not itself a test — a fixture, a mock factory, a loader — 
 
 ### Verification
 
-Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md), [four-static-analysis-passes-per-workflow](.claude/memories/four-static-analysis-passes-per-workflow.md).
+Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md), [four-static-analysis-passes-per-workflow](.claude/memories/four-static-analysis-passes-per-workflow.md), [a-workflow-reads-the-library-it-executes](.claude/memories/a-workflow-reads-the-library-it-executes.md).
 
 #### A push starts more than one workflow
 
@@ -152,9 +153,13 @@ CI is the source of truth. Do not run tests, linters or builds locally to verify
 
 Find the run by the full forty-character hash from `git rev-parse HEAD`. `gh run list --commit` silently returns an empty list for the short hash `git log --oneline` prints, which is indistinguishable from a run that has not started, so anything that polls should list recent runs and match `headSha` by prefix locally.
 
+#### Four passes read the packages the workflow executes
+
+A workflow's static analysis reads its own deployed source, its own test subtree, every package under `lib/python/` that the workflow executes and every suite under `test/lib/python/` that covers one of them, all four named in the argument lists of the jobs the file already carries rather than in jobs added for the purpose. What a workflow executes is what its deployed source imports, what its own suites import, and what `test/conftest.py` loads as a plugin for every suite in the tree — so `test_fixtures` belongs to every deploying workflow whether or not that workflow names it anywhere else. Having the library on the test passes' import path is not reading it: `PYTHONPATH=lib/python` resolves the import, and naming `lib/python/test_fixtures` on the command line is what makes the linter open the package. A package executed by ten workflows is read by all ten, and that repetition is the rule working rather than duplication to remove, since a green run of a workflow this one does not depend on is not a gate on this one's deployment. The library is owned by no workflow, and one workflow reading it for everybody is what stood until `39e1ad90` scoped `scripts.yml` down under `#607` and left all twelve packages and their suites read by no linter, type checker or duplicate detector anywhere in the repository, with every workflow still green.
+
 #### Four static analysis passes per workflow
 
-A workflow lints and type-checks its own source and its own tests in four passes — the linter over the source, the linter over the tests, the type checker over the source, the type checker over the tests — each a job of its own, so a red run says which half of which tool broke before a log is opened. The split is what keeps the test import path, which needs the shared library and `scripts/` on it, off the source passes. Where the source is Terraform rather than Python there is nothing for the source passes to read and the workflow carries the two test passes alone. Adding a workflow means adding all four, since nothing else in the repository notices a tool that is not being run.
+A workflow lints and type-checks its own source and its own tests in four passes — the linter over the source, the linter over the tests, the type checker over the source, the type checker over the tests — each a job of its own, so a red run says which half of which tool broke before a log is opened. The split is what keeps the test import path, which needs the shared library and `scripts/` on it, off the source passes. Every workflow carries all four, one whose deployed source is Terraform included: what its source passes read is the shared library it executes, which is why `bootstrap.yml` has a `pylint-source`, a `mypy-source` and a `copy-paste-source` job while deploying no Python of its own. Adding a workflow means adding all four, since nothing else in the repository notices a tool that is not being run.
 
 #### Path filters are not shell globs
 
