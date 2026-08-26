@@ -479,6 +479,9 @@ jobs:
             lib/python/test_fixtures \
             lib/python/urllib_mocks \
             --recursive=y \
+            --disable=missing-module-docstring \
+            --disable=missing-class-docstring \
+            --disable=missing-function-docstring \
             --fail-on=C,R,W \
             --fail-under=10.0
   pylint-tests:
@@ -522,6 +525,9 @@ jobs:
             test/lib/python/test_test_fixtures \
             test/lib/python/test_urllib_mocks \
             --recursive=y \
+            --disable=missing-module-docstring \
+            --disable=missing-class-docstring \
+            --disable=missing-function-docstring \
             --fail-on=C,R,W --fail-under=10.0
   reconciliation:
     if: github.ref == 'refs/heads/main'

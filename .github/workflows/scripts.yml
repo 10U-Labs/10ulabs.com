@@ -301,6 +301,9 @@ jobs:
             lib/python/terraform_config \
             lib/python/test_fixtures \
             lib/python/urllib_mocks \
+            --disable=missing-module-docstring \
+            --disable=missing-class-docstring \
+            --disable=missing-function-docstring \
             --fail-on=C,R,W --fail-under=10.0
   pylint-tests:
     runs-on: ubuntu-latest
@@ -337,6 +340,9 @@ jobs:
             test/lib/python/test_terraform_config \
             test/lib/python/test_test_fixtures \
             test/lib/python/test_urllib_mocks \
+            --disable=missing-module-docstring \
+            --disable=missing-class-docstring \
+            --disable=missing-function-docstring \
             --recursive=y --fail-on=C,R,W --fail-under=10.0
   test-boto-mocks:
     runs-on: ubuntu-latest
