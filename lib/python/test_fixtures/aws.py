@@ -1,8 +1,4 @@
-"""AWS fixtures for pytest tests.
-
-Use by adding to conftest.py:
-    pytest_plugins = ['test_fixtures.aws']
-"""
+"""AWS fixtures for pytest tests."""
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
