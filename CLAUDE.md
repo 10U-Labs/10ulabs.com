@@ -9,6 +9,9 @@
     - [One issue, one commit](#one-issue-one-commit)
     - [Straight to main](#straight-to-main)
     - [The skip ci directive](#the-skip-ci-directive)
+  - [Comments](#comments)
+    - [Nothing carries a comment or a docstring](#nothing-carries-a-comment-or-a-docstring)
+    - [What a comment was about to say](#what-a-comment-was-about-to-say)
   - [Issues](#issues)
     - [An issue on disk goes stale](#an-issue-on-disk-goes-stale)
     - [An issue states one solution](#an-issue-states-one-solution)
@@ -65,6 +68,18 @@ Work goes straight to `main` as direct commits. Do not create a feature branch, 
 #### The skip ci directive
 
 The literal `[skip ci]`, brackets included, goes in a commit message only when that push is meant to start nothing. GitHub scans the whole raw message rather than the subject line, so a body that merely names the directive — reporting what an earlier commit did with it — suppresses every workflow its own diff was due to start, which is how `0463bad9` landed 486 `pylint` fixes and nine edited workflow files with no run having read them. Write `skip ci` without the brackets when describing another commit's use of it; quoting the string, indenting it or wrapping it in backticks does not break the match, because the scan reads characters rather than markup.
+
+### Comments
+
+Longer: [nothing-carries-a-comment-or-a-docstring](.claude/memories/nothing-carries-a-comment-or-a-docstring.md).
+
+#### Nothing carries a comment or a docstring
+
+No file this repository lints carries a comment or a docstring: no `#` and no module, class or function docstring in Python, no `#` in a workflow file, no `#`, `//` or `/* */` in OpenTofu, no `//` or `/* */` in JavaScript. `assert-no-comments` is a job in each of the twelve workflow files and is in each `reconciliation` `needs:` list, so a deployment is gated on it; the twenty-two `pylint-source` and `pylint-tests` jobs disable the three `missing-*-docstring` checkers so that pylint does not demand back what that job refuses. A `.md` file is never read, because prose is the content of a markdown file rather than a gloss on a line of code. Prose beside code is never checked by anything, so it stops being true with nothing to say when, and a rename is where that costs first: every sentence naming the old identifier is then wrong, in files the rename never touched, and the diff gives no way to find them. `#652`, `#653` and `#655` were three such findings, all made by a person reading rather than by a job.
+
+#### What a comment was about to say
+
+A comment is about to say what the code does, why it is the way it is, or that a value is required, and each has somewhere better to go: the first is the name, and a name that does not say it is the thing to change; the second is the commit message and the issue, which are dated and attached to a change where a comment sits beside a line claiming to describe it forever; the third is a test, which goes red when it stops being true. That is why commit bodies here are long. An assignment to `__doc__` is code and stays, and a `#` inside a string literal is not a comment. Two trees still carry prose because no job reads them, `lib/python/test_utils/` with `test/lib/python/test_test_utils/` under `#603` and `lib/terraform/write_ahead_queue/` under `#660`; neither is an exception, and copying what is in them reproduces the problem rather than the rule.
 
 ### Issues
 

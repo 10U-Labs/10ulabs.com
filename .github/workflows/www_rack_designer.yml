@@ -3,6 +3,54 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  assert-no-comments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install assert-no-comments
+        run: |
+          python3 -m pip install \
+            assert-no-comments
+      - name: Assert no comments
+        run: >-
+          assert-no-comments
+          --annotate
+          --verbose
+          .github/workflows/www_rack_designer.yml
+          .github/actions/verify-oidc-vars/action.yml
+          src/www/paths/rack_designer
+          lib/python/boto_mocks
+          lib/python/event_factories
+          lib/python/lambda_response
+          lib/python/module_utils
+          lib/python/naming_conventions
+          lib/python/repo_utils
+          lib/python/terraform_config
+          lib/python/test_fixtures
+          lib/python/urllib_mocks
+          test/__init__.py
+          test/conftest.py
+          test/www/conftest.py
+          test/www/paths/__init__.py
+          test/www/paths/conftest.py
+          test/www/paths/rack_designer
+          test/lib/__init__.py
+          test/lib/python/__init__.py
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_event_factories
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_naming_conventions
+          test/lib/python/test_naming_conventions_helpers
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_test_fixtures
+          test/lib/python/test_urllib_mocks
   assert-no-inline-directives:
     runs-on: ubuntu-latest
     steps:
@@ -351,6 +399,7 @@ jobs:
   reconciliation:
     if: github.ref == 'refs/heads/main'
     needs:
+      - assert-no-comments
       - assert-no-inline-directives
       - assert-no-linter-config-files
       - assert-one-assert-per-pytest

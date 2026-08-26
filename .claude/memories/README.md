@@ -4,6 +4,7 @@
 
 - [What these notes are](#what-these-notes-are)
 - [Working practice](#working-practice)
+- [Comments](#comments)
 - [Issues](#issues)
 - [Tests](#tests)
 
@@ -24,6 +25,10 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md) — a failed run is answered with a follow-up commit, never an amended force-push
 - [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md) — no column limit on `.md` files, on issue bodies or on commit message bodies
 - [never-write-the-skip-ci-brackets-in-prose](never-write-the-skip-ci-brackets-in-prose.md) — a commit message that names the bracketed directive starts no workflow, so prose about it drops the brackets
+
+## Comments
+
+- [nothing-carries-a-comment-or-a-docstring](nothing-carries-a-comment-or-a-docstring.md) — no `#` and no docstring in anything a job reads; the reasoning moves to the commit message and the issue, which are dated
 
 ## Issues
 

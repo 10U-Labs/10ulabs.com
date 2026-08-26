@@ -1,19 +1,52 @@
 ---
-# Non-deploying Python
-#
-# scripts/ holds the one program the deploys shell out to,
-# invalidate_cloudfront.py. It deploys nothing of its own, so it has no
-# workflow of its own and this file is what reads it and the one suite that
-# covers it. Its pytest job runs the root conftest, which loads the two
-# test_fixtures plugin modules, so this workflow also executes nine
-# packages under lib/python/ and reads them and their suites here, and
-# gates each of the nine on its own suite. Every check here is its own
-# job, so a red check reports alongside the others rather than hiding
-# behind the first failing step.
 concurrency:
   cancel-in-progress: true
   group: scripts-${{ github.ref }}
 jobs:
+  assert-no-comments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install assert-no-comments
+        run: |
+          python3 -m pip install \
+            assert-no-comments
+      - name: Assert no comments
+        run: >-
+          assert-no-comments
+          --annotate
+          --verbose
+          .github/workflows/scripts.yml
+          scripts
+          lib/python/boto_mocks
+          lib/python/event_factories
+          lib/python/lambda_response
+          lib/python/module_utils
+          lib/python/naming_conventions
+          lib/python/repo_utils
+          lib/python/terraform_config
+          lib/python/test_fixtures
+          lib/python/urllib_mocks
+          test/__init__.py
+          test/conftest.py
+          test/scripts
+          test/lib/__init__.py
+          test/lib/python/__init__.py
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_event_factories
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_naming_conventions
+          test/lib/python/test_naming_conventions_helpers
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_test_fixtures
+          test/lib/python/test_urllib_mocks
   assert-no-inline-directives:
     runs-on: ubuntu-latest
     steps:

@@ -136,31 +136,28 @@ def test_cloudfront_default_cache_behavior_uses_caching_disabled(
     assert cache_policy_id != '' or 'ForwardedValues' in default_behavior
 
 
-def test_cloudfront_health_cache_behavior_uses_api_origin(cloudfront_client, api_distribution_id):
+def _cache_behavior_matching(cloudfront_client, api_distribution_id, path_pattern):
     if api_distribution_id is None:
         pytest.skip("API CloudFront distribution not found")
     dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
     behaviors = dist_config['DistributionConfig'].get('CacheBehaviors', {})
     cache_behaviors = behaviors.get('Items', [])
-    health_behavior = next(
-        (b for b in cache_behaviors if '/health' in b.get('PathPattern', '')), None
+    return next(
+        (b for b in cache_behaviors if path_pattern in b.get('PathPattern', '')), None
     )
-    if health_behavior:
-        origin_id = health_behavior['TargetOriginId'].lower()
+
+
+def test_cloudfront_health_cache_behavior_uses_api_origin(cloudfront_client, api_distribution_id):
+    behavior = _cache_behavior_matching(cloudfront_client, api_distribution_id, '/health')
+    if behavior:
+        origin_id = behavior['TargetOriginId'].lower()
         assert 'api' in origin_id or 'execute' in origin_id
 
 
 def test_cloudfront_v1_api_cache_behavior_uses_api_origin(cloudfront_client, api_distribution_id):
-    if api_distribution_id is None:
-        pytest.skip("API CloudFront distribution not found")
-    dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    behaviors = dist_config['DistributionConfig'].get('CacheBehaviors', {})
-    cache_behaviors = behaviors.get('Items', [])
-    v1_behavior = next(
-        (b for b in cache_behaviors if '/v1' in b.get('PathPattern', '')), None
-    )
-    if v1_behavior:
-        origin_id = v1_behavior['TargetOriginId'].lower()
+    behavior = _cache_behavior_matching(cloudfront_client, api_distribution_id, '/v1')
+    if behavior:
+        origin_id = behavior['TargetOriginId'].lower()
         assert 'api' in origin_id or 'execute' in origin_id
 
 
@@ -438,38 +435,33 @@ def test_api_gateway_stage_access_log_format_configured(apigateway_client, api_g
     assert 'format' in access_log
 
 
-def test_api_gateway_method_settings_logging_level_is_info(apigateway_client, api_gateway_id):
+def _stage_method_settings(apigateway_client, api_gateway_id):
     if api_gateway_id is None:
         pytest.skip("API Gateway not found")
     response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
-    method_settings = response.get('methodSettings', {})
+    return response.get('methodSettings', {})
+
+
+def test_api_gateway_method_settings_logging_level_is_info(apigateway_client, api_gateway_id):
+    method_settings = _stage_method_settings(apigateway_client, api_gateway_id)
     if '*/*' in method_settings:
         assert method_settings['*/*'].get('loggingLevel') == 'INFO'
 
 
 def test_api_gateway_method_settings_metrics_enabled(apigateway_client, api_gateway_id):
-    if api_gateway_id is None:
-        pytest.skip("API Gateway not found")
-    response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
-    method_settings = response.get('methodSettings', {})
+    method_settings = _stage_method_settings(apigateway_client, api_gateway_id)
     if '*/*' in method_settings:
         assert method_settings['*/*'].get('metricsEnabled') is True
 
 
 def test_api_gateway_method_settings_data_trace_enabled(apigateway_client, api_gateway_id):
-    if api_gateway_id is None:
-        pytest.skip("API Gateway not found")
-    response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
-    method_settings = response.get('methodSettings', {})
+    method_settings = _stage_method_settings(apigateway_client, api_gateway_id)
     if '*/*' in method_settings:
         assert 'dataTraceEnabled' in method_settings['*/*']
 
 
 def test_api_gateway_method_settings_apply_to_all_methods(apigateway_client, api_gateway_id):
-    if api_gateway_id is None:
-        pytest.skip("API Gateway not found")
-    response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
-    method_settings = response.get('methodSettings', {})
+    method_settings = _stage_method_settings(apigateway_client, api_gateway_id)
     assert '*/*' in method_settings
 
 

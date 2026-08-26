@@ -82,11 +82,11 @@ def test_can_delete_object_from_state_bucket(s3_client, state_bucket_name, test_
         s3_client.delete_object(Bucket=state_bucket_name, Key=test_object_key)
 
 
-def _change_record(route53_client, hosted_zone_id, record_name, action, value, comment):
+def _change_record(route53_client, hosted_zone_id, record_name, action, value):
     return route53_client.change_resource_record_sets(
         HostedZoneId=hosted_zone_id,
         ChangeBatch={
-            "Comment": f"Pre-deployment capability test - {comment}",
+            "Comment": f"Pre-deployment capability test - {action.lower()}",
             "Changes": [{
                 "Action": action,
                 "ResourceRecordSet": {
@@ -104,7 +104,7 @@ def test_can_create_route53_record(route53_client, hosted_zone_id, test_record_n
     try:
         response = _change_record(
             route53_client, hosted_zone_id, test_record_name,
-            "CREATE", "pre-deployment-test-v1", "create",
+            "CREATE", "pre-deployment-test-v1",
         )
         assert response["ChangeInfo"]["Status"] in ("PENDING", "INSYNC")
     except ClientError as e:
@@ -115,7 +115,7 @@ def test_can_create_route53_record(route53_client, hosted_zone_id, test_record_n
     finally:
         _change_record(
             route53_client, hosted_zone_id, test_record_name,
-            "DELETE", "pre-deployment-test-v1", "cleanup",
+            "DELETE", "pre-deployment-test-v1",
         )
 
 
@@ -123,11 +123,11 @@ def test_can_upsert_route53_record(route53_client, hosted_zone_id, test_record_n
     try:
         _change_record(
             route53_client, hosted_zone_id, test_record_name,
-            "CREATE", "pre-deployment-test-v1", "setup",
+            "CREATE", "pre-deployment-test-v1",
         )
         response = _change_record(
             route53_client, hosted_zone_id, test_record_name,
-            "UPSERT", "pre-deployment-test-v2", "upsert",
+            "UPSERT", "pre-deployment-test-v2",
         )
         assert response["ChangeInfo"]["Status"] in ("PENDING", "INSYNC")
     except ClientError as e:
@@ -138,7 +138,7 @@ def test_can_upsert_route53_record(route53_client, hosted_zone_id, test_record_n
     finally:
         _change_record(
             route53_client, hosted_zone_id, test_record_name,
-            "DELETE", "pre-deployment-test-v2", "cleanup",
+            "DELETE", "pre-deployment-test-v2",
         )
 
 
@@ -146,11 +146,11 @@ def test_can_delete_route53_record(route53_client, hosted_zone_id, test_record_n
     try:
         _change_record(
             route53_client, hosted_zone_id, test_record_name,
-            "CREATE", "pre-deployment-test-delete", "setup",
+            "CREATE", "pre-deployment-test-delete",
         )
         response = _change_record(
             route53_client, hosted_zone_id, test_record_name,
-            "DELETE", "pre-deployment-test-delete", "delete",
+            "DELETE", "pre-deployment-test-delete",
         )
         assert response["ChangeInfo"]["Status"] in ("PENDING", "INSYNC")
     except ClientError as e:

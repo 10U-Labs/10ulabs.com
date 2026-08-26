@@ -274,37 +274,29 @@ def test_cloudwatch_logs_firehose_policy_allows_put_record(iam_client, config):
     assert any('firehose:PutRecord' in a for a in actions)
 
 
-def test_firehose_receives_incoming_records(config, aws_region):
+def _firehose_metric(config, aws_region, metric_name):
     cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
     end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=24)
     stream_name = config['firehose_delivery_stream_name']
-    response = cloudwatch.get_metric_statistics(
+    return cloudwatch.get_metric_statistics(
         Namespace='AWS/Firehose',
-        MetricName='IncomingRecords',
+        MetricName=metric_name,
         Dimensions=[{'Name': 'DeliveryStreamName', 'Value': stream_name}],
         StartTime=start_time,
         EndTime=end_time,
         Period=3600,
         Statistics=['Sum']
     )
+
+
+def test_firehose_receives_incoming_records(config, aws_region):
+    response = _firehose_metric(config, aws_region, 'IncomingRecords')
     assert 'Datapoints' in response
 
 
 def test_firehose_delivery_to_s3_is_successful(config, aws_region):
-    cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
-    end_time = datetime.now(UTC)
-    start_time = end_time - timedelta(hours=24)
-    stream_name = config['firehose_delivery_stream_name']
-    response = cloudwatch.get_metric_statistics(
-        Namespace='AWS/Firehose',
-        MetricName='DeliveryToS3.Success',
-        Dimensions=[{'Name': 'DeliveryStreamName', 'Value': stream_name}],
-        StartTime=start_time,
-        EndTime=end_time,
-        Period=3600,
-        Statistics=['Sum']
-    )
+    response = _firehose_metric(config, aws_region, 'DeliveryToS3.Success')
     assert 'Datapoints' in response
 
 

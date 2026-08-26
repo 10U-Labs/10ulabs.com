@@ -1,16 +1,27 @@
 ---
-# Prose
-#
-# Every markdown file here is prose: the conventions in CLAUDE.md, the tenets
-# under docs/, and the notes and session skill under .claude/. None of it
-# deploys and no test tier runs any of it, so this workflow is the only thing
-# that reads it at all. Ported from deltahdl, less that repository's jsonlint
-# job: the JSON here lives under src/ and belongs to the workflows that
-# deploy it.
 concurrency:
   cancel-in-progress: true
   group: documentation-${{ github.ref }}
 jobs:
+  assert-no-comments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install assert-no-comments
+        run: |
+          python3 -m pip install \
+            assert-no-comments
+      - name: Assert no comments
+        run: >-
+          assert-no-comments
+          --annotate
+          --verbose
+          .github/workflows/documentation.yml
   markdownlint:
     runs-on: ubuntu-latest
     steps:
@@ -22,13 +33,6 @@ jobs:
           python3 -m pip install \
             assert-no-inline-directives \
             assert-no-linter-config-files
-      # Every step from here on carries !cancelled(). Each scans the whole
-      # tree rather than the change, so each can hold a backlog, and a step
-      # the job stopped short of is reported the same way as one that found
-      # nothing: a breach left standing in the first of them hides the rest
-      # for as long as it stands. The job still fails when any of these
-      # fails; what changes is that one run names every breach rather than
-      # the earliest.
       - if: ${{ !cancelled() }}
         name: Assert no inline markdownlint disables
         run: >-
@@ -43,12 +47,6 @@ jobs:
           --linters markdownlint
           --verbose
           ${{ github.workspace }}
-      # MD013 is the line-length rule, and markdown here is not hard-wrapped:
-      # a paragraph is one line however long it runs. --disable is variadic,
-      # so the glob goes before it. --dot is what reaches .claude/, where the
-      # notes and the session skill live: markdownlint skips a directory whose
-      # name begins with a dot unless it is passed, so without it those files
-      # are silently unread while the glob above appears to name them.
       - if: ${{ !cancelled() }}
         name: Lint Markdown
         run: markdownlint '**/*.md' --dot --disable MD013
@@ -85,10 +83,6 @@ on:
     branches:
       - main
     paths:
-      # Every markdown file in the tree, which is what the lint step reads.
-      # '**/*.md' is the wrong form for a paths filter: '**' is any run of
-      # characters here rather than a run of directories, so it needs a
-      # slash to match and would miss CLAUDE.md and LICENSE.md at the root.
       - '**.md'
       - .github/workflows/documentation.yml
   workflow_dispatch:
