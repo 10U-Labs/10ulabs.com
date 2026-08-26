@@ -1,5 +1,3 @@
-"""Unit tests for Lambda lifecycle configuration."""
-
 from repo_utils import REPO_ROOT
 from test_fixtures.lambda_lifecycle import create_lambda_lifecycle_tests
 

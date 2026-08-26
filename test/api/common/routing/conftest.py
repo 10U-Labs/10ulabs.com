@@ -1,4 +1,3 @@
-"""Pytest fixtures and configuration for API backend tests."""
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -8,7 +7,6 @@ from test_fixtures.config import parse_tfvars_file, parse_locals_file
 
 
 def parse_bootstrap_tfvar(var_name: str) -> str:
-    """Parse a variable from bootstrap terraform.tfvars file."""
     base = Path(__file__).parent.parent.parent.parent.parent
     tfvars_path = base / "src" / "bootstrap" / "terraform.tfvars"
     config = parse_tfvars_file(tfvars_path)
@@ -16,14 +14,12 @@ def parse_bootstrap_tfvar(var_name: str) -> str:
 
 
 def parse_health_tfvars() -> Dict[str, str]:
-    """Parse health endpoint terraform.tfvars configuration."""
     base = Path(__file__).parent.parent.parent.parent.parent
     tfvars_path = base / "src" / "api" / "operational" / "health" / "terraform.tfvars"
     return parse_tfvars_file(tfvars_path)
 
 
 def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
-    """Parse API backend locals.tf file for configuration values."""
     base = Path(__file__).parent.parent.parent.parent.parent
     locals_path = base / "src" / "api" / "common" / "routing" / "locals.tf"
     config = parse_locals_file(locals_path, shared_config)
@@ -37,18 +33,15 @@ def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
 
 
 def _add_derived_config(result: Dict[str, str]) -> None:
-    """Add derived configuration values based on the resource prefix."""
     prefix = result['resource_prefix']
     result['firehose_delivery_stream_name'] = f"{prefix}-CloudWatchLogs"
     result['firehose_role_name'] = f"{prefix}FirehoseCloudWatchLogs"
     result['cloudwatch_logs_firehose_role_name'] = f"{prefix}CloudWatchLogsFirehose"
-    # API Gateway CloudWatch role uses PascalCase
     result['api_gateway_cloudwatch_role_name'] = f"{prefix}ApiGatewayCloudwatch"
 
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture(shared_config) -> Dict[str, Any]:
-    """Provide merged configuration from terraform files."""
     base = Path(__file__).parent.parent.parent.parent.parent
     tfvars_path = base / "src" / "api" / "common" / "routing" / "terraform.tfvars"
     result: Dict[str, Any] = dict(parse_tfvars_file(tfvars_path))
@@ -61,7 +54,6 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     result['github_org'] = shared_config.get('github_org', '')
     result['github_repo'] = api_locals.get('github_repo_full', '')
     result['resource_prefix'] = api_locals.get('resource_prefix', '')
-    # stack_name is the terraform tfvars value for API Gateway resources
     result['stack_name'] = result.get('stack_name', '')
     ssm_param = parse_bootstrap_tfvar('ssm_parameter_name_for_github_pat')
     result['ssm_parameter_name_for_github_pat'] = ssm_param
@@ -69,7 +61,6 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     health_config = parse_health_tfvars()
     result['health_handler_function_name'] = health_config.get('health_handler_function_name', '')
     result['health_handler_log_group_name'] = health_config.get('health_handler_log_group_name', '')
-    # Add catchall handler function name from shared_config
     result['catchall_handler_function_name'] = shared_config.get(
         'lambda_handler_names', {}
     ).get('catchall', 'TenULabsCatchAllHandler')
@@ -78,36 +69,30 @@ def config_fixture(shared_config) -> Dict[str, Any]:
 
 @pytest.fixture
 def sns_client(aws_region):
-    """Provide SNS client for the configured AWS region."""
     return boto3.client('sns', region_name=aws_region)
 
 
 @pytest.fixture(scope="module")
 def dynamodb_client(aws_region):
-    """Provide DynamoDB client for the configured AWS region."""
     return boto3.client('dynamodb', region_name=aws_region)
 
 
 @pytest.fixture
 def cloudwatch_client(aws_region):
-    """Provide CloudWatch client for the configured AWS region."""
     return boto3.client('cloudwatch', region_name=aws_region)
 
 
 @pytest.fixture
 def events_client(aws_region):
-    """Provide EventBridge client for the configured AWS region."""
     return boto3.client('events', region_name=aws_region)
 
 
 @pytest.fixture
 def logs_client(aws_region):
-    """Provide CloudWatch Logs client for the configured AWS region."""
     return boto3.client('logs', region_name=aws_region)
 
 
 def find_sns_topic_arns(client: Any, topic_name: str) -> List[str]:
-    """Find SNS topic ARNs matching the given topic name."""
     topics = client.list_topics()
     topic_arns = [t['TopicArn'] for t in topics['Topics']]
     matching_topics = [t for t in topic_arns if topic_name in t]

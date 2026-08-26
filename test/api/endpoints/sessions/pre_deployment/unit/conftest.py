@@ -1,4 +1,3 @@
-"""Pytest fixtures for sessions pre-deployment unit tests."""
 import os
 from unittest.mock import patch, MagicMock
 
@@ -16,7 +15,6 @@ load_analytics_module = create_lambda_loader(SESSIONS_EXPORTER_PATH)
 
 @pytest.fixture
 def handler():
-    """Provide the handler Lambda module for tests."""
     module = load_lambda_module("handler.py", "handler")
     module.clear_clients()
     return module
@@ -24,7 +22,6 @@ def handler():
 
 @pytest.fixture
 def export_module():
-    """Provide the export handler Lambda module for tests."""
     os.environ['DYNAMODB_TABLE_ARN'] = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-events'
     os.environ['S3_BUCKET'] = 'test-bucket'
     os.environ['S3_PREFIX'] = 'exports/events'

@@ -1,21 +1,9 @@
-"""Layer 2: Configuration tests for health endpoint post-deployment.
-
-Tests that resources have correct settings. Assumes existence tests passed.
-These tests verify that resources created by THIS workflow are configured correctly.
-
-Three-layer testing model:
-- Layer 2: Configuration - Resources configured correctly
-"""
-
-
 from test_fixtures.integration import (
     create_lambda_configuration_tests,
     create_log_group_configuration_tests,
     create_naming_convention_tests,
     get_aws_account_id_via_cli,
 )
-
-
 
 
 TestLambdaConfiguration = create_lambda_configuration_tests(
@@ -36,7 +24,6 @@ TestNamingConventions = create_naming_convention_tests(
 
 
 def test_health_handler_has_10_second_timeout(lambda_client, config):
-    """Verify Lambda function has 10 second timeout."""
     function_name = config.get(
         'health_handler_function_name', 'TenULabsHealthHandler'
     )
@@ -48,7 +35,6 @@ def test_health_handler_has_10_second_timeout(lambda_client, config):
 
 
 def test_health_handler_arn_names_the_authenticated_account(lambda_client, config):
-    """Verify the deployed ARN names the account the deploy authenticated to."""
     function_name = config.get(
         'health_handler_function_name', 'TenULabsHealthHandler'
     )

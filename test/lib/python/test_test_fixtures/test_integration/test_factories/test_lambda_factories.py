@@ -734,21 +734,27 @@ class TestCreateDeployedNamingConventionTestsHasMethods:
 
 
 class TestCreateDeployedNamingConventionTestsExecution:
-    def test_iam_role_exists_success(self):
+    @pytest.fixture
+    def iam_tests(self):
         iam_class, _ = create_deployed_naming_convention_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
-        instance = iam_class()
+        return iam_class()
+
+    @pytest.fixture
+    def lambda_tests(self):
+        _, lambda_class = create_deployed_naming_convention_tests(
+            "func_key", "DefaultFunc", "TestHandler"
+        )
+        return lambda_class()
+
+    def test_iam_role_exists_success(self, iam_tests):
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyFunctionServiceRole"}}
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_role_exists(mock_client, config) is None
+        assert iam_tests.test_handler_role_exists(mock_client, config) is None
 
-    def test_iam_role_exists_fails_when_not_found(self):
-        iam_class, _ = create_deployed_naming_convention_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        instance = iam_class()
+    def test_iam_role_exists_fails_when_not_found(self, iam_tests):
         mock_client = MagicMock()
         mock_client.exceptions.NoSuchEntityException = type(
             "NoSuchEntityException", (Exception,), {}
@@ -758,35 +764,23 @@ class TestCreateDeployedNamingConventionTestsExecution:
         )
         config = {"func_key": "MyFunction"}
         with pytest.raises(pytest.fail.Exception):
-            instance.test_handler_role_exists(mock_client, config)
+            iam_tests.test_handler_role_exists(mock_client, config)
 
-    def test_iam_role_name_is_pascalcase_success(self):
-        iam_class, _ = create_deployed_naming_convention_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        instance = iam_class()
+    def test_iam_role_name_is_pascalcase_success(self, iam_tests):
         mock_client = MagicMock()
         mock_client.get_role.return_value = {
             "Role": {"RoleName": "MyFunctionServiceRole"}
         }
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_role_name_is_pascalcase(mock_client, config) is None
+        assert iam_tests.test_handler_role_name_is_pascalcase(mock_client, config) is None
 
-    def test_lambda_function_exists_success(self):
-        _, lambda_class = create_deployed_naming_convention_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        instance = lambda_class()
+    def test_lambda_function_exists_success(self, lambda_tests):
         mock_client = MagicMock()
         mock_client.get_function.return_value = {"Configuration": {"FunctionName": "MyFunction"}}
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_function_exists(mock_client, config) is None
+        assert lambda_tests.test_handler_function_exists(mock_client, config) is None
 
-    def test_lambda_function_exists_fails_when_not_found(self):
-        _, lambda_class = create_deployed_naming_convention_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        instance = lambda_class()
+    def test_lambda_function_exists_fails_when_not_found(self, lambda_tests):
         mock_client = MagicMock()
         mock_client.exceptions.ResourceNotFoundException = type(
             "ResourceNotFoundException", (Exception,), {}
@@ -796,29 +790,21 @@ class TestCreateDeployedNamingConventionTestsExecution:
         )
         config = {"func_key": "MyFunction"}
         with pytest.raises(pytest.fail.Exception):
-            instance.test_handler_function_exists(mock_client, config)
+            lambda_tests.test_handler_function_exists(mock_client, config)
 
-    def test_lambda_function_name_is_pascalcase_success(self):
-        _, lambda_class = create_deployed_naming_convention_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        instance = lambda_class()
+    def test_lambda_function_name_is_pascalcase_success(self, lambda_tests):
         mock_client = MagicMock()
         mock_client.get_function.return_value = {
             "Configuration": {"FunctionName": "MyPascalCaseFunction"}
         }
         config = {"func_key": "MyPascalCaseFunction"}
-        assert instance.test_handler_function_name_is_pascalcase(mock_client, config) is None
+        assert lambda_tests.test_handler_function_name_is_pascalcase(mock_client, config) is None
 
-    def test_lambda_function_name_is_pascalcase_fails_when_invalid(self):
-        _, lambda_class = create_deployed_naming_convention_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        instance = lambda_class()
+    def test_lambda_function_name_is_pascalcase_fails_when_invalid(self, lambda_tests):
         mock_client = MagicMock()
         mock_client.get_function.return_value = {
             "Configuration": {"FunctionName": "my_snake_case_function"}
         }
         config = {"func_key": "my_snake_case_function"}
         with pytest.raises(AssertionError):
-            instance.test_handler_function_name_is_pascalcase(mock_client, config)
+            lambda_tests.test_handler_function_name_is_pascalcase(mock_client, config)

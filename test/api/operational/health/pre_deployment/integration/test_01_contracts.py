@@ -1,29 +1,14 @@
-"""Layer 1: Contract tests for health endpoint pre-deployment.
-
-Tests that local files that must work together are compatible. No AWS calls.
-
-Seven-layer testing model:
-- Layer 1: Contracts - Local files are compatible
-"""
 import ast
 
 import pytest
 from repo_utils import REPO_ROOT
 
 
-
 HEALTH_SRC = REPO_ROOT / "src" / "api" / "operational" / "health"
 
 
 class TestLambdaHandlerContract:
-    """Layer 1: Verify Lambda handler exports match Terraform references."""
-
     def test_handler_module_exports_handler_function(self):
-        """Verify handler.py exports a function named 'lambda_handler'.
-
-        lambda.tf references handler = "handler.lambda_handler" which means
-        the handler.py module must export a function named 'lambda_handler'.
-        """
         handler_path = HEALTH_SRC / "lambda" / "handler.py"
         handler_content = handler_path.read_text()
 
@@ -39,11 +24,6 @@ class TestLambdaHandlerContract:
         )
 
     def test_handler_function_accepts_event_and_context(self):
-        """Verify the entry point accepts event and context parameters.
-
-        Lambda runtime calls lambda_handler(event, context), so the function
-        must accept at least two positional parameters.
-        """
         handler_path = HEALTH_SRC / "lambda" / "handler.py"
         handler_content = handler_path.read_text()
 

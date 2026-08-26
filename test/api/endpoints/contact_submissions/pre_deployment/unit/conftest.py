@@ -1,4 +1,3 @@
-"""Pytest fixtures for contact handler pre-deployment unit tests."""
 import json
 from types import ModuleType
 from unittest.mock import patch
@@ -12,20 +11,17 @@ CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact_submissions"
 
 
 def load_contact_handler_module() -> ModuleType:
-    """Load the contact handler module dynamically."""
     handler_path = CONTACT_SRC / "lambda" / "handler.py"
     return load_module_from_path("contact_handler", handler_path)
 
 
 @pytest.fixture
 def contact_handler() -> ModuleType:
-    """Load and return the contact handler module."""
     return load_contact_handler_module()
 
 
 @pytest.fixture
 def contact_post_event():
-    """Create a sample POST event for contact endpoint testing."""
     return {
         'path': '/v1/contact-submissions',
         'httpMethod': 'POST',
@@ -42,7 +38,6 @@ def contact_post_event():
 
 @pytest.fixture
 def successful_contact_response(request):
-    """Return response from a successful contact form submission."""
     handler = request.getfixturevalue("contact_handler")
     event = request.getfixturevalue("contact_post_event")
     ctx = request.getfixturevalue("lambda_context")

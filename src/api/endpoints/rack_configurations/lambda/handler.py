@@ -1,4 +1,3 @@
-"""Lambda handler for rack designer API."""
 import base64
 import hashlib
 import json
@@ -17,19 +16,16 @@ _clients: Dict[str, Any] = {}
 
 
 def clear_clients() -> None:
-    """Clear cached boto3 clients."""
     _clients.clear()
 
 
 def get_dynamodb_client():
-    """Get or create cached DynamoDB client."""
     if 'dynamodb' not in _clients:
         _clients['dynamodb'] = boto3.client('dynamodb')
     return _clients['dynamodb']
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
-    """Build a JSON API Gateway response with CORS headers."""
     response = {
         'statusCode': status_code,
         'headers': {
@@ -44,7 +40,6 @@ def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def error_response(status_code: int, message: str, details: str = '') -> Dict[str, Any]:
-    """Build an error response with optional details."""
     body: Dict[str, Any] = {'success': False, 'error': message}
     if details:
         body['details'] = details
@@ -53,7 +48,6 @@ def error_response(status_code: int, message: str, details: str = '') -> Dict[st
 
 
 def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Parse request body, handling base64 encoding if present."""
     body = event.get('body', '{}')
     if event.get('isBase64Encoded'):
         body = base64.b64decode(body).decode('utf-8')
@@ -62,7 +56,6 @@ def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def generate_config_hash(config: Dict[str, Any]) -> str:
-    """Generate a 9-character hash from a rack configuration."""
     canonical = json.dumps(config, sort_keys=True, separators=(',', ':'))
     hash_bytes = hashlib.sha256(canonical.encode('utf-8')).digest()
     hash_int = int.from_bytes(hash_bytes[:6], 'big')
@@ -81,7 +74,6 @@ def save_rack_configuration(
     config: Dict[str, Any],
     device_id: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Save a rack configuration to DynamoDB."""
     table_name = os.environ['RACK_CONFIGURATIONS_TABLE']
     created_at = datetime.now(timezone.utc).isoformat()
     item: Dict[str, Any] = {
@@ -110,7 +102,6 @@ def save_rack_configuration(
 
 
 def migrate_rack_configuration(old_hash: str, config: Dict[str, Any]) -> Optional[str]:
-    """Migrate a rack configuration to a new hash if needed."""
     new_hash = generate_config_hash(config)
     if old_hash == new_hash:
         return None
@@ -135,7 +126,6 @@ def migrate_rack_configuration(old_hash: str, config: Dict[str, Any]) -> Optiona
 
 
 def load_rack_configuration(config_hash: str) -> Dict[str, Any]:
-    """Load a rack configuration from DynamoDB by hash."""
     table_name = os.environ['RACK_CONFIGURATIONS_TABLE']
     try:
         response = get_dynamodb_client().get_item(
@@ -160,7 +150,6 @@ def load_rack_configuration(config_hash: str) -> Dict[str, Any]:
 
 
 def validate_rack_configuration(config: Dict[str, Any]) -> Optional[str]:
-    """Validate a rack configuration, returning error message if invalid."""
     error_msg = None
     if 'rackHeight' not in config:
         error_msg = 'Missing required field: rackHeight'
@@ -182,7 +171,6 @@ def validate_rack_configuration(config: Dict[str, Any]) -> Optional[str]:
 
 
 def handle_post(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle POST request to save a rack configuration."""
     try:
         body = parse_body(event)
         config = body.get('configuration')
@@ -209,7 +197,6 @@ def handle_post(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_get(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle GET request to retrieve a rack configuration."""
     path_params = event.get('pathParameters') or {}
     config_hash = path_params.get('config_hash')
     if not config_hash:
@@ -226,7 +213,6 @@ def handle_get(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def lambda_handler(event, _context):
-    """Main Lambda handler for rack designer API requests."""
     logger.info("Received API request: %s", json.dumps(event))
 
     method = event.get('httpMethod', '')

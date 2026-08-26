@@ -1,4 +1,3 @@
-"""Pytest configuration and fixtures for rack designer tests."""
 from typing import Dict
 
 import pytest
@@ -8,7 +7,6 @@ from test_fixtures.integration import get_aws_account_id_via_cli
 
 @pytest.fixture(scope="module")
 def config(shared_config) -> Dict[str, str]:
-    """Provide rack designer configuration for tests."""
     result = {
         'aws_region': shared_config['aws_region'],
         'aws_account_id': get_aws_account_id_via_cli(),

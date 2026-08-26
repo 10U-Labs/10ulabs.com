@@ -1,4 +1,3 @@
-"""Shared pytest fixtures and utilities for API tests."""
 from unittest.mock import Mock
 
 import boto3
@@ -14,16 +13,11 @@ API_COMMON_ROUTING_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"
 
 @pytest.fixture(scope="session")
 def api_common_routing_terraform_initialized():
-    """Initialize terraform for api_common_routing state access."""
     return terraform_init(API_COMMON_ROUTING_DIR)
 
 
 @pytest.fixture(scope="session")
 def api_common_routing_outputs(request):
-    """Get api_common_routing terraform outputs.
-
-    Single source of truth for api_common_routing output names.
-    """
     if not request.getfixturevalue("api_common_routing_terraform_initialized"):
         pytest.skip("Terraform init failed for api_common_routing")
     return {
@@ -35,24 +29,15 @@ def api_common_routing_outputs(request):
 
 @pytest.fixture(scope="session")
 def apigateway_client(aws_region):
-    """Create an API Gateway client."""
     return boto3.client("apigateway", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
 def ses_client(aws_region):
-    """Create an SES client."""
     return boto3.client("ses", region_name=aws_region)
 
 
 def endpoint_is_deployed(api_url: str, path: str, method: str = "GET") -> bool:
-    """Check if an endpoint is deployed and functional.
-
-    Returns False if:
-    - Endpoint returns 404 (not deployed)
-    - Endpoint returns "Not Found" error in JSON (CatchAllHandler)
-    - Endpoint returns 500 (Lambda not properly deployed/configured)
-    """
     url = f"{api_url}{path}"
     headers = {"x-test-mode": "true"}
     try:
@@ -76,18 +61,15 @@ def endpoint_is_deployed(api_url: str, path: str, method: str = "GET") -> bool:
 
 
 def skip_if_endpoint_not_deployed(api_url: str, path: str, method: str = "GET"):
-    """Skip test if the specified endpoint is not deployed."""
     if not endpoint_is_deployed(api_url, path, method):
         pytest.skip(f"Endpoint {path} not deployed (managed by separate workflow)")
 
 
 @pytest.fixture
 def lambda_context():
-    """Provide a mock Lambda context object."""
     return Mock()
 
 
 @pytest.fixture(scope="session")
 def lambda_client(aws_region):
-    """Provide a Lambda client for the configured AWS region."""
     return boto3.client("lambda", region_name=aws_region)

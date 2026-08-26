@@ -1,29 +1,17 @@
-"""Layer 1: Existence tests for sessions endpoint post-deployment.
-
-Existence tests verify that resources created by terraform apply exist.
-No configuration checks - just existence.
-"""
-
-
 class TestLambdaExistence:
-    """Tests for Lambda function existence."""
-
     def test_sessions_handler_lambda_exists(self, lambda_client, sessions_config):
-        """Verify sessions handler Lambda exists."""
         response = lambda_client.get_function(
             FunctionName=sessions_config["handler_function_name"]
         )
         assert response["Configuration"]["FunctionName"] == sessions_config["handler_function_name"]
 
     def test_sessions_export_lambda_exists(self, lambda_client, sessions_config):
-        """Verify sessions export Lambda exists."""
         response = lambda_client.get_function(
             FunctionName=sessions_config["export_function_name"]
         )
         assert response["Configuration"]["FunctionName"] == sessions_config["export_function_name"]
 
 def test_dynamo_db_existence(dynamodb_client, sessions_config):
-    """Verify session events DynamoDB table exists."""
     response = dynamodb_client.describe_table(
         TableName=sessions_config["dynamodb_table_name"]
     )
@@ -31,16 +19,12 @@ def test_dynamo_db_existence(dynamodb_client, sessions_config):
 
 
 def test_s3_existence(s3_client, sessions_config):
-    """Verify analytics S3 bucket exists."""
     response = s3_client.head_bucket(Bucket=sessions_config["s3_bucket_name"])
     assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
 
 
 class TestCloudWatchLogsExistence:
-    """Tests for CloudWatch Log Group existence."""
-
     def test_handler_log_group_exists(self, logs_client, sessions_config):
-        """Verify handler CloudWatch log group exists."""
         response = logs_client.describe_log_groups(
             logGroupNamePrefix=sessions_config["handler_log_group"]
         )
@@ -48,7 +32,6 @@ class TestCloudWatchLogsExistence:
         assert sessions_config["handler_log_group"] in log_groups
 
     def test_export_log_group_exists(self, logs_client, sessions_config):
-        """Verify export CloudWatch log group exists."""
         response = logs_client.describe_log_groups(
             logGroupNamePrefix=sessions_config["export_log_group"]
         )
@@ -56,24 +39,19 @@ class TestCloudWatchLogsExistence:
         assert sessions_config["export_log_group"] in log_groups
 
 class TestBackupExistence:
-    """Tests for AWS Backup resource existence."""
-
     def test_backup_vault_exists(self, backup_client, sessions_config):
-        """Verify AWS Backup vault exists."""
         response = backup_client.describe_backup_vault(
             BackupVaultName=sessions_config["backup_vault_name"]
         )
         assert response["BackupVaultName"] == sessions_config["backup_vault_name"]
 
     def test_backup_plan_exists(self, backup_client, sessions_config):
-        """Verify backup plan exists."""
         response = backup_client.list_backup_plans()
         plan_names = [p["BackupPlanName"] for p in response["BackupPlansList"]]
         assert sessions_config["backup_plan_name"] in plan_names
 
 
 def test_event_bridge_existence(scheduler_client, sessions_config):
-    """Verify EventBridge scheduler exists."""
     response = scheduler_client.get_schedule(
         Name=sessions_config["scheduler_name"]
     )
@@ -81,24 +59,18 @@ def test_event_bridge_existence(scheduler_client, sessions_config):
 
 
 class TestIamRoleExistence:
-    """Tests for IAM role existence."""
-
     def test_sessions_handler_iam_role_exists(self, iam_client, sessions_config):
-        """Verify sessions handler IAM role exists."""
         response = iam_client.get_role(RoleName=sessions_config["handler_role_name"])
         assert response["Role"]["RoleName"] == sessions_config["handler_role_name"]
 
     def test_sessions_export_iam_role_exists(self, iam_client, sessions_config):
-        """Verify sessions export IAM role exists."""
         response = iam_client.get_role(RoleName=sessions_config["export_role_name"])
         assert response["Role"]["RoleName"] == sessions_config["export_role_name"]
 
     def test_scheduler_iam_role_exists(self, iam_client, sessions_config):
-        """Verify scheduler IAM role exists."""
         response = iam_client.get_role(RoleName=sessions_config["scheduler_role_name"])
         assert response["Role"]["RoleName"] == sessions_config["scheduler_role_name"]
 
     def test_backup_iam_role_exists(self, iam_client, sessions_config):
-        """Verify backup IAM role exists."""
         response = iam_client.get_role(RoleName=sessions_config["backup_role_name"])
         assert response["Role"]["RoleName"] == sessions_config["backup_role_name"]

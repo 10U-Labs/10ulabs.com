@@ -1,8 +1,6 @@
-"""Pytest fixtures for health endpoint post-deployment tests."""
 import pytest
 
 
 @pytest.fixture(scope="module")
 def api_url(config):
-    """Build API URL from configuration."""
     return f"https://{config['api_fqdn']}"

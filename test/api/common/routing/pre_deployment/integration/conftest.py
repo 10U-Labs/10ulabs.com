@@ -1,13 +1,8 @@
-"""Pytest fixtures for api_common_routing pre-deployment integration tests."""
-
 import re
 
 from test.api.conftest import REPO_ROOT, terraform_init, terraform_output
 
 import pytest
-
-# Note: pytest_plugins and common fixtures (openapi_path, apigateway_path)
-# are inherited from parent conftest.py files
 
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
@@ -15,13 +10,11 @@ BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 
 @pytest.fixture(scope="session", name="bootstrap_initialized")
 def bootstrap_initialized_fixture():
-    """Initialize terraform for bootstrap state access."""
     return terraform_init(BOOTSTRAP_DIR)
 
 
 @pytest.fixture(scope="session", name="bootstrap_outputs")
 def bootstrap_outputs_fixture(bootstrap_initialized):
-    """Get bootstrap terraform outputs."""
     if not bootstrap_initialized:
         pytest.skip("Terraform init failed for bootstrap")
     return {
@@ -39,7 +32,6 @@ def bootstrap_outputs_fixture(bootstrap_initialized):
 
 @pytest.fixture(scope="session")
 def central_logs_bucket_name(bootstrap_outputs):
-    """Extract the central logs bucket name from its ARN."""
     arn = bootstrap_outputs.get("arn_for_central_logs_bucket", "")
     if not arn:
         return ""

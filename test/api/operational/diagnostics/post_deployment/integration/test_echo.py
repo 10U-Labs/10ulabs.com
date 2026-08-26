@@ -1,4 +1,3 @@
-"""Integration tests for echo endpoint."""
 import concurrent.futures
 import time
 
@@ -11,7 +10,6 @@ TEST_HEADERS = {"x-test-mode": "true"}
 
 
 def test_echo_endpoint_accessible_without_auth(api_url):
-    """Test that echo endpoint is accessible without authentication."""
     response = requests.post(
         f"{api_url}/diagnostics/echo", json={"test": "data"}, headers=TEST_HEADERS, timeout=10
     )
@@ -20,7 +18,6 @@ def test_echo_endpoint_accessible_without_auth(api_url):
 
 
 def test_echo_endpoint_returns_echoed_data(api_url):
-    """Test that echo endpoint returns the echoed data."""
     test_data = {"message": "hello", "number": 42}
     response = requests.post(
         f"{api_url}/diagnostics/echo", json=test_data, headers=TEST_HEADERS, timeout=10
@@ -31,7 +28,6 @@ def test_echo_endpoint_returns_echoed_data(api_url):
 
 
 def test_echo_endpoint_with_unicode_returns_200(api_url):
-    """Test that echo endpoint handles unicode content."""
     test_data = {"message": "Hello 世界 🌍"}
     response = requests.post(
         f"{api_url}/diagnostics/echo", json=test_data, headers=TEST_HEADERS, timeout=10
@@ -41,7 +37,6 @@ def test_echo_endpoint_with_unicode_returns_200(api_url):
 
 
 def test_echo_endpoint_with_unicode_preserves_characters(api_url):
-    """Test that echo endpoint preserves unicode characters."""
     test_data = {"message": "Hello 世界 🌍"}
     response = requests.post(
         f"{api_url}/diagnostics/echo", json=test_data, headers=TEST_HEADERS, timeout=10
@@ -52,7 +47,6 @@ def test_echo_endpoint_with_unicode_preserves_characters(api_url):
 
 
 def test_echo_endpoint_with_large_payload(api_url):
-    """Test that echo endpoint handles large payloads."""
     large_data = {"items": [{"id": i, "value": f"item-{i}"} for i in range(100)]}
     response = requests.post(
         f"{api_url}/diagnostics/echo", json=large_data, headers=TEST_HEADERS, timeout=10
@@ -62,7 +56,6 @@ def test_echo_endpoint_with_large_payload(api_url):
 
 
 def test_echo_endpoint_preserves_string_type(api_url):
-    """Test that echo endpoint preserves string types."""
     test_data = {"string": "test"}
     response = requests.post(
         f"{api_url}/diagnostics/echo", json=test_data, headers=TEST_HEADERS, timeout=10
@@ -73,7 +66,6 @@ def test_echo_endpoint_preserves_string_type(api_url):
 
 
 def test_echo_endpoint_preserves_integer_type(api_url):
-    """Test that echo endpoint preserves integer types."""
     test_data = {"number": 42}
     response = requests.post(
         f"{api_url}/diagnostics/echo", json=test_data, headers=TEST_HEADERS, timeout=10
@@ -84,7 +76,6 @@ def test_echo_endpoint_preserves_integer_type(api_url):
 
 
 def test_echo_endpoint_preserves_float_type(api_url):
-    """Test that echo endpoint preserves float types."""
     test_data = {"float": 3.14}
     response = requests.post(
         f"{api_url}/diagnostics/echo", json=test_data, headers=TEST_HEADERS, timeout=10
@@ -95,7 +86,6 @@ def test_echo_endpoint_preserves_float_type(api_url):
 
 
 def test_echo_endpoint_preserves_boolean_type(api_url):
-    """Test that echo endpoint preserves boolean types."""
     test_data = {"boolean": True}
     response = requests.post(
         f"{api_url}/diagnostics/echo", json=test_data, headers=TEST_HEADERS, timeout=10
@@ -106,7 +96,6 @@ def test_echo_endpoint_preserves_boolean_type(api_url):
 
 
 def test_echo_endpoint_preserves_null_type(api_url):
-    """Test that echo endpoint preserves null types."""
     test_data = {"null": None}
     response = requests.post(
         f"{api_url}/diagnostics/echo", json=test_data, headers=TEST_HEADERS, timeout=10
@@ -117,7 +106,6 @@ def test_echo_endpoint_preserves_null_type(api_url):
 
 
 def test_api_handles_concurrent_echo_requests(api_url):
-    """Verify API handles concurrent echo requests."""
     skip_if_endpoint_not_deployed(api_url, "/diagnostics/echo", "POST")
 
     def make_echo_request(value):
@@ -131,7 +119,6 @@ def test_api_handles_concurrent_echo_requests(api_url):
 
 
 def test_malformed_json_request_returns_400(api_url):
-    """Verify malformed JSON request returns 400 or 500 status code."""
     skip_if_endpoint_not_deployed(api_url, "/diagnostics/echo", "POST")
     headers = {"Content-Type": "application/json", "x-test-mode": "true"}
     response = requests.post(
@@ -141,7 +128,6 @@ def test_malformed_json_request_returns_400(api_url):
 
 
 def test_oversized_payload_returns_413(api_url):
-    """Verify oversized payload returns 413 or handles gracefully."""
     skip_if_endpoint_not_deployed(api_url, "/diagnostics/echo", "POST")
     large_payload = {"data": "x" * (10 * 1024 * 1024)}
     response = requests.post(
@@ -151,7 +137,6 @@ def test_oversized_payload_returns_413(api_url):
 
 
 def test_api_handles_malformed_json_gracefully(api_url):
-    """Verify API handles malformed JSON gracefully."""
     skip_if_endpoint_not_deployed(api_url, "/diagnostics/echo", "POST")
     headers = {"Content-Type": "application/json", "x-test-mode": "true"}
     response = requests.post(
@@ -161,7 +146,6 @@ def test_api_handles_malformed_json_gracefully(api_url):
 
 
 def test_api_handles_missing_content_type_header(api_url):
-    """Verify API handles missing Content-Type header."""
     skip_if_endpoint_not_deployed(api_url, "/diagnostics/echo", "POST")
     response = requests.post(
         f"{api_url}/diagnostics/echo", data='{"test": "data"}', headers=TEST_HEADERS, timeout=10
@@ -170,7 +154,6 @@ def test_api_handles_missing_content_type_header(api_url):
 
 
 def test_rate_limit_applies_to_echo_endpoint(api_url):
-    """Verify rate limiting applies to echo endpoint."""
     skip_if_endpoint_not_deployed(api_url, "/diagnostics/echo", "POST")
     url = f"{api_url}/diagnostics/echo"
     payload = {"test": "rate_limit_check"}

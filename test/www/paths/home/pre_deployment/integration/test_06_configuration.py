@@ -1,18 +1,11 @@
-"""Layer 6: Configuration tests for www home page deployment prerequisites.
-
-Test that prerequisite resources are configured correctly. Assumes existence passed.
-"""
 import pytest
 from botocore.exceptions import ClientError
 
 
 class TestCloudFrontConfiguration:
-    """Layer 6: Verify CloudFront distribution is configured correctly."""
-
     def test_cloudfront_distribution_is_deployed(
         self, cloudfront_distribution, www_common_outputs
     ):
-        """Verify the CloudFront distribution is deployed."""
         distribution_id = www_common_outputs.get("cloudfront_distribution_id")
         if not distribution_id:
             pytest.skip("cloudfront_distribution_id output not available")
@@ -28,7 +21,6 @@ class TestCloudFrontConfiguration:
     def test_cloudfront_distribution_is_enabled(
         self, cloudfront_distribution, www_common_outputs
     ):
-        """Verify the CloudFront distribution is enabled."""
         distribution_id = www_common_outputs.get("cloudfront_distribution_id")
         if not distribution_id:
             pytest.skip("cloudfront_distribution_id output not available")
@@ -44,16 +36,12 @@ class TestCloudFrontConfiguration:
 
 
 class TestS3BucketConfiguration:
-    """Layer 6: Verify S3 bucket is configured correctly."""
-
     def test_s3_bucket_location_is_retrievable(self, s3_client, www_common_outputs):
-        """Verify S3 bucket location is retrievable."""
         bucket_name = www_common_outputs.get("bucket_name")
         if not bucket_name:
             pytest.skip("bucket_name output not available")
         try:
             response = s3_client.get_bucket_location(Bucket=bucket_name)
-            # If we can get the location, the bucket exists and is accessible
             location_retrieved = "LocationConstraint" in response
             assert location_retrieved, "Should be able to retrieve bucket location"
         except ClientError as e:
@@ -62,13 +50,11 @@ class TestS3BucketConfiguration:
             raise
 
     def test_s3_bucket_accepts_list_operations(self, s3_client, www_common_outputs):
-        """Verify S3 bucket permissions allow list operations."""
         bucket_name = www_common_outputs.get("bucket_name")
         if not bucket_name:
             pytest.skip("bucket_name output not available")
         try:
             response = s3_client.list_objects_v2(Bucket=bucket_name, MaxKeys=1)
-            # If we can list, we have read access (KeyCount is always present)
             can_list = "KeyCount" in response
             assert can_list, "Should be able to list bucket objects"
         except ClientError as e:

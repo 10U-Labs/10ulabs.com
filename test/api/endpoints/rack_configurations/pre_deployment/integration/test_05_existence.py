@@ -1,12 +1,3 @@
-"""Layer 5: Existence tests for rack_configurations endpoint pre-deployment.
-
-Tests that prerequisite resources from OTHER workflows exist.
-Not configuration, not capability - just existence.
-
-Seven-layer testing model:
-- Layer 5: Existence - Prerequisite resources actually exist
-"""
-
 from test_fixtures.integration import (
     assert_api_gateway_exists,
     create_www_common_s3_existence_tests,
@@ -14,19 +5,15 @@ from test_fixtures.integration import (
 
 
 class TestAPIBackendPrerequisites:
-    """Layer 5: Verify api_common_routing resources exist."""
-
     def test_api_common_routing_outputs_provides_gateway_id(self, api_common_routing_outputs):
-        """Verify api_common_routing terraform outputs provide api_gateway_id."""
         assert api_common_routing_outputs.get("api_gateway_id"), (
             "api_gateway_id output not found in api_common_routing. "
             "Run terraform apply in src/api/common/routing/"
         )
 
     def test_api_gateway_rest_api_exists(self, api_gateway_info):
-        """Verify the API Gateway REST API exists."""
         assert_api_gateway_exists(api_gateway_info)
-        assert True  # Explicit pass
+        assert True
 
 
 TestWWWSharedPrerequisites = create_www_common_s3_existence_tests()

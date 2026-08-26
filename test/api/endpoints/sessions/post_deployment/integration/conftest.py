@@ -1,12 +1,3 @@
-"""Pytest fixtures for sessions post-deployment integration tests.
-
-Post-deployment integration tests verify:
-- Resources created by terraform apply exist
-- Resources are configured correctly
-- Components are properly wired together
-
-Shared fixtures are inherited from test/api/endpoints/sessions/conftest.py.
-"""
 import pytest
 
 from repo_utils import REPO_ROOT
@@ -17,7 +8,6 @@ SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
 
 @pytest.fixture(scope="module")
 def sessions_outputs(request):
-    """Get sessions terraform outputs."""
     if not request.getfixturevalue("sessions_terraform_initialized"):
         pytest.skip("Terraform init failed for sessions")
     return {
@@ -38,10 +28,6 @@ def sessions_outputs(request):
 
 @pytest.fixture(scope="module")
 def sessions_config():
-    """Get sessions configuration for testing.
-
-    Provides expected resource names based on naming conventions.
-    """
     return {
         "handler_function_name": "TenULabsSessionsHandler",
         "export_function_name": "TenULabsSessionsExport",

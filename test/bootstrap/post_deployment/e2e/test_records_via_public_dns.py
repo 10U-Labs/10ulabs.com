@@ -1,4 +1,3 @@
-"""End-to-end tests for DNS records via public DNS queries."""
 import time
 
 import dns.resolver
@@ -8,7 +7,6 @@ import pytest
 def test_can_create_and_resolve_record(
     route53_client, hosted_zone, config, public_dns_resolver
 ):
-    """Test creating and resolving DNS record."""
     domain_name = config['domain_name']
     test_record_name = f"e2e-test.{domain_name}"
     test_value = "e2e-test-value-12345"
@@ -53,7 +51,6 @@ def test_can_create_and_resolve_record(
 
 
 def test_google_verification_record_resolves(public_dns_resolver, config):
-    """Test that Google verification record resolves."""
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 
@@ -70,7 +67,6 @@ def test_google_verification_record_resolves(public_dns_resolver, config):
 
 
 def test_google_verification_record_has_correct_content(public_dns_resolver, config):
-    """Test that Google verification record has correct content."""
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 
@@ -82,7 +78,6 @@ def test_google_verification_record_has_correct_content(public_dns_resolver, con
 
 
 def test_mx_record_resolves(public_dns_resolver, config):
-    """Test that MX record resolves."""
     domain_name = config['domain_name']
 
     try:
@@ -95,7 +90,6 @@ def test_mx_record_resolves(public_dns_resolver, config):
 
 
 def test_mx_record_returns_correct_priority(public_dns_resolver, config):
-    """Test that MX record returns correct priority."""
     domain_name = config['domain_name']
 
     answers = public_dns_resolver.resolve(domain_name, 'MX')
@@ -104,7 +98,6 @@ def test_mx_record_returns_correct_priority(public_dns_resolver, config):
 
 
 def test_mx_record_returns_smtp_hostname(public_dns_resolver, config):
-    """Test that MX record returns SMTP hostname."""
     domain_name = config['domain_name']
 
     answers = public_dns_resolver.resolve(domain_name, 'MX')
@@ -113,7 +106,6 @@ def test_mx_record_returns_smtp_hostname(public_dns_resolver, config):
 
 
 def test_mx_record_has_correct_ttl(public_dns_resolver, config):
-    """Test that MX record has correct TTL."""
     domain_name = config['domain_name']
 
     answers = public_dns_resolver.resolve(domain_name, 'MX')
@@ -121,7 +113,6 @@ def test_mx_record_has_correct_ttl(public_dns_resolver, config):
 
 
 def test_txt_record_has_correct_ttl(public_dns_resolver, config):
-    """Test that TXT record has correct TTL."""
     domain_name = config['domain_name']
 
     answers = public_dns_resolver.resolve(domain_name, 'TXT')

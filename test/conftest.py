@@ -1,14 +1,6 @@
-"""Path setup for all tests.
-
-This conftest.py sets up lib/python in sys.path so tests can import
-modules like repo_utils, terraform_config, and test_fixtures.
-
-Shared fixtures are loaded via pytest_plugins.
-"""
 import sys
 from pathlib import Path
 
-# Load shared fixtures for all tests - must be a module-level variable
 pytest_plugins = ['test_fixtures.aws']
 
 _REPO_ROOT = Path(__file__).parent.parent

@@ -1,18 +1,4 @@
-"""Layer 3: Wiring tests for bootstrap post-deployment.
-
-These tests verify that components are connected properly.
-Tests assume Layer 1 existence and Layer 2 configuration tests have passed.
-"""
-
-
-
-# =============================================================================
-# CloudTrail Wiring
-# =============================================================================
-
-
 def test_cloudtrail_writes_logs_to_s3(s3_client, cloudtrail_client):
-    """Test that CloudTrail writes logs to S3."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -22,7 +8,6 @@ def test_cloudtrail_writes_logs_to_s3(s3_client, cloudtrail_client):
 
 
 def test_cloudtrail_writes_logs_to_cloudwatch(logs_client, cloudtrail_client):
-    """Test that CloudTrail writes logs to CloudWatch."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     log_group_arn = trail['CloudWatchLogsLogGroupArn']
@@ -36,26 +21,14 @@ def test_cloudtrail_writes_logs_to_cloudwatch(logs_client, cloudtrail_client):
     assert len(streams['logStreams']) > 0
 
 
-# =============================================================================
-# Central Logs Wiring
-# =============================================================================
-
-
 def test_central_logs_write_policy_exists(iam_client):
-    """Test that central logs write policy exists."""
     policy_name = 'central-logs-write-policy'
     response = iam_client.list_policies(Scope='Local')
     policy_names = [p['PolicyName'] for p in response['Policies']]
     assert policy_name in policy_names
 
 
-# =============================================================================
-# CloudTrail IAM Wiring
-# =============================================================================
-
-
 def test_cloudtrail_iam_role_trust_policy_allows_cloudtrail(iam_client, cloudtrail_client):
-    """Test that CloudTrail IAM role trust policy allows CloudTrail service."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     if 'CloudWatchLogsRoleArn' in trail:
@@ -74,7 +47,6 @@ def test_cloudtrail_iam_role_trust_policy_allows_cloudtrail(iam_client, cloudtra
 
 
 def test_cloudtrail_iam_role_has_inline_policy(iam_client, cloudtrail_client):
-    """Test that CloudTrail IAM role has inline policy."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     if 'CloudWatchLogsRoleArn' in trail:
@@ -84,7 +56,6 @@ def test_cloudtrail_iam_role_has_inline_policy(iam_client, cloudtrail_client):
 
 
 def test_cloudtrail_iam_role_policy_allows_log_actions(iam_client, cloudtrail_client):
-    """Test that CloudTrail IAM role policy allows log actions."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     if 'CloudWatchLogsRoleArn' in trail:
@@ -96,13 +67,7 @@ def test_cloudtrail_iam_role_policy_allows_log_actions(iam_client, cloudtrail_cl
         assert 'logs:CreateLogStream' in policy_doc or 'logs:*' in policy_doc
 
 
-# =============================================================================
-# Terraform State Bucket Wiring
-# =============================================================================
-
-
 def test_terraform_state_bucket_policy_allows_github_actions_role(s3_client, config):
-    """Test that terraform state bucket policy allows GitHub Actions role."""
     bucket_name = config['name_for_terraform_state_bucket']
     policy = s3_client.get_bucket_policy(Bucket=bucket_name)
     policy_doc = policy['Policy']
@@ -110,13 +75,7 @@ def test_terraform_state_bucket_policy_allows_github_actions_role(s3_client, con
     assert role_name in policy_doc
 
 
-# =============================================================================
-# GitHub Actions OIDC Wiring
-# =============================================================================
-
-
 def test_github_actions_role_is_attached_to_oidc_provider(iam_client, config):
-    """Test that GitHub Actions role is attached to OIDC provider."""
     role_name = config['name_for_github_actions_role']
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']

@@ -1,4 +1,3 @@
-"""Drop CloudFront's cached copies of the files a deploy just replaced."""
 import argparse
 import sys
 import time
@@ -7,15 +6,6 @@ import boto3
 
 
 def find_distribution_id(cloudfront, fqdn):
-    """Find the distribution serving a domain.
-
-    Args:
-        cloudfront: Boto3 CloudFront client
-        fqdn: Domain name to look for among the distribution aliases
-
-    Returns:
-        The distribution id, or None if no distribution carries the domain.
-    """
     response = cloudfront.list_distributions()
     distribution_id = None
     for distribution in response.get("DistributionList", {}).get("Items", []):
@@ -27,18 +17,6 @@ def find_distribution_id(cloudfront, fqdn):
 
 def wait_for_invalidation(cloudfront, distribution_id, invalidation_id,
                           max_attempts=20, poll_interval=5):
-    """Poll an invalidation until CloudFront reports it complete.
-
-    Args:
-        cloudfront: Boto3 CloudFront client
-        distribution_id: Distribution the invalidation was created on
-        invalidation_id: Invalidation to poll
-        max_attempts: Number of status reads before giving up
-        poll_interval: Seconds to wait between status reads
-
-    Raises:
-        RuntimeError: If the status is not Completed within max_attempts.
-    """
     completed = False
     attempt = 0
     while not completed and attempt < max_attempts:
@@ -59,11 +37,6 @@ def wait_for_invalidation(cloudfront, distribution_id, invalidation_id,
 
 
 def main():
-    """Invalidate the paths named on the command line.
-
-    Returns:
-        0 when the invalidation completed, 1 when it did not.
-    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--fqdn", required=True)
     parser.add_argument("--region", required=True)

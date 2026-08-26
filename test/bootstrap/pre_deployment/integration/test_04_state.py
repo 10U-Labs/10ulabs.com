@@ -1,7 +1,3 @@
-"""Layer 4: State validation tests for bootstrap pre-deployment.
-
-Verifies Terraform state matches AWS reality. Skips in cold state (no prior state).
-"""
 import subprocess
 
 import pytest
@@ -15,7 +11,6 @@ BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 
 
 def _has_existing_state() -> bool:
-    """Check if bootstrap terraform has existing state."""
     result = subprocess.run(
         ["terraform", "state", "list"],
         cwd=BOOTSTRAP_DIR,
@@ -28,7 +23,6 @@ def _has_existing_state() -> bool:
 
 
 def _is_terraform_initialized() -> bool:
-    """Check if terraform is initialized."""
     return (BOOTSTRAP_DIR / ".terraform.lock.hcl").exists()
 
 
@@ -41,16 +35,10 @@ def _is_terraform_initialized() -> bool:
     reason="Cold state - no prior Terraform state to validate against"
 )
 def test_no_orphaned_resources():
-    """Verify no resources to be created already exist in AWS.
-
-    This test runs terraform plan to find resources that will be created,
-    then checks if any of them already exist in AWS. If they do, it means
-    the resource was created outside of Terraform and needs to be imported.
-    """
     creates = get_planned_creates(BOOTSTRAP_DIR)
 
     if not creates:
-        return  # Nothing to check
+        return
 
     orphaned = []
     for resource in creates:
@@ -63,4 +51,4 @@ def test_no_orphaned_resources():
             msg += f"  - {r['type']}: {r['name']}\n"
             msg += f"    Fix: terraform import {r['address']} {r['name']}\n"
         pytest.fail(msg)
-    assert True  # Explicit pass
+    assert True

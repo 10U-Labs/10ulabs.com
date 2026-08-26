@@ -1,13 +1,8 @@
-"""Health check Lambda handler for 10U Labs API.
-
-Provides endpoint for checking API health.
-"""
 import json
 from typing import Any, Dict
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a JSON API Gateway response."""
     return {
         'statusCode': status_code,
         'headers': {
@@ -19,7 +14,6 @@ def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_health(_event: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle GET /health request."""
     status_data = {
         'status': 'healthy',
         'service': '10U Labs API',
@@ -34,7 +28,6 @@ ROUTE_MAP = {
 
 
 def lambda_handler(event, _context):
-    """Lambda handler entry point."""
     path = event.get('path', '')
     method = event.get('httpMethod', '')
     route_key = (path, method)

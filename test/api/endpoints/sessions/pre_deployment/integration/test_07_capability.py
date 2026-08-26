@@ -1,14 +1,7 @@
-"""Layer 7: Capability tests for sessions endpoint.
-
-Capability tests verify that you can perform required operations.
-These test that deployment prerequisites allow required actions.
-"""
-
 from botocore.exceptions import ClientError
 
 
 def test_terraform_state_capability(s3_client, state_bucket_name):
-    """Verify can read from Terraform state bucket."""
     has_capability = True
     try:
         s3_client.list_objects_v2(

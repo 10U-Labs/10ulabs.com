@@ -1,4 +1,3 @@
-"""Pytest fixtures for www common tests."""
 from typing import Dict
 
 import boto3
@@ -8,7 +7,6 @@ from test_fixtures.config import create_website_config
 
 
 def _get_hosted_zone_id(domain_name: str) -> str:
-    """Look up Route53 hosted zone ID for a domain."""
     route53 = boto3.client("route53")
     response = route53.list_hosted_zones_by_name(DNSName=domain_name, MaxItems="1")
     zones = response.get("HostedZones", [])
@@ -21,7 +19,6 @@ def _get_hosted_zone_id(domain_name: str) -> str:
 
 @pytest.fixture(scope="module")
 def config(shared_config) -> Dict[str, str]:
-    """Provide website configuration for tests."""
     locals_path = REPO_ROOT / "src" / "www" / "common" / "locals.tf"
     hosted_zone_id = _get_hosted_zone_id(shared_config.get('domain_name', ''))
     return create_website_config(locals_path, shared_config, hosted_zone_id)
@@ -29,19 +26,16 @@ def config(shared_config) -> Dict[str, str]:
 
 @pytest.fixture(name="website_src_path")
 def fixture_website_src_path():
-    """Provide path to website source directory."""
     return REPO_ROOT / "src" / "www" / "common"
 
 
 @pytest.fixture
 def cloudfront_s3_tf_content(website_src_path):
-    """Provide CloudFront S3 Terraform file content."""
     with open(website_src_path / "cloudfront_s3.tf", encoding="utf-8") as f:
         return f.read()
 
 
 @pytest.fixture
 def certificate_dns_tf_content(website_src_path):
-    """Provide certificate DNS Terraform file content."""
     with open(website_src_path / "certificate_dns.tf", encoding="utf-8") as f:
         return f.read()

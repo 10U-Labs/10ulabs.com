@@ -9,6 +9,11 @@ from test_fixtures.integration.helpers import (
 )
 
 
+def _lambda_role_name(lambda_config):
+    role_arn = lambda_config.get("Role", "")
+    return role_arn.split("/")[-1] if "/" in role_arn else ""
+
+
 def create_lambda_api_gateway_wiring_tests(
     function_name_config_key: str,
     default_function_name: str,
@@ -138,20 +143,14 @@ def create_lambda_execution_role_wiring_tests(fixture_name: str = "lambda_functi
             )
 
         def test_lambda_role_exists(self, iam_client, request):
-            lambda_config = request.getfixturevalue(fixture_name)
-            role_arn = lambda_config.get("Role", "")
-            role_name = role_arn.split("/")[-1] if "/" in role_arn else ""
-
+            role_name = _lambda_role_name(request.getfixturevalue(fixture_name))
             if not role_name:
                 pytest.fail("Could not extract role name from Lambda configuration")
 
             check_iam_role_exists(iam_client, role_name, "the Lambda's deployment")
 
         def test_lambda_role_can_be_assumed_by_lambda(self, iam_client, request):
-            lambda_config = request.getfixturevalue(fixture_name)
-            role_arn = lambda_config.get("Role", "")
-            role_name = role_arn.split("/")[-1] if "/" in role_arn else ""
-
+            role_name = _lambda_role_name(request.getfixturevalue(fixture_name))
             if not role_name:
                 pytest.skip("Could not extract role name from Lambda configuration")
 

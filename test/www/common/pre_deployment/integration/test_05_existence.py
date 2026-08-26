@@ -1,15 +1,8 @@
-"""Layer 5: Existence tests for www_common pre-deployment validation.
-
-Verify prerequisite resources exist. Assumes state tests passed.
-"""
 import pytest
 from botocore.exceptions import ClientError
 
 
-
-
 def test_github_actions_role_exists(iam_client, github_actions_role_name):
-    """Verify GitHub Actions IAM role exists."""
     try:
         response = iam_client.get_role(RoleName=github_actions_role_name)
         assert response["Role"]["RoleName"] == github_actions_role_name
@@ -20,7 +13,6 @@ def test_github_actions_role_exists(iam_client, github_actions_role_name):
 
 
 def test_state_bucket_exists(s3_client, state_bucket_name):
-    """Verify Terraform state bucket exists."""
     try:
         response = s3_client.head_bucket(Bucket=state_bucket_name)
         assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
@@ -32,7 +24,6 @@ def test_state_bucket_exists(s3_client, state_bucket_name):
 
 
 def test_hosted_zone_exists(route53_client, hosted_zone_id):
-    """Verify Route53 hosted zone exists."""
     try:
         response = route53_client.get_hosted_zone(Id=hosted_zone_id)
         zone_id_from_response = response["HostedZone"]["Id"]

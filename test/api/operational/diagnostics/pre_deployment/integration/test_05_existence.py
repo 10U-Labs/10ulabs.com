@@ -1,20 +1,7 @@
-"""Layer 5: Existence tests for diagnostics endpoint pre-deployment.
-
-Tests that prerequisite resources exist. Assumes authorization passed.
-These tests verify that resources from OTHER workflows that THIS workflow
-depends on exist before deployment.
-
-Seven-layer testing model:
-- Layer 5: Existence - Prerequisite resources exist
-"""
-
 from test_fixtures.integration import (
     Layer4APIBackendPrerequisiteTests,
 )
 
 
 class TestAPIBackendPrerequisites(Layer4APIBackendPrerequisiteTests):
-    """Layer 5: Verify api_common_routing prerequisites exist.
-
-    All tests inherited from Layer4APIBackendPrerequisiteTests.
-    """
+    pass

@@ -1,4 +1,3 @@
-"""Unit tests for rack configurations Google Analytics integration."""
 from repo_utils import REPO_ROOT
 
 RACK_DESIGNER_SRC = REPO_ROOT / "src" / "www" / "paths" / "rack_designer"
@@ -8,12 +7,10 @@ GTAG_CONFIG = f"gtag('config', '{GOOGLE_ANALYTICS_ID}')"
 
 
 def test_index_html_has_gtag_script():
-    """Test that index.html includes Google Analytics script."""
     content = (RACK_DESIGNER_SRC / "index.html").read_text()
     assert GTAG_SCRIPT_URL in content
 
 
 def test_index_html_has_gtag_config():
-    """Test that index.html includes Google Analytics config."""
     content = (RACK_DESIGNER_SRC / "index.html").read_text()
     assert GTAG_CONFIG in content

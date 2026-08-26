@@ -1,4 +1,3 @@
-"""Unit tests to verify IAM role and Lambda function names use PascalCase."""
 from naming_conventions.test_helpers import (
     create_iam_role_tests,
     create_lambda_function_tests,

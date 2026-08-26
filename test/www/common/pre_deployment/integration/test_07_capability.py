@@ -1,37 +1,27 @@
-"""Layer 7: Capability tests for www_common pre-deployment validation.
-
-Verify we can perform required operations. Assumes configuration tests passed.
-"""
 import uuid
 
 import pytest
 from botocore.exceptions import ClientError
 
 
-
-
 @pytest.fixture(name="test_object_key")
 def object_key_fixture():
-    """Generate a unique test object key."""
     return f".pre-deployment-test/{uuid.uuid4()}.txt"
 
 
 @pytest.fixture(name="zone_name")
 def zone_name_fixture(route53_client, hosted_zone_id):
-    """Get the zone name for constructing test record names."""
     response = route53_client.get_hosted_zone(Id=hosted_zone_id)
     return response["HostedZone"]["Name"]
 
 
 @pytest.fixture(name="test_record_name")
 def record_name_fixture(zone_name):
-    """Generate a unique test record name."""
     unique_id = str(uuid.uuid4())[:8]
     return f"_pre-deployment-test-{unique_id}.{zone_name}"
 
 
 def test_can_list_objects_in_state_bucket(s3_client, state_bucket_name):
-    """Verify we can call s3:ListObjectsV2."""
     try:
         response = s3_client.list_objects_v2(Bucket=state_bucket_name, MaxKeys=1)
         assert "Contents" in response or "KeyCount" in response
@@ -43,7 +33,6 @@ def test_can_list_objects_in_state_bucket(s3_client, state_bucket_name):
 
 
 def test_can_get_object_from_state_bucket(s3_client, state_bucket_name):
-    """Verify we can call s3:GetObject on a state file."""
     try:
         response = s3_client.list_objects_v2(Bucket=state_bucket_name, MaxKeys=1)
         if not response.get("Contents"):
@@ -59,7 +48,6 @@ def test_can_get_object_from_state_bucket(s3_client, state_bucket_name):
 
 
 def test_can_put_object_to_state_bucket(s3_client, state_bucket_name, test_object_key):
-    """Verify we can call s3:PutObject."""
     try:
         response = s3_client.put_object(
             Bucket=state_bucket_name,
@@ -77,7 +65,6 @@ def test_can_put_object_to_state_bucket(s3_client, state_bucket_name, test_objec
 
 
 def test_can_delete_object_from_state_bucket(s3_client, state_bucket_name, test_object_key):
-    """Verify we can call s3:DeleteObject."""
     try:
         s3_client.put_object(
             Bucket=state_bucket_name,
@@ -96,7 +83,6 @@ def test_can_delete_object_from_state_bucket(s3_client, state_bucket_name, test_
 
 
 def test_can_create_route53_record(route53_client, hosted_zone_id, test_record_name):
-    """Verify we can call route53:ChangeResourceRecordSets to create."""
     try:
         response = route53_client.change_resource_record_sets(
             HostedZoneId=hosted_zone_id,
@@ -137,7 +123,6 @@ def test_can_create_route53_record(route53_client, hosted_zone_id, test_record_n
 
 
 def test_can_upsert_route53_record(route53_client, hosted_zone_id, test_record_name):
-    """Verify we can call route53:ChangeResourceRecordSets to upsert."""
     try:
         route53_client.change_resource_record_sets(
             HostedZoneId=hosted_zone_id,
@@ -193,7 +178,6 @@ def test_can_upsert_route53_record(route53_client, hosted_zone_id, test_record_n
 
 
 def test_can_delete_route53_record(route53_client, hosted_zone_id, test_record_name):
-    """Verify we can call route53:ChangeResourceRecordSets to delete."""
     try:
         route53_client.change_resource_record_sets(
             HostedZoneId=hosted_zone_id,

@@ -1,40 +1,29 @@
-"""Pytest configuration and fixtures for post-deployment integration tests."""
 import boto3
 import pytest
-
-# Note: The following fixtures are inherited from parent conftest files:
-# - From test_fixtures/aws.py: iam_client, s3_client, logs_client, apigateway_client,
-#   ec2_client, lambda_client, dynamodb_client
-# - From routing/conftest.py: cloudwatch_client, events_client, sns_client
 
 
 @pytest.fixture(scope="module")
 def sqs_client(aws_region):
-    """Create and return a boto3 SQS client for the specified region."""
     return boto3.client("sqs", region_name=aws_region)
 
 
 @pytest.fixture(name="api_gateway_id", scope="module")
 def api_gateway_id_fixture(apigateway_client, config):
-    """Get API Gateway REST API ID by name."""
     return get_api_gateway_id_by_name(apigateway_client, config['api_gateway_name'])
 
 
 @pytest.fixture(scope="module")
 def apigatewayv2_client(aws_region):
-    """Create and return a boto3 API Gateway V2 client for the specified region."""
     return boto3.client("apigatewayv2", region_name=aws_region)
 
 
 @pytest.fixture(name="cloudfront_client", scope="module")
 def cloudfront_client_fixture():
-    """Create and return a boto3 CloudFront client."""
     return boto3.client("cloudfront")
 
 
 @pytest.fixture(scope="module")
 def api_distribution_id(cloudfront_client, config):
-    """Find and return the CloudFront distribution ID for the API FQDN."""
     distributions = cloudfront_client.list_distributions()
     api_fqdn = config['api_fqdn']
     dist_id = None
@@ -48,7 +37,6 @@ def api_distribution_id(cloudfront_client, config):
 
 @pytest.fixture(scope="module")
 def first_cloudfront_dist_config(cloudfront_client):
-    """Get the DistributionConfig of the first CloudFront distribution."""
     distributions = cloudfront_client.list_distributions()
     if distributions['DistributionList']['Quantity'] > 0:
         dist_id = distributions['DistributionList']['Items'][0]['Id']
@@ -59,22 +47,15 @@ def first_cloudfront_dist_config(cloudfront_client):
 
 @pytest.fixture(scope="module")
 def acm_client():
-    """Create and return a boto3 ACM client for us-east-1.
-
-    CloudFront requires ACM certificates to be in us-east-1, regardless of
-    where other resources are deployed.
-    """
     return boto3.client("acm", region_name="us-east-1")
 
 
 @pytest.fixture(scope="module")
 def firehose_client(aws_region):
-    """Create and return a boto3 Firehose client for the specified region."""
     return boto3.client("firehose", region_name=aws_region)
 
 
 def get_api_gateway_id_by_name(client, api_name):
-    """Get the API Gateway ID by searching for the API name."""
     apis = client.get_rest_apis()
     api_id = None
     for api in apis['items']:
@@ -85,24 +66,20 @@ def get_api_gateway_id_by_name(client, api_name):
 
 
 def create_test_dynamodb_item(client, table_name, item):
-    """Create a test item in DynamoDB table."""
     client.put_item(TableName=table_name, Item=item)
 
 
 def cleanup_test_dynamodb_item(client, table_name, key):
-    """Delete a test item from DynamoDB table."""
     client.delete_item(TableName=table_name, Key=key)
 
 
 @pytest.fixture(scope="module")
 def ssm_client(aws_region):
-    """Create and return a boto3 SSM client for the specified region."""
     return boto3.client("ssm", region_name=aws_region)
 
 
 @pytest.fixture(scope="module")
 def usage_plan_id(apigateway_client, api_gateway_id):
-    """Get the first API Gateway usage plan ID, or None if not found."""
     if api_gateway_id is None:
         return None
     usage_plans = apigateway_client.get_usage_plans()
@@ -113,7 +90,6 @@ def usage_plan_id(apigateway_client, api_gateway_id):
 
 @pytest.fixture(scope="module")
 def api_route53_records(config):
-    """Get Route53 A records for the API FQDN."""
     route53 = boto3.client('route53')
     hosted_zones = route53.list_hosted_zones_by_name(DNSName=config['domain'])
     if not hosted_zones['HostedZones']:

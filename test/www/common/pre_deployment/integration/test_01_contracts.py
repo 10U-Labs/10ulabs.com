@@ -1,30 +1,21 @@
-"""Layer 1: Contract tests for www_common pre-deployment validation.
-
-Verify local files that must work together are compatible. No AWS calls.
-"""
 import re
 
 from repo_utils import REPO_ROOT
-
-
 
 
 SRC_DIR = REPO_ROOT / "src" / "www" / "common"
 
 
 def _read_file(filename: str) -> str:
-    """Read a file from the source directory."""
     with open(SRC_DIR / filename, encoding="utf-8") as f:
         return f.read()
 
 
 def _extract_local_references(content: str) -> set:
-    """Extract all local.* references from Terraform content."""
     return set(re.findall(r'local\.(\w+)', content))
 
 
 def _extract_local_definitions(content: str) -> set:
-    """Extract all local variable definitions from locals.tf content."""
     definitions = set()
     for match in re.finditer(r'^\s*(\w+)\s*=', content, re.MULTILINE):
         name = match.group(1)
@@ -34,7 +25,6 @@ def _extract_local_definitions(content: str) -> set:
 
 
 def test_cloudfront_s3_local_references_exist_in_locals():
-    """Verify all local.* references in cloudfront_s3.tf are defined in locals.tf."""
     cloudfront_content = _read_file("cloudfront_s3.tf")
     locals_content = _read_file("locals.tf")
 
@@ -49,7 +39,6 @@ def test_cloudfront_s3_local_references_exist_in_locals():
 
 
 def test_certificate_dns_local_references_exist_in_locals():
-    """Verify all local.* references in certificate_dns.tf are defined in locals.tf."""
     cert_content = _read_file("certificate_dns.tf")
     locals_content = _read_file("locals.tf")
 
@@ -64,7 +53,6 @@ def test_certificate_dns_local_references_exist_in_locals():
 
 
 def test_providers_local_references_exist_in_locals():
-    """Verify all local.* references in providers.tf are defined in locals.tf."""
     providers_content = _read_file("providers.tf")
     locals_content = _read_file("locals.tf")
 
@@ -79,7 +67,6 @@ def test_providers_local_references_exist_in_locals():
 
 
 def test_lambda_edge_local_references_exist_in_locals():
-    """Verify all local.* references in lambda_edge.tf are defined in locals.tf."""
     lambda_content = _read_file("lambda_edge.tf")
     locals_content = _read_file("locals.tf")
 
@@ -94,14 +81,12 @@ def test_lambda_edge_local_references_exist_in_locals():
 
 
 def test_shared_module_source_declaration_exists():
-    """Verify shared.tf has a module source declaration."""
     shared_content = _read_file("shared.tf")
     match = re.search(r'source\s*=\s*"([^"]+)"', shared_content)
     assert match, "shared.tf missing module source declaration"
 
 
 def test_shared_module_source_path_exists():
-    """Verify shared module source path exists on disk."""
     shared_content = _read_file("shared.tf")
     match = re.search(r'source\s*=\s*"([^"]+)"', shared_content)
     source_path = match.group(1)
@@ -112,7 +97,6 @@ def test_shared_module_source_path_exists():
 
 
 def test_s3_bucket_module_source_declaration_exists():
-    """Verify cloudfront_s3.tf has website_bucket module source declaration."""
     cloudfront_content = _read_file("cloudfront_s3.tf")
     match = re.search(
         r'module\s+"website_bucket"\s*\{[^}]*source\s*=\s*"([^"]+)"',
@@ -123,7 +107,6 @@ def test_s3_bucket_module_source_declaration_exists():
 
 
 def test_s3_bucket_module_source_path_exists():
-    """Verify S3 bucket module source path exists on disk."""
     cloudfront_content = _read_file("cloudfront_s3.tf")
     match = re.search(
         r'module\s+"website_bucket"\s*\{[^}]*source\s*=\s*"([^"]+)"',
@@ -138,13 +121,11 @@ def test_s3_bucket_module_source_path_exists():
 
 
 def test_lambda_handler_file_exists():
-    """Verify Lambda@Edge handler file exists."""
     handler_path = SRC_DIR / "lambda" / "handler.py"
     assert handler_path.exists(), f"Lambda handler not found: {handler_path}"
 
 
 def test_lambda_handler_has_handler_function():
-    """Verify Lambda@Edge handler has the expected handler function."""
     handler_content = (SRC_DIR / "lambda" / "handler.py").read_text()
     assert "def lambda_handler(" in handler_content, (
         "Lambda handler file missing 'def lambda_handler(' function"
@@ -152,7 +133,6 @@ def test_lambda_handler_has_handler_function():
 
 
 def test_lambda_edge_references_handler_file():
-    """Verify lambda_edge.tf references the correct handler file."""
     lambda_content = _read_file("lambda_edge.tf")
     assert "lambda/handler.py" in lambda_content, (
         "lambda_edge.tf does not reference lambda/handler.py"
@@ -160,14 +140,12 @@ def test_lambda_edge_references_handler_file():
 
 
 def test_lambda_edge_has_handler_config():
-    """Verify lambda_edge.tf has handler configuration."""
     lambda_content = _read_file("lambda_edge.tf")
     match = re.search(r'handler\s*=\s*"([^"]+)"', lambda_content)
     assert match, "lambda_edge.tf missing handler configuration"
 
 
 def test_lambda_edge_handler_matches_module():
-    """Verify lambda_edge.tf handler config matches Python module."""
     lambda_content = _read_file("lambda_edge.tf")
     match = re.search(r'handler\s*=\s*"([^"]+)"', lambda_content)
     handler_config = match.group(1) if match else ""

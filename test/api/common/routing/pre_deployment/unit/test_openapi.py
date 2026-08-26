@@ -1,116 +1,94 @@
-"""Tests for OpenAPI specification validation."""
 from pathlib import Path
 
 
 def _get_openapi_path() -> Path:
-    """Get the path to openapi.json file."""
     base = Path(__file__).parent.parent.parent.parent.parent.parent.parent
     return base / "src" / "www" / "api" / "openapi.json"
 
 
 def test_openapi_spec_file_exists():
-    """Verify openapi.json file exists."""
     assert _get_openapi_path().exists()
 
 
 def test_openapi_spec_is_valid_json(openapi_spec):
-    """Verify spec is valid JSON."""
     assert openapi_spec is not None
 
 
 def test_openapi_spec_has_openapi_field(openapi_spec):
-    """Verify spec has openapi field."""
     assert 'openapi' in openapi_spec
 
 
 def test_openapi_spec_version_starts_with_3_0(openapi_spec):
-    """Verify OpenAPI version starts with 3.0."""
     assert openapi_spec['openapi'].startswith('3.0')
 
 
 def test_openapi_spec_has_info_section(openapi_spec):
-    """Verify spec has info section."""
     assert 'info' in openapi_spec
 
 
 def test_openapi_spec_info_has_title(openapi_spec):
-    """Verify info section has title."""
     assert 'title' in openapi_spec['info']
 
 
 def test_openapi_spec_info_has_version(openapi_spec):
-    """Verify info section has version."""
     assert 'version' in openapi_spec['info']
 
 
 def test_openapi_spec_has_paths_section(openapi_spec):
-    """Verify spec has paths section."""
     assert 'paths' in openapi_spec
 
 
 def test_openapi_spec_paths_not_empty(openapi_spec):
-    """Verify paths section is not empty."""
     assert len(openapi_spec['paths']) > 0
 
 
 def test_openapi_spec_has_health_endpoint(openapi_spec):
-    """Verify spec has /health endpoint."""
     assert '/health' in openapi_spec['paths']
 
 
 def test_openapi_spec_health_has_get_method(openapi_spec):
-    """Verify /health has GET method."""
     assert 'get' in openapi_spec['paths']['/health']
 
 
 def test_openapi_spec_has_diagnostics_echo_endpoint(openapi_spec):
-    """Verify spec has /diagnostics/echo endpoint."""
     assert '/diagnostics/echo' in openapi_spec['paths']
 
 
 def test_openapi_spec_diagnostics_echo_has_post_method(openapi_spec):
-    """Verify /diagnostics/echo has POST method."""
     assert 'post' in openapi_spec['paths']['/diagnostics/echo']
 
 
 def test_openapi_spec_has_catchall_endpoint(openapi_spec):
-    """Verify spec has /{proxy+} catchall endpoint."""
     assert '/{proxy+}' in openapi_spec['paths']
 
 
 def test_openapi_spec_health_has_options_method(openapi_spec):
-    """Verify /health has OPTIONS method."""
     assert 'options' in openapi_spec['paths']['/health']
 
 
 def test_openapi_spec_health_options_has_integration_key(openapi_spec):
-    """Verify /health OPTIONS has API Gateway integration key."""
     options = openapi_spec['paths']['/health']['options']
     assert 'x-amazon-apigateway-integration' in options
 
 
 def test_openapi_spec_health_options_integration_type_is_mock(openapi_spec):
-    """Verify /health OPTIONS integration type is mock."""
     options = openapi_spec['paths']['/health']['options']
     assert options['x-amazon-apigateway-integration']['type'] == 'mock'
 
 
 def test_openapi_spec_health_options_integration_has_responses(openapi_spec):
-    """Verify /health OPTIONS integration has responses."""
     options = openapi_spec['paths']['/health']['options']
     integration = options['x-amazon-apigateway-integration']
     assert 'responses' in integration
 
 
 def test_openapi_spec_health_options_integration_has_default_response(openapi_spec):
-    """Verify /health OPTIONS integration has default response."""
     options = openapi_spec['paths']['/health']['options']
     integration = options['x-amazon-apigateway-integration']
     assert 'default' in integration['responses']
 
 
 def test_openapi_spec_health_options_returns_allow_origin_header(openapi_spec):
-    """Verify /health OPTIONS returns Access-Control-Allow-Origin header."""
     options = openapi_spec['paths']['/health']['options']
     integration = options['x-amazon-apigateway-integration']
     response_params = integration['responses']['default']['responseParameters']
@@ -118,7 +96,6 @@ def test_openapi_spec_health_options_returns_allow_origin_header(openapi_spec):
 
 
 def test_openapi_spec_health_options_returns_allow_methods_header(openapi_spec):
-    """Verify /health OPTIONS returns Access-Control-Allow-Methods header."""
     options = openapi_spec['paths']['/health']['options']
     integration = options['x-amazon-apigateway-integration']
     response_params = integration['responses']['default']['responseParameters']
@@ -126,7 +103,6 @@ def test_openapi_spec_health_options_returns_allow_methods_header(openapi_spec):
 
 
 def test_openapi_spec_health_options_returns_allow_headers_header(openapi_spec):
-    """Verify /health OPTIONS returns Access-Control-Allow-Headers header."""
     options = openapi_spec['paths']['/health']['options']
     integration = options['x-amazon-apigateway-integration']
     response_params = integration['responses']['default']['responseParameters']
@@ -134,7 +110,6 @@ def test_openapi_spec_health_options_returns_allow_headers_header(openapi_spec):
 
 
 def test_openapi_spec_health_options_allows_wildcard_origin(openapi_spec):
-    """Verify /health OPTIONS allows wildcard origin."""
     options = openapi_spec['paths']['/health']['options']
     integration = options['x-amazon-apigateway-integration']
     response_params = integration['responses']['default']['responseParameters']
@@ -144,112 +119,88 @@ def test_openapi_spec_health_options_allows_wildcard_origin(openapi_spec):
 
 
 def test_openapi_spec_has_contact_submissions_endpoint(openapi_spec):
-    """Verify spec has /v1/contact-submissions endpoint."""
     assert '/v1/contact-submissions' in openapi_spec['paths']
 
 
 def test_openapi_spec_contact_submissions_has_post_method(openapi_spec):
-    """Verify /v1/contact-submissions has POST method."""
     assert 'post' in openapi_spec['paths']['/v1/contact-submissions']
 
 
 def test_openapi_spec_contact_submissions_has_options_method(openapi_spec):
-    """Verify /v1/contact-submissions has OPTIONS method."""
     assert 'options' in openapi_spec['paths']['/v1/contact-submissions']
 
 
 def test_openapi_spec_has_rack_configurations_endpoint(openapi_spec):
-    """Verify spec has /v1/rack-configurations endpoint."""
     assert '/v1/rack-configurations' in openapi_spec['paths']
 
 
 def test_openapi_spec_rack_configurations_has_post_method(openapi_spec):
-    """Verify /v1/rack-configurations has POST method."""
     assert 'post' in openapi_spec['paths']['/v1/rack-configurations']
 
 
 def test_openapi_spec_rack_configurations_has_options_method(openapi_spec):
-    """Verify /v1/rack-configurations has OPTIONS method."""
     assert 'options' in openapi_spec['paths']['/v1/rack-configurations']
 
 
 def test_openapi_spec_has_rack_configuration_hash_endpoint(openapi_spec):
-    """Verify spec has /v1/rack-configurations/{config_hash} endpoint."""
     assert '/v1/rack-configurations/{config_hash}' in openapi_spec['paths']
 
 
 def test_openapi_spec_rack_configuration_hash_has_get_method(openapi_spec):
-    """Verify /v1/rack-configurations/{config_hash} has GET method."""
     path = '/v1/rack-configurations/{config_hash}'
     assert 'get' in openapi_spec['paths'][path]
 
 
 def test_openapi_spec_rack_configuration_hash_has_options_method(openapi_spec):
-    """Verify /v1/rack-configurations/{config_hash} has OPTIONS method."""
     path = '/v1/rack-configurations/{config_hash}'
     assert 'options' in openapi_spec['paths'][path]
 
 
 def test_openapi_spec_has_session_events_endpoint(openapi_spec):
-    """Verify spec has /v1/sessions/{session_id}/events endpoint."""
     assert '/v1/sessions/{session_id}/events' in openapi_spec['paths']
 
 
 def test_openapi_spec_session_events_has_post_method(openapi_spec):
-    """Verify /v1/sessions/{session_id}/events has POST method."""
     assert 'post' in openapi_spec['paths']['/v1/sessions/{session_id}/events']
 
 
 def test_openapi_spec_session_events_has_options_method(openapi_spec):
-    """Verify /v1/sessions/{session_id}/events has OPTIONS method."""
     assert 'options' in openapi_spec['paths']['/v1/sessions/{session_id}/events']
 
 
 def test_openapi_spec_diagnostics_echo_has_options_method(openapi_spec):
-    """Verify /diagnostics/echo has OPTIONS method."""
     assert 'options' in openapi_spec['paths']['/diagnostics/echo']
 
 
 def test_openapi_spec_has_request_validators(openapi_spec):
-    """Verify spec has x-amazon-apigateway-request-validators section."""
     assert 'x-amazon-apigateway-request-validators' in openapi_spec
 
 
 def test_openapi_spec_has_validate_headers_validator(openapi_spec):
-    """Verify spec has validate-headers validator defined."""
     validators = openapi_spec['x-amazon-apigateway-request-validators']
     assert 'validate-headers' in validators
 
 
 def test_openapi_spec_validate_headers_validates_parameters(openapi_spec):
-    """Verify validate-headers validator validates request parameters."""
     validators = openapi_spec['x-amazon-apigateway-request-validators']
     assert validators['validate-headers']['validateRequestParameters'] is True
 
 
 def test_openapi_spec_has_gateway_responses(openapi_spec):
-    """Verify spec has x-amazon-apigateway-gateway-responses section."""
     assert 'x-amazon-apigateway-gateway-responses' in openapi_spec
 
 
 def test_openapi_spec_has_bad_request_parameters_response(openapi_spec):
-    """Verify spec has BAD_REQUEST_PARAMETERS gateway response."""
     responses = openapi_spec['x-amazon-apigateway-gateway-responses']
     assert 'BAD_REQUEST_PARAMETERS' in responses
 
 
 def test_openapi_spec_bad_request_parameters_returns_400(openapi_spec):
-    """Verify BAD_REQUEST_PARAMETERS returns 400 status code."""
     responses = openapi_spec['x-amazon-apigateway-gateway-responses']
     assert responses['BAD_REQUEST_PARAMETERS']['statusCode'] == 400
 
 
 def test_openapi_spec_response_templates_do_not_use_input_json_in_quotes():
-    """Verify response templates don't use $input.json() inside quotes.
-
-    Using $input.json() inside a quoted string causes double-quoting because
-    $input.json() returns a JSON-quoted value. Use $input.path() instead.
-    """
     content = _get_openapi_path().read_text()
     assert '"$input.json(' not in content, (
         "Do not use $input.json() in quoted response templates - "

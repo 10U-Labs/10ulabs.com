@@ -1,8 +1,3 @@
-"""Contact form Lambda handler for 10U Labs API.
-
-Provides endpoints for processing contact form submissions with reCAPTCHA
-verification and email notification via SES.
-"""
 import json
 import logging
 import os
@@ -22,17 +17,14 @@ _test_mode = {'enabled': False}
 
 
 def is_test_mode() -> bool:
-    """Check if test mode is enabled."""
     return _test_mode['enabled']
 
 
 def set_test_mode(enabled: bool):
-    """Set test mode enabled state."""
     _test_mode['enabled'] = enabled
 
 
 def get_header_case_insensitive(headers: dict, header_name: str) -> str:
-    """Get a header value case-insensitively."""
     if not headers:
         return ''
     for key, value in headers.items():
@@ -42,14 +34,12 @@ def get_header_case_insensitive(headers: dict, header_name: str) -> str:
 
 
 def get_ssm_client():
-    """Get or create a cached SSM client."""
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')
     return _clients['ssm']
 
 
 def get_ses_client():
-    """Get or create a cached SES client."""
     if 'ses' not in _clients:
         _clients['ses'] = boto3.client('ses')
     return _clients['ses']
@@ -64,14 +54,12 @@ CORS_HEADERS = {
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a JSON API Gateway response with CORS headers for contact endpoint."""
     return {'statusCode': status_code, 'headers': CORS_HEADERS, 'body': json.dumps(body)}
 
 
 def error_response(
     status_code: int, error: str, details: str | None = None
 ) -> Dict[str, Any]:
-    """Create an error response for contact endpoint with optional details."""
     response_body: Dict[str, Any] = {'success': False, 'error': error}
     if details is not None:
         response_body['details'] = details
@@ -79,13 +67,11 @@ def error_response(
 
 
 def parse_request_body(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract and parse JSON body from Lambda event for contact form processing."""
     raw_body = event.get('body') or '{}'
     return json.loads(raw_body) if isinstance(raw_body, str) else raw_body
 
 
 def get_recaptcha_secret() -> str:
-    """Retrieve reCAPTCHA secret from SSM Parameter Store."""
     parameter_name = os.environ.get('RECAPTCHA_SECRET_PARAMETER_NAME')
     if not parameter_name:
         return ''
@@ -101,7 +87,6 @@ def get_recaptcha_secret() -> str:
 
 
 def verify_recaptcha(token: str, secret: str) -> bool:
-    """Verify a reCAPTCHA token with Google's API."""
     if not token or not secret:
         return False
     try:
@@ -131,7 +116,6 @@ def verify_recaptcha(token: str, secret: str) -> bool:
 
 
 def validate_contact_email(email: str) -> bool:
-    """Validate email address format."""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     result = bool(re.match(pattern, email))
     return result
@@ -140,7 +124,6 @@ def validate_contact_email(email: str) -> bool:
 def send_contact_email(
     recipient: str, sender_name: str, sender_email: str, message: str
 ) -> bool:
-    """Send contact form email via SES."""
     subject = f'Contact Form: Message from {sender_name}'
     body_text = f'Name: {sender_name}\nEmail: {sender_email}\n\nMessage:\n{message}'
     body_html = f'''<html>
@@ -172,7 +155,6 @@ def send_contact_email(
 
 
 def _validate_contact_fields(fields: Dict[str, str]) -> Optional[Dict[str, Any]]:
-    """Validate contact form fields and return error response if invalid."""
     validations = [
         (not fields['recaptcha_token'], 'Missing required field: recaptcha_token'),
         (not fields['name'], 'Missing required field: name'),
@@ -194,7 +176,6 @@ def _validate_contact_fields(fields: Dict[str, str]) -> Optional[Dict[str, Any]]
 
 
 def _process_contact_submission(fields: Dict[str, str]) -> Dict[str, Any]:
-    """Process a validated contact form submission."""
     recaptcha_secret = get_recaptcha_secret()
     contact_email = os.environ.get('CONTACT_EMAIL')
     response: Dict[str, Any]
@@ -228,7 +209,6 @@ TEST_MODE_MOCK_RESPONSE = {
 
 
 def handle_contact_post(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle POST /v1/contact-submissions request."""
     try:
         body = parse_request_body(event)
         fields = {
@@ -256,7 +236,6 @@ ROUTE_MAP = {
 
 
 def lambda_handler(event, _context):
-    """Lambda handler entry point."""
     logger.info("Received contact request: %s", json.dumps(event))
 
     headers = event.get('headers', {})

@@ -1,4 +1,3 @@
-"""Pytest fixtures for diagnostics endpoint tests."""
 from typing import Dict
 
 import pytest
@@ -11,5 +10,4 @@ DIAGNOSTICS_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
 
 @pytest.fixture(scope="module")
 def config(shared_config) -> Dict[str, str]:
-    """Load configuration from terraform.tfvars and shared outputs."""
     return create_simple_config(DIAGNOSTICS_SRC / "terraform.tfvars", shared_config)

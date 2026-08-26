@@ -1,13 +1,7 @@
-"""Layer 6: Configuration tests for sessions endpoint.
-
-Configuration tests verify that prerequisite resources are configured correctly.
-These are resources created by OTHER workflows that must be properly configured.
-"""
 import pytest
 
 
 def test_api_gateway_configuration(apigateway_client, api_gateway_id):
-    """Verify API Gateway has /v1 resource."""
     if api_gateway_id is None:
         pytest.skip("API Gateway ID not available")
     response = apigateway_client.get_resources(restApiId=api_gateway_id)

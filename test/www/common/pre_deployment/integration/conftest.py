@@ -1,4 +1,3 @@
-"""Pytest fixtures for pre-deployment integration tests."""
 import boto3
 import pytest
 from repo_utils import REPO_ROOT
@@ -7,19 +6,16 @@ from test_fixtures.terraform import terraform_init, terraform_output
 
 
 def pytest_configure(config):
-    """Register the layer marker."""
     config.addinivalue_line(
         "markers",
         "layer(num): mark test as belonging to layer N"
     )
 
 
-
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 
 
 def _get_bootstrap_outputs() -> dict:
-    """Get all bootstrap terraform outputs."""
     if not terraform_init(BOOTSTRAP_DIR):
         return {}
     return {
@@ -40,37 +36,31 @@ def _get_bootstrap_outputs() -> dict:
 
 @pytest.fixture(scope="session")
 def aws_region():
-    """Provide the AWS region."""
     return TEST_AWS_REGION
 
 
 @pytest.fixture(scope="session")
 def s3_client():
-    """Create an S3 client."""
     return boto3.client("s3", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
 def iam_client():
-    """Create an IAM client."""
     return boto3.client("iam", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
 def route53_client():
-    """Create a Route53 client."""
     return boto3.client("route53", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
 def sts_client():
-    """Create an STS client."""
     return boto3.client("sts", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
 def bootstrap_outputs():
-    """Get bootstrap terraform outputs."""
     outputs = _get_bootstrap_outputs()
     if not outputs:
         pytest.skip("Terraform init failed for bootstrap")
@@ -79,7 +69,6 @@ def bootstrap_outputs():
 
 @pytest.fixture(scope="session")
 def state_bucket_name(request):
-    """Extract state bucket name from ARN."""
     outputs = request.getfixturevalue("bootstrap_outputs")
     arn = outputs.get("state_bucket_arn", "")
     if not arn:
@@ -89,7 +78,6 @@ def state_bucket_name(request):
 
 @pytest.fixture(scope="session")
 def github_actions_role_arn(request):
-    """Get GitHub Actions role ARN."""
     outputs = request.getfixturevalue("bootstrap_outputs")
     arn = outputs.get("github_actions_role_arn", "")
     if not arn:
@@ -99,7 +87,6 @@ def github_actions_role_arn(request):
 
 @pytest.fixture(scope="session")
 def github_actions_role_name(request):
-    """Get GitHub Actions role name."""
     outputs = request.getfixturevalue("bootstrap_outputs")
     name = outputs.get("github_actions_role_name", "")
     if not name:
@@ -109,7 +96,6 @@ def github_actions_role_name(request):
 
 @pytest.fixture(scope="session")
 def hosted_zone_id(request):
-    """Get Route53 hosted zone ID."""
     outputs = request.getfixturevalue("bootstrap_outputs")
     zone_id = outputs.get("hosted_zone_id", "")
     if not zone_id:
@@ -119,6 +105,5 @@ def hosted_zone_id(request):
 
 @pytest.fixture(scope="session")
 def current_identity(request):
-    """Get the current AWS identity."""
     client = request.getfixturevalue("sts_client")
     return client.get_caller_identity()

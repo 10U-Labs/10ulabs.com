@@ -1,11 +1,9 @@
-"""Lambda handler for the diagnostics echo API endpoint."""
 from typing import Any, Dict
 
 from lambda_http import json_response, parse_body
 
 
 def handle_echo_post(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle POST requests to the echo endpoint."""
     try:
         body = parse_body(event)
         request_id = event.get('requestContext', {}).get('requestId', 'N/A')
@@ -21,7 +19,6 @@ ROUTE_MAP = {
 
 
 def lambda_handler(event, _context):
-    """Main Lambda handler for routing echo requests."""
     method = event.get('httpMethod', '')
     if method == 'OPTIONS':
         return {

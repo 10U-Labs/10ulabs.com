@@ -1,4 +1,3 @@
-"""Lambda handler for sessions API - handles session event tracking."""
 import base64
 import json
 import logging
@@ -15,19 +14,16 @@ _clients: Dict[str, Any] = {}
 
 
 def clear_clients() -> None:
-    """Clear cached boto3 clients."""
     _clients.clear()
 
 
 def get_dynamodb_client():
-    """Get or create cached DynamoDB client."""
     if 'dynamodb' not in _clients:
         _clients['dynamodb'] = boto3.client('dynamodb')
     return _clients['dynamodb']
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
-    """Build a JSON API Gateway response with CORS headers."""
     response = {
         'statusCode': status_code,
         'headers': {
@@ -42,7 +38,6 @@ def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def error_response(status_code: int, message: str, details: str = '') -> Dict[str, Any]:
-    """Build an error response with optional details."""
     body: Dict[str, Any] = {'success': False, 'error': message}
     if details:
         body['details'] = details
@@ -51,7 +46,6 @@ def error_response(status_code: int, message: str, details: str = '') -> Dict[st
 
 
 def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Parse request body, handling base64 encoding if present."""
     body = event.get('body', '{}')
     if event.get('isBase64Encoded'):
         body = base64.b64decode(body).decode('utf-8')
@@ -60,7 +54,6 @@ def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def validate_analytics_event(event: Dict[str, Any]) -> Optional[str]:
-    """Validate an analytics event, returning error message if invalid."""
     error_msg = None
     if 'event_type' not in event:
         error_msg = 'Missing required field: event_type'
@@ -76,7 +69,6 @@ def validate_analytics_event(event: Dict[str, Any]) -> Optional[str]:
 
 
 def validate_analytics_request(body: Dict[str, Any]) -> Optional[str]:
-    """Validate an analytics request body, returning error message if invalid."""
     error_msg = None
     if 'device_id' not in body:
         error_msg = 'Missing required field: device_id'
@@ -94,7 +86,6 @@ def validate_analytics_request(body: Dict[str, Any]) -> Optional[str]:
 
 
 def extract_session_id_from_path(path: str) -> Optional[str]:
-    """Extract session_id from path like /v1/sessions/{session_id}/events."""
     match = re.match(r'^/v1/sessions/([^/]+)/events$', path)
     if match:
         return match.group(1)
@@ -107,7 +98,6 @@ def save_analytics_events(
     events: list,
     session_context: Optional[Dict[str, Any]]
 ) -> Dict[str, Any]:
-    """Save analytics events to DynamoDB."""
     table_name = os.environ['SESSION_EVENTS_TABLE']
     result: Dict[str, Any] = {}
     try:
@@ -135,7 +125,6 @@ def save_analytics_events(
 
 
 def handle_events(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle POST request to save analytics events."""
     try:
         path = event.get('path', '')
         session_id = extract_session_id_from_path(path)
@@ -173,7 +162,6 @@ def handle_events(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def lambda_handler(event, _context):
-    """Main Lambda handler for sessions API requests."""
     logger.info("Received API request: %s", json.dumps(event))
 
     method = event.get('httpMethod', '')

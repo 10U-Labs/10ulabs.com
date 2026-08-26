@@ -1,16 +1,13 @@
-"""Unit tests for state.tf Terraform configuration."""
 import hcl2
 import pytest
 
 
 def _load_state_tf(bootstrap_dir):
-    """Load and parse state.tf."""
     with open(bootstrap_dir / "state.tf", encoding='utf-8') as f:
         return hcl2.load(f)
 
 
 def _find_resource(tf_config, resource_type, resource_name):
-    """Find a resource by type and name."""
     for resource in tf_config.get('resource', []):
         if resource_type in resource:
             if resource_name in resource[resource_type]:
@@ -19,7 +16,6 @@ def _find_resource(tf_config, resource_type, resource_name):
 
 
 def _find_lifecycle_rule(tf_config, rule_id):
-    """Find a lifecycle rule of the state bucket by its id, or an empty rule."""
     lifecycle = _find_resource(
         tf_config,
         'aws_s3_bucket_lifecycle_configuration',
@@ -32,21 +28,18 @@ def _find_lifecycle_rule(tf_config, rule_id):
 
 
 def test_terraform_state_bucket_exists_in_state_tf(bootstrap_dir):
-    """Test that terraform state bucket resource exists in state.tf."""
     tf_config = _load_state_tf(bootstrap_dir)
     bucket = _find_resource(tf_config, 'aws_s3_bucket', 'terraform_state')
     assert bucket is not None
 
 
 def test_terraform_state_bucket_versioning_is_suspended(bootstrap_dir):
-    """Test that terraform state bucket versioning is declared as suspended."""
     tf_config = _load_state_tf(bootstrap_dir)
     versioning = _find_resource(tf_config, 'aws_s3_bucket_versioning', 'terraform_state')
     assert versioning['versioning_configuration'][0]['status'] == 'Suspended'
 
 
 def test_terraform_state_bucket_encryption_resource_exists(bootstrap_dir):
-    """Test that terraform state bucket encryption resource exists."""
     tf_config = _load_state_tf(bootstrap_dir)
     encryption = _find_resource(
         tf_config,
@@ -57,7 +50,6 @@ def test_terraform_state_bucket_encryption_resource_exists(bootstrap_dir):
 
 
 def test_terraform_state_bucket_public_access_block_exists(bootstrap_dir):
-    """Test that terraform state bucket public access block exists."""
     tf_config = _load_state_tf(bootstrap_dir)
     block = _find_resource(
         tf_config,
@@ -74,7 +66,6 @@ def test_terraform_state_bucket_public_access_block_exists(bootstrap_dir):
     "restrict_public_buckets",
 ])
 def test_terraform_state_bucket_public_access_block_setting(bootstrap_dir, setting):
-    """Test that terraform state bucket public access block has setting enabled."""
     tf_config = _load_state_tf(bootstrap_dir)
     block = _find_resource(
         tf_config,
@@ -85,7 +76,6 @@ def test_terraform_state_bucket_public_access_block_setting(bootstrap_dir, setti
 
 
 def test_terraform_state_bucket_logging_resource_exists(bootstrap_dir):
-    """Test that terraform state bucket logging resource exists."""
     tf_config = _load_state_tf(bootstrap_dir)
     logging = _find_resource(
         tf_config,
@@ -96,14 +86,12 @@ def test_terraform_state_bucket_logging_resource_exists(bootstrap_dir):
 
 
 def test_terraform_state_bucket_policy_resource_exists(bootstrap_dir):
-    """Test that terraform state bucket policy resource exists."""
     tf_config = _load_state_tf(bootstrap_dir)
     policy = _find_resource(tf_config, 'aws_s3_bucket_policy', 'terraform_state')
     assert policy is not None
 
 
 def test_terraform_state_bucket_encryption_uses_aes256(bootstrap_dir):
-    """Test that terraform state bucket encryption uses AES256."""
     tf_config = _load_state_tf(bootstrap_dir)
     config = _find_resource(
         tf_config,
@@ -116,7 +104,6 @@ def test_terraform_state_bucket_encryption_uses_aes256(bootstrap_dir):
 
 
 def test_terraform_state_bucket_expires_delete_markers(bootstrap_dir):
-    """Test that the state bucket has a rule that removes delete markers."""
     tf_config = _load_state_tf(bootstrap_dir)
     rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
     expiration = (rule.get('expiration') or [{}])[0]
@@ -124,11 +111,6 @@ def test_terraform_state_bucket_expires_delete_markers(bootstrap_dir):
 
 
 def test_terraform_state_bucket_delete_marker_rule_sets_no_age(bootstrap_dir):
-    """Test that the delete marker rule carries nothing but the marker argument.
-
-    S3 rejects an expiration that sets ExpiredObjectDeleteMarker alongside
-    Days or Date.
-    """
     tf_config = _load_state_tf(bootstrap_dir)
     rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
     expiration = (rule.get('expiration') or [{}])[0]
@@ -136,7 +118,6 @@ def test_terraform_state_bucket_delete_marker_rule_sets_no_age(bootstrap_dir):
 
 
 def test_terraform_state_bucket_delete_marker_rule_covers_every_key(bootstrap_dir):
-    """Test that the delete marker rule filters on nothing, so it covers all keys."""
     tf_config = _load_state_tf(bootstrap_dir)
     rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
     filter_blocks = rule.get('filter')
