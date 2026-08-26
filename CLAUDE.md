@@ -12,6 +12,7 @@
   - [Issues](#issues)
     - [An issue on disk goes stale](#an-issue-on-disk-goes-stale)
     - [An issue states one solution](#an-issue-states-one-solution)
+    - [Enumerate a directory from git](#enumerate-a-directory-from-git)
     - [File what the sweep turns up](#file-what-the-sweep-turns-up)
     - [Placing an issue in the queue](#placing-an-issue-in-the-queue)
     - [The seven sections](#the-seven-sections)
@@ -65,7 +66,7 @@ The literal `[skip ci]`, brackets included, goes in a commit message only when t
 
 ### Issues
 
-Longer: [how-issues-are-written](.claude/memories/how-issues-are-written.md), [an-issue-states-one-solution](.claude/memories/an-issue-states-one-solution.md), [file-what-the-sweep-turns-up](.claude/memories/file-what-the-sweep-turns-up.md), [an-edge-is-only-a-true-block](.claude/memories/an-edge-is-only-a-true-block.md).
+Longer: [how-issues-are-written](.claude/memories/how-issues-are-written.md), [an-issue-states-one-solution](.claude/memories/an-issue-states-one-solution.md), [file-what-the-sweep-turns-up](.claude/memories/file-what-the-sweep-turns-up.md), [an-edge-is-only-a-true-block](.claude/memories/an-edge-is-only-a-true-block.md), [enumerate-a-directory-from-git](.claude/memories/enumerate-a-directory-from-git.md).
 
 #### An issue on disk goes stale
 
@@ -74,6 +75,10 @@ A filed issue is written against the tree as it stood, and the tree moves. Check
 #### An issue states one solution
 
 An issue is definitive. Its `Proposed Solution` names one change — this function, this file, this algorithm — because the issue is the instruction to whoever picks it up and they were not in the conversation that produced it. Never file "either X or Y", a menu with a recommendation, or a question left for the reader; an issue that ends with something still to decide is not finished. Where a draft reaches a genuine fork, stop and ask which branch and then write down the branch that came back, so the asking happens before the filing rather than inside the body. Naming the rejected alternative and why it lost is still worth writing, because it stops the same ground being covered twice; what is not allowed is leaving the choice open. For issues already on disk that carry an either, do not pick: ask which one before editing a file, however clearly the text leans toward one of them, and ask before there is a draft, because a draft turns the question into a request to approve what is already done.
+
+#### Enumerate a directory from git
+
+When an issue body states what a directory holds — a count of its entries, a list of them, or the name of one — enumerate it with `git ls-files` rather than with `ls` or a file browser. A working copy carries ignored build artifacts that git will not report, so a package deleted from the repository goes on reading as a live one to anything that looks at the disk. `9086acda` deleted `lib/python/runner_labels/` and left the directory standing on a `__pycache__` that `.gitignore` covers, `git status` stayed clean throughout, and nine issue bodies then counted thirteen packages under `lib/python/` where git had twelve. `git status --ignored` is the form that shows what the plain one suppresses.
 
 #### File what the sweep turns up
 
