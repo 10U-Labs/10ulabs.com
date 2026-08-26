@@ -81,8 +81,7 @@ A package here is either loaded as a pytest plugin or imported directly, and whi
 The package a conftest.py loads as a pytest plugin. `test_fixtures.aws` holds the AWS fixtures and `test_fixtures.unit` the Lambda unit-testing ones; `test/conftest.py` loads both for the whole tree, so a suite that wants only these two loads nothing of its own.
 
 ```python
-# In conftest.py
-pytest_plugins = ['test_fixtures.aws']
+# Loaded for the whole tree by test/conftest.py
 
 # Provides these fixtures, among others:
 # - shared_config: Parsed shared Terraform module config
