@@ -89,4 +89,3 @@ def create_mock_dynamodb_client(method_name: str, return_value: Any = None) -> M
     mock_client = MagicMock()
     getattr(mock_client, method_name).return_value = return_value
     return mock_client
-
