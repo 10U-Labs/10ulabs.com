@@ -179,6 +179,14 @@ jobs:
       - copy-paste-tests
       - mypy-tests
       - pylint-tests
+      - test-boto-mocks
+      - test-event-factories
+      - test-lambda-response
+      - test-module-utils
+      - test-repo-utils
+      - test-terraform-config
+      - test-test-fixtures
+      - test-urllib-mocks
       - unit-tests
       - yamllint
     runs-on: ubuntu-latest
@@ -241,6 +249,214 @@ jobs:
             --fqdn "$WEBSITE_FQDN" \
             --region ${{ vars.AWS_REGION }} \
             --paths "/rack-designer/*"
+  test-boto-mocks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run boto_mocks tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_boto_mocks/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=boto_mocks \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-event-factories:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run event_factories tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_event_factories/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=event_factories \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-lambda-response:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run lambda_response tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_lambda_response/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=lambda_response \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-module-utils:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run module_utils tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_module_utils/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=module_utils \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-repo-utils:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run repo_utils tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_repo_utils/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=repo_utils \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-terraform-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run terraform_config tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_terraform_config/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=terraform_config \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-test-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run test_fixtures tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_test_fixtures/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=test_fixtures \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-urllib-mocks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run urllib_mocks tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_urllib_mocks/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=urllib_mocks \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
   unit-tests:
     runs-on: ubuntu-latest
     steps:
@@ -299,9 +515,27 @@ on:
     paths:
       - .github/actions/verify-oidc-vars/action.yml
       - .github/workflows/www_rack_designer.yml
+      - lib/python/boto_mocks/**
+      - lib/python/event_factories/**
+      - lib/python/lambda_response/**
+      - lib/python/module_utils/**
+      - lib/python/repo_utils/**
+      - lib/python/terraform_config/**
+      - lib/python/test_fixtures/**
+      - lib/python/urllib_mocks/**
       - src/www/paths/rack_designer/**
       - test/__init__.py
       - test/conftest.py
+      - test/lib/__init__.py
+      - test/lib/python/__init__.py
+      - test/lib/python/test_boto_mocks/**
+      - test/lib/python/test_event_factories/**
+      - test/lib/python/test_lambda_response/**
+      - test/lib/python/test_module_utils/**
+      - test/lib/python/test_repo_utils/**
+      - test/lib/python/test_terraform_config/**
+      - test/lib/python/test_test_fixtures/**
+      - test/lib/python/test_urllib_mocks/**
       - test/www/conftest.py
       - test/www/paths/__init__.py
       - test/www/paths/conftest.py
