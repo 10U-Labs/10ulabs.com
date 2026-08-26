@@ -9,8 +9,6 @@ from repo_utils import REPO_ROOT
 from test_fixtures.terraform import terraform_init, terraform_output
 
 
-# Common directory constants
-API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"
 API_COMMON_ROUTING_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"
 
 
