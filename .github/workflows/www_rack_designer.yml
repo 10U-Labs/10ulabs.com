@@ -96,6 +96,79 @@ jobs:
           test/www/paths/__init__.py
           test/www/paths/conftest.py
           test/www/paths/rack_designer
+  copy-paste-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install jscpd
+        run: npm install -g jscpd@4.0.5
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            test/www/paths/rack_designer
+  mypy-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            mypy \
+            pytest \
+            'python-hcl2<8' \
+            requests \
+            types-requests
+      - name: Run mypy
+        run: |
+          MYPYPATH=lib/python:scripts python3 -m mypy \
+            test/__init__.py \
+            test/conftest.py \
+            test/www/conftest.py \
+            test/www/paths/__init__.py \
+            test/www/paths/conftest.py \
+            test/www/paths/rack_designer
+  pylint-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            boto3-stubs \
+            botocore \
+            dnspython \
+            pylint \
+            pytest \
+            'python-hcl2<8' \
+            requests \
+            types-requests
+      - name: Run pylint
+        run: |
+          PYTHONPATH=lib/python:scripts python3 -m pylint \
+            test/__init__.py \
+            test/conftest.py \
+            test/www/conftest.py \
+            test/www/paths/__init__.py \
+            test/www/paths/conftest.py \
+            test/www/paths/rack_designer \
+            --recursive=y \
+            --fail-on=C,R,W --fail-under=10.0
   reconciliation:
     if: github.ref == 'refs/heads/main'
     needs:
@@ -103,6 +176,9 @@ jobs:
       - assert-no-linter-config-files
       - assert-one-assert-per-pytest
       - assert-pytest-fixture-name-is-needed
+      - copy-paste-tests
+      - mypy-tests
+      - pylint-tests
       - unit-tests
       - yamllint
     runs-on: ubuntu-latest
