@@ -174,6 +174,11 @@ class TestIsCapacityError:
         result = {'error': [{'reason': 'InsufficientCapacity'}]}
         assert is_capacity_error(result) is True
 
+    def test_ignores_non_dict_items_in_list(self):
+        """Test ignores non-dict items when a dict in the list has Capacity."""
+        result = {'error': ['string error', {'reason': 'Capacity'}]}
+        assert is_capacity_error(result) is True
+
     def test_returns_false_for_permission_error(self):
         """Test returns False for permission error."""
         result = {'error': 'Permission denied'}
@@ -192,6 +197,16 @@ class TestIsCapacityError:
     def test_returns_false_for_other_list_errors(self):
         """Test returns False for list without Capacity."""
         result = {'error': [{'reason': 'Unauthorized'}]}
+        assert is_capacity_error(result) is False
+
+    def test_returns_false_for_list_of_non_dicts(self):
+        """Test returns False for a list holding only non-dict items."""
+        result = {'error': ['string error 1', 'string error 2']}
+        assert is_capacity_error(result) is False
+
+    def test_returns_false_for_empty_list(self):
+        """Test returns False for an empty error list."""
+        result = {'error': []}
         assert is_capacity_error(result) is False
 
     def test_returns_false_for_integer_error(self):
