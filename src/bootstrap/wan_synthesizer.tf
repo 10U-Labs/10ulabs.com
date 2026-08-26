@@ -1,11 +1,3 @@
-# Deploy role for the wan-synthesizer repo's GitHub Actions (GitOps).
-#
-# It reuses the account's shared GitHub OIDC provider (created by
-# module.github_oidc) and is assumable ONLY by that repo's workflows. The repo
-# provisions its own IAM/Lambda/API-Gateway/S3 stacks, so it gets
-# AdministratorAccess -- matching this account's own GitHubActionsRole. Set the
-# output ARN as the wan-synthesizer repo's OIDC_ROLE_ARN GitHub variable.
-
 resource "aws_iam_role" "wan_synthesizer_github_actions" {
   name = "${local.resource_prefix}WanSynthesizerRole"
 
@@ -23,12 +15,6 @@ resource "aws_iam_role" "wan_synthesizer_github_actions" {
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
               "repo:${local.github_org}/wan-synthesizer:*",
-              # Renaming a repository makes GitHub qualify its subject claim with ids a
-              # rename cannot change, so the plain name above matches nothing today. The
-              # numbers are the organisation's id and the repository's, read back with
-              # "gh api repos/10U-Labs/wan-synthesizer/actions/oidc/customization/sub".
-              # They are written out rather than wildcarded: "@*" would also admit a
-              # repository of that name in any organisation.
               "repo:${local.github_org}@240548037/wan-synthesizer@1262350676:*",
             ]
           }

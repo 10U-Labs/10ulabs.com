@@ -1,6 +1,3 @@
-# DynamoDB table for API request audit logging
-# Used by all endpoints for durability and audit trails
-
 resource "aws_dynamodb_table" "api_audit_log" {
   name         = "${local.resource_prefix}ApiAuditLog"
   billing_mode = "PAY_PER_REQUEST"
@@ -32,7 +29,6 @@ resource "aws_dynamodb_table" "api_audit_log" {
     type = "S"
   }
 
-  # GSI1: Query by endpoint and time
   global_secondary_index {
     name            = "endpoint-time-index"
     hash_key        = "endpoint"
@@ -40,7 +36,6 @@ resource "aws_dynamodb_table" "api_audit_log" {
     projection_type = "ALL"
   }
 
-  # GSI2: Find orphaned requests (status=processing)
   global_secondary_index {
     name            = "status-time-index"
     hash_key        = "status"
@@ -48,7 +43,6 @@ resource "aws_dynamodb_table" "api_audit_log" {
     projection_type = "ALL"
   }
 
-  # Auto-delete records after 90 days
   ttl {
     attribute_name = "ttl"
     enabled        = true

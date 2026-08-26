@@ -31,7 +31,6 @@ resource "aws_lambda_function" "handler" {
     Name = module.common.lambda_handler_names.rack_configurations
   })
 
-  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
   lifecycle {
     replace_triggered_by = [aws_iam_role.lambda.id]
   }

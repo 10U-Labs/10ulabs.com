@@ -4,7 +4,6 @@ locals {
   resource_prefix     = "TenULabs"
   ssm_github_pat_name = "/github/pat"
 
-  # GitHub App configuration
   github_app = {
     id              = "2436221"
     installation_id = "98653544"

@@ -14,11 +14,6 @@ resource "aws_s3_bucket_versioning" "terraform_state" {
 resource "aws_s3_bucket_lifecycle_configuration" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
-  # A delete of a key that names no version id -- every state lock release --
-  # writes a delete marker rather than removing the key. This rule takes the
-  # marker away once nothing is left underneath it. It may carry nothing else:
-  # S3 rejects an expiration that sets expired_object_delete_marker together
-  # with days or date.
   rule {
     id     = "expire-delete-markers"
     status = "Enabled"

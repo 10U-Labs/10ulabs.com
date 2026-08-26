@@ -1,11 +1,3 @@
-# Reusable S3 Bucket Module
-#
-# Creates an S3 bucket with standard security configurations:
-# - Versioning disabled
-# - Public access blocked
-# - AES256 server-side encryption
-# - Access logging to central logs bucket (optional)
-
 resource "aws_s3_bucket" "this" {
   bucket        = var.bucket_name
   force_destroy = var.force_destroy

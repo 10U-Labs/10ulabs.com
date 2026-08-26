@@ -82,22 +82,29 @@ def test_can_delete_object_from_state_bucket(s3_client, state_bucket_name, test_
         s3_client.delete_object(Bucket=state_bucket_name, Key=test_object_key)
 
 
+def _change_record(route53_client, hosted_zone_id, record_name, action, value, comment):
+    return route53_client.change_resource_record_sets(
+        HostedZoneId=hosted_zone_id,
+        ChangeBatch={
+            "Comment": f"Pre-deployment capability test - {comment}",
+            "Changes": [{
+                "Action": action,
+                "ResourceRecordSet": {
+                    "Name": record_name,
+                    "Type": "TXT",
+                    "TTL": 60,
+                    "ResourceRecords": [{"Value": f'"{value}"'}]
+                }
+            }]
+        }
+    )
+
+
 def test_can_create_route53_record(route53_client, hosted_zone_id, test_record_name):
     try:
-        response = route53_client.change_resource_record_sets(
-            HostedZoneId=hosted_zone_id,
-            ChangeBatch={
-                "Comment": "Pre-deployment capability test - create",
-                "Changes": [{
-                    "Action": "CREATE",
-                    "ResourceRecordSet": {
-                        "Name": test_record_name,
-                        "Type": "TXT",
-                        "TTL": 60,
-                        "ResourceRecords": [{"Value": '"pre-deployment-test-v1"'}]
-                    }
-                }]
-            }
+        response = _change_record(
+            route53_client, hosted_zone_id, test_record_name,
+            "CREATE", "pre-deployment-test-v1", "create",
         )
         assert response["ChangeInfo"]["Status"] in ("PENDING", "INSYNC")
     except ClientError as e:
@@ -106,53 +113,21 @@ def test_can_create_route53_record(route53_client, hosted_zone_id, test_record_n
             pytest.fail(f"No permission to create records in zone '{hosted_zone_id}'")
         raise
     finally:
-        route53_client.change_resource_record_sets(
-            HostedZoneId=hosted_zone_id,
-            ChangeBatch={
-                "Changes": [{
-                    "Action": "DELETE",
-                    "ResourceRecordSet": {
-                        "Name": test_record_name,
-                        "Type": "TXT",
-                        "TTL": 60,
-                        "ResourceRecords": [{"Value": '"pre-deployment-test-v1"'}]
-                    }
-                }]
-            }
+        _change_record(
+            route53_client, hosted_zone_id, test_record_name,
+            "DELETE", "pre-deployment-test-v1", "cleanup",
         )
 
 
 def test_can_upsert_route53_record(route53_client, hosted_zone_id, test_record_name):
     try:
-        route53_client.change_resource_record_sets(
-            HostedZoneId=hosted_zone_id,
-            ChangeBatch={
-                "Comment": "Pre-deployment capability test - setup",
-                "Changes": [{
-                    "Action": "CREATE",
-                    "ResourceRecordSet": {
-                        "Name": test_record_name,
-                        "Type": "TXT",
-                        "TTL": 60,
-                        "ResourceRecords": [{"Value": '"pre-deployment-test-v1"'}]
-                    }
-                }]
-            }
+        _change_record(
+            route53_client, hosted_zone_id, test_record_name,
+            "CREATE", "pre-deployment-test-v1", "setup",
         )
-        response = route53_client.change_resource_record_sets(
-            HostedZoneId=hosted_zone_id,
-            ChangeBatch={
-                "Comment": "Pre-deployment capability test - upsert",
-                "Changes": [{
-                    "Action": "UPSERT",
-                    "ResourceRecordSet": {
-                        "Name": test_record_name,
-                        "Type": "TXT",
-                        "TTL": 60,
-                        "ResourceRecords": [{"Value": '"pre-deployment-test-v2"'}]
-                    }
-                }]
-            }
+        response = _change_record(
+            route53_client, hosted_zone_id, test_record_name,
+            "UPSERT", "pre-deployment-test-v2", "upsert",
         )
         assert response["ChangeInfo"]["Status"] in ("PENDING", "INSYNC")
     except ClientError as e:
@@ -161,53 +136,21 @@ def test_can_upsert_route53_record(route53_client, hosted_zone_id, test_record_n
             pytest.fail(f"No permission to modify records in zone '{hosted_zone_id}'")
         raise
     finally:
-        route53_client.change_resource_record_sets(
-            HostedZoneId=hosted_zone_id,
-            ChangeBatch={
-                "Changes": [{
-                    "Action": "DELETE",
-                    "ResourceRecordSet": {
-                        "Name": test_record_name,
-                        "Type": "TXT",
-                        "TTL": 60,
-                        "ResourceRecords": [{"Value": '"pre-deployment-test-v2"'}]
-                    }
-                }]
-            }
+        _change_record(
+            route53_client, hosted_zone_id, test_record_name,
+            "DELETE", "pre-deployment-test-v2", "cleanup",
         )
 
 
 def test_can_delete_route53_record(route53_client, hosted_zone_id, test_record_name):
     try:
-        route53_client.change_resource_record_sets(
-            HostedZoneId=hosted_zone_id,
-            ChangeBatch={
-                "Comment": "Pre-deployment capability test - setup",
-                "Changes": [{
-                    "Action": "CREATE",
-                    "ResourceRecordSet": {
-                        "Name": test_record_name,
-                        "Type": "TXT",
-                        "TTL": 60,
-                        "ResourceRecords": [{"Value": '"pre-deployment-test-delete"'}]
-                    }
-                }]
-            }
+        _change_record(
+            route53_client, hosted_zone_id, test_record_name,
+            "CREATE", "pre-deployment-test-delete", "setup",
         )
-        response = route53_client.change_resource_record_sets(
-            HostedZoneId=hosted_zone_id,
-            ChangeBatch={
-                "Comment": "Pre-deployment capability test - delete",
-                "Changes": [{
-                    "Action": "DELETE",
-                    "ResourceRecordSet": {
-                        "Name": test_record_name,
-                        "Type": "TXT",
-                        "TTL": 60,
-                        "ResourceRecords": [{"Value": '"pre-deployment-test-delete"'}]
-                    }
-                }]
-            }
+        response = _change_record(
+            route53_client, hosted_zone_id, test_record_name,
+            "DELETE", "pre-deployment-test-delete", "delete",
         )
         assert response["ChangeInfo"]["Status"] in ("PENDING", "INSYNC")
     except ClientError as e:

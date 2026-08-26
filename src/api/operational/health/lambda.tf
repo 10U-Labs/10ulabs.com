@@ -24,7 +24,6 @@ resource "aws_lambda_function" "health_handler" {
     Name = var.health_handler_function_name
   })
 
-  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
   lifecycle {
     replace_triggered_by = [aws_iam_role.lambda_health_handler.id]
   }

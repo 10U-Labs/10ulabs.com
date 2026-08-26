@@ -1,6 +1,3 @@
-# Lambda@Edge for SPA routing
-# Must be deployed in us-east-1 for CloudFront integration
-
 data "archive_file" "spa_routing" {
   type        = "zip"
   source_file = "${path.module}/lambda/handler.py"

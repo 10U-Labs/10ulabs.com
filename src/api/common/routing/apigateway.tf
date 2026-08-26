@@ -1,5 +1,4 @@
 locals {
-  # Lambda function names - sourced from shared module for consistency
   lambda_function_names = {
     catchall            = module.common.lambda_handler_names.catchall
     contact             = module.common.lambda_handler_names.contact
@@ -9,13 +8,10 @@ locals {
     sessions            = module.common.lambda_handler_names.sessions
   }
 
-  # Helper to construct Lambda ARN from function name
   lambda_arn_prefix = "arn:aws:lambda:${local.aws_region}:${local.aws_account_id}:function"
 
-  # Helper to construct API Gateway integration ARN from Lambda ARN
   apigw_integration_prefix = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions"
 
-  # Construct all integration ARNs directly from function names
   catchall_integration_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.catchall}/invocations"
   contact_arn              = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.contact}/invocations"
   echo_arn                 = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.echo}/invocations"
@@ -193,12 +189,8 @@ resource "null_resource" "api_gateway_propagation_wait" {
       MAX_N=8
       SUCCESS=false
       while [ $N -le $MAX_N ]; do
-        # Poll /health endpoint with GET - it falls back to CatchAllHandler
-        # when health Lambda doesn't exist, which returns 404 (valid response)
         HTTP_STATUS=$(curl -s -o /dev/null -w "%%{http_code}" -X GET \
           "https://${local.api_fqdn}/health" || echo "000")
-        # Accept 200 (health Lambda exists) or 404 (CatchAllHandler fallback)
-        # Both indicate API Gateway is deployed and functioning
         if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "404" ]; then
           echo "API Gateway is ready (status: $HTTP_STATUS)"
           SUCCESS=true

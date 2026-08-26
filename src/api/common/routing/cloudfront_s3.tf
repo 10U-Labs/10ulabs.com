@@ -145,8 +145,6 @@ resource "aws_cloudfront_distribution" "main" {
     origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
   }
 
-  # The WAN synthesizer's own API Gateway (separate repo/stack), wired in via its
-  # routing remote state. The /wan-synthesizer/* behavior routes here.
   origin {
     domain_name         = data.terraform_remote_state.wan_synthesizer.outputs.api_gateway_execute_domain
     origin_id           = "wan-synthesizer"
