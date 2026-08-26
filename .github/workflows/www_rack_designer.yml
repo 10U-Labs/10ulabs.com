@@ -119,15 +119,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install \
-            boto3 \
-            boto3-stubs \
-            botocore \
-            dnspython \
-            mypy \
-            pytest \
-            'python-hcl2<8' \
-            requests \
-            types-requests
+            mypy
       - name: Run mypy
         run: |
           MYPYPATH=lib/python:scripts python3 -m mypy \
@@ -149,15 +141,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install \
-            boto3 \
-            boto3-stubs \
-            botocore \
-            dnspython \
-            pylint \
-            pytest \
-            'python-hcl2<8' \
-            requests \
-            types-requests
+            pylint
       - name: Run pylint
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
@@ -470,13 +454,8 @@ jobs:
         run: |
           python3 -m pip install \
             boto3 \
-            boto3-stubs \
             botocore \
-            dnspython \
-            pytest \
-            'python-hcl2<8' \
-            requests \
-            types-requests
+            pytest
       - name: Run unit tests
         run: |
           TEST=test/www/paths/rack_designer

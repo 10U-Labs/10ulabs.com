@@ -160,13 +160,9 @@ jobs:
         run: |
           python3 -m pip install \
             boto3 \
-            boto3-stubs \
             botocore \
-            dnspython \
             pytest \
-            'python-hcl2<8' \
-            requests \
-            types-requests
+            requests
       - id: terraform
         name: Extract Terraform version
         run: |
@@ -204,12 +200,7 @@ jobs:
             boto3 \
             boto3-stubs \
             botocore \
-            dnspython \
-            mypy \
-            pytest \
-            'python-hcl2<8' \
-            requests \
-            types-requests
+            mypy
       - name: Run mypy on source
         run: |
           SRC=src/api/endpoints/sessions
@@ -230,7 +221,6 @@ jobs:
             boto3 \
             boto3-stubs \
             botocore \
-            dnspython \
             mypy \
             pytest \
             'python-hcl2<8' \
@@ -271,13 +261,9 @@ jobs:
         run: |
           python3 -m pip install \
             boto3 \
-            boto3-stubs \
             botocore \
-            dnspython \
             pytest \
-            'python-hcl2<8' \
-            requests \
-            types-requests
+            requests
       - id: terraform
         name: Extract Terraform version
         run: |
@@ -324,13 +310,9 @@ jobs:
         run: |
           python3 -m pip install \
             boto3 \
-            boto3-stubs \
             botocore \
-            dnspython \
             pytest \
-            'python-hcl2<8' \
-            requests \
-            types-requests
+            requests
       - id: terraform
         name: Extract Terraform version
         run: |
@@ -366,14 +348,8 @@ jobs:
         run: |
           python3 -m pip install \
             boto3 \
-            boto3-stubs \
             botocore \
-            dnspython \
-            pylint \
-            pytest \
-            'python-hcl2<8' \
-            requests \
-            types-requests
+            pylint
       - name: Run pylint on source
         run: |
           SRC=src/api/endpoints/sessions
@@ -394,14 +370,11 @@ jobs:
         run: |
           python3 -m pip install \
             boto3 \
-            boto3-stubs \
             botocore \
-            dnspython \
             pylint \
             pytest \
             'python-hcl2<8' \
-            requests \
-            types-requests
+            requests
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
@@ -801,13 +774,10 @@ jobs:
         run: |
           python3 -m pip install \
             boto3 \
-            boto3-stubs \
             botocore \
-            dnspython \
             pytest \
             'python-hcl2<8' \
-            requests \
-            types-requests
+            requests
       - name: Run unit tests
         run: |
           TEST=test/api/endpoints/sessions
