@@ -36,6 +36,7 @@ jobs:
           lib/python/urllib_mocks
           test/__init__.py
           test/conftest.py
+          test/lib/terraform/__init__.py
           test/lib/terraform/conftest.py
           test/www/__init__.py
           test/www/conftest.py
@@ -119,6 +120,7 @@ jobs:
           --verbose
           test/__init__.py
           test/conftest.py
+          test/lib/terraform/__init__.py
           test/lib/terraform/conftest.py
           test/www/__init__.py
           test/www/conftest.py
@@ -158,6 +160,7 @@ jobs:
           --verbose
           test/__init__.py
           test/conftest.py
+          test/lib/terraform/__init__.py
           test/lib/terraform/conftest.py
           test/www/__init__.py
           test/www/conftest.py
@@ -342,6 +345,7 @@ jobs:
           MYPYPATH=lib/python:scripts python3 -m mypy \
             test/__init__.py \
             test/conftest.py \
+            test/lib/terraform/__init__.py \
             test/lib/terraform/conftest.py \
             test/www/__init__.py \
             test/www/conftest.py \
@@ -515,6 +519,7 @@ jobs:
           PYTHONPATH=lib/python:scripts python3 -m pylint \
             test/__init__.py \
             test/conftest.py \
+            test/lib/terraform/__init__.py \
             test/lib/terraform/conftest.py \
             test/www/__init__.py \
             test/www/conftest.py \
