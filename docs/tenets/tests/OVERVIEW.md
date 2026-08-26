@@ -103,7 +103,7 @@ The rest of the package is imported rather than loaded as a plugin:
 | `test_fixtures.lambda_lifecycle` | Test factories for the lifecycle rules a Lambda with environment variables needs |
 | `test_fixtures.terraform_tests` | Test factories for remote-state contracts and naming conventions |
 | `test_fixtures.integration` | The base classes of the seven-layer pre-deployment integration model |
-| `test_fixtures.unit` | `TEST_CONSTANTS`, `create_mock_dynamodb_client`, and re-exports of the shared library's unit-test helpers |
+| `test_fixtures.unit` | `create_mock_dynamodb_client` and re-exports of the shared library's unit-test helpers |
 
 ### terraform_config/
 
