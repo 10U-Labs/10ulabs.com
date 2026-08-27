@@ -1,3 +1,4 @@
+import re
 from unittest.mock import patch, mock_open
 
 import pytest
@@ -613,9 +614,9 @@ class TestRemoteStateContractMessagesNameTheOutputsFile:
             tmp_path, "message_endpoint", required_outputs=["needed_output"]
         )
         method = getattr(TestClass(), "test_needed_output_output_exists_in_api_common_routing")
-        with pytest.raises(AssertionError) as excinfo:
+        expected = re.escape(str(API_COMMON_ROUTING_OUTPUTS_FILE.relative_to(REPO_ROOT)))
+        with pytest.raises(AssertionError, match=expected):
             method()
-        assert str(API_COMMON_ROUTING_OUTPUTS_FILE.relative_to(REPO_ROOT)) in str(excinfo.value)
 
     @patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
     def test_dangling_reference_message_names_outputs_file(self, mock_outputs, tmp_path):
@@ -623,6 +624,6 @@ class TestRemoteStateContractMessagesNameTheOutputsFile:
         lambda_file.write_text('data.terraform_remote_state.api.outputs.dangling_output')
         mock_outputs.return_value = {"present_output"}
         instance = create_remote_state_contract_tests(tmp_path, "message_endpoint")()
-        with pytest.raises(AssertionError) as excinfo:
+        expected = re.escape(str(API_COMMON_ROUTING_OUTPUTS_FILE.relative_to(REPO_ROOT)))
+        with pytest.raises(AssertionError, match=expected):
             instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs()
-        assert str(API_COMMON_ROUTING_OUTPUTS_FILE.relative_to(REPO_ROOT)) in str(excinfo.value)
