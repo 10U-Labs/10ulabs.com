@@ -7,11 +7,11 @@ from naming_conventions import validate_name
 from repo_utils import REPO_ROOT
 from terraform_config import extract_iam_role_names, extract_lambda_function_names
 
-API_BACKEND_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "common" / "routing" / "outputs.tf"
+API_COMMON_ROUTING_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "common" / "routing" / "outputs.tf"
 
 
 def _get_api_common_routing_outputs() -> set:
-    with open(API_BACKEND_OUTPUTS_FILE, encoding="utf-8") as f:
+    with open(API_COMMON_ROUTING_OUTPUTS_FILE, encoding="utf-8") as f:
         content = f.read()
     pattern = r'output\s+"(\w+)"'
     return set(re.findall(pattern, content))
@@ -24,6 +24,7 @@ def create_remote_state_contract_tests(
     required_outputs: Optional[list] = None,
 ):
     lambda_path = endpoint_src / lambda_file
+    outputs_file = API_COMMON_ROUTING_OUTPUTS_FILE.relative_to(REPO_ROOT)
 
     def get_api_remote_state_references():
         with open(lambda_path, encoding="utf-8") as f:
@@ -32,14 +33,14 @@ def create_remote_state_contract_tests(
         return set(re.findall(pattern, content))
 
     class TestRemoteStateContract:
-        def test_all_api_remote_state_references_exist_in_backend_outputs(self):
+        def test_all_api_remote_state_references_exist_in_api_common_routing_outputs(self):
             references = get_api_remote_state_references()
             outputs = _get_api_common_routing_outputs()
             missing = references - outputs
 
             assert not missing, (
-                f"{endpoint_name}/{lambda_file} references api backend outputs that "
-                f"don't exist: {missing}. Add these outputs to src/api/common/routing/outputs.tf"
+                f"{endpoint_name}/{lambda_file} references api_common_routing outputs "
+                f"that don't exist: {missing}. Add these outputs to {outputs_file}"
             )
 
         def test_lambda_file_exists(self):
@@ -52,15 +53,15 @@ def create_remote_state_contract_tests(
                 def test_output_exists(_self):
                     outputs = _get_api_common_routing_outputs()
                     assert name in outputs, (
-                        f"{name} output missing from api/backend/outputs.tf. "
+                        f"{name} output missing from {outputs_file}. "
                         f"This is required by the {endpoint_name} endpoint."
                     )
 
                 return test_output_exists
 
             test_method = make_test(output_name)
-            test_method.__name__ = f"test_{output_name}_output_exists_in_backend"
-            test_method.__doc__ = f"Verify {output_name} output exists in api backend."
+            test_method.__name__ = f"test_{output_name}_output_exists_in_api_common_routing"
+            test_method.__doc__ = f"Verify {output_name} output exists in api_common_routing."
             setattr(TestRemoteStateContract, test_method.__name__, test_method)
 
     return TestRemoteStateContract
