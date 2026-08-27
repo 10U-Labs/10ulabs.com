@@ -19,12 +19,6 @@ def aws_region(request):
 
 
 @pytest.fixture(scope="session")
-def ssm_github_pat_name(request):
-    config = request.getfixturevalue("shared_config")
-    return config["ssm_github_pat_name"]
-
-
-@pytest.fixture(scope="session")
 def state_bucket_name(request):
     config = request.getfixturevalue("shared_config")
     return config["name_for_terraform_state_bucket"]
@@ -160,12 +154,6 @@ def ec2_client(request):
 def ses_client(request):
     region = request.getfixturevalue("aws_region")
     return boto3.client("ses", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def events_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("events", region_name=region)
 
 
 @pytest.fixture(scope="session")

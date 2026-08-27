@@ -12,11 +12,6 @@ def api_gateway_id_fixture(apigateway_client, config):
     return get_api_gateway_id_by_name(apigateway_client, config['api_gateway_name'])
 
 
-@pytest.fixture(scope="module")
-def apigatewayv2_client(aws_region):
-    return boto3.client("apigatewayv2", region_name=aws_region)
-
-
 @pytest.fixture(name="cloudfront_client", scope="module")
 def cloudfront_client_fixture():
     return boto3.client("cloudfront")

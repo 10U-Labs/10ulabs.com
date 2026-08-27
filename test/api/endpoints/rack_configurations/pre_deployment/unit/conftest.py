@@ -13,14 +13,3 @@ def handler():
     module = load_lambda_module("handler.py", "handler")
     module.clear_clients()
     return module
-
-
-@pytest.fixture(name="backup_tf_path")
-def backup_tf_path_fixture():
-    return RACK_CONFIGURATIONS_SRC_PATH / "backup.tf"
-
-
-@pytest.fixture
-def backup_tf_content(backup_tf_path):
-    with open(backup_tf_path, encoding="utf-8") as f:
-        return f.read()

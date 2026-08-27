@@ -67,24 +67,9 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     return result
 
 
-@pytest.fixture
-def sns_client(aws_region):
-    return boto3.client('sns', region_name=aws_region)
-
-
 @pytest.fixture(scope="module")
 def dynamodb_client(aws_region):
     return boto3.client('dynamodb', region_name=aws_region)
-
-
-@pytest.fixture
-def cloudwatch_client(aws_region):
-    return boto3.client('cloudwatch', region_name=aws_region)
-
-
-@pytest.fixture
-def events_client(aws_region):
-    return boto3.client('events', region_name=aws_region)
 
 
 @pytest.fixture

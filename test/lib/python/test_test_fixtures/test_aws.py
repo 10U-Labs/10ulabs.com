@@ -17,7 +17,6 @@ from test_fixtures.aws import (
     dynamodb_client,
     ec2_client,
     ecr_client,
-    events_client,
     find_lifecycle_rule,
     get_log_group_info,
     iam_client,
@@ -29,7 +28,6 @@ from test_fixtures.aws import (
     ses_client,
     shared_config,
     ssm_client,
-    ssm_github_pat_name,
     stale_delete_markers,
     state_bucket_name,
     state_bucket_region,
@@ -183,12 +181,6 @@ def test_aws_region_fixture():
     assert region == "eu-west-1"
 
 
-def test_ssm_github_pat_name_fixture():
-    config = {"ssm_github_pat_name": "/github/pat", "aws_region": "us-east-1"}
-    pat_name = config["ssm_github_pat_name"]
-    assert pat_name == "/github/pat"
-
-
 def test_state_bucket_name_fixture():
     config = {"name_for_terraform_state_bucket": "my-state-bucket"}
     bucket_name = config["name_for_terraform_state_bucket"]
@@ -250,11 +242,6 @@ class TestClientFixtures:
     def test_ses_client_creates_ses_client(self, mock_boto3):
         mock_boto3.client("ses", region_name="us-east-1")
         assert mock_boto3.client.call_args[0][0] == "ses"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_events_client_creates_events_client(self, mock_boto3):
-        mock_boto3.client("events", region_name="us-east-1")
-        assert mock_boto3.client.call_args[0][0] == "events"
 
     @patch("test_fixtures.aws.boto3")
     def test_scheduler_client_creates_scheduler_client(self, mock_boto3):
@@ -474,13 +461,6 @@ def test_aws_region_fixture_execution():
     mock_request.getfixturevalue.assert_called_with("shared_config")
 
 
-def test_ssm_github_pat_name_fixture_execution():
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = {"ssm_github_pat_name": "/github/pat"}
-    result = ssm_github_pat_name.__wrapped__(mock_request)
-    assert result == "/github/pat"
-
-
 def test_state_bucket_name_fixture_execution():
     mock_request = MagicMock()
     mock_request.getfixturevalue.return_value = {"name_for_terraform_state_bucket": "my-bucket"}
@@ -566,13 +546,6 @@ class TestClientFixturesExecution:
         mock_request.getfixturevalue.return_value = "us-east-1"
         ses_client.__wrapped__(mock_request)
         assert mock_boto3.client.call_args[0][0] == "ses"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_events_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        events_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "events"
 
     @patch("test_fixtures.aws.boto3")
     def test_scheduler_client_fixture_creates_client(self, mock_boto3):

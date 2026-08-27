@@ -22,20 +22,3 @@ def config(shared_config) -> Dict[str, str]:
     locals_path = REPO_ROOT / "src" / "www" / "common" / "locals.tf"
     hosted_zone_id = _get_hosted_zone_id(shared_config.get('domain_name', ''))
     return create_website_config(locals_path, shared_config, hosted_zone_id)
-
-
-@pytest.fixture(name="website_src_path")
-def fixture_website_src_path():
-    return REPO_ROOT / "src" / "www" / "common"
-
-
-@pytest.fixture
-def cloudfront_s3_tf_content(website_src_path):
-    with open(website_src_path / "cloudfront_s3.tf", encoding="utf-8") as f:
-        return f.read()
-
-
-@pytest.fixture
-def certificate_dns_tf_content(website_src_path):
-    with open(website_src_path / "certificate_dns.tf", encoding="utf-8") as f:
-        return f.read()

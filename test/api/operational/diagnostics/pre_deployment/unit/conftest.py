@@ -22,11 +22,6 @@ def load_diagnostics_handler_module() -> ModuleType:
 
 
 @pytest.fixture
-def diagnostics_handler() -> ModuleType:
-    return load_diagnostics_handler_module()
-
-
-@pytest.fixture
 def echo_handler() -> ModuleType:
     return load_diagnostics_handler_module()
 
