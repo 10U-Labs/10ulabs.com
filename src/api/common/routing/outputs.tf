@@ -34,14 +34,6 @@ output "cloudfront_domain_name" {
   value = aws_cloudfront_distribution.main.domain_name
 }
 
-output "api_audit_log_table_name" {
-  value = aws_dynamodb_table.api_audit_log.name
-}
-
-output "api_audit_log_table_arn" {
-  value = aws_dynamodb_table.api_audit_log.arn
-}
-
 output "firehose_cloudwatch_logs_arn" {
   description = "ARN of the CloudWatch Logs Firehose delivery stream"
   value       = aws_kinesis_firehose_delivery_stream.cloudwatch_logs.arn

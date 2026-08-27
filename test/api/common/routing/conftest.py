@@ -67,11 +67,6 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     return result
 
 
-@pytest.fixture(scope="module")
-def dynamodb_client(aws_region):
-    return boto3.client('dynamodb', region_name=aws_region)
-
-
 @pytest.fixture
 def logs_client(aws_region):
     return boto3.client('logs', region_name=aws_region)

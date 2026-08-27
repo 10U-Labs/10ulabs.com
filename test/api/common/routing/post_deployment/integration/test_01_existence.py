@@ -106,12 +106,6 @@ def test_cloudwatch_logs_firehose_role_exists(iam_client, config):
     assert response['Role']['RoleName'] == role_name
 
 
-def test_api_audit_log_table_exists(dynamodb_client, shared_config):
-    table_name = f"{shared_config['resource_prefix']}ApiAuditLog"
-    response = dynamodb_client.describe_table(TableName=table_name)
-    assert response['Table']['TableName'] == table_name
-
-
 def test_api_key_ssm_parameter_exists(ssm_client, config):
     param_name = config['ssm_parameter_name_for_api_key']
     response = ssm_client.get_parameter(Name=param_name, WithDecryption=False)
