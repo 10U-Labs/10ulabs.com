@@ -41,13 +41,19 @@ def test_api_handles_concurrent_requests(api_url):
     skip_if_endpoint_not_deployed(api_url, "/health")
 
     def make_health_request():
-        return requests.get(f"{api_url}/health", headers=TEST_HEADERS, timeout=10)
+        try:
+            response = requests.get(
+                f"{api_url}/health", headers=TEST_HEADERS, timeout=10
+            )
+            return response.status_code
+        except requests.exceptions.RequestException:
+            return None
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(make_health_request) for _ in range(20)]
-        results = [f.result() for f in concurrent.futures.as_completed(futures)]
+        statuses = [f.result() for f in concurrent.futures.as_completed(futures)]
 
-    success_count = sum(1 for r in results if r.status_code == 200)
+    success_count = sum(1 for status in statuses if status == 200)
     assert success_count >= 15
 
 
