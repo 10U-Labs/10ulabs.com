@@ -24,7 +24,7 @@ $ git ls-files lib/python/ | cut -d/ -f3 | sort -u | wc -l
 12
 ```
 
-The thirteenth was `runner_labels`, a directory whose entire content was one compiled file for a package that no longer existed. At `HEAD` the two agree at twelve, because the thirty-one `__pycache__` directories and the `.pytest_cache` were deleted from the working copy when the miscount was found; that agreement is a property of one working copy on one day, not a reason to go back to reading `ls`.
+The thirteenth was `runner_labels`, a directory whose entire content was one compiled file for a package that no longer existed. At `HEAD` the two agree at nine, because the thirty-one `__pycache__` directories and the `.pytest_cache` were deleted from the working copy when the miscount was found, and at nine rather than the twelve above because `9c2da520` deleted `event_factories` and `urllib_mocks` and `2be7ee64` deleted `test_utils`; that agreement is a property of one working copy on one day, not a reason to go back to reading `ls`.
 
 ## Why git status said nothing
 
