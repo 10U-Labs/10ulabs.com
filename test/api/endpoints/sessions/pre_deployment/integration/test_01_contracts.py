@@ -1,9 +1,13 @@
+import re
+
 from repo_utils import REPO_ROOT
 
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
 SESSIONS_TRACKER_PATH = SESSIONS_SRC_PATH / "lambda" / "tracker"
 SESSIONS_EXPORTER_PATH = SESSIONS_SRC_PATH / "lambda" / "exporter"
+SESSIONS_IAM_TF_PATH = SESSIONS_SRC_PATH / "iam.tf"
+TRACKER_HANDLER_PATH = SESSIONS_TRACKER_PATH / "handler.py"
 
 
 class TestLambdaHandlerContracts:
@@ -70,3 +74,31 @@ class TestEnvironmentVariableContracts:
         analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
         content = analytics_tf.read_text()
         assert "S3_PREFIX" in content
+
+
+def _dynamodb_client_methods_granted_by_iam_tf():
+    policy = re.search(
+        r'resource\s+"aws_iam_role_policy"\s+"dynamodb_access"\s*\{.*?\n\}',
+        SESSIONS_IAM_TF_PATH.read_text(),
+        re.DOTALL,
+    )
+    granted = re.findall(r'"dynamodb:(\w+)"', policy.group(0) if policy else "")
+    return {re.sub(r"(?<!^)([A-Z])", r"_\1", action).lower() for action in granted}
+
+
+def _dynamodb_client_methods_called_by_tracker_handler():
+    handler = TRACKER_HANDLER_PATH.read_text()
+    aliases = sorted(set(re.findall(r"(\w+)\s*=\s*get_dynamodb_client\(\)", handler)))
+    receivers = "|".join([r"get_dynamodb_client\(\)"] + [re.escape(a) for a in aliases])
+    return set(re.findall(rf"(?:{receivers})\.(\w+)\(", handler))
+
+
+class TestIamPolicyContracts:
+    def test_dynamodb_actions_granted_are_the_ones_the_tracker_calls(self):
+        granted = _dynamodb_client_methods_granted_by_iam_tf()
+        called = _dynamodb_client_methods_called_by_tracker_handler()
+        assert granted == called, (
+            f"iam.tf grants DynamoDB actions no tracker call needs: "
+            f"{sorted(granted - called)}; the tracker calls DynamoDB methods "
+            f"iam.tf does not grant: {sorted(called - granted)}"
+        )
