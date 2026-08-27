@@ -203,5 +203,5 @@ The package below is imported by the Lambda handlers themselves rather than by t
 Build and parse the HTTP shape a handler returns:
 
 ```python
-from lambda_http import json_response, success_response, error_response, parse_body
+from lambda_http import json_response, parse_body
 ```
