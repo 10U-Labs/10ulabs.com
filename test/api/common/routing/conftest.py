@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import boto3
 import pytest
@@ -70,10 +70,3 @@ def config_fixture(shared_config) -> Dict[str, Any]:
 @pytest.fixture
 def logs_client(aws_region):
     return boto3.client('logs', region_name=aws_region)
-
-
-def find_sns_topic_arns(client: Any, topic_name: str) -> List[str]:
-    topics = client.list_topics()
-    topic_arns = [t['TopicArn'] for t in topics['Topics']]
-    matching_topics = [t for t in topic_arns if topic_name in t]
-    return matching_topics

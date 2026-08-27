@@ -60,14 +60,6 @@ def get_api_gateway_id_by_name(client, api_name):
     return api_id
 
 
-def create_test_dynamodb_item(client, table_name, item):
-    client.put_item(TableName=table_name, Item=item)
-
-
-def cleanup_test_dynamodb_item(client, table_name, key):
-    client.delete_item(TableName=table_name, Key=key)
-
-
 @pytest.fixture(scope="module")
 def ssm_client(aws_region):
     return boto3.client("ssm", region_name=aws_region)
