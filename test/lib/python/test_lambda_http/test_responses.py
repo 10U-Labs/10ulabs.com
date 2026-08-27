@@ -66,4 +66,3 @@ class TestParseBody:
         event = {'body': '{"nested": {"key": "value"}}'}
         result = parse_body(event)
         assert result == {'nested': {'key': 'value'}}
-

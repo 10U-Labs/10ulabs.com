@@ -19,4 +19,3 @@ def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
     body = event.get('body', {})
     result = json.loads(body) if isinstance(body, str) else body
     return result
-
