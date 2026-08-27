@@ -12,11 +12,9 @@ This document is an inventory of this test suite: the levels the tests hang off,
   - [terraform_drift/](#terraform_drift)
   - [naming_conventions/](#naming_conventions)
   - [boto_mocks/](#boto_mocks)
-  - [event_factories/](#event_factories)
   - [lambda_response/](#lambda_response)
   - [module_utils/](#module_utils)
   - [test_utils/](#test_utils)
-  - [urllib_mocks/](#urllib_mocks)
   - [repo_utils/](#repo_utils)
   - [lambda_http/](#lambda_http)
 
@@ -165,17 +163,6 @@ from boto_mocks import (
 )
 ```
 
-### event_factories/
-
-Create test Lambda event payloads:
-
-```python
-from event_factories import (
-    create_sqs_event,              # SQS trigger event
-    create_dlq_message,            # DLQ message format
-)
-```
-
 ### lambda_response/
 
 Assert Lambda response structure:
@@ -206,14 +193,6 @@ A loader that reaches an endpoint's handler module from the endpoint's own conft
 
 ```python
 from test_utils import create_endpoint_handler_loader
-```
-
-### urllib_mocks/
-
-Mock responses for handlers that call out with `urllib`:
-
-```python
-from urllib_mocks import create_mock_urllib_response
 ```
 
 ### repo_utils/

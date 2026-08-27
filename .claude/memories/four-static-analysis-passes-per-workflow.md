@@ -49,14 +49,12 @@ From the sessions endpoint's workflow, the whole of two of the four jobs:
     PYTHONPATH=lib/python python3 -m pylint \
       $SRC/lambda/ \
       lib/python/boto_mocks \
-      lib/python/event_factories \
       lib/python/lambda_response \
       lib/python/module_utils \
       lib/python/naming_conventions \
       lib/python/repo_utils \
       lib/python/terraform_config \
       lib/python/test_fixtures \
-      lib/python/urllib_mocks \
       --recursive=y \
       --fail-on=C,R,W --fail-under=10.0
 - name: Run pylint on tests
@@ -72,7 +70,6 @@ From the sessions endpoint's workflow, the whole of two of the four jobs:
       test/lib/__init__.py \
       test/lib/python/__init__.py \
       test/lib/python/test_boto_mocks \
-      test/lib/python/test_event_factories \
       test/lib/python/test_lambda_response \
       test/lib/python/test_module_utils \
       test/lib/python/test_naming_conventions \
@@ -80,12 +77,11 @@ From the sessions endpoint's workflow, the whole of two of the four jobs:
       test/lib/python/test_repo_utils \
       test/lib/python/test_terraform_config \
       test/lib/python/test_test_fixtures \
-      test/lib/python/test_urllib_mocks \
       --recursive=y \
       --fail-on=C,R,W --fail-under=10.0
 ```
 
-Three kinds of path are in those lists. The source pass names the workflow's own Lambda directory and then the nine shared-library packages this endpoint executes. The test pass names the package and configuration files above its own subtree by name — those run in every suite below them, so a workflow that skipped them would leave the code its own tests are built on unread by anything — then its own subtree, then the `test/lib/python/` suite for each of those nine packages.
+Three kinds of path are in those lists. The source pass names the workflow's own Lambda directory and then the seven shared-library packages this endpoint executes. The test pass names the package and configuration files above its own subtree by name — those run in every suite below them, so a workflow that skipped them would leave the code its own tests are built on unread by anything — then its own subtree, then the `test/lib/python/` suite for each of those seven packages.
 
 ## Related notes
 

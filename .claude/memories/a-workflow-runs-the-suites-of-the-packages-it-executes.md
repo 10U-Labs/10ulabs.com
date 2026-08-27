@@ -48,13 +48,15 @@ The coverage gate is over the package rather than over the workflow's own source
 
 A package reached only through another package travels with it: the workflow that runs the reaching package's suite runs the reached package's suite too.
 
-`lib/python/boto_mocks/`, `lib/python/event_factories/` and `lib/python/urllib_mocks/` are the case that forced this. Outside test code each was imported by exactly one file, and it was the same file for all three — `lib/python/test_fixtures/unit.py`. No Lambda under `src/`, no program under `scripts/` and no suite outside `test/lib/python/test_test_fixtures/` names any of them. Only `boto_mocks` is still reached that way: the commit closing `#567` deleted the three fixtures that read the other two, and `event_factories` and `urllib_mocks` are now reached by nothing at all, which is a defect in those packages rather than a change to this rule. Read narrowly, "the workflow that uses the package" finds no workflow for these three, since what the workflows use is `test_fixtures` and `test_fixtures` is what uses them, and their suites would run nowhere at all. Every landed workflow gives each of the three a job of its own, `scripts.yml` included.
+`lib/python/boto_mocks/` is the case that forced this. Outside test code it is imported by exactly one file, `lib/python/test_fixtures/unit.py`. No Lambda under `src/`, no program under `scripts/` and no suite outside `test/lib/python/test_test_fixtures/` names it. Read narrowly, "the workflow that uses the package" finds no workflow for it, since what the workflows use is `test_fixtures` and `test_fixtures` is what uses `boto_mocks`, and its suite would run nowhere at all. Every landed workflow gives it a job of its own, `scripts.yml` included.
+
+`event_factories` and `urllib_mocks` stood beside it here until the commit closing `#649` deleted both packages and their suites. They reached the workflows the same way until the commit closing `#567` deleted the three fixtures in `unit.py` that read them, and a package the corollary no longer reaches is one nothing imports at all: the answer to that is to delete it, not to keep eleven `test-*` jobs green over it.
 
 Check it against the tree rather than taking it on trust: `git grep -l boto_mocks -- src scripts lib test` names nothing outside `lib/python/boto_mocks/` and `test/lib/python/test_boto_mocks/` but that one `unit.py` and seven files under `test/lib/python/test_test_fixtures/test_integration/`.
 
 ## `test_utils` is not that case
 
-`lib/python/test_utils/` is the fourth package with no consumer of its own, and the corollary does not reach it. Nothing imports it at all, not through another package and not directly, so there is no workflow that executes it and no workflow that owes its suite a job. What it needs is the decision `#603` was filed for, which is whether the package stays at all, rather than a workflow to run its tests in.
+`lib/python/test_utils/` is the other package with no consumer of its own, and the corollary does not reach it. Nothing imports it at all, not through another package and not directly, so there is no workflow that executes it and no workflow that owes its suite a job. What it needs is the decision `#603` was filed for, which is whether the package stays at all, rather than a workflow to run its tests in.
 
 ## One suite run by every workflow is the rule working
 
@@ -70,7 +72,7 @@ The packages and their suites are named in the workflow's `paths` filter as well
 
 ## Working out what a workflow executes
 
-Read the imports, not the directory names. A workflow executes a package if the source it deploys imports it, if any suite it runs imports it, if a package it already executes imports it, or if `test/conftest.py` or a `conftest.py` above its subtree imports it — the last being how `test_fixtures`, and through it `boto_mocks`, `event_factories`, `lambda_response`, `module_utils`, `terraform_config` and `urllib_mocks`, reach every suite in the tree.
+Read the imports, not the directory names. A workflow executes a package if the source it deploys imports it, if any suite it runs imports it, if a package it already executes imports it, or if `test/conftest.py` or a `conftest.py` above its subtree imports it — the last being how `test_fixtures`, and through it `boto_mocks`, `lambda_response`, `module_utils` and `terraform_config`, reach every suite in the tree.
 
 `git ls-files lib/python | awk -F/ '{print $3}' | sort -u` is the list to check against, since a working copy carries `__pycache__` directories for packages git no longer has; see [enumerate-a-directory-from-git](enumerate-a-directory-from-git.md). The suite for a package is `test/lib/python/test_<package>`, with `naming_conventions` the exception noted above.
 

@@ -24,21 +24,18 @@ jobs:
           .github/workflows/scripts.yml
           scripts
           lib/python/boto_mocks
-          lib/python/event_factories
           lib/python/lambda_response
           lib/python/module_utils
           lib/python/naming_conventions
           lib/python/repo_utils
           lib/python/terraform_config
           lib/python/test_fixtures
-          lib/python/urllib_mocks
           test/__init__.py
           test/conftest.py
           test/scripts
           test/lib/__init__.py
           test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
-          test/lib/python/test_event_factories
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
           test/lib/python/test_naming_conventions
@@ -46,7 +43,6 @@ jobs:
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_test_fixtures
-          test/lib/python/test_urllib_mocks
   assert-no-inline-directives:
     runs-on: ubuntu-latest
     steps:
@@ -68,21 +64,18 @@ jobs:
           .github/workflows/scripts.yml
           scripts
           lib/python/boto_mocks
-          lib/python/event_factories
           lib/python/lambda_response
           lib/python/module_utils
           lib/python/naming_conventions
           lib/python/repo_utils
           lib/python/terraform_config
           lib/python/test_fixtures
-          lib/python/urllib_mocks
           test/__init__.py
           test/conftest.py
           test/scripts
           test/lib/__init__.py
           test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
-          test/lib/python/test_event_factories
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
           test/lib/python/test_naming_conventions
@@ -90,7 +83,6 @@ jobs:
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_test_fixtures
-          test/lib/python/test_urllib_mocks
   assert-no-linter-config-files:
     runs-on: ubuntu-latest
     steps:
@@ -111,17 +103,14 @@ jobs:
           --verbose
           scripts
           lib/python/boto_mocks
-          lib/python/event_factories
           lib/python/lambda_response
           lib/python/module_utils
           lib/python/naming_conventions
           lib/python/repo_utils
           lib/python/terraform_config
           lib/python/test_fixtures
-          lib/python/urllib_mocks
           test/scripts
           test/lib/python/test_boto_mocks
-          test/lib/python/test_event_factories
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
           test/lib/python/test_naming_conventions
@@ -129,7 +118,6 @@ jobs:
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_test_fixtures
-          test/lib/python/test_urllib_mocks
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -153,7 +141,6 @@ jobs:
           test/lib/__init__.py
           test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
-          test/lib/python/test_event_factories
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
           test/lib/python/test_naming_conventions
@@ -161,7 +148,6 @@ jobs:
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_test_fixtures
-          test/lib/python/test_urllib_mocks
   assert-pytest-fixture-name-is-needed:
     runs-on: ubuntu-latest
     steps:
@@ -185,7 +171,6 @@ jobs:
           test/lib/__init__.py
           test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
-          test/lib/python/test_event_factories
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
           test/lib/python/test_naming_conventions
@@ -193,7 +178,6 @@ jobs:
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_test_fixtures
-          test/lib/python/test_urllib_mocks
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:
@@ -206,14 +190,12 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             scripts/ \
             lib/python/boto_mocks \
-            lib/python/event_factories \
             lib/python/lambda_response \
             lib/python/module_utils \
             lib/python/naming_conventions \
             lib/python/repo_utils \
             lib/python/terraform_config \
-            lib/python/test_fixtures \
-            lib/python/urllib_mocks
+            lib/python/test_fixtures
   copy-paste-tests:
     runs-on: ubuntu-latest
     steps:
@@ -226,15 +208,13 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             test/scripts \
             test/lib/python/test_boto_mocks \
-            test/lib/python/test_event_factories \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
             test/lib/python/test_naming_conventions \
             test/lib/python/test_naming_conventions_helpers \
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
-            test/lib/python/test_test_fixtures \
-            test/lib/python/test_urllib_mocks
+            test/lib/python/test_test_fixtures
   mypy-source:
     runs-on: ubuntu-latest
     steps:
@@ -259,14 +239,12 @@ jobs:
           MYPYPATH=lib/python:scripts python3 -m mypy \
             scripts/ \
             lib/python/boto_mocks \
-            lib/python/event_factories \
             lib/python/lambda_response \
             lib/python/module_utils \
             lib/python/naming_conventions \
             lib/python/repo_utils \
             lib/python/terraform_config \
-            lib/python/test_fixtures \
-            lib/python/urllib_mocks
+            lib/python/test_fixtures
   mypy-tests:
     runs-on: ubuntu-latest
     steps:
@@ -295,15 +273,13 @@ jobs:
             test/lib/__init__.py \
             test/lib/python/__init__.py \
             test/lib/python/test_boto_mocks \
-            test/lib/python/test_event_factories \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
             test/lib/python/test_naming_conventions \
             test/lib/python/test_naming_conventions_helpers \
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
-            test/lib/python/test_test_fixtures \
-            test/lib/python/test_urllib_mocks
+            test/lib/python/test_test_fixtures
   pylint-source:
     runs-on: ubuntu-latest
     steps:
@@ -326,14 +302,12 @@ jobs:
           PYTHONPATH=lib/python python3 -m pylint \
             scripts/ \
             lib/python/boto_mocks \
-            lib/python/event_factories \
             lib/python/lambda_response \
             lib/python/module_utils \
             lib/python/naming_conventions \
             lib/python/repo_utils \
             lib/python/terraform_config \
             lib/python/test_fixtures \
-            lib/python/urllib_mocks \
             --disable=missing-module-docstring \
             --disable=missing-class-docstring \
             --disable=missing-function-docstring \
@@ -364,7 +338,6 @@ jobs:
             test/lib/__init__.py \
             test/lib/python/__init__.py \
             test/lib/python/test_boto_mocks \
-            test/lib/python/test_event_factories \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
             test/lib/python/test_naming_conventions \
@@ -372,7 +345,6 @@ jobs:
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
             test/lib/python/test_test_fixtures \
-            test/lib/python/test_urllib_mocks \
             --disable=missing-module-docstring \
             --disable=missing-class-docstring \
             --disable=missing-function-docstring \
@@ -400,32 +372,6 @@ jobs:
             test/lib/python/test_boto_mocks/ \
             --confcutdir=test --verbose --pythonwarnings=error \
             --cov=boto_mocks \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
-  test-event-factories:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run event_factories tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_event_factories/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=event_factories \
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
@@ -611,32 +557,6 @@ jobs:
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
-  test-urllib-mocks:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run urllib_mocks tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_urllib_mocks/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=urllib_mocks \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
   yamllint:
     runs-on: ubuntu-latest
     steps:
@@ -669,21 +589,18 @@ on:
     paths:
       - .github/workflows/scripts.yml
       - lib/python/boto_mocks/**
-      - lib/python/event_factories/**
       - lib/python/lambda_response/**
       - lib/python/module_utils/**
       - lib/python/naming_conventions/**
       - lib/python/repo_utils/**
       - lib/python/terraform_config/**
       - lib/python/test_fixtures/**
-      - lib/python/urllib_mocks/**
       - scripts/**
       - test/__init__.py
       - test/conftest.py
       - test/lib/__init__.py
       - test/lib/python/__init__.py
       - test/lib/python/test_boto_mocks/**
-      - test/lib/python/test_event_factories/**
       - test/lib/python/test_lambda_response/**
       - test/lib/python/test_module_utils/**
       - test/lib/python/test_naming_conventions/**
@@ -691,7 +608,6 @@ on:
       - test/lib/python/test_repo_utils/**
       - test/lib/python/test_terraform_config/**
       - test/lib/python/test_test_fixtures/**
-      - test/lib/python/test_urllib_mocks/**
       - test/scripts/**
   workflow_dispatch:
 permissions:
