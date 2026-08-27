@@ -89,6 +89,7 @@ jobs:
           lib/python/terraform_drift
           lib/python/test_fixtures
           lib/python/urllib_mocks
+          lib/terraform/common
           test/__init__.py
           test/conftest.py
           test/api/__init__.py
