@@ -6,13 +6,13 @@ variable "queue_name" {
 variable "visibility_timeout_seconds" {
   description = "Visibility timeout in seconds (should be 6x Lambda timeout)"
   type        = number
-  default     = 720 # 6 * 120 seconds (2 min Lambda timeout)
+  default     = 720
 }
 
 variable "message_retention_seconds" {
   description = "Message retention period in seconds"
   type        = number
-  default     = 86400 # 1 day
+  default     = 86400
 }
 
 variable "max_receive_count" {

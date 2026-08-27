@@ -1,9 +1,6 @@
-# Write-ahead queue module for API endpoint durability
-# Creates an SQS queue with DLQ for write-ahead logging pattern
-
 resource "aws_sqs_queue" "dlq" {
   name                      = "${var.queue_name}Dlq"
-  message_retention_seconds = 1209600 # 14 days
+  message_retention_seconds = 1209600
 
   tags = merge(var.tags, {
     Name = "${var.queue_name}Dlq"

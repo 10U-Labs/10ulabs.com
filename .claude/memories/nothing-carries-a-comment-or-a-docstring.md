@@ -45,7 +45,7 @@ An assignment to `__doc__` is code and is left alone: `lib/python/test_fixtures/
 
 ## The trap in what is already written
 
-Two trees are not read and go on carrying prose, so a session that copies what is next to it can copy the wrong thing. `lib/python/test_utils/` and `test/lib/python/test_test_utils/` are in no argument list of any job in any workflow, which is `#603`. `lib/terraform/write_ahead_queue/` is sourced by no stack and named by no job, which is `#660`. Neither is an exception to the rule; both are files nothing checks yet.
+One tree is not read and goes on carrying prose, so a session that copies what is next to it can copy the wrong thing. `lib/python/test_utils/` and `test/lib/python/test_test_utils/` are in no argument list of any job in any workflow, which is `#603`. It is not an exception to the rule; it is a pair of packages nothing checks yet. `lib/terraform/write_ahead_queue/` stood beside it until the commit closing `#660` put the module in the `assert-no-comments` argument list of `www_common.yml` and deleted the five comments it had been carrying, which is what the fix for one of these looks like.
 
 ## Related notes
 

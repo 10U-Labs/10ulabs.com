@@ -36,6 +36,7 @@ jobs:
           lib/python/urllib_mocks
           lib/terraform/common
           lib/terraform/s3_bucket
+          lib/terraform/write_ahead_queue
           test/__init__.py
           test/conftest.py
           test/lib/terraform/__init__.py
@@ -90,6 +91,7 @@ jobs:
           lib/python/terraform_drift
           lib/python/test_fixtures
           lib/python/urllib_mocks
+          lib/terraform/write_ahead_queue
           test/__init__.py
           test/conftest.py
           test/lib/terraform/__init__.py
@@ -742,6 +744,9 @@ jobs:
       - name: Terraform Format Check on s3_bucket module
         run: |
           cd lib/terraform/s3_bucket && terraform fmt -diff -check
+      - name: Terraform Format Check on write_ahead_queue module
+        run: |
+          cd lib/terraform/write_ahead_queue && terraform fmt -diff -check
   test-boto-mocks:
     runs-on: ubuntu-latest
     steps:
@@ -1072,6 +1077,11 @@ jobs:
         name: Run tflint on s3_bucket module
         run: |
           cd lib/terraform/s3_bucket && tflint --init && tflint
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint on write_ahead_queue module
+        run: |
+          cd lib/terraform/write_ahead_queue && tflint --init && tflint
   unit-tests:
     runs-on: ubuntu-latest
     steps:
