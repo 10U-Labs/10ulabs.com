@@ -25,3 +25,9 @@ def variables_tf_content(module_path):
 def outputs_tf_content(module_path):
     with open(module_path / "outputs.tf", encoding="utf-8") as f:
         return f.read()
+
+
+@pytest.fixture
+def versions_tf_content(module_path):
+    with open(module_path / "versions.tf", encoding="utf-8") as f:
+        return f.read()

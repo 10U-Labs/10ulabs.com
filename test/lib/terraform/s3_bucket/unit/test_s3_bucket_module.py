@@ -6,6 +6,10 @@ def test_module_files_exist(module_path):
     )
 
 
+def test_module_versions_file_exists(module_path):
+    assert (module_path / "versions.tf").exists()
+
+
 def test_s3_bucket_resource_exists(main_tf_content):
     assert 'resource "aws_s3_bucket"' in main_tf_content
 
@@ -62,3 +66,11 @@ def test_bucket_id_output_exists(outputs_tf_content):
 
 def test_bucket_arn_output_exists(outputs_tf_content):
     assert 'output "bucket_arn"' in outputs_tf_content
+
+
+def test_module_declares_required_version(versions_tf_content):
+    assert "required_version" in versions_tf_content
+
+
+def test_module_declares_aws_provider(versions_tf_content):
+    assert "hashicorp/aws" in versions_tf_content

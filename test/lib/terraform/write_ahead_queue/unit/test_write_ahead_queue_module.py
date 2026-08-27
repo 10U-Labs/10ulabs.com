@@ -10,6 +10,10 @@ def test_module_outputs_file_exists(module_path):
     assert (module_path / "outputs.tf").exists()
 
 
+def test_module_versions_file_exists(module_path):
+    assert (module_path / "versions.tf").exists()
+
+
 def test_main_queue_resource_exists(main_tf_content):
     assert 'resource "aws_sqs_queue" "main"' in main_tf_content
 
@@ -92,3 +96,11 @@ def test_dlq_arn_output_exists(outputs_tf_content):
 
 def test_dlq_name_output_exists(outputs_tf_content):
     assert 'output "dlq_name"' in outputs_tf_content
+
+
+def test_module_declares_required_version(versions_tf_content):
+    assert "required_version" in versions_tf_content
+
+
+def test_module_declares_aws_provider(versions_tf_content):
+    assert "hashicorp/aws" in versions_tf_content
