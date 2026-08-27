@@ -14,7 +14,6 @@ This document is an inventory of this test suite: the levels the tests hang off,
   - [boto_mocks/](#boto_mocks)
   - [lambda_response/](#lambda_response)
   - [module_utils/](#module_utils)
-  - [test_utils/](#test_utils)
   - [repo_utils/](#repo_utils)
   - [lambda_http/](#lambda_http)
 
@@ -185,14 +184,6 @@ from module_utils import reset_module_state
 
 def test_something(handler_module):
     reset_module_state(handler_module, boto_client=None, cache={})
-```
-
-### test_utils/
-
-A loader that reaches an endpoint's handler module from the endpoint's own conftest:
-
-```python
-from test_utils import create_endpoint_handler_loader
 ```
 
 ### repo_utils/

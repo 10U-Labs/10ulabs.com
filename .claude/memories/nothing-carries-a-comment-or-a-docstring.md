@@ -8,7 +8,6 @@
 - [Where the reasoning goes instead](#where-the-reasoning-goes-instead)
 - [What a comment was about to say](#what-a-comment-was-about-to-say)
 - [What is not a comment](#what-is-not-a-comment)
-- [The trap in what is already written](#the-trap-in-what-is-already-written)
 - [Related notes](#related-notes)
 
 ## The rule
@@ -42,10 +41,6 @@ A comment is usually about to say one of three things, and each has somewhere be
 ## What is not a comment
 
 An assignment to `__doc__` is code and is left alone: `lib/python/test_fixtures/terraform_tests.py` builds a generated test method's `__doc__` from the output name it was given, and `test_lambda_factories.py` reads it back. A `#` inside a string literal is not a comment either, so the fixtures that parse tfvars with `'# comment\nkey = value\n'` keep their sample data, and the `#` filter in `_trusted_repository_patterns` in `test/bootstrap/pre_deployment/unit/test_deploy_roles_terraform.py` stays even though there is nothing left for it to strip.
-
-## The trap in what is already written
-
-One tree is not read and goes on carrying prose, so a session that copies what is next to it can copy the wrong thing. `lib/python/test_utils/` and `test/lib/python/test_test_utils/` are in no argument list of any job in any workflow, which is `#603`. It is not an exception to the rule; it is a pair of packages nothing checks yet. `lib/terraform/write_ahead_queue/` stood beside it until the commit closing `#660` put the module in the `assert-no-comments` argument list of `www_common.yml` and deleted the five comments it had been carrying, which is what the fix for one of these looks like.
 
 ## Related notes
 

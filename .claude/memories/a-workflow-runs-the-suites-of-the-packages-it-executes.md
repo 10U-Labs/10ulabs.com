@@ -6,7 +6,6 @@
 - [The shape of the job](#the-shape-of-the-job)
 - [A workflow that deploys nothing carries the jobs anyway](#a-workflow-that-deploys-nothing-carries-the-jobs-anyway)
 - [A package reached through another package travels with it](#a-package-reached-through-another-package-travels-with-it)
-- [`test_utils` is not that case](#test_utils-is-not-that-case)
 - [One suite run by every workflow is the rule working](#one-suite-run-by-every-workflow-is-the-rule-working)
 - [The `paths` filter carries the same set](#the-paths-filter-carries-the-same-set)
 - [Working out what a workflow executes](#working-out-what-a-workflow-executes)
@@ -53,10 +52,6 @@ A package reached only through another package travels with it: the workflow tha
 `event_factories` and `urllib_mocks` stood beside it here until the commit closing `#649` deleted both packages and their suites. They reached the workflows the same way until the commit closing `#567` deleted the three fixtures in `unit.py` that read them, and a package the corollary no longer reaches is one nothing imports at all: the answer to that is to delete it, not to keep eleven `test-*` jobs green over it.
 
 Check it against the tree rather than taking it on trust: `git grep -l boto_mocks -- src scripts lib test` names nothing outside `lib/python/boto_mocks/` and `test/lib/python/test_boto_mocks/` but that one `unit.py` and seven files under `test/lib/python/test_test_fixtures/test_integration/`.
-
-## `test_utils` is not that case
-
-`lib/python/test_utils/` is the other package with no consumer of its own, and the corollary does not reach it. Nothing imports it at all, not through another package and not directly, so there is no workflow that executes it and no workflow that owes its suite a job. What it needs is the decision `#603` was filed for, which is whether the package stays at all, rather than a workflow to run its tests in.
 
 ## One suite run by every workflow is the rule working
 

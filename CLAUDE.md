@@ -79,7 +79,7 @@ No file this repository lints carries a comment or a docstring: no `#` and no mo
 
 #### What a comment was about to say
 
-A comment is about to say what the code does, why it is the way it is, or that a value is required, and each has somewhere better to go: the first is the name, and a name that does not say it is the thing to change; the second is the commit message and the issue, which are dated and attached to a change where a comment sits beside a line claiming to describe it forever; the third is a test, which goes red when it stops being true. That is why commit bodies here are long. An assignment to `__doc__` is code and stays, and a `#` inside a string literal is not a comment. One tree still carries prose because no job reads it, `lib/python/test_utils/` with `test/lib/python/test_test_utils/` under `#603`; it is not an exception, and copying what is in it reproduces the problem rather than the rule. `lib/terraform/write_ahead_queue/` was the second until the commit closing `#660` gave `www_common.yml` the module in its `assert-no-comments` argument list.
+A comment is about to say what the code does, why it is the way it is, or that a value is required, and each has somewhere better to go: the first is the name, and a name that does not say it is the thing to change; the second is the commit message and the issue, which are dated and attached to a change where a comment sits beside a line claiming to describe it forever; the third is a test, which goes red when it stops being true. That is why commit bodies here are long. An assignment to `__doc__` is code and stays, and a `#` inside a string literal is not a comment.
 
 ### Issues
 
