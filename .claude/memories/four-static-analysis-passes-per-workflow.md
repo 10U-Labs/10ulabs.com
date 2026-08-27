@@ -43,45 +43,88 @@ The scripts workflow is the one that differs. It deploys nothing, so it has no s
 From the sessions endpoint's workflow, the whole of two of the four jobs:
 
 ```yaml
-- name: Run pylint on source
-  run: |
-    SRC=src/api/endpoints/sessions
-    PYTHONPATH=lib/python python3 -m pylint \
-      $SRC/lambda/ \
-      lib/python/boto_mocks \
-      lib/python/lambda_response \
-      lib/python/module_utils \
-      lib/python/naming_conventions \
-      lib/python/repo_utils \
-      lib/python/terraform_config \
-      lib/python/test_fixtures \
-      --recursive=y \
-      --fail-on=C,R,W --fail-under=10.0
-- name: Run pylint on tests
-  run: |
-    PYTHONPATH=lib/python:scripts python3 -m pylint \
-      test/__init__.py \
-      test/conftest.py \
-      test/api/__init__.py \
-      test/api/conftest.py \
-      test/api/endpoints/__init__.py \
-      test/api/endpoints/conftest.py \
-      test/api/endpoints/sessions \
-      test/lib/__init__.py \
-      test/lib/python/__init__.py \
-      test/lib/python/test_boto_mocks \
-      test/lib/python/test_lambda_response \
-      test/lib/python/test_module_utils \
-      test/lib/python/test_naming_conventions \
-      test/lib/python/test_naming_conventions_helpers \
-      test/lib/python/test_repo_utils \
-      test/lib/python/test_terraform_config \
-      test/lib/python/test_test_fixtures \
-      --recursive=y \
-      --fail-on=C,R,W --fail-under=10.0
+  pylint-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pylint \
+            pytest \
+            requests
+      - name: Run pylint on source
+        run: |
+          SRC=src/api/endpoints/sessions
+          PYTHONPATH=lib/python python3 -m pylint \
+            $SRC/lambda/ \
+            lib/python/boto_mocks \
+            lib/python/lambda_response \
+            lib/python/module_utils \
+            lib/python/naming_conventions \
+            lib/python/repo_utils \
+            lib/python/terraform_config \
+            lib/python/test_fixtures \
+            --recursive=y \
+            --disable=missing-module-docstring \
+            --disable=missing-class-docstring \
+            --disable=missing-function-docstring \
+            --fail-on=C,R,W --fail-under=10.0
+  pylint-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pylint \
+            pytest \
+            'python-hcl2<8' \
+            requests
+      - name: Run pylint on tests
+        run: |
+          PYTHONPATH=lib/python:scripts python3 -m pylint \
+            test/__init__.py \
+            test/conftest.py \
+            test/api/__init__.py \
+            test/api/conftest.py \
+            test/api/endpoints/__init__.py \
+            test/api/endpoints/conftest.py \
+            test/api/endpoints/sessions \
+            test/lib/__init__.py \
+            test/lib/python/__init__.py \
+            test/lib/python/test_boto_mocks \
+            test/lib/python/test_lambda_response \
+            test/lib/python/test_module_utils \
+            test/lib/python/test_naming_conventions \
+            test/lib/python/test_naming_conventions_helpers \
+            test/lib/python/test_repo_utils \
+            test/lib/python/test_terraform_config \
+            test/lib/python/test_test_fixtures \
+            --recursive=y \
+            --disable=missing-module-docstring \
+            --disable=missing-class-docstring \
+            --disable=missing-function-docstring \
+            --fail-on=C,R,W --fail-under=10.0
 ```
 
 Three kinds of path are in those lists. The source pass names the workflow's own Lambda directory and then the seven shared-library packages this endpoint executes. The test pass names the package and configuration files above its own subtree by name — those run in every suite below them, so a workflow that skipped them would leave the code its own tests are built on unread by anything — then its own subtree, then the `test/lib/python/` suite for each of those seven packages.
+
+The three steps before the pylint step in each job are where the split of "Why source and tests are split" is visible. `pylint-tests` installs `'python-hcl2<8'` and `pylint-source` does not: the endpoint's own unit subtree has a test that parses its Terraform, and no file the source pass reads imports the parser. That is the same asymmetry as the import path, which `pylint-tests` sets to `lib/python:scripts` and `pylint-source` to `lib/python` alone. The three `--disable=missing-*-docstring` lines are the other half of a rule stated elsewhere: `assert-no-comments` refuses a docstring anywhere in the tree, and those lines are what stops the four passes demanding back what it refuses. A copy of these jobs written without them goes red on every file it reads.
 
 ## Related notes
 
