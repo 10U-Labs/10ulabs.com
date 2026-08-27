@@ -76,12 +76,16 @@ class TestEnvironmentVariableContracts:
         assert "S3_PREFIX" in content
 
 
-def _dynamodb_client_methods_granted_by_iam_tf():
-    policy = re.search(
+def _dynamodb_access_policy_block():
+    return re.search(
         r'resource\s+"aws_iam_role_policy"\s+"dynamodb_access"\s*\{.*?\n\}',
         SESSIONS_IAM_TF_PATH.read_text(),
         re.DOTALL,
     )
+
+
+def _dynamodb_client_methods_granted_by_iam_tf():
+    policy = _dynamodb_access_policy_block()
     granted = re.findall(r'"dynamodb:(\w+)"', policy.group(0) if policy else "")
     return {re.sub(r"(?<!^)([A-Z])", r"_\1", action).lower() for action in granted}
 
@@ -94,6 +98,11 @@ def _dynamodb_client_methods_called_by_tracker_handler():
 
 
 class TestIamPolicyContracts:
+    def test_iam_tf_declares_the_dynamodb_access_policy(self):
+        assert _dynamodb_access_policy_block(), (
+            "aws_iam_role_policy.dynamodb_access not found in iam.tf"
+        )
+
     def test_dynamodb_actions_granted_are_the_ones_the_tracker_calls(self):
         granted = _dynamodb_client_methods_granted_by_iam_tf()
         called = _dynamodb_client_methods_called_by_tracker_handler()
