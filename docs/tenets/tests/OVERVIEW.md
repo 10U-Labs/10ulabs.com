@@ -23,7 +23,7 @@ Tests follow a cascading conftest.py pattern. Each level inherits from parents a
 
 ```text
 test/
-├── conftest.py                              # Level 0: lib/python on sys.path, unit and AWS fixture plugins
+├── conftest.py                              # Level 0: lib/python on sys.path, the AWS fixture plugin
 ├── api/
 │   ├── conftest.py                          # Level 1: Terraform outputs, AWS clients, deployment probes
 │   ├── endpoints/
