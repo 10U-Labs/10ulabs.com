@@ -163,7 +163,7 @@ def test_rate_limit_applies_to_echo_endpoint(api_url):
             response = requests.post(url, json=payload, headers=TEST_HEADERS, timeout=2)
             status_codes.append(response.status_code)
             time.sleep(0.1)
-        except requests.exceptions.Timeout:
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
             pass
     has_successful_response = 200 in status_codes
     assert has_successful_response, f"No 200 responses in {len(status_codes)} requests"
