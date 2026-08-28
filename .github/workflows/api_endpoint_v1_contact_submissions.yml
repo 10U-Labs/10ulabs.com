@@ -614,6 +614,7 @@ jobs:
       - pylint-source
       - pylint-tests
       - terraform-format
+      - terraform-format-module
       - test-boto-mocks
       - test-lambda-response
       - test-module-utils
@@ -698,6 +699,26 @@ jobs:
         run: |
           cd src/api/endpoints/contact_submissions && \
             terraform fmt -diff -check -recursive
+  terraform-format-module:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: terraform
+        name: Extract Terraform version
+        run: |
+          TF_FILE=src/api/endpoints/contact_submissions/backend.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_FILE \
+            | cut -d'"' -f2 | sed 's/>= //')
+          echo "version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.terraform.outputs.version }}
+          terraform_wrapper: false
+      - name: Terraform Format Check on common module
+        run: |
+          cd lib/terraform/common && terraform fmt -diff -check
   test-boto-mocks:
     runs-on: ubuntu-latest
     steps:

@@ -724,6 +724,9 @@ jobs:
         with:
           terraform_version: ${{ steps.terraform.outputs.version }}
           terraform_wrapper: false
+      - name: Terraform Format Check on common module
+        run: |
+          cd lib/terraform/common && terraform fmt -diff -check
       - name: Terraform Format Check on s3_bucket module
         run: |
           cd lib/terraform/s3_bucket && terraform fmt -diff -check
