@@ -710,6 +710,9 @@ on:
       - lib/python/repo_utils/**
       - lib/python/terraform_config/**
       - lib/python/test_fixtures/**
+      - lib/terraform/common/**
+      - lib/terraform/s3_bucket/**
+      - src/www/common/**
       - src/www/paths/rack_designer/**
       - test/__init__.py
       - test/conftest.py
