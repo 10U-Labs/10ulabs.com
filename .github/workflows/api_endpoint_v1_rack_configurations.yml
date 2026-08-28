@@ -35,10 +35,14 @@ jobs:
           lib/terraform/common
           test/__init__.py
           test/conftest.py
+          test/lib/terraform/__init__.py
+          test/lib/terraform/conftest.py
           test/api/__init__.py
           test/api/conftest.py
           test/api/endpoints/__init__.py
           test/api/endpoints/conftest.py
+          test/lib/terraform/common
+          test/lib/terraform/unit
           test/api/endpoints/rack_configurations
           test/lib/__init__.py
           test/lib/python/__init__.py
@@ -83,10 +87,14 @@ jobs:
           lib/terraform/common
           test/__init__.py
           test/conftest.py
+          test/lib/terraform/__init__.py
+          test/lib/terraform/conftest.py
           test/api/__init__.py
           test/api/conftest.py
           test/api/endpoints/__init__.py
           test/api/endpoints/conftest.py
+          test/lib/terraform/common
+          test/lib/terraform/unit
           test/api/endpoints/rack_configurations
           test/lib/__init__.py
           test/lib/python/__init__.py
@@ -126,6 +134,8 @@ jobs:
           lib/python/terraform_config
           lib/python/terraform_drift
           lib/python/test_fixtures
+          test/lib/terraform/common
+          test/lib/terraform/unit
           test/api/endpoints/rack_configurations
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
@@ -155,10 +165,14 @@ jobs:
           --verbose
           test/__init__.py
           test/conftest.py
+          test/lib/terraform/__init__.py
+          test/lib/terraform/conftest.py
           test/api/__init__.py
           test/api/conftest.py
           test/api/endpoints/__init__.py
           test/api/endpoints/conftest.py
+          test/lib/terraform/common
+          test/lib/terraform/unit
           test/api/endpoints/rack_configurations
           test/lib/__init__.py
           test/lib/python/__init__.py
@@ -201,10 +215,14 @@ jobs:
           --verbose
           test/__init__.py
           test/conftest.py
+          test/lib/terraform/__init__.py
+          test/lib/terraform/conftest.py
           test/api/__init__.py
           test/api/conftest.py
           test/api/endpoints/__init__.py
           test/api/endpoints/conftest.py
+          test/lib/terraform/common
+          test/lib/terraform/unit
           test/api/endpoints/rack_configurations
           test/lib/__init__.py
           test/lib/python/__init__.py
@@ -258,6 +276,8 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            test/lib/terraform/common \
+            test/lib/terraform/unit \
             test/api/endpoints/rack_configurations \
             test/lib/python/test_boto_mocks \
             test/lib/python/test_lambda_response \
@@ -373,10 +393,14 @@ jobs:
           MYPYPATH=lib/python:scripts python3 -m mypy \
             test/__init__.py \
             test/conftest.py \
+            test/lib/terraform/__init__.py \
+            test/lib/terraform/conftest.py \
             test/api/__init__.py \
             test/api/conftest.py \
             test/api/endpoints/__init__.py \
             test/api/endpoints/conftest.py \
+            test/lib/terraform/common \
+            test/lib/terraform/unit \
             test/api/endpoints/rack_configurations \
             test/lib/__init__.py \
             test/lib/python/__init__.py \
@@ -545,10 +569,14 @@ jobs:
           PYTHONPATH=lib/python:scripts python3 -m pylint \
             test/__init__.py \
             test/conftest.py \
+            test/lib/terraform/__init__.py \
+            test/lib/terraform/conftest.py \
             test/api/__init__.py \
             test/api/conftest.py \
             test/api/endpoints/__init__.py \
             test/api/endpoints/conftest.py \
+            test/lib/terraform/common \
+            test/lib/terraform/unit \
             test/api/endpoints/rack_configurations \
             test/lib/__init__.py \
             test/lib/python/__init__.py \
@@ -594,6 +622,7 @@ jobs:
       - test-test-fixtures
       - tflint
       - unit-tests
+      - unit-tests-module
       - yamllint
     runs-on: ubuntu-latest
     steps:
@@ -937,6 +966,28 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $TEST/pre_deployment/unit/ \
             --confcutdir=test --verbose --pythonwarnings=error
+  unit-tests-module:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest
+      - name: Run module unit tests
+        run: |
+          TEST_DIRS="test/lib/terraform/common/unit/"
+          TEST_DIRS="$TEST_DIRS test/lib/terraform/unit/"
+          PYTHONPATH=lib/python python3 -m pytest \
+            $TEST_DIRS \
+            --confcutdir=test --verbose --pythonwarnings=error
   yamllint:
     runs-on: ubuntu-latest
     steps:
@@ -997,6 +1048,10 @@ on:
       - test/lib/python/test_terraform_config/**
       - test/lib/python/test_terraform_drift/**
       - test/lib/python/test_test_fixtures/**
+      - test/lib/terraform/__init__.py
+      - test/lib/terraform/common/**
+      - test/lib/terraform/conftest.py
+      - test/lib/terraform/unit/**
   workflow_dispatch:
 permissions:
   contents: read
