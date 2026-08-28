@@ -27,7 +27,7 @@
     - [An empty conftest stays](#an-empty-conftest-stays)
     - [Cover every tier the change touches](#cover-every-tier-the-change-touches)
     - [Test first](#test-first)
-    - [The tenets and the inventory](#the-tenets-and-the-inventory)
+    - [The tenets are generic](#the-tenets-are-generic)
     - [The tree splits on deployment phase](#the-tree-splits-on-deployment-phase)
     - [Where test code that is not a test goes](#where-test-code-that-is-not-a-test-goes)
   - [Verification](#verification)
@@ -45,7 +45,7 @@
 
 These are the standing conventions for working in this repository. Each section links the longer write-up behind it, one note per topic under `.claude/memories/`; [.claude/memories/README.md](.claude/memories/README.md) indexes them all.
 
-A section here states a rule, a trap or the reason behind one. It does not restate what a file in the tree already says: an inventory copied into this file is a second copy that goes stale with nothing to catch it, and `#549`, `#553`, `#554`, `#584` and `#600` were all filed to repair one. Where the answer is in a workflow file, a tenet or `docs/tenets/tests/OVERVIEW.md`, this file points at it rather than paraphrasing it.
+A section here states a rule, a trap or the reason behind one. It does not restate what a file in the tree already says: an inventory copied into this file is a second copy that goes stale with nothing to catch it, and `#549`, `#553`, `#554`, `#584` and `#600` were all filed to repair one. Where the answer is in a workflow file or a tenet, this file points at it rather than paraphrasing it.
 
 ## Conventions
 
@@ -141,17 +141,17 @@ Read `docs/tenets/tests/` before implementing. Unit tests alone are not sufficie
 
 We do TDD: the test is written first, then the code that makes it pass. Test-first means authoring order — the red and the green observations belong to CI, since nothing runs locally.
 
-#### The tenets and the inventory
+#### The tenets are generic
 
-The four tier files under `docs/tenets/tests/` — `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRATION_TESTS.md`, `POST_DEPLOYMENT_INTEGRATION_TESTS.md` and `E2E_TESTS.md` — are tenets, not a description of the suite. They name no language, tool, directory or resource, because the repository already states all of that and a second copy drifts. When a tenet and the repository disagree, the repository is what changes; editing a tenet to match the code is backwards. `OVERVIEW.md` beside them is the opposite kind of document and is read the opposite way: it is an inventory of this suite by name, down to the conftest levels and the shared fixtures each holds, so where it and the tree disagree it is `OVERVIEW.md` that is out of date.
+The four tier files under `docs/tenets/tests/` — `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRATION_TESTS.md`, `POST_DEPLOYMENT_INTEGRATION_TESTS.md` and `E2E_TESTS.md` — are tenets, not a description of the suite. They name no language, tool, directory or resource, because the repository already states all of that and a second copy drifts. When a tenet and the repository disagree, the repository is what changes; editing a tenet to match the code is backwards.
 
 #### The tree splits on deployment phase
 
-A subsystem that deploys is laid out as `pre_deployment/{unit,integration}` and `post_deployment/{integration,e2e}`, and a tier directory appears only when there is a test to put in it. The deployment phase is the top split because neither post-deployment tier can be attempted until there is a deployment to call. Code under `lib/` deploys nothing of its own and so carries no such split: its tests mirror the package and stop. What decides the tier is what the test reads, not how end-to-end it looks. Which directory holds what is in `docs/tenets/tests/OVERVIEW.md`.
+A subsystem that deploys is laid out as `pre_deployment/{unit,integration}` and `post_deployment/{integration,e2e}`, and a tier directory appears only when there is a test to put in it. The deployment phase is the top split because neither post-deployment tier can be attempted until there is a deployment to call. Code under `lib/` deploys nothing of its own and so carries no such split: its tests mirror the package and stop. What decides the tier is what the test reads, not how end-to-end it looks. Which directory holds what is read from the tree with `git ls-files`.
 
 #### Where test code that is not a test goes
 
-Test code that is not itself a test — a fixture, a mock factory, a loader — is written once, and what decides where it goes is how many suites call it rather than what it is named after. A fixture is written at the highest conftest level where it still applies and inherited from there, because a copy one level down is what drifts. A helper several suites call belongs in `lib/python/` whatever subsystem its name mentions, and one a single suite calls belongs beside that suite however general it sounds; a module at the root of the test tree that only one subsystem imports is the shape to avoid. So writing a new fixture starts with reading: the conftest files above the one in hand, and the inventory in `docs/tenets/tests/OVERVIEW.md`, which is what the shared library already holds.
+Test code that is not itself a test — a fixture, a mock factory, a loader — is written once, and what decides where it goes is how many suites call it rather than what it is named after. A fixture is written at the highest conftest level where it still applies and inherited from there, because a copy one level down is what drifts. A helper several suites call belongs in `lib/python/` whatever subsystem its name mentions, and one a single suite calls belongs beside that suite however general it sounds; a module at the root of the test tree that only one subsystem imports is the shape to avoid. So writing a new fixture starts with reading: the conftest files above the one in hand, and the packages under `lib/python/`, which is what the shared library already holds.
 
 ### Verification
 

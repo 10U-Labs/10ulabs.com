@@ -5,8 +5,6 @@
 - [What a tenet is](#what-a-tenet-is)
 - [What belongs to the repository instead](#what-belongs-to-the-repository-instead)
 - [The four tier files hold to it](#the-four-tier-files-hold-to-it)
-- [The overview file is the other kind](#the-overview-file-is-the-other-kind)
-- [Why the overview file is kept](#why-the-overview-file-is-kept)
 - [The failure to watch for](#the-failure-to-watch-for)
 
 ## What a tenet is
@@ -20,14 +18,6 @@ So a tenet says "one test file per unit of source, named for the unit it covers"
 ## The four tier files hold to it
 
 The four tier files here hold to that. `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRATION_TESTS.md`, `POST_DEPLOYMENT_INTEGRATION_TESTS.md` and `E2E_TESTS.md` mention no directory, no `pytest`, no `terraform` and no module name. When one of them and the tree disagree, the tree is what changes; editing a tenet to match the code is backwards.
-
-## The overview file is the other kind
-
-`OVERVIEW.md` beside them is the opposite kind of document and is read the opposite way. It names the conftest levels, the modules under `lib/python/` and the imports each provides — all of it a description of this suite — so where it and the tree disagree, `OVERVIEW.md` is what is out of date. It has been: its hierarchy diagram went on drawing a directory of the API test tree that had already gone, long after the three that replaced it were in place.
-
-## Why the overview file is kept
-
-Keeping it is still worth it, because what it indexes — the fixtures in `lib/python/test_fixtures/`, `boto_mocks/`, `terraform_config/`, `naming_conventions/` and the rest — is the answer to "does this already exist", and that is expensive to rediscover. Read it for the inventory, not for the layout, and check what it says against the tree before relying on it. It says nothing about where a new thing goes, either: that is a convention rather than a description, so it sits in `CLAUDE.md` and in [test-code-is-placed-by-how-many-suites-use-it](test-code-is-placed-by-how-many-suites-use-it.md) with the rest of them.
 
 ## The failure to watch for
 

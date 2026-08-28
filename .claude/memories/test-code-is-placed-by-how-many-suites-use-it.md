@@ -26,7 +26,7 @@ The failure this catches is a module at the root of the test tree that only one 
 
 ## Check before creating
 
-The common fixtures already exist, so writing a new one starts with reading rather than writing. Read the configuration files above the one in hand, because the fixture may already be inherited. Read the inventory in `docs/tenets/tests/OVERVIEW.md`, which is what the shared library holds and is expensive to rediscover. Read the shared AWS fixture plugin in particular, since the whole tree already loads it and the clients and identities it provides are the ones most often written again by hand.
+The common fixtures already exist, so writing a new one starts with reading rather than writing. Read the configuration files above the one in hand, because the fixture may already be inherited. Read the packages under `lib/python/`, which is what the shared library holds. Read the shared AWS fixture plugin in particular, since the whole tree already loads it and the clients and identities it provides are the ones most often written again by hand.
 
 ## Related notes
 

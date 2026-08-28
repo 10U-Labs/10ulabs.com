@@ -8,7 +8,7 @@
 
 ## What to read
 
-Before implementing a change, read `docs/tenets/tests/`. Five files sit there and they are not all the same kind of document: `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRATION_TESTS.md`, `POST_DEPLOYMENT_INTEGRATION_TESTS.md` and `E2E_TESTS.md` say what each tier is held to and name no tool or directory, while `OVERVIEW.md` describes this suite by name. Which one wins when they disagree with the tree is in [tenets-are-generic](tenets-are-generic.md).
+Before implementing a change, read `docs/tenets/tests/`. Four files sit there and they are all the same kind of document: `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRATION_TESTS.md`, `POST_DEPLOYMENT_INTEGRATION_TESTS.md` and `E2E_TESTS.md` say what each tier is held to and name no tool or directory. That a tenet loses to nothing, the repository being what changes when the two disagree, is in [tenets-are-generic](tenets-are-generic.md).
 
 ## What the tenets require
 
