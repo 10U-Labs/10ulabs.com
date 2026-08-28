@@ -159,6 +159,17 @@ jobs:
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_test_fixtures
+  assert-opentofu-resource-is-used:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Assert every OpenTofu resource is reached by something
+        uses: 10U-Labs/assert-opentofu-resource-is-used@latest
+        with:
+          directories: src/www/common
+          search-in: .
+          verbose: "true"
   assert-pytest-fixture-name-is-needed:
     runs-on: ubuntu-latest
     steps:
@@ -376,6 +387,7 @@ jobs:
       - assert-no-inline-directives
       - assert-no-linter-config-files
       - assert-one-assert-per-pytest
+      - assert-opentofu-resource-is-used
       - assert-pytest-fixture-name-is-needed
       - copy-paste-source
       - copy-paste-tests
