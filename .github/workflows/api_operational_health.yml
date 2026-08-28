@@ -193,7 +193,9 @@ jobs:
       - name: Assert every OpenTofu resource is reached by something
         uses: 10U-Labs/assert-opentofu-resource-is-used@latest
         with:
-          directories: src/api/operational/health
+          directories: >-
+            src/api/operational/health
+            lib/terraform/common
           search-in: .
           verbose: "true"
   assert-pytest-fixture-name-is-needed:
