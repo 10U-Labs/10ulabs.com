@@ -205,14 +205,14 @@ def api_gateway_info(request):
         raise
 
 
-@pytest.fixture(name="api_url", scope="module")
-def api_url_fixture(request):
+@pytest.fixture(scope="module")
+def api_url(request):
     config = request.getfixturevalue("config")
     return f"https://{config['api_fqdn']}"
 
 
-@pytest.fixture(name="api_key", scope="module")
-def api_key_fixture(request):
+@pytest.fixture(scope="module")
+def api_key(request):
     client = request.getfixturevalue("ssm_client")
     param_response = client.get_parameter(Name='/api/key', WithDecryption=True)
     return param_response['Parameter']['Value'] if param_response else None

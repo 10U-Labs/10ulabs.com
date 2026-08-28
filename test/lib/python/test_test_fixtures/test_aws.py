@@ -6,8 +6,8 @@ from botocore.exceptions import ClientError
 
 from test_fixtures.aws import (
     api_gateway_info,
-    api_key_fixture,
-    api_url_fixture,
+    api_key,
+    api_url,
     apigateway_client,
     aws_region,
     backup_client,
@@ -701,7 +701,7 @@ class TestApiGatewayInfoFixtureExecution:
 def test_api_url_fixture_execution():
     mock_request = MagicMock()
     mock_request.getfixturevalue.return_value = {"api_fqdn": "api.example.com"}
-    result = api_url_fixture.__wrapped__(mock_request)
+    result = api_url.__wrapped__(mock_request)
     assert result == "https://api.example.com"
 
 
@@ -712,7 +712,7 @@ def test_api_key_fixture_execution():
         "Parameter": {"Value": "secret-key-123"}
     }
     mock_request.getfixturevalue.return_value = mock_client
-    result = api_key_fixture.__wrapped__(mock_request)
+    result = api_key.__wrapped__(mock_request)
     assert result == "secret-key-123"
     mock_client.get_parameter.assert_called_with(Name='/api/key', WithDecryption=True)
 

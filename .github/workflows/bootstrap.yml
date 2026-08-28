@@ -188,6 +188,7 @@ jobs:
           test/lib/python/test_terraform_config
           test/lib/python/test_terraform_drift
           test/lib/python/test_test_fixtures
+          lib/python/test_fixtures
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:
