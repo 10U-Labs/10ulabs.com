@@ -34,7 +34,6 @@ jobs:
           lib/python/test_fixtures
           lib/terraform/common
           lib/terraform/s3_bucket
-          lib/terraform/write_ahead_queue
           test/__init__.py
           test/conftest.py
           test/lib/terraform/__init__.py
@@ -43,7 +42,7 @@ jobs:
           test/www/conftest.py
           test/lib/terraform/common
           test/lib/terraform/s3_bucket
-          test/lib/terraform/write_ahead_queue
+          test/lib/terraform/unit
           test/www/common
           test/lib/__init__.py
           test/lib/python/__init__.py
@@ -87,7 +86,6 @@ jobs:
           lib/python/test_fixtures
           lib/terraform/common
           lib/terraform/s3_bucket
-          lib/terraform/write_ahead_queue
           test/__init__.py
           test/conftest.py
           test/lib/terraform/__init__.py
@@ -96,7 +94,7 @@ jobs:
           test/www/conftest.py
           test/lib/terraform/common
           test/lib/terraform/s3_bucket
-          test/lib/terraform/write_ahead_queue
+          test/lib/terraform/unit
           test/www/common
           test/lib/__init__.py
           test/lib/python/__init__.py
@@ -138,7 +136,7 @@ jobs:
           lib/python/test_fixtures
           test/lib/terraform/common
           test/lib/terraform/s3_bucket
-          test/lib/terraform/write_ahead_queue
+          test/lib/terraform/unit
           test/www/common
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
@@ -174,7 +172,7 @@ jobs:
           test/www/conftest.py
           test/lib/terraform/common
           test/lib/terraform/s3_bucket
-          test/lib/terraform/write_ahead_queue
+          test/lib/terraform/unit
           test/www/common
           test/lib/__init__.py
           test/lib/python/__init__.py
@@ -223,7 +221,7 @@ jobs:
           test/www/conftest.py
           test/lib/terraform/common
           test/lib/terraform/s3_bucket
-          test/lib/terraform/write_ahead_queue
+          test/lib/terraform/unit
           test/www/common
           test/lib/__init__.py
           test/lib/python/__init__.py
@@ -279,7 +277,7 @@ jobs:
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             test/lib/terraform/common \
             test/lib/terraform/s3_bucket \
-            test/lib/terraform/write_ahead_queue \
+            test/lib/terraform/unit \
             test/www/common \
             test/lib/python/test_boto_mocks \
             test/lib/python/test_lambda_response \
@@ -401,7 +399,7 @@ jobs:
             test/www/conftest.py \
             test/lib/terraform/common \
             test/lib/terraform/s3_bucket \
-            test/lib/terraform/write_ahead_queue \
+            test/lib/terraform/unit \
             test/www/common \
             test/lib/__init__.py \
             test/lib/python/__init__.py \
@@ -574,7 +572,7 @@ jobs:
             test/www/conftest.py \
             test/lib/terraform/common \
             test/lib/terraform/s3_bucket \
-            test/lib/terraform/write_ahead_queue \
+            test/lib/terraform/unit \
             test/www/common \
             test/lib/__init__.py \
             test/lib/python/__init__.py \
@@ -729,9 +727,6 @@ jobs:
       - name: Terraform Format Check on s3_bucket module
         run: |
           cd lib/terraform/s3_bucket && terraform fmt -diff -check
-      - name: Terraform Format Check on write_ahead_queue module
-        run: |
-          cd lib/terraform/write_ahead_queue && terraform fmt -diff -check
   test-boto-mocks:
     runs-on: ubuntu-latest
     steps:
@@ -1010,11 +1005,6 @@ jobs:
         name: Run tflint on s3_bucket module
         run: |
           cd lib/terraform/s3_bucket && tflint --init && tflint
-      - env:
-          GITHUB_TOKEN: ${{ github.token }}
-        name: Run tflint on write_ahead_queue module
-        run: |
-          cd lib/terraform/write_ahead_queue && tflint --init && tflint
   unit-tests:
     runs-on: ubuntu-latest
     steps:
@@ -1054,8 +1044,8 @@ jobs:
       - name: Run module unit tests
         run: |
           TEST_DIRS="test/lib/terraform/s3_bucket/unit/"
-          TEST_DIRS="$TEST_DIRS test/lib/terraform/write_ahead_queue/unit/"
           TEST_DIRS="$TEST_DIRS test/lib/terraform/common/unit/"
+          TEST_DIRS="$TEST_DIRS test/lib/terraform/unit/"
           PYTHONPATH=lib/python python3 -m pytest \
             $TEST_DIRS \
             --confcutdir=test --verbose --pythonwarnings=error
@@ -1101,7 +1091,6 @@ on:
       - lib/python/test_fixtures/**
       - lib/terraform/common/**
       - lib/terraform/s3_bucket/**
-      - lib/terraform/write_ahead_queue/**
       - src/www/common/**
       - test/__init__.py
       - test/conftest.py
@@ -1120,7 +1109,7 @@ on:
       - test/lib/terraform/common/**
       - test/lib/terraform/conftest.py
       - test/lib/terraform/s3_bucket/**
-      - test/lib/terraform/write_ahead_queue/**
+      - test/lib/terraform/unit/**
       - test/www/__init__.py
       - test/www/common/**
       - test/www/conftest.py
