@@ -270,47 +270,6 @@ class TestCallerIdentityFixture:
         assert "Arn" in mock_response
 
 
-class TestCurrentRoleArnFixture:
-    def test_converts_assumed_role_arn_to_role_arn(self):
-        identity = {
-            "Account": "123456789012",
-            "Arn": "arn:aws:sts::123456789012:assumed-role/my-role/session-name"
-        }
-        arn = identity.get("Arn", "")
-        if ":assumed-role/" in arn:
-            account = identity.get("Account", "")
-            role_name = arn.split("/")[1]
-            result = f"arn:aws:iam::{account}:role/{role_name}"
-        else:
-            result = arn
-        assert result == "arn:aws:iam::123456789012:role/my-role"
-
-    def test_returns_original_arn_if_not_assumed_role(self):
-        identity = {
-            "Account": "123456789012",
-            "Arn": "arn:aws:iam::123456789012:user/my-user"
-        }
-        arn = identity.get("Arn", "")
-        if ":assumed-role/" in arn:
-            account = identity.get("Account", "")
-            role_name = arn.split("/")[1]
-            result = f"arn:aws:iam::{account}:role/{role_name}"
-        else:
-            result = arn
-        assert result == "arn:aws:iam::123456789012:user/my-user"
-
-    def test_handles_empty_arn(self):
-        identity = {"Account": "123456789012", "Arn": ""}
-        arn = identity.get("Arn", "")
-        if ":assumed-role/" in arn:
-            account = identity.get("Account", "")
-            role_name = arn.split("/")[1]
-            result = f"arn:aws:iam::{account}:role/{role_name}"
-        else:
-            result = arn
-        assert result == ""
-
-
 class TestCurrentRoleNameFixture:
     def test_extracts_role_name_from_role_arn(self):
         role_arn = "arn:aws:iam::123456789012:role/my-test-role"

@@ -7,6 +7,19 @@ from test_fixtures.lambda_lifecycle import (
 )
 
 
+LAMBDA_WITH_LIFECYCLE_TF = '''
+resource "aws_lambda_function" "my_lambda" {
+  function_name = "my-function"
+  environment {
+    variables = { KEY = "value" }
+  }
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.lambda_role.id]
+  }
+}
+'''
+
+
 class TestExtractBlockContentSimpleBlocks:
     def test_extracts_empty_block(self):
         content = "{}"
@@ -70,19 +83,8 @@ class TestExtractBlockContentNestedBlocks:
 
 class TestCheckLambdaLifecycleRulesPass:
     def test_passes_for_lambda_with_lifecycle_and_replace_triggered_by(self, tmp_path):
-        tf_content = '''
-resource "aws_lambda_function" "my_lambda" {
-  function_name = "my-function"
-  environment {
-    variables = { KEY = "value" }
-  }
-  lifecycle {
-    replace_triggered_by = [aws_iam_role.lambda_role.id]
-  }
-}
-'''
         tf_file = tmp_path / "lambda.tf"
-        tf_file.write_text(tf_content)
+        tf_file.write_text(LAMBDA_WITH_LIFECYCLE_TF)
         assert _check_lambda_lifecycle_rules(tf_file) is None
 
     def test_passes_for_lambda_without_environment_variables(self, tmp_path):
@@ -279,19 +281,8 @@ class TestCreateLambdaLifecycleTestsCustomTfFiles:
 
 class TestCreateLambdaLifecycleTestsTestMethodBehavior:
     def test_lifecycle_test_passes_for_valid_lambda(self, tmp_path):
-        tf_content = '''
-resource "aws_lambda_function" "my_lambda" {
-  function_name = "my-function"
-  environment {
-    variables = { KEY = "value" }
-  }
-  lifecycle {
-    replace_triggered_by = [aws_iam_role.lambda_role.id]
-  }
-}
-'''
         tf_file = tmp_path / "lambda.tf"
-        tf_file.write_text(tf_content)
+        tf_file.write_text(LAMBDA_WITH_LIFECYCLE_TF)
         TestClass = create_lambda_lifecycle_tests(tmp_path)
         instance = TestClass()
         assert instance.test_lambda_with_env_vars_has_lifecycle_rule() is None
