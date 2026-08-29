@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 from botocore.exceptions import ClientError
 
-from test_fixtures.unit import create_mock_dynamodb_client
+from test_fixtures.unit import create_mock_dynamodb_client, reset_module_state
 
 
 class TestExtractSessionIdFromPath:
@@ -338,7 +338,7 @@ class TestHandleEventsErrorHandling:
 
 class TestGetDynamoDbClient:
     def test_creates_client_when_not_cached(self, handler):
-        handler.clear_clients()
+        reset_module_state(handler, _clients={})
         with patch('boto3.client') as mock_boto:
             mock_client = MagicMock()
             mock_boto.return_value = mock_client
@@ -347,7 +347,7 @@ class TestGetDynamoDbClient:
             assert result == mock_client
 
     def test_returns_cached_client(self, handler):
-        handler.clear_clients()
+        reset_module_state(handler, _clients={})
         with patch('boto3.client') as mock_boto:
             mock_client = MagicMock()
             mock_boto.return_value = mock_client

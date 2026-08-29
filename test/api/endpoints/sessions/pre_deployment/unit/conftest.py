@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 from module_utils import create_lambda_loader
+from test_fixtures.unit import reset_module_state
 from repo_utils import REPO_ROOT
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
@@ -16,7 +17,7 @@ load_analytics_module = create_lambda_loader(SESSIONS_EXPORTER_PATH)
 @pytest.fixture
 def handler():
     module = load_lambda_module("handler.py", "handler")
-    module.clear_clients()
+    reset_module_state(module, _clients={})
     return module
 
 
