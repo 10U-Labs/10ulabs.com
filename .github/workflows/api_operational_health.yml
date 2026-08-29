@@ -243,12 +243,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Assert every definition is named outside the tests
+      - name: Assert every definition is named outside its own package's tests
         uses: 10U-Labs/assert-python-definition-is-used@latest
         with:
           assume-used-matching: lambda_handler
-          search-in: lib/python scripts src
-          trees: src/api/operational/health/lambda
+          dont-search-in: test/lib/python/test_{package}
+          search-in: lib/python scripts src test
+          trees: >-
+            src/api/operational/health/lambda
+            lib/python
           verbose: "true"
   assert-python-definition-is-used-in-tests:
     runs-on: ubuntu-latest
