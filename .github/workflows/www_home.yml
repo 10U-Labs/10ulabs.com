@@ -316,7 +316,11 @@ jobs:
         run: |
           for file in \
             src/www/paths/home/components.json \
-            src/www/paths/home/package.json
+            src/www/paths/home/package-lock.json \
+            src/www/paths/home/package.json \
+            src/www/paths/home/tsconfig.app.json \
+            src/www/paths/home/tsconfig.json \
+            src/www/paths/home/tsconfig.node.json
           do
             echo "Validating $file"
             jsonlint -q "$file"
