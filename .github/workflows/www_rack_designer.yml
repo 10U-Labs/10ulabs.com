@@ -272,6 +272,19 @@ jobs:
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
             test/lib/python/test_test_fixtures
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install eslint
+        run: npm install --no-save eslint@9 @eslint/js globals
+      - name: Run eslint
+        run: |
+          npx eslint \
+            --config src/www/paths/rack_designer/eslint.config.mjs \
+            --max-warnings 0 \
+            src/www/paths/rack_designer/js
   mypy-source:
     runs-on: ubuntu-latest
     steps:
@@ -424,6 +437,7 @@ jobs:
       - assert-python-definition-is-used-in-tests
       - copy-paste-source
       - copy-paste-tests
+      - eslint
       - mypy-source
       - mypy-tests
       - pylint-source
