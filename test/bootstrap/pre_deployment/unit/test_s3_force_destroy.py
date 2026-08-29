@@ -1,13 +1,6 @@
+from test.bootstrap.pre_deployment.unit.conftest import V7_COMPATIBLE
+
 import hcl2
-from hcl2 import SerializationOptions
-
-
-V7_COMPATIBLE = SerializationOptions(
-    strip_string_quotes=True,
-    explicit_blocks=False,
-    with_comments=False,
-    preserve_heredocs=False,
-)
 
 
 def test_terraform_state_bucket_has_force_destroy(bootstrap_dir):

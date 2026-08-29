@@ -1,14 +1,7 @@
+from test.bootstrap.pre_deployment.unit.conftest import V7_COMPATIBLE
+
 import hcl2
-from hcl2 import SerializationOptions
 import pytest
-
-
-V7_COMPATIBLE = SerializationOptions(
-    strip_string_quotes=True,
-    explicit_blocks=False,
-    with_comments=False,
-    preserve_heredocs=False,
-)
 
 
 def _load_state_tf(bootstrap_dir):
