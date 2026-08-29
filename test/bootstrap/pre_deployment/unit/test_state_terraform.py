@@ -1,10 +1,19 @@
 import hcl2
+from hcl2 import SerializationOptions
 import pytest
+
+
+V7_COMPATIBLE = SerializationOptions(
+    strip_string_quotes=True,
+    explicit_blocks=False,
+    with_comments=False,
+    preserve_heredocs=False,
+)
 
 
 def _load_state_tf(bootstrap_dir):
     with open(bootstrap_dir / "state.tf", encoding='utf-8') as f:
-        return hcl2.load(f)
+        return hcl2.load(f, serialization_options=V7_COMPATIBLE)
 
 
 def _find_resource(tf_config, resource_type, resource_name):

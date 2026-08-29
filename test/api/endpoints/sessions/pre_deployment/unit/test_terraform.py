@@ -1,7 +1,16 @@
 import hcl2
+from hcl2 import SerializationOptions
 from repo_utils import REPO_ROOT
 from test_fixtures.lambda_lifecycle import create_lambda_lifecycle_tests
 from test_fixtures.terraform_tests import create_remote_state_config_tests
+
+V7_COMPATIBLE = SerializationOptions(
+    strip_string_quotes=True,
+    explicit_blocks=False,
+    with_comments=False,
+    preserve_heredocs=False,
+)
+
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
 
@@ -64,7 +73,7 @@ class TestLambdaConfiguration:
 def test_analytics_bucket_configuration():
     analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
     with open(analytics_tf, encoding='utf-8') as f:
-        tf_config = hcl2.load(f)
+        tf_config = hcl2.load(f, serialization_options=V7_COMPATIBLE)
     versioning = next(
         r['aws_s3_bucket_versioning']['analytics']
         for r in tf_config['resource']
