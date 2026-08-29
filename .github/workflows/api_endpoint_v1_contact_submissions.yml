@@ -246,6 +246,7 @@ jobs:
       - name: Assert every definition is named outside the tests
         uses: 10U-Labs/assert-python-definition-is-used@latest
         with:
+          assume-used-matching: lambda_handler
           search-in: lib/python scripts src
           trees: src/api/endpoints/contact_submissions/lambda
           verbose: "true"
