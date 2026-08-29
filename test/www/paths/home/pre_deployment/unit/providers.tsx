@@ -3,7 +3,19 @@ import { BrowserRouter } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ReactNode } from "react";
 
-import { createTestQueryClient, futureFlags } from "./provider_defaults";
+const futureFlags = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+};
+
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
 
 export const AllProviders = ({ children }: { children: ReactNode }) => {
   const queryClient = createTestQueryClient();
