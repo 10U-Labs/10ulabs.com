@@ -242,7 +242,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install jscpd
-        run: npm install -g jscpd@4.0.5
+        run: npm install -g jscpd
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -259,7 +259,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install jscpd
-        run: npm install -g jscpd@4.0.5
+        run: npm install -g jscpd
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -278,7 +278,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install eslint
-        run: npm install --no-save eslint@9 @eslint/js@9 globals
+        run: npm install --no-save eslint @eslint/js globals
       - name: Run eslint
         run: |
           npx eslint \

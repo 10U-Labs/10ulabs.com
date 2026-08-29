@@ -261,7 +261,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install jscpd
-        run: npm install -g jscpd@4.0.5
+        run: npm install -g jscpd
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -279,7 +279,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install jscpd
-        run: npm install -g jscpd@4.0.5
+        run: npm install -g jscpd
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
@@ -412,7 +412,7 @@ jobs:
             dnspython \
             mypy \
             pytest \
-            'python-hcl2<8' \
+            python-hcl2 \
             requests \
             types-requests
       - name: Run mypy on tests
@@ -621,7 +621,7 @@ jobs:
             dnspython \
             pylint \
             pytest \
-            'python-hcl2<8' \
+            python-hcl2 \
             requests
       - name: Run pylint on tests
         run: |
@@ -1088,7 +1088,7 @@ jobs:
             boto3 \
             botocore \
             pytest \
-            'python-hcl2<8'
+            python-hcl2
       - name: Run unit tests
         run: |
           TEST=test/bootstrap

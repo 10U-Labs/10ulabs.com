@@ -35,6 +35,7 @@
     - [A workflow runs the suites of the packages it executes](#a-workflow-runs-the-suites-of-the-packages-it-executes)
     - [An eslint config is read from wherever eslint was started](#an-eslint-config-is-read-from-wherever-eslint-was-started)
     - [CI is the source of truth](#ci-is-the-source-of-truth)
+    - [Every tool is installed at latest](#every-tool-is-installed-at-latest)
     - [Finding the run](#finding-the-run)
     - [Four passes read the packages the workflow executes](#four-passes-read-the-packages-the-workflow-executes)
     - [Four static analysis passes per workflow](#four-static-analysis-passes-per-workflow)
@@ -156,7 +157,7 @@ Test code that is not itself a test — a fixture, a mock factory, a loader — 
 
 ### Verification
 
-Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md), [four-static-analysis-passes-per-workflow](.claude/memories/four-static-analysis-passes-per-workflow.md), [a-workflow-reads-the-library-it-executes](.claude/memories/a-workflow-reads-the-library-it-executes.md), [a-workflow-runs-the-suites-of-the-packages-it-executes](.claude/memories/a-workflow-runs-the-suites-of-the-packages-it-executes.md), [an-eslint-config-is-read-from-wherever-eslint-was-started](.claude/memories/an-eslint-config-is-read-from-wherever-eslint-was-started.md).
+Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [every-tool-is-installed-at-latest](.claude/memories/every-tool-is-installed-at-latest.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md), [four-static-analysis-passes-per-workflow](.claude/memories/four-static-analysis-passes-per-workflow.md), [a-workflow-reads-the-library-it-executes](.claude/memories/a-workflow-reads-the-library-it-executes.md), [a-workflow-runs-the-suites-of-the-packages-it-executes](.claude/memories/a-workflow-runs-the-suites-of-the-packages-it-executes.md), [an-eslint-config-is-read-from-wherever-eslint-was-started](.claude/memories/an-eslint-config-is-read-from-wherever-eslint-was-started.md).
 
 #### A push starts more than one workflow
 
@@ -173,6 +174,10 @@ A glob in a flat eslint configuration has no meaning until something says what d
 #### CI is the source of truth
 
 CI is the source of truth. Do not run tests, linters or builds locally to verify a change — write the code and the tests, commit, push to `main`, and read the run with `gh run list` / `gh run watch` / `gh run view --log-failed`. Local runs cost tokens and pull in dependencies this machine does not otherwise need; CI is free and checks every gate at once. Reading the code locally is still right and cheap — `grep` and file reads are how the useful findings surface, and two suites asserting opposite things about one setting is the kind of thing only reading catches. The line is at executing checks: no virtualenv, no dependency install, no `pytest` or `pylint` run to confirm what CI confirms for free.
+
+#### Every tool is installed at latest
+
+Every package a workflow installs is named with no version specifier, on purpose, so each job installs whatever the index is serving when it runs: seventeen from `python3 -m pip install`, three from `npm install -g` and three from the `npm install --no-save` in `www_rack_designer.yml`. A pinned checker is a checker that has stopped checking — the five `10U-Labs` tools are written to be extended, and the day a release can see more is the day this repository wants to be held to it, where a pin defers that finding to whenever somebody edits the line and nothing schedules that. A bound like `<8` is the same thing with a slower fuse. The cost is real and is accepted: a run three weeks old cannot be reproduced, and a release in another repository can turn an unrelated push red, which `#690` is — `assert-no-comments` `v20260829124358` gave the tool TypeScript and twenty-three comments that had stood for months became findings. Answer such a run by fixing what it found, never by adding a specifier. `src/www/paths/home/package-lock.json` is not an exception to this because it is not a tool pin: it pins what deploys rather than what CI refuses.
 
 #### Finding the run
 
