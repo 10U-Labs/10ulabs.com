@@ -6,7 +6,6 @@ import { Cpu, CircuitBoard, Layers } from "lucide-react";
 const Index = () => {
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-background to-secondary py-20 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center space-y-6">
@@ -28,7 +27,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Products Section */}
       <section id="products" className="py-20 px-4 bg-background">
         <div className="container mx-auto max-w-6xl">
           <h2 className="text-4xl font-bold text-center mb-12 text-foreground">
@@ -74,7 +72,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* About Section */}
       <section className="py-20 px-4 bg-secondary">
         <div className="container mx-auto max-w-4xl">
           <h2 className="text-4xl font-bold text-center mb-8 text-foreground">
@@ -91,7 +88,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Contact Section */}
       <section id="contact" className="py-20 px-4 bg-background">
         <div className="container mx-auto max-w-2xl">
           <h2 className="text-4xl font-bold text-center mb-4 text-foreground">
@@ -108,7 +104,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="bg-secondary py-8 px-4 border-t border-border">
         <div className="container mx-auto max-w-6xl text-center text-muted-foreground">
           <a href="/privacy.html" className="text-primary hover:underline mb-2 inline-block">Privacy Notice</a>

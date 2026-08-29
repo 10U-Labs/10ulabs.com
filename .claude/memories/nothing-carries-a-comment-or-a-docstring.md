@@ -12,7 +12,7 @@
 
 ## The rule
 
-No file this repository lints carries a comment or a docstring. That covers every `#` in a Python file, every module, class and function docstring, every `#` in a workflow file, every `#`, `//` and `/* */` in an OpenTofu file, and every `//` and `/* */` in JavaScript. A name, a signature and the shape of a function are the whole of what a reader gets. Where that is not enough to say what a thing holds or does, the thing is named or shaped wrong rather than under-explained, and the answer is to rename or reshape it.
+No file this repository lints carries a comment or a docstring. That covers every `#` in a Python file, every module, class and function docstring, every `#` in a workflow file, every `#`, `//` and `/* */` in an OpenTofu file, and every `//` and `/* */` in JavaScript or TypeScript. A name, a signature and the shape of a function are the whole of what a reader gets. Where that is not enough to say what a thing holds or does, the thing is named or shaped wrong rather than under-explained, and the answer is to rename or reshape it.
 
 ## What refuses it
 

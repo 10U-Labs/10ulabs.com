@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+import { Children, isValidElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
+import App from "@/App";
 
 vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({
@@ -17,6 +19,22 @@ vi.mock("@/hooks/use_toast", () => ({
     toast: vi.fn(),
   }),
 }));
+
+const findRoutesElement = (node: unknown): React.ReactElement | null => {
+  if (!isValidElement(node)) {
+    return null;
+  }
+  if (node.type === Routes) {
+    return node;
+  }
+  let found: React.ReactElement | null = null;
+  Children.forEach((node.props as { children?: React.ReactNode }).children, (child) => {
+    if (found === null) {
+      found = findRoutesElement(child);
+    }
+  });
+  return found;
+};
 
 const futureFlags = {
   v7_startTransition: true,
@@ -93,6 +111,13 @@ describe("App", () => {
       render(<TestWrapper initialPath="/nonexistent" />);
       const hasNotFoundContent = screen.getByText("404") !== null;
       expect(hasNotFoundContent).toBe(true);
+    });
+
+    it("declares the catch-all as the last route in App", () => {
+      const routes = findRoutesElement(App());
+      const declared = Children.toArray(routes.props.children) as React.ReactElement[];
+      const last = declared[declared.length - 1];
+      expect(last.props.path).toBe("*");
     });
   });
 });
