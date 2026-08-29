@@ -648,7 +648,10 @@ jobs:
             --disable=missing-function-docstring \
             --fail-on=C,R,W --fail-under=10.0
   reconciliation:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main'
+      && (github.event_name != 'workflow_run'
+      || github.event.workflow_run.conclusion == 'success')
     needs:
       - assert-no-comments
       - assert-no-inline-directives
@@ -1157,6 +1160,11 @@ on:
       - test/lib/terraform/conftest.py
       - test/lib/terraform/unit/**
   workflow_dispatch:
+  workflow_run:
+    types:
+      - completed
+    workflows:
+      - api_common_routing
 permissions:
   contents: read
   id-token: write
