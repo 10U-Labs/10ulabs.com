@@ -278,7 +278,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install eslint
-        run: npm install --no-save eslint@9 @eslint/js globals
+        run: npm install --no-save eslint@9 @eslint/js@9 globals
       - name: Run eslint
         run: |
           npx eslint \
