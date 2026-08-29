@@ -33,6 +33,7 @@
   - [Verification](#verification)
     - [A push starts more than one workflow](#a-push-starts-more-than-one-workflow)
     - [A workflow runs the suites of the packages it executes](#a-workflow-runs-the-suites-of-the-packages-it-executes)
+    - [An eslint config is read from wherever eslint was started](#an-eslint-config-is-read-from-wherever-eslint-was-started)
     - [CI is the source of truth](#ci-is-the-source-of-truth)
     - [Finding the run](#finding-the-run)
     - [Four passes read the packages the workflow executes](#four-passes-read-the-packages-the-workflow-executes)
@@ -155,7 +156,7 @@ Test code that is not itself a test — a fixture, a mock factory, a loader — 
 
 ### Verification
 
-Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md), [four-static-analysis-passes-per-workflow](.claude/memories/four-static-analysis-passes-per-workflow.md), [a-workflow-reads-the-library-it-executes](.claude/memories/a-workflow-reads-the-library-it-executes.md), [a-workflow-runs-the-suites-of-the-packages-it-executes](.claude/memories/a-workflow-runs-the-suites-of-the-packages-it-executes.md).
+Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md), [four-static-analysis-passes-per-workflow](.claude/memories/four-static-analysis-passes-per-workflow.md), [a-workflow-reads-the-library-it-executes](.claude/memories/a-workflow-reads-the-library-it-executes.md), [a-workflow-runs-the-suites-of-the-packages-it-executes](.claude/memories/a-workflow-runs-the-suites-of-the-packages-it-executes.md), [an-eslint-config-is-read-from-wherever-eslint-was-started](.claude/memories/an-eslint-config-is-read-from-wherever-eslint-was-started.md).
 
 #### A push starts more than one workflow
 
@@ -164,6 +165,10 @@ A push starts every workflow whose `paths` filter the commit touches, and the ch
 #### A workflow runs the suites of the packages it executes
 
 A workflow runs the suite of every package under `lib/python/` that the workflow executes, each in a job of its own named after its package and carrying the `--cov=<package> --cov-branch --cov-report=term-missing --cov-fail-under=100` gate `a2558ccc` gave the ten jobs in `api_common_routing.yml`. What a workflow executes is the same set the static analysis reads. The reason is that the workflow runs the code and the code can make its run red: a defect in a package a workflow imports is reported by that workflow either way, and the job is what makes it reported against the package that broke rather than against whichever of the workflow's own suites reached the broken line first. A workflow that deploys is gated twice over, its `reconciliation` job being what stops an apply over a broken library; a workflow that deploys nothing carries the jobs on the first reason alone, which is the case `scripts.yml` was left in when `39e1ad90` deleted its twelve `test-*` jobs and the ten issues that put them back elsewhere all argued from the deployment gate. A package reached only through another package travels with it, so the workflow that runs the reaching package's suite runs the reached package's suite too: `boto_mocks` is imported outside test code by one file only, `lib/python/test_fixtures/unit.py`, and without the corollary its suite would run in no workflow at all. The `paths` filter carries the same set, so an edit to a package starts every workflow that runs its suite.
+
+#### An eslint config is read from wherever eslint was started
+
+A glob in a flat eslint configuration has no meaning until something says what directory it is anchored to, and eslint answers that two ways. A configuration it found by searching upward anchors its `files` and `ignores` at the directory holding the file; a configuration named with `--config` anchors them at the working directory instead, and a `basePath` key resolves the same two ways. So one unedited file covers different sets of files depending on how eslint was started, with no error either way. Both eslint jobs here run the binary from the repository root with `--config`, which is what lets `src/www/paths/home/eslint.config.js` reach `test/www/paths/home` as well as its own package, and is also why the `ignores: ["dist"]` in that file names a directory at the repository root rather than the build output it was written for. The `"lint": "eslint ."` script in the same `package.json` is the other reading, and it reaches neither the test tree nor the same `dist`. Name the directories on the command line rather than leaning on the globs: an argument list is a scope a reader can check against `git ls-files`, and `--max-warnings 0` goes on the same command, because a configuration setting any rule to `warn` leaves the job green on every finding that rule makes.
 
 #### CI is the source of truth
 

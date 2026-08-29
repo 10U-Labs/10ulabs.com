@@ -21,6 +21,7 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [four-static-analysis-passes-per-workflow](four-static-analysis-passes-per-workflow.md) — linter and type checker, over source and over tests, four jobs with the same names in every workflow
 - [a-workflow-reads-the-library-it-executes](a-workflow-reads-the-library-it-executes.md) — the four passes name the `lib/python/` packages the workflow runs and the suites covering them, in every workflow that runs them
 - [a-workflow-runs-the-suites-of-the-packages-it-executes](a-workflow-runs-the-suites-of-the-packages-it-executes.md) — the running half of the same rule: a `test-*` job per `lib/python/` package the workflow executes, a package reached only through another travelling with it
+- [an-eslint-config-is-read-from-wherever-eslint-was-started](an-eslint-config-is-read-from-wherever-eslint-was-started.md) — a glob in a flat eslint config is anchored at the working directory when the file is passed with `--config` and at the file itself when eslint found it
 - [commit-straight-to-main](commit-straight-to-main.md) — direct commits, no branches and no pull requests, one commit per issue with its closing line
 - [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md) — a failed run is answered with a follow-up commit, never an amended force-push
 - [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md) — no column limit on `.md` files, on issue bodies or on commit message bodies
