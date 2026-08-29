@@ -290,6 +290,21 @@ jobs:
         name: Run E2E tests
         run: |
           npm run test:e2e --prefix src/www/paths/home
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install npm dependencies
+        run: |
+          npm ci --prefix src/www/paths/home
+      - name: Run eslint
+        run: |
+          src/www/paths/home/node_modules/.bin/eslint \
+            --config src/www/paths/home/eslint.config.js \
+            --max-warnings 0 \
+            src/www/paths/home \
+            test/www/paths/home
   jsonlint:
     runs-on: ubuntu-latest
     steps:
@@ -561,6 +576,7 @@ jobs:
       - assert-python-definition-is-used-in-tests
       - copy-paste-source
       - copy-paste-tests
+      - eslint
       - jsonlint
       - mypy-source
       - mypy-tests
