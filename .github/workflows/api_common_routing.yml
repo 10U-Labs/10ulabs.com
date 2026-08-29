@@ -390,6 +390,21 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $BASE/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
+  jsonlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install jsonlint
+        run: npm install -g jsonlint
+      - name: Linting JSON files
+        run: |
+          for file in \
+            src/www/api/openapi.json
+          do
+            echo "Validating $file"
+            jsonlint -q "$file"
+          done
   mypy-source:
     runs-on: ubuntu-latest
     steps:
@@ -662,6 +677,7 @@ jobs:
       - assert-python-definition-is-used-in-tests
       - copy-paste-source
       - copy-paste-tests
+      - jsonlint
       - mypy-source
       - mypy-tests
       - pre-deployment-integration-tests

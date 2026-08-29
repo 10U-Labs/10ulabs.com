@@ -315,7 +315,6 @@ jobs:
       - name: Linting JSON files
         run: |
           for file in \
-            src/www/api/openapi.json \
             src/www/paths/home/components.json \
             src/www/paths/home/package.json
           do
