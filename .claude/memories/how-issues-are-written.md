@@ -31,7 +31,7 @@ An issue about anything else has two sections, **Problem** and **Proposed Soluti
 
 The program is the code a test tier can run: `src/`, `lib/python/`, `lib/terraform/` and `scripts/`. A defect there got past tiers that exist and could have failed, and naming which assertion let it through is what turns one bug report into a gap in the suite that can be closed.
 
-The configs in `etc/`, the workflow files in `.github/` and the documentation in `docs/` are not the program. No tier runs them. A test written against one of them opens the file, reads a value back and asserts the value it just read, so it cannot fail for a reason worth knowing and it fails for reasons that are not: it goes red every time somebody renames a step or adds a path.
+The workflow files in `.github/` and the documentation in `docs/` are not the program. No tier runs them. A test written against one of them opens the file, reads a value back and asserts the value it just read, so it cannot fail for a reason worth knowing and it fails for reasons that are not: it goes red every time somebody renames a step or adds a path.
 
 Static analysis is the one thing that reaches both sides, because the YAML linter reads every workflow file and the markdown linter reads every document, so the question does have an answer for a defect in one of them. The section stays with the program anyway. The five middle sections travel as a set and are answered against one defect between them, and an issue carrying one of the five carries all five; splitting the set so that a documentation issue takes one section and leaves four would put a third shape of issue in the queue, and the reader would have to work out which of the three is in front of them before knowing what the issue owes.
 
