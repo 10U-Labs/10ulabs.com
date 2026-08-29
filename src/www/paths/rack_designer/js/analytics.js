@@ -1,4 +1,4 @@
-var Analytics = (function() {
+window.Analytics = (function() {
     var API_BASE_URL = 'https://api.10ulabs.com';
     var FLUSH_INTERVAL_MS = 10000;
     var MAX_BATCH_SIZE = 25;
@@ -8,7 +8,6 @@ var Analytics = (function() {
     var sessionContext = null;
     var eventQueue = [];
     var contextSent = false;
-    var flushTimer = null;
 
     function generateUUID() {
         var result = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -46,7 +45,7 @@ var Analytics = (function() {
             ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
             ctx.fillText('Canvas Test', 4, 35);
             result = hashString(canvas.toDataURL());
-        } catch (e) {
+        } catch {
             result = 'canvas_error';
         }
         return result;
@@ -67,7 +66,7 @@ var Analytics = (function() {
             } else {
                 result = 'webgl_unsupported';
             }
-        } catch (e) {
+        } catch {
             result = 'webgl_error';
         }
         return result;
@@ -103,7 +102,7 @@ var Analytics = (function() {
             } else {
                 result = 'audio_unsupported';
             }
-        } catch (e) {
+        } catch {
             result = 'audio_error';
         }
         return result;
@@ -143,7 +142,7 @@ var Analytics = (function() {
             }
             document.body.removeChild(span);
             result = hashString(detected.join(','));
-        } catch (e) {
+        } catch {
             result = 'fonts_error';
         }
         return result;
@@ -199,7 +198,7 @@ var Analytics = (function() {
         sessionId = generateUUID();
         deviceId = computeDeviceId();
         sessionContext = getSessionContext();
-        flushTimer = setInterval(function() {
+        setInterval(function() {
             if (eventQueue.length > 0) {
                 flush();
             }
@@ -220,7 +219,7 @@ var Analytics = (function() {
         };
         if (data) {
             for (var key in data) {
-                if (data.hasOwnProperty(key)) {
+                if (Object.prototype.hasOwnProperty.call(data, key)) {
                     event[key] = data[key];
                 }
             }

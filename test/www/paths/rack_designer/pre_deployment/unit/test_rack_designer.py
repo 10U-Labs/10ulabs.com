@@ -1,3 +1,5 @@
+import re
+
 from repo_utils import REPO_ROOT
 
 RACK_DESIGNER_DIR = REPO_ROOT / "src" / "www" / "paths" / "rack_designer"
@@ -5,6 +7,7 @@ GOOGLE_ANALYTICS_ID = "G-8YJFQC2EGV"
 GTAG_SCRIPT_URL = f"https://www.googletagmanager.com/gtag/js?id={GOOGLE_ANALYTICS_ID}"
 GTAG_CONFIG = f"gtag('config', '{GOOGLE_ANALYTICS_ID}')"
 ADSENSE_CLIENT_ID = "ca-pub-7173129895205323"
+INLINE_HANDLER = re.compile(r'\son[a-z]+="([A-Za-z_$][\w$]*)\(')
 
 
 class TestRackDesignerFilesExist:
@@ -471,3 +474,15 @@ class TestAnalyticsJSSessionContext:
     def test_analytics_js_collects_language(self):
         content = (RACK_DESIGNER_DIR / "js" / "analytics.js").read_text()
         assert "language:" in content
+
+
+class TestRackDesignerInlineHandlers:
+    def test_every_inline_handler_is_assigned_on_window(self):
+        html = (RACK_DESIGNER_DIR / "index.html").read_text()
+        app_js = (RACK_DESIGNER_DIR / "js" / "app.js").read_text()
+        for handler in INLINE_HANDLER.findall(html):
+            assert f"window.{handler} = {handler};" in app_js
+
+    def test_index_html_has_inline_handlers_to_check(self):
+        html = (RACK_DESIGNER_DIR / "index.html").read_text()
+        assert INLINE_HANDLER.findall(html)

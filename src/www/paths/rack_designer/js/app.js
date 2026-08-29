@@ -78,7 +78,7 @@ function handleDragStart(e) {
         e.dataTransfer.setData('partSize', partSize);
         e.dataTransfer.effectAllowed = 'copy';
         sessionStorage.setItem('draggingPartSize', partSize);
-        Analytics.track('drag_started', { source: 'palette', part_type: partType, size: parseInt(partSize) });
+        window.Analytics.track('drag_started', { source: 'palette', part_type: partType, size: parseInt(partSize) });
     } else if (partId) {
         e.dataTransfer.setData('existingPart', partId);
         e.dataTransfer.setData('sourceRackId', rackId);
@@ -87,7 +87,7 @@ function handleDragStart(e) {
         sessionStorage.setItem('draggingPartId', partId);
         sessionStorage.setItem('draggingPartRackId', rackId);
         const part = placedParts.find(c => c.id === partId);
-        Analytics.track('drag_started', { source: 'rack', part_id: partId, part_type: part ? part.type : null, rack_id: parseInt(rackId) });
+        window.Analytics.track('drag_started', { source: 'rack', part_id: partId, part_type: part ? part.type : null, rack_id: parseInt(rackId) });
     }
 
     document.querySelectorAll('.placed-part').forEach(comp => {
@@ -110,7 +110,7 @@ function handleDragEnd(e) {
     document.querySelectorAll('.placed-part').forEach(comp => {
         comp.style.pointerEvents = '';
     });
-    Analytics.track('drag_ended', {});
+    window.Analytics.track('drag_ended', {});
 }
 
 function getAffectedSlots(startSlot, partSize) {
@@ -262,7 +262,7 @@ function handleDrop(e) {
 function addPart(type, size, rackId, startSlot) {
     if (!canPlacePart(rackId, startSlot, size)) {
         alert(`Cannot place part: slots ${startSlot} to ${startSlot + size - 1} are not available or exceed rack height.`);
-        Analytics.track('placement_failed', { part_type: type, size: size, rack_id: rackId, slot: startSlot, reason: 'slot_unavailable', rack_count: rackCount });
+        window.Analytics.track('placement_failed', { part_type: type, size: size, rack_id: rackId, slot: startSlot, reason: 'slot_unavailable', rack_count: rackCount });
         return;
     }
 
@@ -277,7 +277,7 @@ function addPart(type, size, rackId, startSlot) {
     };
 
     placedParts.push(part);
-    Analytics.track('part_added', { part_type: type, size: size, rack_id: rackId, slot: startSlot, part_id: part.id, rack_count: rackCount });
+    window.Analytics.track('part_added', { part_type: type, size: size, rack_id: rackId, slot: startSlot, part_id: part.id, rack_count: rackCount });
     renderParts();
 }
 
@@ -292,7 +292,7 @@ function movePart(partId, newRackId, newStartSlot) {
     for (let i = newStartSlot; i < newStartSlot + part.size; i++) {
         if (i > rackHeight) {
             alert(`Cannot place part: exceeds rack height.`);
-            Analytics.track('placement_failed', { part_id: partId, part_type: part.type, rack_id: newRackId, slot: newStartSlot, reason: 'exceeds_height', rack_count: rackCount });
+            window.Analytics.track('placement_failed', { part_id: partId, part_type: part.type, rack_id: newRackId, slot: newStartSlot, reason: 'exceeds_height', rack_count: rackCount });
             return;
         }
 
@@ -301,7 +301,7 @@ function movePart(partId, newRackId, newStartSlot) {
             const otherEnd = other.startSlot + other.size - 1;
             if (i >= other.startSlot && i <= otherEnd) {
                 alert(`Cannot place part: slot ${i} is occupied.`);
-                Analytics.track('placement_failed', { part_id: partId, part_type: part.type, rack_id: newRackId, slot: newStartSlot, reason: 'slot_occupied', rack_count: rackCount });
+                window.Analytics.track('placement_failed', { part_id: partId, part_type: part.type, rack_id: newRackId, slot: newStartSlot, reason: 'slot_occupied', rack_count: rackCount });
                 return;
             }
         }
@@ -309,7 +309,7 @@ function movePart(partId, newRackId, newStartSlot) {
 
     part.rackId = newRackId;
     part.startSlot = newStartSlot;
-    Analytics.track('part_moved', { part_id: partId, part_type: part.type, from_rack: oldRackId, from_slot: oldSlot, to_rack: newRackId, to_slot: newStartSlot, rack_count: rackCount });
+    window.Analytics.track('part_moved', { part_id: partId, part_type: part.type, from_rack: oldRackId, from_slot: oldSlot, to_rack: newRackId, to_slot: newStartSlot, rack_count: rackCount });
     renderParts();
 }
 
@@ -338,7 +338,7 @@ function canPlacePart(rackId, startSlot, size, excludeId = null) {
 function removePart(partId) {
     const part = placedParts.find(c => c.id === partId);
     if (part) {
-        Analytics.track('part_removed', { part_id: partId, part_type: part.type, rack_id: part.rackId, slot: part.startSlot, size: part.size, rack_count: rackCount });
+        window.Analytics.track('part_removed', { part_id: partId, part_type: part.type, rack_id: part.rackId, slot: part.startSlot, size: part.size, rack_count: rackCount });
     }
     placedParts = placedParts.filter(c => c.id !== partId);
     if (selectedPartId === partId) {
@@ -357,7 +357,7 @@ function selectPart(partId) {
         document.getElementById('partHeightValue').textContent = `${part.size}U`;
         document.getElementById('detailsPanel').style.display = 'block';
         document.getElementById('mainArea').classList.remove('no-selection');
-        Analytics.track('part_selected', { part_id: partId, part_type: part.type, rack_id: part.rackId, slot: part.startSlot });
+        window.Analytics.track('part_selected', { part_id: partId, part_type: part.type, rack_id: part.rackId, slot: part.startSlot });
     }
 
     renderParts();
@@ -365,7 +365,7 @@ function selectPart(partId) {
 
 function deselectPart() {
     if (selectedPartId) {
-        Analytics.track('part_deselected', { part_id: selectedPartId });
+        window.Analytics.track('part_deselected', { part_id: selectedPartId });
     }
     selectedPartId = null;
     document.getElementById('detailsPanel').style.display = 'none';
@@ -382,7 +382,7 @@ function updatePartName() {
         const newName = document.getElementById('partName').value.trim();
         part.customName = newName || null;
         if (oldName !== part.customName) {
-            Analytics.track('part_name_changed', { part_id: selectedPartId, part_type: part.type, old_value: oldName, value: part.customName });
+            window.Analytics.track('part_name_changed', { part_id: selectedPartId, part_type: part.type, old_value: oldName, value: part.customName });
         }
         renderParts();
     }
@@ -397,7 +397,7 @@ function updatePartColor() {
         const newColor = document.getElementById('partColor').value;
         part.customColor = newColor;
         if (oldColor !== newColor) {
-            Analytics.track('part_color_changed', { part_id: selectedPartId, part_type: part.type, old_value: oldColor, value: newColor });
+            window.Analytics.track('part_color_changed', { part_id: selectedPartId, part_type: part.type, old_value: oldColor, value: newColor });
         }
         renderParts();
     }
@@ -413,7 +413,7 @@ function updatePartHeight(delta) {
 
         if (newHeight < 1 || newHeight > 10) {
             alert('Height must be between 1U and 10U');
-            Analytics.track('part_height_blocked', { part_id: selectedPartId, part_type: part.type, old_size: oldSize, attempted_size: newHeight, reason: 'out_of_range' });
+            window.Analytics.track('part_height_blocked', { part_id: selectedPartId, part_type: part.type, old_size: oldSize, attempted_size: newHeight, reason: 'out_of_range' });
             return;
         }
 
@@ -463,18 +463,18 @@ function updatePartHeight(delta) {
                 if (canExpandDown) {
                     part.startSlot = expandDownStartSlot;
                     part.size = newHeight;
-                    Analytics.track('part_height_changed', { part_id: selectedPartId, part_type: part.type, old_size: oldSize, new_size: newHeight, direction: 'down' });
+                    window.Analytics.track('part_height_changed', { part_id: selectedPartId, part_type: part.type, old_size: oldSize, new_size: newHeight, direction: 'down' });
                 } else if (canExpandUp) {
                     part.size = newHeight;
-                    Analytics.track('part_height_changed', { part_id: selectedPartId, part_type: part.type, old_size: oldSize, new_size: newHeight, direction: 'up' });
+                    window.Analytics.track('part_height_changed', { part_id: selectedPartId, part_type: part.type, old_size: oldSize, new_size: newHeight, direction: 'up' });
                 } else {
                     alert(`Cannot change height: no free slots available above or below`);
-                    Analytics.track('part_height_blocked', { part_id: selectedPartId, part_type: part.type, old_size: oldSize, attempted_size: newHeight, reason: 'no_space' });
+                    window.Analytics.track('part_height_blocked', { part_id: selectedPartId, part_type: part.type, old_size: oldSize, attempted_size: newHeight, reason: 'no_space' });
                     return;
                 }
             } else {
                 part.size = newHeight;
-                Analytics.track('part_height_changed', { part_id: selectedPartId, part_type: part.type, old_size: oldSize, new_size: newHeight, direction: 'shrink' });
+                window.Analytics.track('part_height_changed', { part_id: selectedPartId, part_type: part.type, old_size: oldSize, new_size: newHeight, direction: 'shrink' });
             }
 
             document.getElementById('partHeightValue').textContent = `${newHeight}U`;
@@ -581,7 +581,7 @@ function updateHeight(delta) {
 
         if (totalUsedSlots > newHeight) {
             alert(`Cannot reduce height to ${newHeight}U: Rack ${rackId} has ${totalUsedSlots}U of parts that won't fit. Please remove some parts first.`);
-            Analytics.track('rack_height_blocked', { old_height: oldHeight, attempted_height: newHeight, rack_id: rackId, reason: 'parts_exceed_height', rack_count: rackCount });
+            window.Analytics.track('rack_height_blocked', { old_height: oldHeight, attempted_height: newHeight, rack_id: rackId, reason: 'parts_exceed_height', rack_count: rackCount });
             return;
         }
     }
@@ -613,7 +613,7 @@ function updateHeight(delta) {
 
                 if (!foundSlot) {
                     alert(`Cannot reduce height to ${newHeight}U: Unable to automatically reposition parts in Rack ${rackId}. Please manually rearrange parts first.`);
-                    Analytics.track('rack_height_blocked', { old_height: oldHeight, attempted_height: newHeight, rack_id: rackId, reason: 'cannot_reposition', rack_count: rackCount });
+                    window.Analytics.track('rack_height_blocked', { old_height: oldHeight, attempted_height: newHeight, rack_id: rackId, reason: 'cannot_reposition', rack_count: rackCount });
                     return;
                 }
             }
@@ -622,7 +622,7 @@ function updateHeight(delta) {
 
     rackHeight = newHeight;
     document.getElementById('heightValue').textContent = `${rackHeight}U`;
-    Analytics.track('rack_height_changed', { old_height: oldHeight, new_height: newHeight, rack_count: rackCount });
+    window.Analytics.track('rack_height_changed', { old_height: oldHeight, new_height: newHeight, rack_count: rackCount });
     initRacks();
     renderParts();
 }
@@ -633,10 +633,10 @@ function resetAllRacks() {
         if (confirm('Are you sure you want to remove all parts from all racks?')) {
             placedParts = [];
             deselectPart();
-            Analytics.track('reset_confirmed', { part_count_before: partCountBefore, rack_count: rackCount });
+            window.Analytics.track('reset_confirmed', { part_count_before: partCountBefore, rack_count: rackCount });
             renderParts();
         } else {
-            Analytics.track('reset_cancelled', { part_count: partCountBefore, rack_count: rackCount });
+            window.Analytics.track('reset_cancelled', { part_count: partCountBefore, rack_count: rackCount });
         }
     }
 }
@@ -653,14 +653,14 @@ function updateRackCount(delta) {
         const partsInRemovedRacks = placedParts.filter(p => p.rackId > newCount);
         if (partsInRemovedRacks.length > 0) {
             alert(`Cannot remove rack${newCount < rackCount - 1 ? 's' : ''}: ${partsInRemovedRacks.length} part${partsInRemovedRacks.length > 1 ? 's' : ''} would be removed. Please move or delete them first.`);
-            Analytics.track('rack_count_blocked', { old_count: oldCount, attempted_count: newCount, parts_affected: partsInRemovedRacks.length, reason: 'parts_in_removed_racks' });
+            window.Analytics.track('rack_count_blocked', { old_count: oldCount, attempted_count: newCount, parts_affected: partsInRemovedRacks.length, reason: 'parts_in_removed_racks' });
             return;
         }
     }
 
     rackCount = newCount;
     document.getElementById('rackCountValue').textContent = `${rackCount} Rack${rackCount > 1 ? 's' : ''}`;
-    Analytics.track('rack_count_changed', { old_count: oldCount, new_count: newCount });
+    window.Analytics.track('rack_count_changed', { old_count: oldCount, new_count: newCount });
     initRacks();
     renderParts();
 }
@@ -758,7 +758,7 @@ function showShareModal(url) {
             copyBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
             var hashMatch = url.match(/\/([A-Z0-9]{8,9})\/?$/);
             var configHash = hashMatch ? hashMatch[1] : null;
-            Analytics.track('share_url_copied', { config_hash: configHash });
+            window.Analytics.track('share_url_copied', { config_hash: configHash });
             setTimeout(function() {
                 copyBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
             }, 2000);
@@ -783,13 +783,13 @@ function showShareModal(url) {
 
 function saveConfiguration() {
     const config = getConfiguration();
-    Analytics.track('save_clicked', { part_count: config.placedParts.length, rack_height: config.rackHeight, rack_count: config.rackCount });
+    window.Analytics.track('save_clicked', { part_count: config.placedParts.length, rack_height: config.rackHeight, rack_count: config.rackCount });
     fetch(`${API_BASE_URL}/v1/rack-configurations`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ configuration: config, device_id: Analytics.getDeviceId() })
+        body: JSON.stringify({ configuration: config, device_id: window.Analytics.getDeviceId() })
     })
     .then(response => response.json())
     .then(data => {
@@ -797,16 +797,16 @@ function saveConfiguration() {
             const basePath = window.location.pathname.replace(/\/[A-Z0-9]{8,9}\/?$/, '').replace(/\/$/, '');
             const newUrl = `${window.location.origin}${basePath}/${data.config_hash}`;
             window.history.pushState({ config_hash: data.config_hash }, '', newUrl);
-            Analytics.track('configuration_saved', { config_hash: data.config_hash, part_count: config.placedParts.length, rack_height: config.rackHeight, rack_count: config.rackCount });
+            window.Analytics.track('configuration_saved', { config_hash: data.config_hash, part_count: config.placedParts.length, rack_height: config.rackHeight, rack_count: config.rackCount });
             showShareModal(newUrl);
         } else {
             alert(`Failed to save configuration: ${data.error}`);
-            Analytics.track('save_failed', { error: data.error });
+            window.Analytics.track('save_failed', { error: data.error });
         }
     })
     .catch(error => {
         alert(`Error saving configuration: ${error.message}`);
-        Analytics.track('save_failed', { error: error.message });
+        window.Analytics.track('save_failed', { error: error.message });
     });
 }
 
@@ -821,7 +821,7 @@ function loadConfigurationFromUrl() {
     .then(data => {
         if (data.success) {
             loadConfiguration(data.configuration);
-            Analytics.track('config_loaded', { config_hash: data.config_hash, part_count: data.configuration.placedParts.length, rack_height: data.configuration.rackHeight, rack_count: data.configuration.rackCount });
+            window.Analytics.track('config_loaded', { config_hash: data.config_hash, part_count: data.configuration.placedParts.length, rack_height: data.configuration.rackHeight, rack_count: data.configuration.rackCount });
             if (data.config_hash !== configHash) {
                 const basePath = window.location.pathname.replace(/\/[A-Z0-9]{8,9}\/?$/, '');
                 const newUrl = `${window.location.origin}${basePath}/${data.config_hash}`;
@@ -829,17 +829,21 @@ function loadConfigurationFromUrl() {
             }
         } else {
             alert(`Failed to load configuration: ${data.error}`);
-            Analytics.track('config_load_failed', { config_hash: configHash, error: data.error });
+            window.Analytics.track('config_load_failed', { config_hash: configHash, error: data.error });
         }
     })
     .catch(error => {
         alert(`Error loading configuration: ${error.message}`);
-        Analytics.track('config_load_failed', { config_hash: configHash, error: error.message });
+        window.Analytics.track('config_load_failed', { config_hash: configHash, error: error.message });
     });
 }
+
+window.deselectPart = deselectPart;
+window.resetAllRacks = resetAllRacks;
+window.saveConfiguration = saveConfiguration;
 
 loadConfigurationFromUrl();
 
 setTimeout(function() {
-    Analytics.track('designer_ready', { rack_count: rackCount, rack_height: rackHeight, part_count: placedParts.length });
+    window.Analytics.track('designer_ready', { rack_count: rackCount, rack_height: rackHeight, part_count: placedParts.length });
 }, 100);
