@@ -30,7 +30,7 @@ window.Analytics = (function() {
     }
 
     function getCanvasFingerprint() {
-        var result = '';
+        var result;
         try {
             var canvas = document.createElement('canvas');
             canvas.width = 200;
@@ -52,7 +52,7 @@ window.Analytics = (function() {
     }
 
     function getWebGLFingerprint() {
-        var result = '';
+        var result;
         try {
             var canvas = document.createElement('canvas');
             var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -73,7 +73,7 @@ window.Analytics = (function() {
     }
 
     function getAudioFingerprint() {
-        var result = '';
+        var result;
         try {
             var AudioContext = window.AudioContext || window.webkitAudioContext;
             if (AudioContext) {
@@ -109,7 +109,7 @@ window.Analytics = (function() {
     }
 
     function getFontsFingerprint() {
-        var result = '';
+        var result;
         try {
             var baseFonts = ['monospace', 'sans-serif', 'serif'];
             var testFonts = [
