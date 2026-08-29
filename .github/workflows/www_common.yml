@@ -250,6 +250,40 @@ jobs:
           search-in: lib/python scripts src
           trees: src/www/common/lambda
           verbose: "true"
+  assert-python-definition-is-used-in-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Assert every definition in the tests is called
+        uses: 10U-Labs/assert-python-definition-is-used@latest
+        with:
+          assume-used-decorated-with: pytest.fixture
+          assume-used-matching: "test_*,Test*,pytest_*"
+          search-in: test lib/python scripts src
+          trees: >-
+            test/__init__.py
+            test/conftest.py
+            test/lib/terraform/__init__.py
+            test/lib/terraform/conftest.py
+            test/www/__init__.py
+            test/www/conftest.py
+            test/lib/terraform/common
+            test/lib/terraform/s3_bucket
+            test/lib/terraform/unit
+            test/www/common
+            test/lib/__init__.py
+            test/lib/python/__init__.py
+            test/lib/python/test_boto_mocks
+            test/lib/python/test_lambda_response
+            test/lib/python/test_module_utils
+            test/lib/python/test_naming_conventions
+            test/lib/python/test_naming_conventions_helpers
+            test/lib/python/test_repo_utils
+            test/lib/python/test_terraform_config
+            test/lib/python/test_terraform_drift
+            test/lib/python/test_test_fixtures
+          verbose: "true"
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:
@@ -604,6 +638,7 @@ jobs:
       - assert-opentofu-resource-is-used
       - assert-pytest-fixture-name-is-needed
       - assert-python-definition-is-used
+      - assert-python-definition-is-used-in-tests
       - copy-paste-source
       - copy-paste-tests
       - mypy-source
