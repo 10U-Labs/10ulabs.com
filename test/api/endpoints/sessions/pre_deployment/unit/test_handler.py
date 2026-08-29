@@ -9,6 +9,15 @@ from botocore.exceptions import ClientError
 from test_fixtures.unit import create_mock_dynamodb_client, reset_module_state
 
 
+def _one_event_post_request():
+    return {
+        'path': '/v1/sessions/abc123/events',
+        'httpMethod': 'POST',
+        'body': '{"device_id": "dev1", "events": [{"event_type": "test", '
+                '"timestamp": "2024-01-15T10:30:00Z"}]}'
+    }
+
+
 class TestExtractSessionIdFromPath:
     def test_valid_path(self, handler):
         result = handler.extract_session_id_from_path('/v1/sessions/abc123/events')
@@ -117,26 +126,14 @@ class TestHandleEvents:
 
     def test_valid_request_returns_200(self, handler):
         mock_dynamodb = create_mock_dynamodb_client('batch_write_item', {})
-        body = '{"device_id": "dev1", "events": [{"event_type": "test", ' \
-               '"timestamp": "2024-01-15T10:30:00Z"}]}'
-        event = {
-            'path': '/v1/sessions/abc123/events',
-            'httpMethod': 'POST',
-            'body': body
-        }
+        event = _one_event_post_request()
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             response = handler.handle_events(event)
         assert response['statusCode'] == 200
 
     def test_valid_request_saves_events(self, handler):
         mock_dynamodb = create_mock_dynamodb_client('batch_write_item', {})
-        body = '{"device_id": "dev1", "events": [{"event_type": "test", ' \
-               '"timestamp": "2024-01-15T10:30:00Z"}]}'
-        event = {
-            'path': '/v1/sessions/abc123/events',
-            'httpMethod': 'POST',
-            'body': body
-        }
+        event = _one_event_post_request()
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             handler.handle_events(event)
         mock_dynamodb.batch_write_item.assert_called_once()
@@ -297,13 +294,7 @@ class TestHandleEventsErrorHandling:
         mock_dynamodb = MagicMock()
         error_response = {'Error': {'Code': 'InternalError', 'Message': 'Error'}}
         mock_dynamodb.batch_write_item.side_effect = ClientError(error_response, 'BatchWriteItem')
-        body = '{"device_id": "dev1", "events": [{"event_type": "test", ' \
-               '"timestamp": "2024-01-15T10:30:00Z"}]}'
-        event = {
-            'path': '/v1/sessions/abc123/events',
-            'httpMethod': 'POST',
-            'body': body
-        }
+        event = _one_event_post_request()
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             response = handler.handle_events(event)
         assert response['statusCode'] == 500
