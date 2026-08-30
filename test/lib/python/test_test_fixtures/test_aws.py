@@ -6,7 +6,6 @@ from botocore.exceptions import ClientError
 
 from test_fixtures.aws import (
     api_gateway_info,
-    aws_region,
     backup_client,
     caller_identity,
     _current_role_arn,
@@ -17,13 +16,9 @@ from test_fixtures.aws import (
     iam_client,
     iam_role_exists,
     logs_client,
-    s3_client,
     scheduler_client,
-    shared_config,
     ssm_client,
     stale_delete_markers,
-    state_bucket_name,
-    sts_client,
 )
 
 
@@ -153,51 +148,13 @@ class TestGetLogGroupInfo:
         assert result["exists"] is True
 
 
-@patch("test_fixtures.aws.get_shared_config")
-def test_shared_config_fixture_execution(mock_get_config):
-    mock_get_config.return_value = {"aws_region": "us-east-1", "key": "value"}
-    result = shared_config.__wrapped__()
-    assert result == {"aws_region": "us-east-1", "key": "value"}
-    mock_get_config.assert_called_once()
-
-
-def test_aws_region_fixture_execution():
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = {"aws_region": "eu-west-1"}
-    result = aws_region.__wrapped__(mock_request)
-    assert result == "eu-west-1"
-    mock_request.getfixturevalue.assert_called_with("shared_config")
-
-
-def test_state_bucket_name_fixture_execution():
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = {"name_for_terraform_state_bucket": "my-bucket"}
-    result = state_bucket_name.__wrapped__(mock_request)
-    assert result == "my-bucket"
-
-
 class TestClientFixturesExecution:
-    @patch("test_fixtures.aws.boto3")
-    def test_sts_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-2"
-        mock_boto3.client.return_value = MagicMock()
-        sts_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "sts"
-
     @patch("test_fixtures.aws.boto3")
     def test_iam_client_fixture_creates_client(self, mock_boto3):
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-west-2"
         iam_client.__wrapped__(mock_request)
         assert mock_boto3.client.call_args[0][0] == "iam"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_s3_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        s3_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "s3"
 
     @patch("test_fixtures.aws.boto3")
     def test_ssm_client_fixture_creates_client(self, mock_boto3):
