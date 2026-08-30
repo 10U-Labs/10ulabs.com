@@ -1,11 +1,13 @@
 from pathlib import Path
 from types import ModuleType
 
-from test.api.operational.health.conftest import HEALTH_SRC
-
 import pytest
 
 from module_utils import create_lambda_loader
+from repo_utils import REPO_ROOT
+
+
+HEALTH_SRC = REPO_ROOT / "src" / "api" / "operational" / "health"
 
 
 def load_health_handler_module() -> ModuleType:
