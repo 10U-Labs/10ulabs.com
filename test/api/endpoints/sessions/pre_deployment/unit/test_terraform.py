@@ -1,3 +1,5 @@
+import re
+
 import hcl2
 from repo_utils import REPO_ROOT
 from test_fixtures.hcl import V7_COMPATIBLE
@@ -5,6 +7,17 @@ from test_fixtures.lambda_lifecycle import create_lambda_lifecycle_tests
 from test_fixtures.terraform_tests import create_remote_state_config_tests
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
+
+
+def _load_events_table():
+    dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
+    with open(dynamodb_tf, encoding='utf-8') as f:
+        tf_config = hcl2.load(f, serialization_options=V7_COMPATIBLE)
+    return next(
+        r['aws_dynamodb_table']['events']
+        for r in tf_config['resource']
+        if 'events' in r.get('aws_dynamodb_table', {})
+    )
 
 
 TestLambdaLifecycle = create_lambda_lifecycle_tests(
@@ -61,12 +74,7 @@ class TestBackendConfiguration:
     def test_backend_encryption_enabled(self):
         backend_tf = SESSIONS_SRC_PATH / "backend.tf"
         content = backend_tf.read_text()
-        assert 'encrypt' in content
-
-    def test_backend_encryption_set_true(self):
-        backend_tf = SESSIONS_SRC_PATH / "backend.tf"
-        content = backend_tf.read_text()
-        assert 'true' in content
+        assert re.search(r'encrypt\s+= true', content)
 
     def test_backend_uses_lockfile(self):
         backend_tf = SESSIONS_SRC_PATH / "backend.tf"
@@ -105,15 +113,10 @@ class TestProviderConfiguration:
         content = providers_tf.read_text()
         assert 'default_tags' in content
 
-    def test_provider_default_tags_include_managed_by(self):
+    def test_provider_default_tags_set_managed_by_to_terraform(self):
         providers_tf = SESSIONS_SRC_PATH / "providers.tf"
         content = providers_tf.read_text()
-        assert 'ManagedBy' in content
-
-    def test_provider_default_tags_managed_by_is_terraform(self):
-        providers_tf = SESSIONS_SRC_PATH / "providers.tf"
-        content = providers_tf.read_text()
-        assert 'terraform' in content
+        assert re.search(r'ManagedBy\s+= "terraform"', content)
 
 
 class TestSharedModuleConfiguration:
@@ -134,25 +137,11 @@ class TestDynamoDbConfiguration:
         content = dynamodb_tf.read_text()
         assert 'PAY_PER_REQUEST' in content
 
-    def test_dynamodb_table_has_hash_key(self):
-        dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
-        content = dynamodb_tf.read_text()
-        assert 'hash_key' in content
+    def test_dynamodb_table_hash_key_is_session_id(self):
+        assert _load_events_table()['hash_key'] == 'session_id'
 
-    def test_dynamodb_table_has_session_id_attribute_named(self):
-        dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
-        content = dynamodb_tf.read_text()
-        assert 'session_id' in content
-
-    def test_dynamodb_table_has_range_key(self):
-        dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
-        content = dynamodb_tf.read_text()
-        assert 'range_key' in content
-
-    def test_dynamodb_table_has_timestamp_attribute_named(self):
-        dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
-        content = dynamodb_tf.read_text()
-        assert 'timestamp' in content
+    def test_dynamodb_table_range_key_is_timestamp(self):
+        assert _load_events_table()['range_key'] == 'timestamp'
 
     def test_dynamodb_table_has_event_type_gsi(self):
         dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
@@ -164,15 +153,8 @@ class TestDynamoDbConfiguration:
         content = dynamodb_tf.read_text()
         assert 'device_id-index' in content
 
-    def test_dynamodb_table_has_pitr_block(self):
-        dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
-        content = dynamodb_tf.read_text()
-        assert 'point_in_time_recovery' in content
-
-    def test_dynamodb_table_has_pitr_enabled(self):
-        dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
-        content = dynamodb_tf.read_text()
-        assert 'enabled = true' in content
+    def test_dynamodb_table_point_in_time_recovery_enabled(self):
+        assert _load_events_table()['point_in_time_recovery'][0]['enabled'] is True
 
     def test_dynamodb_table_has_event_type_attribute(self):
         dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
@@ -209,12 +191,7 @@ class TestBackupConfiguration:
     def test_backup_role_defined(self):
         backup_tf = SESSIONS_SRC_PATH / "backup.tf"
         content = backup_tf.read_text()
-        assert 'aws_iam_role' in content
-
-    def test_backup_role_names_backup(self):
-        backup_tf = SESSIONS_SRC_PATH / "backup.tf"
-        content = backup_tf.read_text()
-        assert 'backup' in content.lower()
+        assert 'resource "aws_iam_role" "backup"' in content
 
     def test_backup_selection_defined(self):
         backup_tf = SESSIONS_SRC_PATH / "backup.tf"
@@ -277,12 +254,7 @@ class TestLocalsConfiguration:
         content = locals_tf.read_text()
         assert 'common_tags' in content
 
-    def test_locals_common_tags_include_purpose(self):
-        locals_tf = SESSIONS_SRC_PATH / "locals.tf"
-        content = locals_tf.read_text()
-        assert 'Purpose' in content
-
     def test_locals_common_tags_purpose_is_sessions(self):
         locals_tf = SESSIONS_SRC_PATH / "locals.tf"
         content = locals_tf.read_text()
-        assert 'sessions' in content
+        assert re.search(r'Purpose\s+= "sessions"', content)

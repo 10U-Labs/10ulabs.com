@@ -117,12 +117,6 @@ def test_terraform_state_bucket_delete_marker_rule_sets_no_age(bootstrap_dir, v7
     assert set(expiration) == {'expired_object_delete_marker'}
 
 
-def test_terraform_state_bucket_delete_marker_rule_has_filter(bootstrap_dir, v7_compatible):
-    tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
-    rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
-    assert rule.get('filter') is not None
-
-
 def test_terraform_state_bucket_delete_marker_rule_has_one_filter(bootstrap_dir, v7_compatible):
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
