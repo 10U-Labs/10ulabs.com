@@ -55,7 +55,11 @@ class TestRackDesignerHTMLStructure:
 
     def test_index_html_has_title(self):
         content = (RACK_DESIGNER_DIR / "index.html").read_text()
-        assert "<title>" in content and "</title>" in content
+        assert "<title>" in content
+
+    def test_index_html_has_title_close_tag(self):
+        content = (RACK_DESIGNER_DIR / "index.html").read_text()
+        assert "</title>" in content
 
     def test_index_html_has_meta_charset(self):
         content = (RACK_DESIGNER_DIR / "index.html").read_text()
