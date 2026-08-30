@@ -41,4 +41,4 @@ What the old rule was protecting against is worth keeping in view. An issue file
 
 ## Related notes
 
-The two cases that write an edge, the `gh api` call that adds one and the `-X DELETE` form that removes one are in `.claude/skills/autopilot/SKILL.md`. Filing in the turn the defect is found is in [file-what-the-sweep-turns-up](file-what-the-sweep-turns-up.md), and what goes in the issue is in [how-issues-are-written](how-issues-are-written.md).
+The two cases that write an edge, the `gh api` call that adds one and the `-X DELETE` form that removes one are in `.claude/skills/autopilot/SKILL.md`. Fixing in the session the defect is found, and the narrow case that is filed instead, is in [solve-what-the-sweep-turns-up](solve-what-the-sweep-turns-up.md), and what goes in the issue is in [how-issues-are-written](how-issues-are-written.md).

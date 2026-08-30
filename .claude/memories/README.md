@@ -36,7 +36,7 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 
 - [how-issues-are-written](how-issues-are-written.md) — seven fixed sections for the program, two for everything else, no test and no static analysis question owed for a config or a workflow file
 - [an-issue-states-one-solution](an-issue-states-one-solution.md) — a `Proposed Solution` names one change; a fork is asked about before the issue is filed, never published as an either
-- [file-what-the-sweep-turns-up](file-what-the-sweep-turns-up.md) — a defect found while working on something else is filed in the same turn, not named in a reply and left for the user to ask for
+- [solve-what-the-sweep-turns-up](solve-what-the-sweep-turns-up.md) — a defect found while working on something else is fixed in the session that found it; an issue is filed only where the fix needs the user
 - [an-edge-is-only-a-true-block](an-edge-is-only-a-true-block.md) — a `blocked_by` edge is written only where the work cannot be finished without the other issue; an issue nothing waits on is filed with no edge
 - [enumerate-a-directory-from-git](enumerate-a-directory-from-git.md) — a body that counts or names what a directory holds reads `git ls-files`, because `ls` shows ignored artifacts git will not report and `git status` stays clean over them
 

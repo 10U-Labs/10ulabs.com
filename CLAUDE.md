@@ -16,8 +16,8 @@
     - [An issue on disk goes stale](#an-issue-on-disk-goes-stale)
     - [An issue states one solution](#an-issue-states-one-solution)
     - [Enumerate a directory from git](#enumerate-a-directory-from-git)
-    - [File what the sweep turns up](#file-what-the-sweep-turns-up)
     - [Placing an issue in the queue](#placing-an-issue-in-the-queue)
+    - [Solve what the sweep turns up](#solve-what-the-sweep-turns-up)
     - [The seven sections](#the-seven-sections)
     - [Two sections for everything outside the program](#two-sections-for-everything-outside-the-program)
     - [Why static analysis is asked separately](#why-static-analysis-is-asked-separately)
@@ -85,7 +85,7 @@ A comment is about to say what the code does, why it is the way it is, or that a
 
 ### Issues
 
-Longer: [how-issues-are-written](.claude/memories/how-issues-are-written.md), [an-issue-states-one-solution](.claude/memories/an-issue-states-one-solution.md), [file-what-the-sweep-turns-up](.claude/memories/file-what-the-sweep-turns-up.md), [an-edge-is-only-a-true-block](.claude/memories/an-edge-is-only-a-true-block.md), [enumerate-a-directory-from-git](.claude/memories/enumerate-a-directory-from-git.md).
+Longer: [how-issues-are-written](.claude/memories/how-issues-are-written.md), [an-issue-states-one-solution](.claude/memories/an-issue-states-one-solution.md), [solve-what-the-sweep-turns-up](.claude/memories/solve-what-the-sweep-turns-up.md), [an-edge-is-only-a-true-block](.claude/memories/an-edge-is-only-a-true-block.md), [enumerate-a-directory-from-git](.claude/memories/enumerate-a-directory-from-git.md).
 
 #### An issue on disk goes stale
 
@@ -99,13 +99,13 @@ An issue is definitive. Its `Proposed Solution` names one change — this functi
 
 When an issue body states what a directory holds — a count of its entries, a list of them, or the name of one — enumerate it with `git ls-files` rather than with `ls` or a file browser. A working copy carries ignored build artifacts that git will not report, so a package deleted from the repository goes on reading as a live one to anything that looks at the disk. `9086acda` deleted `lib/python/runner_labels/` and left the directory standing on a `__pycache__` that `.gitignore` covers, `git status` stayed clean throughout, and nine issue bodies then counted thirteen packages under `lib/python/` where git had twelve. `git status --ignored` is the form that shows what the plain one suppresses.
 
-#### File what the sweep turns up
-
-A defect found while working on something else is filed in the same turn it is found, with a `blocked_by` edge if something genuinely waits on it, rather than named in the reply and left for the user to ask for. A reply is not a record and does not outlive the session. Neither of the two reasons for holding one back survives contact: a fork in how to fix it is a reason to ask which branch and then file, since the fork says nothing about whether the defect is real, and a fix that is not yet specifiable is the work rather than a reason to defer it. A sweep that turns up five defects files five issues.
-
 #### Placing an issue in the queue
 
 A filed issue is placed in the queue before the work goes on, and a `blocked_by` edge is written only where the block is real: where the issue in hand, or another open issue, cannot be finished until the new one is. Where nothing waits on it, it is filed with no edge, which is a finished placement rather than a missing one. An ordering is not a dependency, and an edge written to give an issue a place in the queue is a false statement about the work that the next reader has to take at face value. `.claude/skills/autopilot/SKILL.md` states the two cases, the test that decides them, and the `gh api` calls that write and remove an edge.
+
+#### Solve what the sweep turns up
+
+A defect found while working on something else is fixed in the session that found it. An issue is filed instead when the fix needs the user: a fork only they can settle, a call on scope or priority that is theirs to make, a change that has to be authorised before it starts. The asking comes first either way, so that what reaches the queue is the branch that came back rather than the question, and where the answer arrives in the session the fix goes in the session too. Nothing else is deferred: a fix that is not yet specifiable is the work rather than a reason to put it off, and a defect is cheapest to repair while the tree that produced it is still in front of you rather than handed to a reader who was not in the conversation. A reply is neither a fix nor a record, so a defect named only there is gone when the session ends. `72b32527` is the shape: twelve conjunction asserts across four files, all of them in files the commit under `#709` never touched, every one found while answering a rejected push and every one fixed in the follow-up rather than filed. A sweep that turns up five defects ends with five fixed, or with an issue for each one the user has to settle.
 
 #### The seven sections
 
