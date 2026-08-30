@@ -6,7 +6,6 @@ from test_fixtures.aws import (
     caller_identity,
     _current_role_arn,
     current_role_name,
-    dynamodb_client,
     find_lifecycle_rule,
     get_log_group_info,
     iam_role_exists,
@@ -142,13 +141,6 @@ class TestGetLogGroupInfo:
 
 
 class TestClientFixturesExecution:
-    @patch("test_fixtures.aws.boto3")
-    def test_dynamodb_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        dynamodb_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "dynamodb"
-
     @patch("test_fixtures.aws.boto3")
     def test_scheduler_client_fixture_creates_client(self, mock_boto3):
         mock_request = MagicMock()
