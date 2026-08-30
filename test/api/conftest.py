@@ -68,9 +68,9 @@ def logs_client(request):
 @pytest.fixture(scope="module")
 def api_gateway_info(request):
     client = request.getfixturevalue("apigateway_client")
-    api_common_routing_outputs = request.getfixturevalue("api_common_routing_outputs")
+    routing_outputs = request.getfixturevalue("api_common_routing_outputs")
 
-    api_id = api_common_routing_outputs.get("api_gateway_id")
+    api_id = routing_outputs.get("api_gateway_id")
     if not api_id:
         return {"id": None, "exists": False, "accessible": False}
 
