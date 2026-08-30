@@ -28,7 +28,7 @@ from test_fixtures.integration.base_classes import (
     Layer7DeploymentCapabilityTests,
 )
 from test_fixtures.integration.factories import (
-    create_deployed_naming_convention_tests,
+    create_deployed_resource_existence_tests,
     create_kms_policy_test,
     create_lambda_api_gateway_wiring_tests,
     create_lambda_configuration_tests,
@@ -40,7 +40,6 @@ from test_fixtures.integration.factories import (
     create_layer2_s3_authorization_tests,
     create_layer6_capability_tests,
     create_log_group_configuration_tests,
-    create_naming_convention_tests,
     create_security_group_existence_test,
     create_simple_layer1_authentication_tests,
     create_sqs_fifo_queue_tests,
@@ -50,7 +49,6 @@ from test_fixtures.integration.factories import (
 )
 from test_fixtures.integration.helpers import (
     assert_api_gateway_exists,
-    assert_iam_role_name_is_pascalcase,
     check_iam_role_exists,
     check_lambda_function_exists,
     check_lambda_role_has_policy,
@@ -90,7 +88,7 @@ __all__ = [
     "Layer6IAMCapabilityTests",
     "Layer6S3CapabilityTests",
     "Layer6S3WriteCapabilityTests",
-    "create_deployed_naming_convention_tests",
+    "create_deployed_resource_existence_tests",
     "create_kms_policy_test",
     "create_lambda_api_gateway_wiring_tests",
     "create_lambda_configuration_tests",
@@ -99,7 +97,6 @@ __all__ = [
     "create_lambda_iam_wiring_tests",
     "create_lambda_role_existence_test",
     "create_log_group_configuration_tests",
-    "create_naming_convention_tests",
     "create_layer1_authentication_tests",
     "create_layer2_s3_authorization_tests",
     "create_layer6_capability_tests",
@@ -110,7 +107,6 @@ __all__ = [
     "create_www_common_s3_existence_tests",
     "handle_ecr_error",
     "assert_api_gateway_exists",
-    "assert_iam_role_name_is_pascalcase",
     "check_iam_role_exists",
     "check_lambda_function_exists",
     "check_lambda_role_has_policy",

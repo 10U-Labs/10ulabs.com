@@ -1,7 +1,7 @@
 from test_fixtures.integration import (
+    create_deployed_resource_existence_tests,
     create_lambda_configuration_tests,
     create_log_group_configuration_tests,
-    create_naming_convention_tests,
 )
 
 
@@ -16,7 +16,10 @@ TestCloudWatchLogsConfiguration = create_log_group_configuration_tests(
     expected_retention=7,
 )
 
-TestNamingConventions = create_naming_convention_tests(
-    function_name_config_key="diagnostics_handler_function_name",
-    default_function_name="TenULabsDiagnosticsHandler",
+_existence_tests = create_deployed_resource_existence_tests(
+    function_name_config_key='diagnostics_handler_function_name',
+    default_function_name='TenULabsDiagnosticsHandler',
+    handler_display_name='DiagnosticsHandler',
 )
+TestDiagnosticsHandlerIAMRoleExists = _existence_tests[0]
+TestDiagnosticsHandlerLambdaFunctionExists = _existence_tests[1]

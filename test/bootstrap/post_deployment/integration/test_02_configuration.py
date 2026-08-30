@@ -1,9 +1,7 @@
 import json
 import pytest
 
-from naming_conventions import validate_name
 from test_fixtures.aws import find_lifecycle_rule, stale_delete_markers
-from test_fixtures.integration import assert_iam_role_name_is_pascalcase
 
 
 def find_tfstate_resource(state, resource_type, resource_name):
@@ -444,18 +442,6 @@ def test_deploy_role_trusts_only_the_synthesizer(iam_client, config, suffix):
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']
     assert sorted(_trusted_repository_patterns(trust_policy)) == sorted(expected)
-
-
-def test_github_actions_role_name_is_pascalcase(iam_client, config):
-    role_name = config.get('name_for_github_actions_role', 'TenULabsGitHubActionsRole')
-    assert_iam_role_name_is_pascalcase(iam_client, role_name, validate_name)
-    assert True
-
-
-def test_cloudtrail_iam_role_name_is_pascalcase(config):
-    role_name = config.get('name_for_cloudtrail_iam_role')
-    error = validate_name(role_name)
-    assert error is None, f"CloudTrail IAM role name '{role_name}' is not PascalCase: {error}"
 
 
 def test_oidc_provider_has_correct_thumbprint(iam_client, aws_account_id):

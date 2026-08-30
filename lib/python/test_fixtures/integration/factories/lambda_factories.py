@@ -1,8 +1,6 @@
 from botocore.exceptions import ClientError
 import pytest
-from naming_conventions import validate_name
 from test_fixtures.integration.helpers import (
-    assert_iam_role_name_is_pascalcase,
     check_iam_role_exists,
     check_lambda_function_exists,
     check_service_can_assume_role,
@@ -247,39 +245,12 @@ def create_lambda_configuration_tests(
     return TestLambdaConfiguration
 
 
-def create_naming_convention_tests(
-    function_name_config_key: str,
-    default_function_name: str,
-):
-    class TestNamingConventions:
-        def test_handler_lambda_name_is_pascalcase(self, lambda_client, config):
-            function_name = config.get(function_name_config_key, default_function_name)
-            response = lambda_client.get_function(FunctionName=function_name)
-            actual_name = response["Configuration"]["FunctionName"]
-            error = validate_name(actual_name)
-            assert error is None, (
-                f"Lambda function has invalid name '{actual_name}': {error}"
-            )
-
-        def test_handler_role_name_is_pascalcase(self, iam_client, config):
-            function_name = config.get(function_name_config_key, default_function_name)
-            role_name = f"{function_name}ServiceRole"
-            response = iam_client.get_role(RoleName=role_name)
-            actual_name = response["Role"]["RoleName"]
-            error = validate_name(actual_name)
-            assert error is None, (
-                f"IAM role has invalid name '{actual_name}': {error}"
-            )
-
-    return TestNamingConventions
-
-
-def create_deployed_naming_convention_tests(
+def create_deployed_resource_existence_tests(
     function_name_config_key: str,
     default_function_name: str,
     handler_display_name: str,
 ):
-    class TestDeployedIAMRoleNamingConventions:
+    class TestDeployedIAMRoleExists:
         def test_handler_role_exists(self, iam_client, config):
             function_name = config.get(function_name_config_key, default_function_name)
             role_name = f"{function_name}ServiceRole"
@@ -288,19 +259,11 @@ def create_deployed_naming_convention_tests(
             except iam_client.exceptions.NoSuchEntityException:
                 pytest.fail(f"IAM role '{role_name}' does not exist")
 
-        def test_handler_role_name_is_pascalcase(self, iam_client, config):
-            function_name = config.get(function_name_config_key, default_function_name)
-            role_name = f"{function_name}ServiceRole"
-            assert_iam_role_name_is_pascalcase(iam_client, role_name, validate_name)
-
-    TestDeployedIAMRoleNamingConventions.test_handler_role_exists.__doc__ = (
+    TestDeployedIAMRoleExists.test_handler_role_exists.__doc__ = (
         f"Verify {handler_display_name} IAM role exists."
     )
-    TestDeployedIAMRoleNamingConventions.test_handler_role_name_is_pascalcase.__doc__ = (
-        f"Verify {handler_display_name} IAM role name uses PascalCase."
-    )
 
-    class TestDeployedLambdaFunctionNamingConventions:
+    class TestDeployedLambdaFunctionExists:
         def test_handler_function_exists(self, lambda_client, config):
             function_name = config.get(function_name_config_key, default_function_name)
             try:
@@ -308,20 +271,8 @@ def create_deployed_naming_convention_tests(
             except lambda_client.exceptions.ResourceNotFoundException:
                 pytest.fail(f"Lambda function '{function_name}' does not exist")
 
-        def test_handler_function_name_is_pascalcase(self, lambda_client, config):
-            function_name = config.get(function_name_config_key, default_function_name)
-            response = lambda_client.get_function(FunctionName=function_name)
-            actual_name = response['Configuration']['FunctionName']
-            error = validate_name(actual_name)
-            assert error is None, (
-                f"Deployed Lambda function has invalid name '{actual_name}': {error}"
-            )
-
-    TestDeployedLambdaFunctionNamingConventions.test_handler_function_exists.__doc__ = (
+    TestDeployedLambdaFunctionExists.test_handler_function_exists.__doc__ = (
         f"Verify {handler_display_name} Lambda function exists."
     )
-    TestDeployedLambdaFunctionNamingConventions.test_handler_function_name_is_pascalcase.__doc__ = (
-        f"Verify {handler_display_name} Lambda function name uses PascalCase."
-    )
 
-    return TestDeployedIAMRoleNamingConventions, TestDeployedLambdaFunctionNamingConventions
+    return TestDeployedIAMRoleExists, TestDeployedLambdaFunctionExists

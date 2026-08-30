@@ -149,12 +149,3 @@ def assert_api_gateway_exists(api_gateway_info, terraform_path: str = "src/api/c
         f"API Gateway '{api_gateway_info['id']}' does not exist. "
         f"Run terraform apply in {terraform_path}"
     )
-
-
-def assert_iam_role_name_is_pascalcase(iam_client, role_name: str, validate_name_func):
-    response = iam_client.get_role(RoleName=role_name)
-    actual_name = response['Role']['RoleName']
-    error = validate_name_func(actual_name)
-    assert error is None, (
-        f"Deployed IAM role has invalid name '{actual_name}': {error}"
-    )

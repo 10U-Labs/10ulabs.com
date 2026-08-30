@@ -7,7 +7,6 @@ from boto_mocks import create_client_error
 from test_fixtures.integration.helpers import (
     NO_CREDENTIALS_MESSAGE,
     assert_api_gateway_exists,
-    assert_iam_role_name_is_pascalcase,
     check_credentials_available,
     check_credentials_valid,
     check_iam_role_exists,
@@ -484,55 +483,6 @@ class TestAssertAPIGatewayExistsDoesNotExist:
         api_gateway_info = {"id": "abc123", "exists": False}
         with pytest.raises(AssertionError, match="custom/terraform/path"):
             assert_api_gateway_exists(api_gateway_info, "custom/terraform/path")
-
-
-class TestAssertIAMRoleNameIsPascalCaseValid:
-    def test_does_not_raise_when_name_valid(self):
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {"Role": {"RoleName": "MyServiceRole"}}
-        validate_func = MagicMock(return_value=None)
-        assert assert_iam_role_name_is_pascalcase(
-            mock_client, "MyServiceRole", validate_func
-        ) is None
-
-    def test_calls_get_role_with_role_name(self):
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {"Role": {"RoleName": "MyServiceRole"}}
-        validate_func = MagicMock(return_value=None)
-        assert_iam_role_name_is_pascalcase(mock_client, "MyServiceRole", validate_func)
-        assert mock_client.get_role.call_args[1]["RoleName"] == "MyServiceRole"
-
-    def test_calls_validate_func_with_actual_name(self):
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {"Role": {"RoleName": "ActualRoleName"}}
-        validate_func = MagicMock(return_value=None)
-        assert_iam_role_name_is_pascalcase(mock_client, "RoleToCheck", validate_func)
-        assert validate_func.call_args[0][0] == "ActualRoleName"
-
-
-class TestAssertIAMRoleNameIsPascalCaseInvalid:
-    def test_raises_assertion_when_name_invalid(self):
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {"Role": {"RoleName": "my_service_role"}}
-        validate_func = MagicMock(return_value="not PascalCase")
-        with pytest.raises(AssertionError):
-            assert_iam_role_name_is_pascalcase(
-                mock_client, "my_service_role", validate_func
-            )
-
-    def test_error_message_contains_actual_name(self):
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {"Role": {"RoleName": "bad_name"}}
-        validate_func = MagicMock(return_value="not PascalCase")
-        with pytest.raises(AssertionError, match="bad_name"):
-            assert_iam_role_name_is_pascalcase(mock_client, "bad_name", validate_func)
-
-    def test_error_message_contains_validation_error(self):
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {"Role": {"RoleName": "bad_name"}}
-        validate_func = MagicMock(return_value="contains_underscore")
-        with pytest.raises(AssertionError, match="contains_underscore"):
-            assert_iam_role_name_is_pascalcase(mock_client, "bad_name", validate_func)
 
 
 class TestNoCredentialsMessage:

@@ -1,6 +1,6 @@
 import pytest
 
-from test_fixtures.integration import create_deployed_naming_convention_tests
+from test_fixtures.integration import create_deployed_resource_existence_tests
 
 
 def test_lambda_catchall_handler_runtime_is_python313(lambda_client, shared_config):
@@ -9,13 +9,13 @@ def test_lambda_catchall_handler_runtime_is_python313(lambda_client, shared_conf
     assert response["Configuration"]["Runtime"] == "python3.13"
 
 
-_naming_tests = create_deployed_naming_convention_tests(
+_existence_tests = create_deployed_resource_existence_tests(
     function_name_config_key='catchall_handler_function_name',
     default_function_name='TenULabsCatchAllHandler',
     handler_display_name='CatchAllHandler',
 )
-TestCatchAllHandlerIAMRoleNamingConventions = _naming_tests[0]
-TestCatchAllHandlerLambdaFunctionNamingConventions = _naming_tests[1]
+TestCatchAllHandlerIAMRoleExists = _existence_tests[0]
+TestCatchAllHandlerLambdaFunctionExists = _existence_tests[1]
 
 
 def test_s3_bucket_versioning_disabled(s3_client, config):

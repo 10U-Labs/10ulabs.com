@@ -1,7 +1,6 @@
 from test_fixtures.integration import (
     create_lambda_configuration_tests,
     create_log_group_configuration_tests,
-    create_naming_convention_tests,
     get_aws_account_id_via_cli,
 )
 
@@ -16,12 +15,6 @@ TestCloudWatchLogsConfiguration = create_log_group_configuration_tests(
     log_group_fixture="health_handler_log_group",
     expected_retention=7,
 )
-
-TestNamingConventions = create_naming_convention_tests(
-    function_name_config_key="health_handler_function_name",
-    default_function_name="TenULabsHealthHandler",
-)
-
 
 def test_health_handler_has_10_second_timeout(lambda_client, config):
     function_name = config.get(

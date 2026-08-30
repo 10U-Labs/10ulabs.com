@@ -26,7 +26,7 @@ from test_fixtures.integration import (
     Layer6IAMCapabilityTests,
     Layer6S3CapabilityTests,
     Layer6S3WriteCapabilityTests,
-    create_deployed_naming_convention_tests,
+    create_deployed_resource_existence_tests,
     create_kms_policy_test,
     create_lambda_api_gateway_wiring_tests,
     create_lambda_configuration_tests,
@@ -38,7 +38,6 @@ from test_fixtures.integration import (
     create_layer2_s3_authorization_tests,
     create_layer6_capability_tests,
     create_log_group_configuration_tests,
-    create_naming_convention_tests,
     create_security_group_existence_test,
     create_simple_layer1_authentication_tests,
     create_sqs_fifo_queue_tests,
@@ -46,7 +45,6 @@ from test_fixtures.integration import (
     create_www_common_s3_existence_tests,
     handle_ecr_error,
     assert_api_gateway_exists,
-    assert_iam_role_name_is_pascalcase,
     check_iam_role_exists,
     check_lambda_function_exists,
     check_lambda_role_has_policy,
@@ -167,8 +165,8 @@ def test_layer7_deployment_capability_tests_import():
     assert Layer7DeploymentCapabilityTests is not None
 
 
-def test_create_deployed_naming_convention_tests_import():
-    assert callable(create_deployed_naming_convention_tests)
+def test_create_deployed_resource_existence_tests_import():
+    assert callable(create_deployed_resource_existence_tests)
 
 
 def test_create_kms_policy_test_import():
@@ -215,10 +213,6 @@ def test_create_log_group_configuration_tests_import():
     assert callable(create_log_group_configuration_tests)
 
 
-def test_create_naming_convention_tests_import():
-    assert callable(create_naming_convention_tests)
-
-
 def test_create_security_group_existence_test_import():
     assert callable(create_security_group_existence_test)
 
@@ -245,10 +239,6 @@ def test_handle_ecr_error_import():
 
 def test_assert_api_gateway_exists_import():
     assert callable(assert_api_gateway_exists)
-
-
-def test_assert_iam_role_name_is_pascalcase_import():
-    assert callable(assert_iam_role_name_is_pascalcase)
 
 
 def test_check_iam_role_exists_import():

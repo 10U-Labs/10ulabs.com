@@ -17,11 +17,10 @@ from test_fixtures.integration.factories.infrastructure import (
     handle_ecr_error,
 )
 from test_fixtures.integration.factories.lambda_factories import (
-    create_deployed_naming_convention_tests,
+    create_deployed_resource_existence_tests,
     create_lambda_api_gateway_wiring_tests,
     create_lambda_configuration_tests,
     create_lambda_execution_role_wiring_tests,
     create_lambda_existence_tests,
     create_lambda_iam_wiring_tests,
-    create_naming_convention_tests,
 )

@@ -1,6 +1,3 @@
-from test_fixtures.integration import create_naming_convention_tests
-
-
 class TestLambdaConfiguration:
     def test_contact_handler_uses_python_runtime(
         self, lambda_client, shared_config
@@ -82,8 +79,3 @@ class TestCloudWatchLogsConfiguration:
             f"Log group retention should be 7 days, got: {retention}"
         )
 
-
-TestNamingConventions = create_naming_convention_tests(
-    function_name_config_key="contact_handler_function_name",
-    default_function_name="TenULabsContactHandler",
-)

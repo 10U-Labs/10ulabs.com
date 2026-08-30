@@ -6,13 +6,12 @@ from botocore.exceptions import ClientError
 
 from boto_mocks import create_client_error
 from test_fixtures.integration.factories.lambda_factories import (
-    create_deployed_naming_convention_tests,
+    create_deployed_resource_existence_tests,
     create_lambda_api_gateway_wiring_tests,
     create_lambda_configuration_tests,
     create_lambda_execution_role_wiring_tests,
     create_lambda_existence_tests,
     create_lambda_iam_wiring_tests,
-    create_naming_convention_tests,
 )
 
 
@@ -617,133 +616,57 @@ class TestCreateLambdaConfigurationTestsExecution:
             instance.test_handler_has_handler_configured(mock_client, config)
 
 
-class TestCreateNamingConventionTestsReturnsClass:
-    def test_returns_class(self):
-        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
-        assert isinstance(test_class, type)
-
-    def test_returns_class_with_name(self):
-        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
-        assert test_class.__name__ == "TestNamingConventions"
-
-
-class TestCreateNamingConventionTestsHasMethods:
-    def test_has_test_handler_lambda_name_is_pascalcase(self):
-        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
-        assert hasattr(test_class, "test_handler_lambda_name_is_pascalcase")
-
-    def test_has_test_handler_role_name_is_pascalcase(self):
-        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
-        assert hasattr(test_class, "test_handler_role_name_is_pascalcase")
-
-
-class TestCreateNamingConventionTestsExecution:
-    def test_handler_lambda_name_is_pascalcase_success(self):
-        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_function.return_value = {
-            "Configuration": {"FunctionName": "MyPascalCaseFunction"}
-        }
-        config = {"func_key": "MyPascalCaseFunction"}
-        assert instance.test_handler_lambda_name_is_pascalcase(mock_client, config) is None
-
-    def test_handler_lambda_name_is_pascalcase_fails_when_invalid(self):
-        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_function.return_value = {
-            "Configuration": {"FunctionName": "my_snake_case_function"}
-        }
-        config = {"func_key": "my_snake_case_function"}
-        with pytest.raises(AssertionError):
-            instance.test_handler_lambda_name_is_pascalcase(mock_client, config)
-
-    def test_handler_role_name_is_pascalcase_success(self):
-        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {
-            "Role": {"RoleName": "MyFunctionServiceRole"}
-        }
-        config = {"func_key": "MyFunction"}
-        assert instance.test_handler_role_name_is_pascalcase(mock_client, config) is None
-
-    def test_handler_role_name_is_pascalcase_fails_when_invalid(self):
-        test_class = create_naming_convention_tests("func_key", "DefaultFunc")
-        instance = test_class()
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {
-            "Role": {"RoleName": "my_function_service_role"}
-        }
-        config = {"func_key": "my_function"}
-        with pytest.raises(AssertionError):
-            instance.test_handler_role_name_is_pascalcase(mock_client, config)
-
-
-class TestCreateDeployedNamingConventionTestsReturnsTuple:
+class TestCreateDeployedResourceExistenceTestsReturnsTuple:
     def test_returns_tuple(self):
-        result = create_deployed_naming_convention_tests(
+        result = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
         assert isinstance(result, tuple)
 
     def test_returns_tuple_of_two(self):
-        result = create_deployed_naming_convention_tests(
+        result = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
         assert len(result) == 2
 
     def test_first_is_iam_class(self):
-        iam_class, _ = create_deployed_naming_convention_tests(
+        iam_class, _ = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
-        assert iam_class.__name__ == "TestDeployedIAMRoleNamingConventions"
+        assert iam_class.__name__ == "TestDeployedIAMRoleExists"
 
     def test_second_is_lambda_class(self):
-        _, lambda_class = create_deployed_naming_convention_tests(
+        _, lambda_class = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
-        assert lambda_class.__name__ == "TestDeployedLambdaFunctionNamingConventions"
+        assert lambda_class.__name__ == "TestDeployedLambdaFunctionExists"
 
 
-class TestCreateDeployedNamingConventionTestsHasMethods:
+class TestCreateDeployedResourceExistenceTestsHasMethods:
     def test_iam_class_has_test_handler_role_exists(self):
-        iam_class, _ = create_deployed_naming_convention_tests(
+        iam_class, _ = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
         assert hasattr(iam_class, "test_handler_role_exists")
 
-    def test_iam_class_has_test_handler_role_name_is_pascalcase(self):
-        iam_class, _ = create_deployed_naming_convention_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        assert hasattr(iam_class, "test_handler_role_name_is_pascalcase")
-
     def test_lambda_class_has_test_handler_function_exists(self):
-        _, lambda_class = create_deployed_naming_convention_tests(
+        _, lambda_class = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
         assert hasattr(lambda_class, "test_handler_function_exists")
 
-    def test_lambda_class_has_test_handler_function_name_is_pascalcase(self):
-        _, lambda_class = create_deployed_naming_convention_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        assert hasattr(lambda_class, "test_handler_function_name_is_pascalcase")
 
-
-class TestCreateDeployedNamingConventionTestsExecution:
+class TestCreateDeployedResourceExistenceTestsExecution:
     @pytest.fixture
     def iam_tests(self):
-        iam_class, _ = create_deployed_naming_convention_tests(
+        iam_class, _ = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
         return iam_class()
 
     @pytest.fixture
     def lambda_tests(self):
-        _, lambda_class = create_deployed_naming_convention_tests(
+        _, lambda_class = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
         return lambda_class()
@@ -766,14 +689,6 @@ class TestCreateDeployedNamingConventionTestsExecution:
         with pytest.raises(pytest.fail.Exception):
             iam_tests.test_handler_role_exists(mock_client, config)
 
-    def test_iam_role_name_is_pascalcase_success(self, iam_tests):
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {
-            "Role": {"RoleName": "MyFunctionServiceRole"}
-        }
-        config = {"func_key": "MyFunction"}
-        assert iam_tests.test_handler_role_name_is_pascalcase(mock_client, config) is None
-
     def test_lambda_function_exists_success(self, lambda_tests):
         mock_client = MagicMock()
         mock_client.get_function.return_value = {"Configuration": {"FunctionName": "MyFunction"}}
@@ -791,20 +706,3 @@ class TestCreateDeployedNamingConventionTestsExecution:
         config = {"func_key": "MyFunction"}
         with pytest.raises(pytest.fail.Exception):
             lambda_tests.test_handler_function_exists(mock_client, config)
-
-    def test_lambda_function_name_is_pascalcase_success(self, lambda_tests):
-        mock_client = MagicMock()
-        mock_client.get_function.return_value = {
-            "Configuration": {"FunctionName": "MyPascalCaseFunction"}
-        }
-        config = {"func_key": "MyPascalCaseFunction"}
-        assert lambda_tests.test_handler_function_name_is_pascalcase(mock_client, config) is None
-
-    def test_lambda_function_name_is_pascalcase_fails_when_invalid(self, lambda_tests):
-        mock_client = MagicMock()
-        mock_client.get_function.return_value = {
-            "Configuration": {"FunctionName": "my_snake_case_function"}
-        }
-        config = {"func_key": "my_snake_case_function"}
-        with pytest.raises(AssertionError):
-            lambda_tests.test_handler_function_name_is_pascalcase(mock_client, config)
