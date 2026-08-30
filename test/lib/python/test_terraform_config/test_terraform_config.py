@@ -8,7 +8,6 @@ from terraform_config import (
     _resolve_lambda_function_name,
     _resolve_local_interpolations,
     _resolve_prefix_refs,
-    extract_iam_role_names,
     extract_lambda_function_names,
     get_endpoint_local_values,
     get_resource_prefix,
@@ -323,61 +322,6 @@ class TestGetEndpointLocalValues:
         assert result.get("handler") == "TenULabsWebhook"
 
 
-class TestExtractIamRoleNames:
-    def test_returns_empty_for_nonexistent_file(self):
-        result = extract_iam_role_names(Path("/nonexistent/file.tf"))
-        assert not result
-
-    def test_extracts_quoted_name_returns_single_result(self, tmp_path):
-        iam_file = tmp_path / "iam.tf"
-        iam_file.write_text('''
-resource "aws_iam_role" "my_role" {
-  name = "MyRoleName"
-  assume_role_policy = jsonencode({})
-}
-''')
-        result = extract_iam_role_names(iam_file)
-        assert len(result) == 1
-
-    def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path):
-        iam_file = tmp_path / "iam.tf"
-        iam_file.write_text('''
-resource "aws_iam_role" "my_role" {
-  name = "MyRoleName"
-  assume_role_policy = jsonencode({})
-}
-''')
-        result = extract_iam_role_names(iam_file)
-        assert result[0] == ("my_role", "MyRoleName")
-
-    def test_extracts_var_reference_name(self, tmp_path):
-        iam_file = tmp_path / "iam.tf"
-        iam_file.write_text('''
-resource "aws_iam_role" "my_role" {
-  name = var.role_name
-  assume_role_policy = jsonencode({})
-}
-''')
-        tfvars_file = tmp_path / "terraform.tfvars"
-        tfvars_file.write_text('role_name = "VarRoleName"\n')
-        (tmp_path / "locals.tf").write_text("")
-        result = extract_iam_role_names(iam_file)
-        assert result[0] == ("my_role", "VarRoleName")
-
-    def test_extracts_local_reference_name(self, tmp_path):
-        iam_file = tmp_path / "iam.tf"
-        iam_file.write_text('''
-resource "aws_iam_role" "my_role" {
-  name = local.role_name
-  assume_role_policy = jsonencode({})
-}
-''')
-        locals_file = tmp_path / "locals.tf"
-        locals_file.write_text('locals {\n  role_name = "LocalRoleName"\n}\n')
-        result = extract_iam_role_names(iam_file)
-        assert result[0] == ("my_role", "LocalRoleName")
-
-
 class TestExtractLambdaFunctionNames:
     def test_returns_empty_for_nonexistent_file(self):
         result = extract_lambda_function_names(Path("/nonexistent/file.tf"))
@@ -554,20 +498,6 @@ def test_get_endpoint_local_values_skips_an_unknown_handler(tmp_path):
             mock_prefix.return_value = "TenULabs"
             result = get_endpoint_local_values(tmp_path)
     assert "handler" not in result
-
-
-def test_extract_iam_role_names_skips_an_unresolvable_expression(tmp_path):
-    iam_file = tmp_path / "iam.tf"
-    iam_file.write_text('''
-resource "aws_iam_role" "my_role" {
-  name = data.aws_caller_identity.current.account_id
-  assume_role_policy = jsonencode({})
-}
-''')
-    (tmp_path / "locals.tf").write_text("")
-    (tmp_path / "terraform.tfvars").write_text("")
-    result = extract_iam_role_names(iam_file)
-    assert len(result) == 0
 
 
 def test_extract_lambda_function_names_skips_an_unresolvable_name(tmp_path):

@@ -175,36 +175,6 @@ def _load_tf_file_context(tf_file: Path) -> tuple | None:
     )
 
 
-def extract_iam_role_names(tf_file: Path) -> list:
-    ctx = _load_tf_file_context(tf_file)
-    if ctx is None:
-        return []
-    content, prefix, local_values, tfvars_values = ctx
-    roles = []
-
-    for match in re.finditer(r'resource\s+"aws_iam_role"\s+"([^"]+)"\s*\{', content):
-        block_content = extract_brace_block(content, match.end() - 1)
-        name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
-        if name_match:
-            role_name = _resolve_prefix_refs(name_match.group(1), prefix)
-            role_name = _resolve_local_interpolations(role_name, local_values)
-            roles.append((match.group(1), role_name))
-        else:
-            local_match = re.search(
-                r'^\s*name\s*=\s*local\.(\w+)', block_content, re.MULTILINE
-            )
-            if local_match and local_match.group(1) in local_values:
-                roles.append((match.group(1), local_values[local_match.group(1)]))
-            else:
-                var_match = re.search(
-                    r'^\s*name\s*=\s*var\.(\w+)', block_content, re.MULTILINE
-                )
-                if var_match and var_match.group(1) in tfvars_values:
-                    roles.append((match.group(1), tfvars_values[var_match.group(1)]))
-
-    return roles
-
-
 def _resolve_lambda_function_name(
     block: str, prefix: str, locals_map: Dict, tfvars: Dict, handlers: Dict
 ) -> Optional[str]:
