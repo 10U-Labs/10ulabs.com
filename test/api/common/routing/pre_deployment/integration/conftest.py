@@ -38,3 +38,28 @@ def central_logs_bucket_name(bootstrap_outputs):
         return ""
     match = re.match(r"arn:aws:s3:::(.+)$", arn)
     return match.group(1) if match else ""
+
+
+@pytest.fixture(scope="session")
+def caller_identity(request):
+    client = request.getfixturevalue("sts_client")
+    return client.get_caller_identity()
+
+
+@pytest.fixture(scope="session")
+def _current_role_arn(request):
+    identity = request.getfixturevalue("caller_identity")
+    arn = identity.get("Arn", "")
+    if ":assumed-role/" in arn:
+        account = identity.get("Account", "")
+        role_name = arn.split("/")[1]
+        return f"arn:aws:iam::{account}:role/{role_name}"
+    return arn
+
+
+@pytest.fixture(scope="session")
+def current_role_name(request):
+    role_arn = request.getfixturevalue("_current_role_arn")
+    if not role_arn:
+        return ""
+    return role_arn.split("/")[-1]

@@ -6,7 +6,6 @@ import pytest
 
 from terraform_config import get_shared_config
 
-pytest_plugins = ['test_fixtures.aws']
 
 _REPO_ROOT = Path(__file__).parent.parent
 _LIB_DIR = _REPO_ROOT / "lib" / "python"

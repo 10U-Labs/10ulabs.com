@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-import pytest
-
 
 def iam_role_exists(client, role_name: str) -> bool:
     try:
@@ -43,28 +41,3 @@ def stale_delete_markers(client, bucket_name: str, older_than_days: int = 7) -> 
             if marker["LastModified"] < cutoff:
                 stale.append(marker["Key"])
     return stale
-
-
-@pytest.fixture(scope="session")
-def caller_identity(request):
-    client = request.getfixturevalue("sts_client")
-    return client.get_caller_identity()
-
-
-@pytest.fixture(scope="session")
-def _current_role_arn(request):
-    identity = request.getfixturevalue("caller_identity")
-    arn = identity.get("Arn", "")
-    if ":assumed-role/" in arn:
-        account = identity.get("Account", "")
-        role_name = arn.split("/")[1]
-        return f"arn:aws:iam::{account}:role/{role_name}"
-    return arn
-
-
-@pytest.fixture(scope="session")
-def current_role_name(request):
-    role_arn = request.getfixturevalue("_current_role_arn")
-    if not role_arn:
-        return ""
-    return role_arn.split("/")[-1]

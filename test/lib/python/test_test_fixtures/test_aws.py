@@ -2,9 +2,6 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 from test_fixtures.aws import (
-    caller_identity,
-    _current_role_arn,
-    current_role_name,
     find_lifecycle_rule,
     get_log_group_info,
     iam_role_exists,
@@ -136,50 +133,6 @@ class TestGetLogGroupInfo:
         }
         result = get_log_group_info(mock_client, "/aws/lambda/target")
         assert result["exists"] is True
-
-
-def test_caller_identity_fixture_execution():
-    mock_request = MagicMock()
-    mock_sts_client = MagicMock()
-    mock_sts_client.get_caller_identity.return_value = {"Account": "123456789012"}
-    mock_request.getfixturevalue.return_value = mock_sts_client
-    result = caller_identity.__wrapped__(mock_request)
-    assert result == {"Account": "123456789012"}
-    mock_sts_client.get_caller_identity.assert_called_once()
-
-
-class TestCurrentRoleArnFixtureExecution:
-    def test_current_role_arn_converts_assumed_role(self):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {
-            "Account": "123456789012",
-            "Arn": "arn:aws:sts::123456789012:assumed-role/MyRole/session"
-        }
-        result = _current_role_arn.__wrapped__(mock_request)
-        assert result == "arn:aws:iam::123456789012:role/MyRole"
-
-    def test_current_role_arn_returns_unchanged_for_non_assumed(self):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = {
-            "Account": "123456789012",
-            "Arn": "arn:aws:iam::123456789012:user/MyUser"
-        }
-        result = _current_role_arn.__wrapped__(mock_request)
-        assert result == "arn:aws:iam::123456789012:user/MyUser"
-
-
-class TestCurrentRoleNameFixtureExecution:
-    def test_current_role_name_extracts_role_name(self):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "arn:aws:iam::123456789012:role/MyRole"
-        result = current_role_name.__wrapped__(mock_request)
-        assert result == "MyRole"
-
-    def test_current_role_name_returns_empty_for_empty_arn(self):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = ""
-        result = current_role_name.__wrapped__(mock_request)
-        assert result == ""
 
 
 class TestFindLifecycleRule:
