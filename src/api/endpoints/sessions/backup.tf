@@ -25,7 +25,7 @@ resource "aws_backup_plan" "sessions" {
 }
 
 resource "aws_iam_role" "backup" {
-  name = "${local.resource_prefix}-SessionsBackup-Role"
+  name = "${local.resource_prefix}SessionsBackupRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -39,7 +39,7 @@ resource "aws_iam_role" "backup" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-SessionsBackup-Role"
+    Name = "${local.resource_prefix}SessionsBackupRole"
   })
 }
 

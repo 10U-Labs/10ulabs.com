@@ -9,7 +9,7 @@ def sessions_config():
         "handler_role_name": "TenULabsSessionsHandlerRole",
         "export_role_name": "TenULabsSessionsExportRole",
         "scheduler_role_name": "TenULabsSessionsSchedulerRole",
-        "backup_role_name": "TenULabs-SessionsBackup-Role",
+        "backup_role_name": "TenULabsSessionsBackupRole",
         "dynamodb_table_name": "TenULabs-session-events",
         "s3_bucket_name": "tenulabs-sessions-analytics",
         "backup_vault_name": "TenULabs-sessions-backup",
