@@ -2,8 +2,6 @@ from typing import Dict
 
 import pytest
 
-pytest_plugins = ['test_fixtures.website']
-
 
 @pytest.fixture(scope="module")
 def config(shared_config) -> Dict[str, str]:

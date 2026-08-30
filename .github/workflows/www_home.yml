@@ -480,8 +480,7 @@ jobs:
           python3 -m pip install \
             boto3 \
             botocore \
-            pytest \
-            requests
+            pytest
       - id: terraform
         name: Extract Terraform version
         run: |
