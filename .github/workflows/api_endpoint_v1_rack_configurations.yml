@@ -391,6 +391,7 @@ jobs:
             botocore \
             mypy \
             pytest \
+            python-hcl2 \
             requests \
             types-requests
       - name: Run mypy on source
@@ -561,6 +562,7 @@ jobs:
             botocore \
             pylint \
             pytest \
+            python-hcl2 \
             requests
       - name: Run pylint on source
         run: |
@@ -919,6 +921,7 @@ jobs:
             botocore \
             pytest \
             pytest-cov \
+            python-hcl2 \
             requests
       - name: Run test_fixtures tests with a full coverage gate
         run: |
