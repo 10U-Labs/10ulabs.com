@@ -49,12 +49,6 @@ def ssm_client(request):
 
 
 @pytest.fixture(scope="session")
-def ecr_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("ecr", region_name=region)
-
-
-@pytest.fixture(scope="session")
 def logs_client(request):
     region = request.getfixturevalue("aws_region")
     return boto3.client("logs", region_name=region)
@@ -166,11 +160,6 @@ def scheduler_client(request):
 def backup_client(request):
     region = request.getfixturevalue("aws_region")
     return boto3.client("backup", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def state_bucket_region(request):
-    return request.getfixturevalue("aws_region")
 
 
 @pytest.fixture(scope="module")

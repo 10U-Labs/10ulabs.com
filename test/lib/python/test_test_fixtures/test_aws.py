@@ -16,7 +16,6 @@ from test_fixtures.aws import (
     current_role_name,
     dynamodb_client,
     ec2_client,
-    ecr_client,
     find_lifecycle_rule,
     get_log_group_info,
     iam_client,
@@ -30,7 +29,6 @@ from test_fixtures.aws import (
     ssm_client,
     stale_delete_markers,
     state_bucket_name,
-    state_bucket_region,
     sts_client,
 )
 
@@ -215,13 +213,6 @@ class TestClientFixturesExecution:
         assert mock_boto3.client.call_args[0][0] == "ssm"
 
     @patch("test_fixtures.aws.boto3")
-    def test_ecr_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        ecr_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "ecr"
-
-    @patch("test_fixtures.aws.boto3")
     def test_logs_client_fixture_creates_client(self, mock_boto3):
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
@@ -320,13 +311,6 @@ class TestCurrentRoleNameFixtureExecution:
         mock_request.getfixturevalue.return_value = ""
         result = current_role_name.__wrapped__(mock_request)
         assert result == ""
-
-
-def test_state_bucket_region_fixture_execution():
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "us-west-2"
-    result = state_bucket_region.__wrapped__(mock_request)
-    assert result == "us-west-2"
 
 
 class TestApiGatewayInfoFixtureExecution:

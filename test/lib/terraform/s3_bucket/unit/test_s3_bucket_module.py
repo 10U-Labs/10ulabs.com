@@ -1,9 +1,13 @@
-def test_module_files_exist(module_path):
-    assert (
-        (module_path / "main.tf").exists()
-        and (module_path / "variables.tf").exists()
-        and (module_path / "outputs.tf").exists()
-    )
+def test_module_main_file_exists(module_path):
+    assert (module_path / "main.tf").exists()
+
+
+def test_module_variables_file_exists(module_path):
+    assert (module_path / "variables.tf").exists()
+
+
+def test_module_outputs_file_exists(module_path):
+    assert (module_path / "outputs.tf").exists()
 
 
 def test_module_versions_file_exists(module_path):
@@ -26,13 +30,20 @@ def test_s3_bucket_public_access_block_exists(main_tf_content):
     assert 'resource "aws_s3_bucket_public_access_block"' in main_tf_content
 
 
-def test_s3_bucket_public_access_block_all_enabled(main_tf_content):
-    assert (
-        'block_public_acls       = true' in main_tf_content
-        and 'block_public_policy     = true' in main_tf_content
-        and 'ignore_public_acls      = true' in main_tf_content
-        and 'restrict_public_buckets = true' in main_tf_content
-    )
+def test_s3_bucket_public_access_block_blocks_acls(main_tf_content):
+    assert 'block_public_acls       = true' in main_tf_content
+
+
+def test_s3_bucket_public_access_block_blocks_policy(main_tf_content):
+    assert 'block_public_policy     = true' in main_tf_content
+
+
+def test_s3_bucket_public_access_block_ignores_acls(main_tf_content):
+    assert 'ignore_public_acls      = true' in main_tf_content
+
+
+def test_s3_bucket_public_access_block_restricts_buckets(main_tf_content):
+    assert 'restrict_public_buckets = true' in main_tf_content
 
 
 def test_s3_bucket_encryption_exists(main_tf_content):

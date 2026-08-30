@@ -69,7 +69,12 @@ class TestBackendConfiguration:
     def test_backend_encryption_enabled(self):
         backend_tf = SESSIONS_SRC_PATH / "backend.tf"
         content = backend_tf.read_text()
-        assert 'encrypt' in content and 'true' in content
+        assert 'encrypt' in content
+
+    def test_backend_encryption_set_true(self):
+        backend_tf = SESSIONS_SRC_PATH / "backend.tf"
+        content = backend_tf.read_text()
+        assert 'true' in content
 
     def test_backend_uses_lockfile(self):
         backend_tf = SESSIONS_SRC_PATH / "backend.tf"
@@ -111,7 +116,12 @@ class TestProviderConfiguration:
     def test_provider_default_tags_include_managed_by(self):
         providers_tf = SESSIONS_SRC_PATH / "providers.tf"
         content = providers_tf.read_text()
-        assert 'ManagedBy' in content and 'terraform' in content
+        assert 'ManagedBy' in content
+
+    def test_provider_default_tags_managed_by_is_terraform(self):
+        providers_tf = SESSIONS_SRC_PATH / "providers.tf"
+        content = providers_tf.read_text()
+        assert 'terraform' in content
 
 
 class TestSharedModuleConfiguration:
@@ -132,15 +142,25 @@ class TestDynamoDbConfiguration:
         content = dynamodb_tf.read_text()
         assert 'PAY_PER_REQUEST' in content
 
-    def test_dynamodb_table_has_session_id_hash_key(self):
+    def test_dynamodb_table_has_hash_key(self):
         dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
         content = dynamodb_tf.read_text()
-        assert 'hash_key' in content and 'session_id' in content
+        assert 'hash_key' in content
 
-    def test_dynamodb_table_has_timestamp_range_key(self):
+    def test_dynamodb_table_has_session_id_attribute_named(self):
         dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
         content = dynamodb_tf.read_text()
-        assert 'range_key' in content and 'timestamp' in content
+        assert 'session_id' in content
+
+    def test_dynamodb_table_has_range_key(self):
+        dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
+        content = dynamodb_tf.read_text()
+        assert 'range_key' in content
+
+    def test_dynamodb_table_has_timestamp_attribute_named(self):
+        dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
+        content = dynamodb_tf.read_text()
+        assert 'timestamp' in content
 
     def test_dynamodb_table_has_event_type_gsi(self):
         dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
@@ -152,10 +172,15 @@ class TestDynamoDbConfiguration:
         content = dynamodb_tf.read_text()
         assert 'device_id-index' in content
 
+    def test_dynamodb_table_has_pitr_block(self):
+        dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
+        content = dynamodb_tf.read_text()
+        assert 'point_in_time_recovery' in content
+
     def test_dynamodb_table_has_pitr_enabled(self):
         dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
         content = dynamodb_tf.read_text()
-        assert 'point_in_time_recovery' in content and 'enabled = true' in content
+        assert 'enabled = true' in content
 
     def test_dynamodb_table_has_event_type_attribute(self):
         dynamodb_tf = SESSIONS_SRC_PATH / "dynamodb.tf"
@@ -192,7 +217,12 @@ class TestBackupConfiguration:
     def test_backup_role_defined(self):
         backup_tf = SESSIONS_SRC_PATH / "backup.tf"
         content = backup_tf.read_text()
-        assert 'aws_iam_role' in content and 'backup' in content.lower()
+        assert 'aws_iam_role' in content
+
+    def test_backup_role_names_backup(self):
+        backup_tf = SESSIONS_SRC_PATH / "backup.tf"
+        content = backup_tf.read_text()
+        assert 'backup' in content.lower()
 
     def test_backup_selection_defined(self):
         backup_tf = SESSIONS_SRC_PATH / "backup.tf"
@@ -258,4 +288,9 @@ class TestLocalsConfiguration:
     def test_locals_common_tags_include_purpose(self):
         locals_tf = SESSIONS_SRC_PATH / "locals.tf"
         content = locals_tf.read_text()
-        assert 'Purpose' in content and 'sessions' in content
+        assert 'Purpose' in content
+
+    def test_locals_common_tags_purpose_is_sessions(self):
+        locals_tf = SESSIONS_SRC_PATH / "locals.tf"
+        content = locals_tf.read_text()
+        assert 'sessions' in content

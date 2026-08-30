@@ -35,6 +35,17 @@ def _create_sqs_service_error_mocks():
     return mock_client, mock_request
 
 
+def _www_common_outputs(monkeypatch, terraform_outputs, **kwargs):
+    monkeypatch.setattr(
+        "test_fixtures.integration.factories.infrastructure.terraform_output",
+        MagicMock(side_effect=terraform_outputs)
+    )
+    _, outputs_fixture = create_www_common_fixtures(**kwargs)
+    mock_request = MagicMock()
+    mock_request.getfixturevalue.return_value = True
+    return outputs_fixture.__wrapped__(mock_request)
+
+
 class TestCreateWwwCommonFixturesReturnsFixtures:
     def test_returns_tuple(self):
         result = create_www_common_fixtures()
@@ -106,61 +117,49 @@ class TestWwwCommonFixturesExecution:
         with pytest.raises(pytest.skip.Exception):
             outputs_fixture.__wrapped__(mock_request)
 
-    def test_outputs_returns_bucket_info(self, monkeypatch):
-        mock_output = MagicMock(side_effect=["my-bucket", "arn:aws:s3:::my-bucket"])
-        monkeypatch.setattr(
-            "test_fixtures.integration.factories.infrastructure.terraform_output",
-            mock_output
+    def test_outputs_returns_bucket_name(self, monkeypatch):
+        result = _www_common_outputs(
+            monkeypatch, ["my-bucket", "arn:aws:s3:::my-bucket"]
         )
-        _, outputs_fixture = create_www_common_fixtures()
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = True
-        result = outputs_fixture.__wrapped__(mock_request)
-        assert "bucket_name" in result and "bucket_arn" in result
+        assert "bucket_name" in result
+
+    def test_outputs_returns_bucket_arn(self, monkeypatch):
+        result = _www_common_outputs(
+            monkeypatch, ["my-bucket", "arn:aws:s3:::my-bucket"]
+        )
+        assert "bucket_arn" in result
 
     def test_outputs_includes_website_domain_when_requested(self, monkeypatch):
-        mock_output = MagicMock(side_effect=[
-            "my-bucket", "arn:aws:s3:::my-bucket", "example.com"
-        ])
-        monkeypatch.setattr(
-            "test_fixtures.integration.factories.infrastructure.terraform_output",
-            mock_output
+        result = _www_common_outputs(
+            monkeypatch,
+            ["my-bucket", "arn:aws:s3:::my-bucket", "example.com"],
+            include_website_domain=True
         )
-        _, outputs_fixture = create_www_common_fixtures(include_website_domain=True)
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = True
-        result = outputs_fixture.__wrapped__(mock_request)
         assert "website_domain_name" in result
 
     def test_outputs_includes_cloudfront_when_requested(self, monkeypatch):
-        mock_output = MagicMock(side_effect=[
-            "my-bucket", "arn:aws:s3:::my-bucket", "E123456789"
-        ])
-        monkeypatch.setattr(
-            "test_fixtures.integration.factories.infrastructure.terraform_output",
-            mock_output
+        result = _www_common_outputs(
+            monkeypatch,
+            ["my-bucket", "arn:aws:s3:::my-bucket", "E123456789"],
+            include_cloudfront=True
         )
-        _, outputs_fixture = create_www_common_fixtures(include_cloudfront=True)
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = True
-        result = outputs_fixture.__wrapped__(mock_request)
         assert "cloudfront_distribution_id" in result
 
-    def test_outputs_includes_both_when_requested(self, monkeypatch):
-        mock_output = MagicMock(side_effect=[
-            "my-bucket", "arn:aws:s3:::my-bucket", "example.com", "E123456789"
-        ])
-        monkeypatch.setattr(
-            "test_fixtures.integration.factories.infrastructure.terraform_output",
-            mock_output
-        )
-        _, outputs_fixture = create_www_common_fixtures(
+    def test_outputs_includes_website_domain_when_both_requested(self, monkeypatch):
+        result = _www_common_outputs(
+            monkeypatch,
+            ["my-bucket", "arn:aws:s3:::my-bucket", "example.com", "E123456789"],
             include_website_domain=True, include_cloudfront=True
         )
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = True
-        result = outputs_fixture.__wrapped__(mock_request)
-        assert "website_domain_name" in result and "cloudfront_distribution_id" in result
+        assert "website_domain_name" in result
+
+    def test_outputs_includes_cloudfront_when_both_requested(self, monkeypatch):
+        result = _www_common_outputs(
+            monkeypatch,
+            ["my-bucket", "arn:aws:s3:::my-bucket", "example.com", "E123456789"],
+            include_website_domain=True, include_cloudfront=True
+        )
+        assert "cloudfront_distribution_id" in result
 
 
 class TestCreateWwwCommonS3ExistenceTestsReturnsClass:
