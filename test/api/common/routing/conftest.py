@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import boto3
 import pytest
-from test_fixtures.config import parse_tfvars_file, parse_locals_file
+from test_fixtures.config import add_derived_config, parse_tfvars_file, parse_locals_file
 
 
 def parse_bootstrap_tfvar(var_name: str) -> str:
@@ -32,14 +32,6 @@ def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     return config
 
 
-def _add_derived_config(result: Dict[str, str]) -> None:
-    prefix = result['resource_prefix']
-    result['firehose_delivery_stream_name'] = f"{prefix}-CloudWatchLogs"
-    result['firehose_role_name'] = f"{prefix}FirehoseCloudWatchLogs"
-    result['cloudwatch_logs_firehose_role_name'] = f"{prefix}CloudWatchLogsFirehose"
-    result['api_gateway_cloudwatch_role_name'] = f"{prefix}ApiGatewayCloudwatch"
-
-
 @pytest.fixture(name="config", scope="module")
 def config_fixture(shared_config) -> Dict[str, Any]:
     base = Path(__file__).parent.parent.parent.parent.parent
@@ -57,7 +49,7 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     result['stack_name'] = result.get('stack_name', '')
     ssm_param = parse_bootstrap_tfvar('ssm_parameter_name_for_github_pat')
     result['ssm_parameter_name_for_github_pat'] = ssm_param
-    _add_derived_config(result)
+    add_derived_config(result)
     health_config = parse_health_tfvars()
     result['health_handler_function_name'] = health_config.get('health_handler_function_name', '')
     result['health_handler_log_group_name'] = health_config.get('health_handler_log_group_name', '')

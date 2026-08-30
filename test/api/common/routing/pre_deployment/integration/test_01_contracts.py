@@ -1,10 +1,10 @@
 import re
 from pathlib import Path
-from test.api.common.routing.conftest import _add_derived_config
 
 import pytest
 
 from repo_utils import REPO_ROOT
+from test_fixtures.config import add_derived_config
 
 ROUTING_SRC = REPO_ROOT / "src" / "api" / "common" / "routing"
 LAMBDA_DIR = ROUTING_SRC / "lambda"
@@ -163,7 +163,7 @@ def test_unit_setup_opens_a_lambda_source_that_exists(lambda_source: str):
 
 def _derived_resource_names() -> list[str]:
     derived: dict[str, str] = {"resource_prefix": _DERIVED_NAME_PREFIX}
-    _add_derived_config(derived)
+    add_derived_config(derived)
     return sorted(
         value.removeprefix(_DERIVED_NAME_PREFIX)
         for key, value in derived.items()

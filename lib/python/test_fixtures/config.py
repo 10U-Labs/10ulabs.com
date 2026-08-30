@@ -70,3 +70,11 @@ def create_website_config(
         'resource_prefix': resource_prefix,
         'hosted_zone_id': hosted_zone_id,
     }
+
+
+def add_derived_config(result: Dict[str, str]) -> None:
+    prefix = result['resource_prefix']
+    result['firehose_delivery_stream_name'] = f"{prefix}-CloudWatchLogs"
+    result['firehose_role_name'] = f"{prefix}FirehoseCloudWatchLogs"
+    result['cloudwatch_logs_firehose_role_name'] = f"{prefix}CloudWatchLogsFirehose"
+    result['api_gateway_cloudwatch_role_name'] = f"{prefix}ApiGatewayCloudwatch"

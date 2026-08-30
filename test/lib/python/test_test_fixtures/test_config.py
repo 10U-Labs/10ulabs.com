@@ -10,6 +10,7 @@ from test_fixtures.config import (
     parse_locals_file,
     create_simple_config,
     create_website_config,
+    add_derived_config,
 )
 
 
@@ -185,3 +186,30 @@ class TestCreateWebsiteConfig:
         }
         result = create_website_config(tf_file(''), shared_config)
         assert result['central_logs_bucket'] == 'my-logs-bucket'
+
+
+class TestAddDerivedConfig:
+    def test_builds_firehose_delivery_stream_name(self):
+        result = {'resource_prefix': 'MyPrefix'}
+        add_derived_config(result)
+        assert result['firehose_delivery_stream_name'] == 'MyPrefix-CloudWatchLogs'
+
+    def test_builds_firehose_role_name(self):
+        result = {'resource_prefix': 'MyPrefix'}
+        add_derived_config(result)
+        assert result['firehose_role_name'] == 'MyPrefixFirehoseCloudWatchLogs'
+
+    def test_builds_cloudwatch_logs_firehose_role_name(self):
+        result = {'resource_prefix': 'MyPrefix'}
+        add_derived_config(result)
+        assert result['cloudwatch_logs_firehose_role_name'] == 'MyPrefixCloudWatchLogsFirehose'
+
+    def test_builds_api_gateway_cloudwatch_role_name(self):
+        result = {'resource_prefix': 'MyPrefix'}
+        add_derived_config(result)
+        assert result['api_gateway_cloudwatch_role_name'] == 'MyPrefixApiGatewayCloudwatch'
+
+    def test_leaves_resource_prefix_unchanged(self):
+        result = {'resource_prefix': 'MyPrefix'}
+        add_derived_config(result)
+        assert result['resource_prefix'] == 'MyPrefix'
