@@ -1,8 +1,9 @@
 import re
 
-from test.api.conftest import REPO_ROOT, terraform_init, terraform_output
-
 import pytest
+
+from repo_utils import REPO_ROOT
+from test_fixtures.terraform import terraform_init, terraform_output
 
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
