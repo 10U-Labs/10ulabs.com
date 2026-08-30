@@ -616,68 +616,49 @@ class TestCreateLambdaConfigurationTestsExecution:
             instance.test_handler_has_handler_configured(mock_client, config)
 
 
-class TestCreateDeployedResourceExistenceTestsReturnsTuple:
-    def test_returns_tuple(self):
+class TestCreateDeployedResourceExistenceTestsReturnsClass:
+    def test_returns_class(self):
         result = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
-        assert isinstance(result, tuple)
+        assert isinstance(result, type)
 
-    def test_returns_tuple_of_two(self):
+    def test_returns_class_with_name(self):
         result = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
-        assert len(result) == 2
-
-    def test_first_is_iam_class(self):
-        iam_class, _ = create_deployed_resource_existence_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        assert iam_class.__name__ == "TestDeployedIAMRoleExists"
-
-    def test_second_is_lambda_class(self):
-        _, lambda_class = create_deployed_resource_existence_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        assert lambda_class.__name__ == "TestDeployedLambdaFunctionExists"
+        assert result.__name__ == "TestDeployedHandlerResourcesExist"
 
 
 class TestCreateDeployedResourceExistenceTestsHasMethods:
-    def test_iam_class_has_test_handler_role_exists(self):
-        iam_class, _ = create_deployed_resource_existence_tests(
+    def test_has_test_handler_role_exists(self):
+        test_class = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
-        assert hasattr(iam_class, "test_handler_role_exists")
+        assert hasattr(test_class, "test_handler_role_exists")
 
-    def test_lambda_class_has_test_handler_function_exists(self):
-        _, lambda_class = create_deployed_resource_existence_tests(
+    def test_has_test_handler_function_exists(self):
+        test_class = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
-        assert hasattr(lambda_class, "test_handler_function_exists")
+        assert hasattr(test_class, "test_handler_function_exists")
 
 
 class TestCreateDeployedResourceExistenceTestsExecution:
     @pytest.fixture
-    def iam_tests(self):
-        iam_class, _ = create_deployed_resource_existence_tests(
+    def existence_tests(self):
+        test_class = create_deployed_resource_existence_tests(
             "func_key", "DefaultFunc", "TestHandler"
         )
-        return iam_class()
+        return test_class()
 
-    @pytest.fixture
-    def lambda_tests(self):
-        _, lambda_class = create_deployed_resource_existence_tests(
-            "func_key", "DefaultFunc", "TestHandler"
-        )
-        return lambda_class()
-
-    def test_iam_role_exists_success(self, iam_tests):
+    def test_iam_role_exists_success(self, existence_tests):
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyFunctionServiceRole"}}
         config = {"func_key": "MyFunction"}
-        assert iam_tests.test_handler_role_exists(mock_client, config) is None
+        assert existence_tests.test_handler_role_exists(mock_client, config) is None
 
-    def test_iam_role_exists_fails_when_not_found(self, iam_tests):
+    def test_iam_role_exists_fails_when_not_found(self, existence_tests):
         mock_client = MagicMock()
         mock_client.exceptions.NoSuchEntityException = type(
             "NoSuchEntityException", (Exception,), {}
@@ -687,15 +668,15 @@ class TestCreateDeployedResourceExistenceTestsExecution:
         )
         config = {"func_key": "MyFunction"}
         with pytest.raises(pytest.fail.Exception):
-            iam_tests.test_handler_role_exists(mock_client, config)
+            existence_tests.test_handler_role_exists(mock_client, config)
 
-    def test_lambda_function_exists_success(self, lambda_tests):
+    def test_lambda_function_exists_success(self, existence_tests):
         mock_client = MagicMock()
         mock_client.get_function.return_value = {"Configuration": {"FunctionName": "MyFunction"}}
         config = {"func_key": "MyFunction"}
-        assert lambda_tests.test_handler_function_exists(mock_client, config) is None
+        assert existence_tests.test_handler_function_exists(mock_client, config) is None
 
-    def test_lambda_function_exists_fails_when_not_found(self, lambda_tests):
+    def test_lambda_function_exists_fails_when_not_found(self, existence_tests):
         mock_client = MagicMock()
         mock_client.exceptions.ResourceNotFoundException = type(
             "ResourceNotFoundException", (Exception,), {}
@@ -705,4 +686,4 @@ class TestCreateDeployedResourceExistenceTestsExecution:
         )
         config = {"func_key": "MyFunction"}
         with pytest.raises(pytest.fail.Exception):
-            lambda_tests.test_handler_function_exists(mock_client, config)
+            existence_tests.test_handler_function_exists(mock_client, config)

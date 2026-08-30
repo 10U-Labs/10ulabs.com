@@ -78,4 +78,3 @@ class TestCloudWatchLogsConfiguration:
         assert retention == 7, (
             f"Log group retention should be 7 days, got: {retention}"
         )
-

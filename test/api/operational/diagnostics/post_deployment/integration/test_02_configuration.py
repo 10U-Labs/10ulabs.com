@@ -16,10 +16,8 @@ TestCloudWatchLogsConfiguration = create_log_group_configuration_tests(
     expected_retention=7,
 )
 
-_existence_tests = create_deployed_resource_existence_tests(
+TestDiagnosticsHandlerResourcesExist = create_deployed_resource_existence_tests(
     function_name_config_key='diagnostics_handler_function_name',
     default_function_name='TenULabsDiagnosticsHandler',
     handler_display_name='DiagnosticsHandler',
 )
-TestDiagnosticsHandlerIAMRoleExists = _existence_tests[0]
-TestDiagnosticsHandlerLambdaFunctionExists = _existence_tests[1]

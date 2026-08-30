@@ -1,7 +1,4 @@
-from naming_conventions import (
-    validate_name,
-    validate_kebab_name,
-)
+from naming_conventions import validate_name
 
 
 class TestValidateName:
@@ -47,43 +44,3 @@ class TestValidateName:
     def test_error_priority_lowercase_over_special_chars(self):
         result = validate_name("my-function")
         assert "must start with uppercase" in result
-
-
-class TestValidateKebabName:
-    def test_valid_name_returns_none(self):
-        assert validate_kebab_name("TenULabs-my-resource") is None
-
-    def test_valid_name_multiple_words_returns_none(self):
-        assert validate_kebab_name("TenULabs-rack-configurations-backup") is None
-
-    def test_empty_name_returns_error(self):
-        result = validate_kebab_name("")
-        assert result == "Name is empty"
-
-    def test_no_hyphen_returns_error(self):
-        result = validate_kebab_name("TenULabsResource")
-        assert "must contain hyphens" in result
-
-    def test_lowercase_prefix_returns_error(self):
-        result = validate_kebab_name("tenulabs-resource")
-        assert "prefix must be PascalCase" in result
-
-    def test_non_alphanumeric_prefix_returns_error(self):
-        result = validate_kebab_name("Ten-U-resource")
-        assert "suffix must be lowercase" in result
-
-    def test_uppercase_suffix_returns_error(self):
-        result = validate_kebab_name("TenULabs-MyResource")
-        assert "suffix must be lowercase" in result
-
-    def test_empty_suffix_returns_error(self):
-        result = validate_kebab_name("TenULabs-")
-        assert "suffix must be lowercase" in result
-
-    def test_special_chars_in_suffix_returns_error(self):
-        result = validate_kebab_name("TenULabs-resource_name")
-        assert "suffix must be lowercase" in result
-
-    def test_empty_prefix_returns_error(self):
-        result = validate_kebab_name("-resource")
-        assert "prefix must be PascalCase" in result

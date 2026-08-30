@@ -250,7 +250,7 @@ def create_deployed_resource_existence_tests(
     default_function_name: str,
     handler_display_name: str,
 ):
-    class TestDeployedIAMRoleExists:
+    class TestDeployedHandlerResourcesExist:
         def test_handler_role_exists(self, iam_client, config):
             function_name = config.get(function_name_config_key, default_function_name)
             role_name = f"{function_name}ServiceRole"
@@ -259,11 +259,6 @@ def create_deployed_resource_existence_tests(
             except iam_client.exceptions.NoSuchEntityException:
                 pytest.fail(f"IAM role '{role_name}' does not exist")
 
-    TestDeployedIAMRoleExists.test_handler_role_exists.__doc__ = (
-        f"Verify {handler_display_name} IAM role exists."
-    )
-
-    class TestDeployedLambdaFunctionExists:
         def test_handler_function_exists(self, lambda_client, config):
             function_name = config.get(function_name_config_key, default_function_name)
             try:
@@ -271,8 +266,11 @@ def create_deployed_resource_existence_tests(
             except lambda_client.exceptions.ResourceNotFoundException:
                 pytest.fail(f"Lambda function '{function_name}' does not exist")
 
-    TestDeployedLambdaFunctionExists.test_handler_function_exists.__doc__ = (
+    TestDeployedHandlerResourcesExist.test_handler_role_exists.__doc__ = (
+        f"Verify {handler_display_name} IAM role exists."
+    )
+    TestDeployedHandlerResourcesExist.test_handler_function_exists.__doc__ = (
         f"Verify {handler_display_name} Lambda function exists."
     )
 
-    return TestDeployedIAMRoleExists, TestDeployedLambdaFunctionExists
+    return TestDeployedHandlerResourcesExist
