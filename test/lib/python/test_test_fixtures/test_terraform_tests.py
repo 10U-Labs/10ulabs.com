@@ -8,7 +8,6 @@ from test_fixtures.terraform_tests import (
     API_COMMON_ROUTING_OUTPUTS_FILE,
     _get_api_common_routing_outputs,
     create_remote_state_contract_tests,
-    create_naming_conventions_tests,
     create_remote_state_config_tests,
 )
 
@@ -185,150 +184,6 @@ class TestCreateRemoteStateContractTests:
             getattr(instance, "test_required_output_output_exists_in_api_common_routing")()
 
 
-class TestCreateNamingConventionsTests:
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_returns_tuple(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        result = create_naming_conventions_tests(tmp_path)
-        assert isinstance(result, tuple)
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_returns_tuple_of_length_two(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        result = create_naming_conventions_tests(tmp_path)
-        assert len(result) == 2
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_first_element_is_class(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        iam_class, _ = create_naming_conventions_tests(tmp_path)
-        assert isinstance(iam_class, type)
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_second_element_is_class(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        _, lambda_class = create_naming_conventions_tests(tmp_path)
-        assert isinstance(lambda_class, type)
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_iam_class_name(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        iam_class, _ = create_naming_conventions_tests(tmp_path)
-        assert iam_class.__name__ == "TestIAMRoleNamingConventions"
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_lambda_class_name(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        _, lambda_class = create_naming_conventions_tests(tmp_path)
-        assert lambda_class.__name__ == "TestLambdaFunctionNamingConventions"
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_iam_class_has_pascalcase_test(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        iam_class, _ = create_naming_conventions_tests(tmp_path)
-        assert hasattr(iam_class, "test_iam_role_name_is_pascalcase")
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_iam_class_has_no_dashes_test(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        iam_class, _ = create_naming_conventions_tests(tmp_path)
-        assert hasattr(iam_class, "test_no_iam_role_names_contain_dashes")
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_lambda_class_has_pascalcase_test(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        _, lambda_class = create_naming_conventions_tests(tmp_path)
-        assert hasattr(lambda_class, "test_lambda_function_name_is_pascalcase")
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_lambda_class_has_no_dashes_test(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        _, lambda_class = create_naming_conventions_tests(tmp_path)
-        assert hasattr(lambda_class, "test_no_lambda_function_names_contain_dashes")
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_uses_custom_iam_file(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        create_naming_conventions_tests(tmp_path, iam_file="custom_iam.tf")
-        assert mock_iam.call_args[0][0] == tmp_path / "custom_iam.tf"
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_uses_custom_lambda_file(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        create_naming_conventions_tests(tmp_path, lambda_file="custom_lambda.tf")
-        assert mock_lambda.call_args[0][0] == tmp_path / "custom_lambda.tf"
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_passes_use_handler_names_flag(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        create_naming_conventions_tests(tmp_path, use_handler_names=True)
-        assert mock_lambda.call_args[1]["use_handler_names"] is True
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_iam_no_dashes_test_passes_with_valid_names(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = [("role1", "ValidRoleName"), ("role2", "AnotherValidName")]
-        mock_lambda.return_value = []
-        iam_class, _ = create_naming_conventions_tests(tmp_path)
-        instance = iam_class()
-        assert instance.test_no_iam_role_names_contain_dashes() is None
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_iam_no_dashes_test_fails_with_dashes(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = [("role1", "Invalid-Role-Name")]
-        mock_lambda.return_value = []
-        iam_class, _ = create_naming_conventions_tests(tmp_path)
-        instance = iam_class()
-        with pytest.raises(AssertionError):
-            instance.test_no_iam_role_names_contain_dashes()
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_lambda_no_dashes_test_passes_with_valid_names(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = [("func1", "ValidFuncName"), ("func2", "AnotherValidName")]
-        _, lambda_class = create_naming_conventions_tests(tmp_path)
-        instance = lambda_class()
-        assert instance.test_no_lambda_function_names_contain_dashes() is None
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_lambda_no_dashes_test_fails_with_dashes(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = [("func1", "Invalid-Func-Name")]
-        _, lambda_class = create_naming_conventions_tests(tmp_path)
-        instance = lambda_class()
-        with pytest.raises(AssertionError):
-            instance.test_no_lambda_function_names_contain_dashes()
-
-
 class TestCreateRemoteStateConfigTests:
     def test_returns_class(self, tmp_path):
         result = create_remote_state_config_tests(tmp_path, "test_endpoint")
@@ -500,28 +355,6 @@ API_URL = data.terraform_remote_state.api.outputs.nonexistent_output
                 instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs()
 
 
-class TestCreateNamingConventionsTestsParameterization:
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_iam_parametrize_uses_none_marker_when_no_roles(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        iam_class, _ = create_naming_conventions_tests(tmp_path)
-        test_method = getattr(iam_class, "test_iam_role_name_is_pascalcase")
-        assert hasattr(test_method, "pytestmark")
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_lambda_parametrize_uses_none_marker_when_no_functions(
-        self, mock_lambda, mock_iam, tmp_path
-    ):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        _, lambda_class = create_naming_conventions_tests(tmp_path)
-        test_method = getattr(lambda_class, "test_lambda_function_name_is_pascalcase")
-        assert hasattr(test_method, "pytestmark")
-
-
 class TestDynamicTestMethodDocstrings:
     def test_required_output_test_has_docstring(self, tmp_path):
         lambda_file = tmp_path / "lambda.tf"
@@ -540,68 +373,6 @@ class TestDynamicTestMethodDocstrings:
         )
         test_method = getattr(TestClass, "test_my_output_output_exists_in_api_common_routing")
         assert "my_output" in test_method.__doc__
-
-
-class TestNamingConventionsNoneCase:
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_iam_pascalcase_fails_with_none_marker(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        iam_class, _ = create_naming_conventions_tests(tmp_path)
-        instance = iam_class()
-        with pytest.raises(pytest.fail.Exception, match="No IAM roles found"):
-            instance.test_iam_role_name_is_pascalcase("NONE", "NONE")
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_lambda_pascalcase_fails_with_none_marker(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = []
-        _, lambda_class = create_naming_conventions_tests(tmp_path)
-        instance = lambda_class()
-        with pytest.raises(pytest.fail.Exception, match="No Lambda functions found"):
-            instance.test_lambda_function_name_is_pascalcase("NONE", "NONE")
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_iam_pascalcase_passes_with_valid_name(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = [("test_role", "ValidRoleName")]
-        mock_lambda.return_value = []
-        iam_class, _ = create_naming_conventions_tests(tmp_path)
-        instance = iam_class()
-        assert instance.test_iam_role_name_is_pascalcase("test_role", "ValidRoleName") is None
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_iam_pascalcase_fails_with_invalid_name(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = [("test_role", "Invalid-Role-Name")]
-        mock_lambda.return_value = []
-        iam_class, _ = create_naming_conventions_tests(tmp_path)
-        instance = iam_class()
-        with pytest.raises(AssertionError, match="Invalid-Role-Name"):
-            instance.test_iam_role_name_is_pascalcase("test_role", "Invalid-Role-Name")
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_lambda_pascalcase_passes_with_valid_name(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = [("test_func", "ValidFunctionName")]
-        _, lambda_class = create_naming_conventions_tests(tmp_path)
-        instance = lambda_class()
-        assert instance.test_lambda_function_name_is_pascalcase(
-            "test_func", "ValidFunctionName"
-        ) is None
-
-    @patch('test_fixtures.terraform_tests.extract_iam_role_names')
-    @patch('test_fixtures.terraform_tests.extract_lambda_function_names')
-    def test_lambda_pascalcase_fails_with_invalid_name(self, mock_lambda, mock_iam, tmp_path):
-        mock_iam.return_value = []
-        mock_lambda.return_value = [("test_func", "Invalid-Function-Name")]
-        _, lambda_class = create_naming_conventions_tests(tmp_path)
-        instance = lambda_class()
-        with pytest.raises(AssertionError, match="Invalid-Function-Name"):
-            instance.test_lambda_function_name_is_pascalcase("test_func", "Invalid-Function-Name")
 
 
 class TestRemoteStateContractMessagesNameTheOutputsFile:

@@ -57,7 +57,7 @@ The same packages and suites are named in the workflow's `paths` filter, so an e
 
 Read the imports, not the directory names. A workflow executes a package if the Lambda source it deploys imports it, if any suite it runs imports it, or if `test/conftest.py` or a `conftest.py` above its subtree imports it — the last being how `test_fixtures` reaches everything. `git ls-files lib/python | awk -F/ '{print $3}' | sort -u` is the list to check against, since a working copy carries `__pycache__` directories for packages git no longer has; see [enumerate-a-directory-from-git](enumerate-a-directory-from-git.md).
 
-The suite for a package is `test/lib/python/test_<package>`, with the exception that `naming_conventions` is covered by two directories, `test_naming_conventions` and `test_naming_conventions_helpers`, and a workflow that reads the package names both.
+The suite for a package is `test/lib/python/test_<package>`.
 
 ## Related notes
 

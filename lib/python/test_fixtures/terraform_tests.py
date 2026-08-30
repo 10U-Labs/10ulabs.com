@@ -2,10 +2,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-import pytest
-from naming_conventions import validate_name
 from repo_utils import REPO_ROOT
-from terraform_config import extract_iam_role_names, extract_lambda_function_names
 
 API_COMMON_ROUTING_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "common" / "routing" / "outputs.tf"
 
@@ -65,67 +62,6 @@ def create_remote_state_contract_tests(
             setattr(TestRemoteStateContract, test_method.__name__, test_method)
 
     return TestRemoteStateContract
-
-
-def create_naming_conventions_tests(
-    endpoint_src: Path,
-    iam_file: str = "iam.tf",
-    lambda_file: str = "lambda.tf",
-    use_handler_names: bool = False,
-):
-    iam_path = endpoint_src / iam_file
-    lambda_path = endpoint_src / lambda_file
-
-    iam_roles = extract_iam_role_names(iam_path)
-    lambda_functions = extract_lambda_function_names(
-        lambda_path, use_handler_names=use_handler_names
-    )
-
-    class TestIAMRoleNamingConventions:
-        @pytest.mark.parametrize(
-            "resource_name,role_name",
-            iam_roles if iam_roles else [("NONE", "NONE")],
-            ids=[f"iam_role_{r[0]}" for r in iam_roles] if iam_roles else ["no_roles_found"],
-        )
-        def test_iam_role_name_is_pascalcase(self, resource_name, role_name):
-            if resource_name == "NONE":
-                pytest.fail("No IAM roles found in iam.tf - check Terraform files")
-            error = validate_name(role_name)
-            assert error is None, (
-                f"IAM role '{resource_name}' has invalid name '{role_name}': {error}"
-            )
-
-        def test_no_iam_role_names_contain_dashes(self):
-            violations = [(r, n) for r, n in iam_roles if '-' in n]
-            assert len(violations) == 0, (
-                f"Found {len(violations)} IAM roles with dashes:\n"
-                + "\n".join(f"  - {r}: '{n}'" for r, n in violations)
-            )
-
-    class TestLambdaFunctionNamingConventions:
-        @pytest.mark.parametrize(
-            "resource_name,function_name",
-            lambda_functions if lambda_functions else [("NONE", "NONE")],
-            ids=([f"lambda_{f[0]}" for f in lambda_functions]
-                 if lambda_functions else ["no_functions_found"]),
-        )
-        def test_lambda_function_name_is_pascalcase(self, resource_name, function_name):
-            if resource_name == "NONE":
-                pytest.fail("No Lambda functions found - check Terraform files")
-            error = validate_name(function_name)
-            assert error is None, (
-                f"Lambda function '{resource_name}' has invalid name "
-                f"'{function_name}': {error}"
-            )
-
-        def test_no_lambda_function_names_contain_dashes(self):
-            violations = [(r, n) for r, n in lambda_functions if '-' in n]
-            assert len(violations) == 0, (
-                f"Found {len(violations)} Lambda functions with dashes:\n"
-                + "\n".join(f"  - {r}: '{n}'" for r, n in violations)
-            )
-
-    return TestIAMRoleNamingConventions, TestLambdaFunctionNamingConventions
 
 
 def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str):

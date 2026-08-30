@@ -1094,7 +1094,6 @@ on:
       - lib/python/lambda_http/**
       - lib/python/lambda_response/**
       - lib/python/module_utils/**
-      - lib/python/naming_conventions/**
       - lib/python/repo_utils/**
       - lib/python/terraform_config/**
       - lib/python/terraform_drift/**
@@ -1114,8 +1113,6 @@ on:
       - test/lib/python/test_lambda_http/**
       - test/lib/python/test_lambda_response/**
       - test/lib/python/test_module_utils/**
-      - test/lib/python/test_naming_conventions/**
-      - test/lib/python/test_naming_conventions_helpers/**
       - test/lib/python/test_repo_utils/**
       - test/lib/python/test_terraform_config/**
       - test/lib/python/test_terraform_drift/**

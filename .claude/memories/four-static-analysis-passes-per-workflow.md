@@ -68,7 +68,6 @@ From the sessions endpoint's workflow, the whole of two of the four jobs:
             lib/python/boto_mocks \
             lib/python/lambda_response \
             lib/python/module_utils \
-            lib/python/naming_conventions \
             lib/python/repo_utils \
             lib/python/terraform_config \
             lib/python/test_fixtures \
@@ -110,8 +109,6 @@ From the sessions endpoint's workflow, the whole of two of the four jobs:
             test/lib/python/test_boto_mocks \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
-            test/lib/python/test_naming_conventions \
-            test/lib/python/test_naming_conventions_helpers \
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
             test/lib/python/test_test_fixtures \

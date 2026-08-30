@@ -35,7 +35,7 @@ One job per package, named `test-<package>` with the underscores turned into hyp
             --cov-fail-under=100
 ```
 
-The coverage gate is over the package rather than over the workflow's own source, so the number a run reports is the library's own and does not move when a Lambda that imports it changes. `naming_conventions` is the one package whose suite is two directories, `test_naming_conventions` and `test_naming_conventions_helpers`; it is still one job, with both paths passed to the one `pytest` invocation and one `--cov=naming_conventions`.
+The coverage gate is over the package rather than over the workflow's own source, so the number a run reports is the library's own and does not move when a Lambda that imports it changes.
 
 ## A workflow that deploys nothing carries the jobs anyway
 
@@ -69,7 +69,7 @@ The packages and their suites are named in the workflow's `paths` filter as well
 
 Read the imports, not the directory names. A workflow executes a package if the source it deploys imports it, if any suite it runs imports it, if a package it already executes imports it, or if `test/conftest.py` or a `conftest.py` above its subtree imports it — the last being how `test_fixtures`, and through it `boto_mocks`, `lambda_response`, `module_utils` and `terraform_config`, reach every suite in the tree.
 
-`git ls-files lib/python | awk -F/ '{print $3}' | sort -u` is the list to check against, since a working copy carries `__pycache__` directories for packages git no longer has; see [enumerate-a-directory-from-git](enumerate-a-directory-from-git.md). The suite for a package is `test/lib/python/test_<package>`, with `naming_conventions` the exception noted above.
+`git ls-files lib/python | awk -F/ '{print $3}' | sort -u` is the list to check against, since a working copy carries `__pycache__` directories for packages git no longer has; see [enumerate-a-directory-from-git](enumerate-a-directory-from-git.md). The suite for a package is `test/lib/python/test_<package>`.
 
 ## Related notes
 
