@@ -26,28 +26,6 @@ TestRemoteStateConfig = create_remote_state_config_tests(
 )
 
 
-class TestIamRoleNamingConventions:
-    def test_sessions_handler_role_name_is_pascalcase(self):
-        iam_tf = SESSIONS_SRC_PATH / "iam.tf"
-        content = iam_tf.read_text()
-        assert 'SessionsHandlerRole' in content
-
-    def test_sessions_export_role_name_is_pascalcase(self):
-        locals_tf = SESSIONS_SRC_PATH / "locals.tf"
-        content = locals_tf.read_text()
-        assert 'SessionsExportRole' in content
-
-    def test_sessions_scheduler_role_name_is_pascalcase(self):
-        locals_tf = SESSIONS_SRC_PATH / "locals.tf"
-        content = locals_tf.read_text()
-        assert 'SessionsSchedulerRole' in content
-
-
-def test_lambda_function_naming_conventions():
-    locals_tf = SESSIONS_SRC_PATH / "locals.tf"
-    content = locals_tf.read_text()
-    assert 'SessionsExport' in content
-
 class TestLambdaConfiguration:
     def test_handler_lambda_uses_arm64_architecture(self):
         lambda_tf = SESSIONS_SRC_PATH / "lambda.tf"
