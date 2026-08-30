@@ -33,18 +33,13 @@ jobs:
           lib/python/test_fixtures
           lib/terraform/common
           lib/terraform/s3_bucket
-          test/__init__.py
           test/conftest.py
-          test/lib/terraform/__init__.py
           test/lib/terraform/conftest.py
-          test/www/__init__.py
           test/www/conftest.py
           test/lib/terraform/common
           test/lib/terraform/s3_bucket
           test/lib/terraform/unit
           test/www/common
-          test/lib/__init__.py
-          test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
@@ -82,18 +77,13 @@ jobs:
           lib/python/test_fixtures
           lib/terraform/common
           lib/terraform/s3_bucket
-          test/__init__.py
           test/conftest.py
-          test/lib/terraform/__init__.py
           test/lib/terraform/conftest.py
-          test/www/__init__.py
           test/www/conftest.py
           test/lib/terraform/common
           test/lib/terraform/s3_bucket
           test/lib/terraform/unit
           test/www/common
-          test/lib/__init__.py
-          test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
@@ -155,18 +145,13 @@ jobs:
         run: >-
           assert-one-assert-per-pytest
           --verbose
-          test/__init__.py
           test/conftest.py
-          test/lib/terraform/__init__.py
           test/lib/terraform/conftest.py
-          test/www/__init__.py
           test/www/conftest.py
           test/lib/terraform/common
           test/lib/terraform/s3_bucket
           test/lib/terraform/unit
           test/www/common
-          test/lib/__init__.py
-          test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
@@ -205,18 +190,13 @@ jobs:
         run: >-
           assert-pytest-fixture-name-is-needed
           --verbose
-          test/__init__.py
           test/conftest.py
-          test/lib/terraform/__init__.py
           test/lib/terraform/conftest.py
-          test/www/__init__.py
           test/www/conftest.py
           test/lib/terraform/common
           test/lib/terraform/s3_bucket
           test/lib/terraform/unit
           test/www/common
-          test/lib/__init__.py
-          test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
@@ -252,18 +232,13 @@ jobs:
           assume-used-matching: "test_*,Test*,pytest_*"
           search-in: test lib/python scripts src
           trees: >-
-            test/__init__.py
             test/conftest.py
-            test/lib/terraform/__init__.py
             test/lib/terraform/conftest.py
-            test/www/__init__.py
             test/www/conftest.py
             test/lib/terraform/common
             test/lib/terraform/s3_bucket
             test/lib/terraform/unit
             test/www/common
-            test/lib/__init__.py
-            test/lib/python/__init__.py
             test/lib/python/test_boto_mocks
             test/lib/python/test_lambda_response
             test/lib/python/test_module_utils
@@ -428,18 +403,14 @@ jobs:
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python:scripts python3 -m mypy \
-            test/__init__.py \
+            --explicit-package-bases \
             test/conftest.py \
-            test/lib/terraform/__init__.py \
             test/lib/terraform/conftest.py \
-            test/www/__init__.py \
             test/www/conftest.py \
             test/lib/terraform/common \
             test/lib/terraform/s3_bucket \
             test/lib/terraform/unit \
             test/www/common \
-            test/lib/__init__.py \
-            test/lib/python/__init__.py \
             test/lib/python/test_boto_mocks \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
@@ -600,18 +571,13 @@ jobs:
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
-            test/__init__.py \
             test/conftest.py \
-            test/lib/terraform/__init__.py \
             test/lib/terraform/conftest.py \
-            test/www/__init__.py \
             test/www/conftest.py \
             test/lib/terraform/common \
             test/lib/terraform/s3_bucket \
             test/lib/terraform/unit \
             test/www/common \
-            test/lib/__init__.py \
-            test/lib/python/__init__.py \
             test/lib/python/test_boto_mocks \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
@@ -1103,10 +1069,7 @@ on:
       - lib/terraform/common/**
       - lib/terraform/s3_bucket/**
       - src/www/common/**
-      - test/__init__.py
       - test/conftest.py
-      - test/lib/__init__.py
-      - test/lib/python/__init__.py
       - test/lib/python/test_boto_mocks/**
       - test/lib/python/test_lambda_response/**
       - test/lib/python/test_module_utils/**
@@ -1114,12 +1077,10 @@ on:
       - test/lib/python/test_terraform_config/**
       - test/lib/python/test_terraform_drift/**
       - test/lib/python/test_test_fixtures/**
-      - test/lib/terraform/__init__.py
       - test/lib/terraform/common/**
       - test/lib/terraform/conftest.py
       - test/lib/terraform/s3_bucket/**
       - test/lib/terraform/unit/**
-      - test/www/__init__.py
       - test/www/common/**
       - test/www/conftest.py
   workflow_dispatch:

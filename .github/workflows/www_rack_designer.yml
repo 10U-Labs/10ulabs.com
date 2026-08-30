@@ -30,14 +30,10 @@ jobs:
           lib/python/repo_utils
           lib/python/terraform_config
           lib/python/test_fixtures
-          test/__init__.py
           test/conftest.py
           test/www/conftest.py
-          test/www/paths/__init__.py
           test/www/paths/conftest.py
           test/www/paths/rack_designer
-          test/lib/__init__.py
-          test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
@@ -71,14 +67,10 @@ jobs:
           lib/python/repo_utils
           lib/python/terraform_config
           lib/python/test_fixtures
-          test/__init__.py
           test/conftest.py
           test/www/conftest.py
-          test/www/paths/__init__.py
           test/www/paths/conftest.py
           test/www/paths/rack_designer
-          test/lib/__init__.py
-          test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
@@ -134,14 +126,10 @@ jobs:
         run: >-
           assert-one-assert-per-pytest
           --verbose
-          test/__init__.py
           test/conftest.py
           test/www/conftest.py
-          test/www/paths/__init__.py
           test/www/paths/conftest.py
           test/www/paths/rack_designer
-          test/lib/__init__.py
-          test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
@@ -179,14 +167,10 @@ jobs:
         run: >-
           assert-pytest-fixture-name-is-needed
           --verbose
-          test/__init__.py
           test/conftest.py
           test/www/conftest.py
-          test/www/paths/__init__.py
           test/www/paths/conftest.py
           test/www/paths/rack_designer
-          test/lib/__init__.py
-          test/lib/python/__init__.py
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
@@ -218,14 +202,10 @@ jobs:
           assume-used-matching: "test_*,Test*,pytest_*"
           search-in: test lib/python scripts src
           trees: >-
-            test/__init__.py
             test/conftest.py
             test/www/conftest.py
-            test/www/paths/__init__.py
             test/www/paths/conftest.py
             test/www/paths/rack_designer
-            test/lib/__init__.py
-            test/lib/python/__init__.py
             test/lib/python/test_boto_mocks
             test/lib/python/test_lambda_response
             test/lib/python/test_module_utils
@@ -344,14 +324,11 @@ jobs:
       - name: Run mypy
         run: |
           MYPYPATH=lib/python:scripts python3 -m mypy \
-            test/__init__.py \
+            --explicit-package-bases \
             test/conftest.py \
             test/www/conftest.py \
-            test/www/paths/__init__.py \
             test/www/paths/conftest.py \
             test/www/paths/rack_designer \
-            test/lib/__init__.py \
-            test/lib/python/__init__.py \
             test/lib/python/test_boto_mocks \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
@@ -411,14 +388,10 @@ jobs:
       - name: Run pylint
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
-            test/__init__.py \
             test/conftest.py \
             test/www/conftest.py \
-            test/www/paths/__init__.py \
             test/www/paths/conftest.py \
             test/www/paths/rack_designer \
-            test/lib/__init__.py \
-            test/lib/python/__init__.py \
             test/lib/python/test_boto_mocks \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
@@ -737,19 +710,14 @@ on:
       - lib/terraform/s3_bucket/**
       - src/www/common/**
       - src/www/paths/rack_designer/**
-      - test/__init__.py
       - test/conftest.py
-      - test/lib/__init__.py
-      - test/lib/python/__init__.py
       - test/lib/python/test_boto_mocks/**
       - test/lib/python/test_lambda_response/**
       - test/lib/python/test_module_utils/**
       - test/lib/python/test_repo_utils/**
       - test/lib/python/test_terraform_config/**
       - test/lib/python/test_test_fixtures/**
-      - test/www/__init__.py
       - test/www/conftest.py
-      - test/www/paths/__init__.py
       - test/www/paths/conftest.py
       - test/www/paths/rack_designer/**
   workflow_dispatch:
