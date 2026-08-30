@@ -5,24 +5,17 @@ from test_fixtures.integration import (
     Layer5APIBackendPrerequisiteTests,
     Layer6APIGatewayRegionalTests,
     Layer7DeploymentCapabilityTests,
-    Layer1AuthenticationTests,
     Layer1EndpointAuthenticationTests,
     Layer2APIGatewayAuthorizationTests,
-    Layer2ECRAuthorizationTests,
     Layer2IAMAuthorizationTests,
     Layer2LambdaAndIAMAuthorizationTests,
     Layer2S3AuthorizationTests,
     Layer4APIBackendPrerequisiteTests,
     Layer4IAMRoleExistenceTests,
-    Layer4PrerequisiteExistenceTests,
     Layer4TerraformStateExistenceTests,
     Layer5APIGatewayRegionalTests,
     Layer5IAMConfigurationTests,
-    Layer5PrerequisiteConfigurationTests,
-    Layer5S3ConfigurationTests,
-    Layer5S3RegionTests,
     Layer6DeploymentCapabilityTests,
-    Layer6ECRCapabilityTests,
     Layer6IAMCapabilityTests,
     Layer6S3CapabilityTests,
     Layer6S3WriteCapabilityTests,
@@ -57,20 +50,12 @@ from test_fixtures.integration import (
 )
 
 
-def test_layer1_authentication_tests_import():
-    assert Layer1AuthenticationTests is not None
-
-
 def test_layer1_endpoint_authentication_tests_import():
     assert Layer1EndpointAuthenticationTests is not None
 
 
 def test_layer2_api_gateway_authorization_tests_import():
     assert Layer2APIGatewayAuthorizationTests is not None
-
-
-def test_layer2_ecr_authorization_tests_import():
-    assert Layer2ECRAuthorizationTests is not None
 
 
 def test_layer2_endpoint_authentication_tests_import():
@@ -105,10 +90,6 @@ def test_layer4_iam_role_existence_tests_import():
     assert Layer4IAMRoleExistenceTests is not None
 
 
-def test_layer4_prerequisite_existence_tests_import():
-    assert Layer4PrerequisiteExistenceTests is not None
-
-
 def test_layer4_terraform_state_existence_tests_import():
     assert Layer4TerraformStateExistenceTests is not None
 
@@ -125,28 +106,12 @@ def test_layer5_iam_configuration_tests_import():
     assert Layer5IAMConfigurationTests is not None
 
 
-def test_layer5_prerequisite_configuration_tests_import():
-    assert Layer5PrerequisiteConfigurationTests is not None
-
-
-def test_layer5_s3_configuration_tests_import():
-    assert Layer5S3ConfigurationTests is not None
-
-
-def test_layer5_s3_region_tests_import():
-    assert Layer5S3RegionTests is not None
-
-
 def test_layer6_api_gateway_regional_tests_import():
     assert Layer6APIGatewayRegionalTests is not None
 
 
 def test_layer6_deployment_capability_tests_import():
     assert Layer6DeploymentCapabilityTests is not None
-
-
-def test_layer6_ecr_capability_tests_import():
-    assert Layer6ECRCapabilityTests is not None
 
 
 def test_layer6_iam_capability_tests_import():

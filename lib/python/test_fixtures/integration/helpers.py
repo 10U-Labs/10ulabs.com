@@ -1,7 +1,7 @@
 import subprocess
 
 import pytest
-from botocore.exceptions import ClientError, NoCredentialsError
+from botocore.exceptions import ClientError
 
 
 NO_CREDENTIALS_MESSAGE = (
@@ -49,28 +49,6 @@ def check_lambda_role_has_policy(iam_client, role_name: str, policy_name: str):
         if e.response["Error"]["Code"] == "NoSuchEntity":
             pytest.skip(f"Lambda role '{role_name}' does not exist")
         raise
-
-
-def _fail_no_credentials():
-    pytest.fail(NO_CREDENTIALS_MESSAGE)
-
-
-def check_credentials_available(sts_client):
-    try:
-        sts_client.get_caller_identity()
-    except NoCredentialsError:
-        _fail_no_credentials()
-
-
-def check_credentials_valid(sts_client):
-    try:
-        sts_client.get_caller_identity()
-    except ClientError as e:
-        pytest.fail(
-            f"Failed to call sts:GetCallerIdentity: "
-            f"{e.response['Error']['Message']}. "
-            "Check AWS credentials are valid and not expired."
-        )
 
 
 def check_service_can_assume_role(trust_policy, service_name):

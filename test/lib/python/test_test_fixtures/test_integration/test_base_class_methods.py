@@ -7,58 +7,6 @@ from boto_mocks import create_client_error
 import test_fixtures.integration as integration_module
 
 
-class TestLayer1AuthenticationTestsExecution:
-    def test_credentials_are_available_success(self):
-        instance = integration_module.Layer1AuthenticationTests()
-        mock_client = MagicMock()
-        mock_client.get_caller_identity.return_value = {"Account": "123"}
-        assert instance.test_aws_credentials_are_available(mock_client) is None
-
-    def test_credentials_are_valid_success(self):
-        instance = integration_module.Layer1AuthenticationTests()
-        mock_client = MagicMock()
-        mock_client.get_caller_identity.return_value = {"Account": "123"}
-        assert instance.test_aws_credentials_are_valid(mock_client) is None
-
-    def test_credentials_return_account_success(self):
-        instance = integration_module.Layer1AuthenticationTests()
-        caller_identity = {"Account": "123456789012", "Arn": "arn:aws:..."}
-        assert instance.test_aws_credentials_return_account(caller_identity) is None
-
-    def test_credentials_return_account_fails_without_account(self):
-        instance = integration_module.Layer1AuthenticationTests()
-        caller_identity = {"Arn": "arn:aws:..."}
-        with pytest.raises(AssertionError):
-            instance.test_aws_credentials_return_account(caller_identity)
-
-    def test_credentials_return_arn_success(self):
-        instance = integration_module.Layer1AuthenticationTests()
-        caller_identity = {"Account": "123", "Arn": "arn:aws:sts::123:assumed-role/r/s"}
-        assert instance.test_aws_credentials_return_arn(caller_identity) is None
-
-    def test_credentials_return_arn_fails_without_arn(self):
-        instance = integration_module.Layer1AuthenticationTests()
-        caller_identity = {"Account": "123"}
-        with pytest.raises(AssertionError):
-            instance.test_aws_credentials_return_arn(caller_identity)
-
-    def test_caller_identity_is_role_with_assumed_role(self):
-        instance = integration_module.Layer1AuthenticationTests()
-        caller_identity = {"Arn": "arn:aws:sts::123:assumed-role/MyRole/session"}
-        assert instance.test_caller_identity_is_role(caller_identity) is None
-
-    def test_caller_identity_is_role_with_role_arn(self):
-        instance = integration_module.Layer1AuthenticationTests()
-        caller_identity = {"Arn": "arn:aws:iam::123:role/MyRole"}
-        assert instance.test_caller_identity_is_role(caller_identity) is None
-
-    def test_caller_identity_is_role_fails_with_user(self):
-        instance = integration_module.Layer1AuthenticationTests()
-        caller_identity = {"Arn": "arn:aws:iam::123:user/MyUser"}
-        with pytest.raises(AssertionError):
-            instance.test_caller_identity_is_role(caller_identity)
-
-
 class TestLayer2IAMAuthorizationTestsExecution:
     def test_can_call_iam_get_role_api_success(self):
         instance = integration_module.Layer2IAMAuthorizationTests()
@@ -168,42 +116,6 @@ class TestLayer2S3AuthorizationTestsExecution:
             instance.test_state_bucket_name_configured("")
 
 
-class TestLayer2ECRAuthorizationTestsExecution:
-    def test_can_call_ecr_describe_repositories_api_success(self):
-        instance = integration_module.Layer2ECRAuthorizationTests()
-        mock_client = MagicMock()
-        mock_client.describe_repositories.return_value = {"repositories": []}
-        assert instance.test_can_call_ecr_describe_repositories_api(mock_client) is None
-
-    def test_can_call_ecr_describe_repositories_api_fails_on_access_denied(self):
-        instance = integration_module.Layer2ECRAuthorizationTests()
-        mock_client = MagicMock()
-        mock_client.describe_repositories.side_effect = create_client_error(
-            "AccessDeniedException"
-        )
-        with pytest.raises(pytest.fail.Exception):
-            instance.test_can_call_ecr_describe_repositories_api(mock_client)
-
-    def test_can_call_ecr_describe_repositories_api_reraises_other_errors(self):
-        instance = integration_module.Layer2ECRAuthorizationTests()
-        mock_client = MagicMock()
-        mock_client.describe_repositories.side_effect = create_client_error(
-            "InternalError"
-        )
-        with pytest.raises(ClientError):
-            instance.test_can_call_ecr_describe_repositories_api(mock_client)
-
-    def test_ecr_client_is_valid_success(self):
-        instance = integration_module.Layer2ECRAuthorizationTests()
-        mock_client = MagicMock()
-        assert instance.test_ecr_client_is_valid(mock_client) is None
-
-    def test_ecr_client_is_valid_fails_when_none(self):
-        instance = integration_module.Layer2ECRAuthorizationTests()
-        with pytest.raises(AssertionError):
-            instance.test_ecr_client_is_valid(None)
-
-
 class TestLayer4TerraformStateExistenceTestsExecution:
     def test_state_bucket_exists_success(self):
         instance = integration_module.Layer4TerraformStateExistenceTests()
@@ -233,62 +145,6 @@ class TestLayer4TerraformStateExistenceTestsExecution:
         instance = integration_module.Layer4TerraformStateExistenceTests()
         with pytest.raises(AssertionError):
             instance.test_state_bucket_has_name("")
-
-
-class TestLayer5S3ConfigurationTestsExecution:
-    def test_state_bucket_is_encrypted_success(self):
-        instance = integration_module.Layer5S3ConfigurationTests()
-        mock_client = MagicMock()
-        mock_client.get_bucket_encryption.return_value = {
-            "ServerSideEncryptionConfiguration": {
-                "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]
-            }
-        }
-        assert instance.test_state_bucket_is_encrypted(mock_client, "my-bucket") is None
-
-    def test_state_bucket_is_encrypted_fails_with_no_rules(self):
-        instance = integration_module.Layer5S3ConfigurationTests()
-        mock_client = MagicMock()
-        mock_client.get_bucket_encryption.return_value = {
-            "ServerSideEncryptionConfiguration": {"Rules": []}
-        }
-        with pytest.raises(AssertionError):
-            instance.test_state_bucket_is_encrypted(mock_client, "my-bucket")
-
-    def test_state_bucket_is_encrypted_fails_on_not_found(self):
-        instance = integration_module.Layer5S3ConfigurationTests()
-        mock_client = MagicMock()
-        mock_client.get_bucket_encryption.side_effect = create_client_error(
-            "ServerSideEncryptionConfigurationNotFoundError"
-        )
-        with pytest.raises(pytest.fail.Exception):
-            instance.test_state_bucket_is_encrypted(mock_client, "my-bucket")
-
-    def test_state_bucket_is_encrypted_reraises_other_errors(self):
-        instance = integration_module.Layer5S3ConfigurationTests()
-        mock_client = MagicMock()
-        mock_client.get_bucket_encryption.side_effect = create_client_error("InternalError")
-        with pytest.raises(ClientError):
-            instance.test_state_bucket_is_encrypted(mock_client, "my-bucket")
-
-    def test_state_bucket_versioning_disabled_when_disabled(self):
-        instance = integration_module.Layer5S3ConfigurationTests()
-        mock_client = MagicMock()
-        mock_client.get_bucket_versioning.return_value = {"Status": "Suspended"}
-        assert instance.test_state_bucket_versioning_disabled(mock_client, "my-bucket") is None
-
-    def test_state_bucket_versioning_disabled_when_not_set(self):
-        instance = integration_module.Layer5S3ConfigurationTests()
-        mock_client = MagicMock()
-        mock_client.get_bucket_versioning.return_value = {}
-        assert instance.test_state_bucket_versioning_disabled(mock_client, "my-bucket") is None
-
-    def test_state_bucket_versioning_disabled_fails_when_enabled(self):
-        instance = integration_module.Layer5S3ConfigurationTests()
-        mock_client = MagicMock()
-        mock_client.get_bucket_versioning.return_value = {"Status": "Enabled"}
-        with pytest.raises(AssertionError):
-            instance.test_state_bucket_versioning_disabled(mock_client, "my-bucket")
 
 
 class TestLayer6S3CapabilityTestsExecution:

@@ -7,40 +7,6 @@ from boto_mocks import create_client_error
 import test_fixtures.integration as integration_module
 
 
-class TestLayer5S3RegionTestsExecution:
-    def test_bucket_in_expected_region_success(self):
-        instance = integration_module.Layer5S3RegionTests()
-        mock_client = MagicMock()
-        mock_client.get_bucket_location.return_value = {"LocationConstraint": "us-west-2"}
-        assert instance.test_bucket_in_expected_region(
-            mock_client, "my-bucket", "us-west-2"
-        ) is None
-
-    def test_bucket_in_expected_region_us_east_1_none(self):
-        instance = integration_module.Layer5S3RegionTests()
-        mock_client = MagicMock()
-        mock_client.get_bucket_location.return_value = {"LocationConstraint": None}
-        assert instance.test_bucket_in_expected_region(
-            mock_client, "my-bucket", "us-east-1"
-        ) is None
-
-    def test_bucket_in_expected_region_fails_with_wrong_region(self):
-        instance = integration_module.Layer5S3RegionTests()
-        mock_client = MagicMock()
-        mock_client.get_bucket_location.return_value = {"LocationConstraint": "eu-west-1"}
-        with pytest.raises(AssertionError):
-            instance.test_bucket_in_expected_region(mock_client, "my-bucket", "us-west-2")
-
-    def test_expected_region_is_configured_success(self):
-        instance = integration_module.Layer5S3RegionTests()
-        assert instance.test_expected_region_is_configured("us-west-2") is None
-
-    def test_expected_region_is_configured_fails_when_empty(self):
-        instance = integration_module.Layer5S3RegionTests()
-        with pytest.raises(AssertionError):
-            instance.test_expected_region_is_configured("")
-
-
 class TestLayer6IAMCapabilityTestsExecution:
     def test_can_list_buckets_success(self):
         instance = integration_module.Layer6IAMCapabilityTests()
@@ -136,65 +102,6 @@ class TestLayer6S3WriteCapabilityTestsExecution:
         mock_client.delete_object.side_effect = create_client_error("InternalError")
         with pytest.raises(ClientError):
             instance.test_can_delete_from_bucket(mock_client, "my-bucket")
-
-
-class TestLayer6ECRCapabilityTestsExecution:
-    def test_can_create_ecr_repository_success(self):
-        instance = integration_module.Layer6ECRCapabilityTests()
-        mock_client = MagicMock()
-        mock_client.create_repository.return_value = {"repository": {}}
-        mock_client.delete_repository.return_value = {}
-        assert instance.test_can_create_ecr_repository(mock_client) is None
-        mock_client.create_repository.assert_called_once()
-        mock_client.delete_repository.assert_called_once()
-
-    def test_can_create_ecr_repository_fails_on_access_denied(self):
-        instance = integration_module.Layer6ECRCapabilityTests()
-        mock_client = MagicMock()
-        mock_client.create_repository.side_effect = create_client_error(
-            "AccessDeniedException"
-        )
-        with pytest.raises(pytest.fail.Exception):
-            instance.test_can_create_ecr_repository(mock_client)
-
-    def test_can_create_ecr_repository_reraises_other_errors(self):
-        instance = integration_module.Layer6ECRCapabilityTests()
-        mock_client = MagicMock()
-        mock_client.create_repository.side_effect = create_client_error("InternalError")
-        with pytest.raises(ClientError):
-            instance.test_can_create_ecr_repository(mock_client)
-
-    def test_can_create_ecr_repository_cleanup_on_delete_failure(self):
-        instance = integration_module.Layer6ECRCapabilityTests()
-        mock_client = MagicMock()
-        mock_client.create_repository.return_value = {"repository": {}}
-        mock_client.delete_repository.side_effect = create_client_error("InternalError")
-        assert instance.test_can_create_ecr_repository(mock_client) is None
-
-    def test_can_delete_ecr_repository_success(self):
-        instance = integration_module.Layer6ECRCapabilityTests()
-        mock_client = MagicMock()
-        mock_client.create_repository.return_value = {"repository": {}}
-        mock_client.delete_repository.return_value = {}
-        assert instance.test_can_delete_ecr_repository(mock_client) is None
-
-    def test_can_delete_ecr_repository_fails_on_access_denied(self):
-        instance = integration_module.Layer6ECRCapabilityTests()
-        mock_client = MagicMock()
-        mock_client.create_repository.return_value = {"repository": {}}
-        mock_client.delete_repository.side_effect = create_client_error(
-            "AccessDeniedException"
-        )
-        with pytest.raises(pytest.fail.Exception):
-            instance.test_can_delete_ecr_repository(mock_client)
-
-    def test_can_delete_ecr_repository_reraises_other_errors(self):
-        instance = integration_module.Layer6ECRCapabilityTests()
-        mock_client = MagicMock()
-        mock_client.create_repository.return_value = {"repository": {}}
-        mock_client.delete_repository.side_effect = create_client_error("InternalError")
-        with pytest.raises(ClientError):
-            instance.test_can_delete_ecr_repository(mock_client)
 
 
 class TestLayer1EndpointAuthenticationTestsExecution:

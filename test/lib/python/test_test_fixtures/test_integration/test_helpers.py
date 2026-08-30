@@ -1,21 +1,18 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from botocore.exceptions import ClientError, NoCredentialsError
+from botocore.exceptions import ClientError
 
 from boto_mocks import create_client_error
 from test_fixtures.integration.helpers import (
     NO_CREDENTIALS_MESSAGE,
     assert_api_gateway_exists,
-    check_credentials_available,
-    check_credentials_valid,
     check_iam_role_exists,
     check_lambda_function_exists,
     check_lambda_role_has_policy,
     check_s3_head_bucket_permission,
     check_service_can_assume_role,
     check_state_file_readable,
-    _fail_no_credentials,
     get_aws_account_id_via_cli,
     handle_ecr_authorization_error,
     skip_if_api_gateway_unavailable,
@@ -147,67 +144,6 @@ def test_check_lambda_role_has_policy_other_errors():
     mock_client.list_role_policies.side_effect = create_client_error("AccessDenied")
     with pytest.raises(ClientError, match="AccessDenied"):
         check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
-
-
-class TestFailNoCredentials:
-    def test_raises_pytest_fail(self):
-        with pytest.raises(pytest.fail.Exception):
-            _fail_no_credentials()
-
-    def test_error_message_contains_credentials_message(self):
-        with pytest.raises(pytest.fail.Exception, match="(?i)credentials"):
-            _fail_no_credentials()
-
-
-class TestCheckCredentialsAvailableSuccess:
-    def test_does_not_raise_when_credentials_available(self):
-        mock_client = MagicMock()
-        mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        assert check_credentials_available(mock_client) is None
-
-    def test_calls_get_caller_identity(self):
-        mock_client = MagicMock()
-        mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        check_credentials_available(mock_client)
-        assert mock_client.get_caller_identity.call_count == 1
-
-
-def test_check_credentials_available_no_credentials():
-    mock_client = MagicMock()
-    mock_client.get_caller_identity.side_effect = NoCredentialsError()
-    with pytest.raises(pytest.fail.Exception):
-        check_credentials_available(mock_client)
-
-
-class TestCheckCredentialsValidSuccess:
-    def test_does_not_raise_when_credentials_valid(self):
-        mock_client = MagicMock()
-        mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        assert check_credentials_valid(mock_client) is None
-
-    def test_calls_get_caller_identity(self):
-        mock_client = MagicMock()
-        mock_client.get_caller_identity.return_value = {"Account": "123456789012"}
-        check_credentials_valid(mock_client)
-        assert mock_client.get_caller_identity.call_count == 1
-
-
-class TestCheckCredentialsValidInvalid:
-    def test_fails_when_credentials_invalid(self):
-        mock_client = MagicMock()
-        mock_client.get_caller_identity.side_effect = create_client_error(
-            "ExpiredTokenException", message="Token has expired"
-        )
-        with pytest.raises(pytest.fail.Exception):
-            check_credentials_valid(mock_client)
-
-    def test_error_message_contains_error_details(self):
-        mock_client = MagicMock()
-        mock_client.get_caller_identity.side_effect = create_client_error(
-            "ExpiredTokenException", message="Token has expired"
-        )
-        with pytest.raises(pytest.fail.Exception, match="Token has expired"):
-            check_credentials_valid(mock_client)
 
 
 class TestCheckServiceCanAssumeRoleAllowed:

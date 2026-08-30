@@ -2,37 +2,6 @@ import uuid
 
 from botocore.exceptions import ClientError
 import pytest
-from test_fixtures.integration.helpers import (
-    check_credentials_available,
-    check_credentials_valid,
-)
-
-
-class Layer1AuthenticationTests:
-    def test_aws_credentials_are_available(self, sts_client):
-        check_credentials_available(sts_client)
-
-    def test_aws_credentials_are_valid(self, sts_client):
-        check_credentials_valid(sts_client)
-
-    def test_aws_credentials_return_account(self, caller_identity):
-        assert "Account" in caller_identity, (
-            "STS GetCallerIdentity response missing 'Account' field. "
-            "AWS credentials may be malformed."
-        )
-
-    def test_aws_credentials_return_arn(self, caller_identity):
-        assert "Arn" in caller_identity, (
-            "STS GetCallerIdentity response missing 'Arn' field. "
-            "AWS credentials may be malformed."
-        )
-
-    def test_caller_identity_is_role(self, caller_identity):
-        arn = caller_identity.get("Arn", "")
-        assert ":assumed-role/" in arn or ":role/" in arn, (
-            f"Expected to be running as IAM role, but running as: {arn}. "
-            "GitHub Actions should assume the GitHub Actions OIDC role."
-        )
 
 
 class Layer2IAMAuthorizationTests:
@@ -91,22 +60,6 @@ class Layer2S3AuthorizationTests:
         )
 
 
-class Layer2ECRAuthorizationTests:
-    def test_can_call_ecr_describe_repositories_api(self, ecr_client):
-        try:
-            ecr_client.describe_repositories(maxResults=1)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                pytest.fail(
-                    "No permission to call ecr:DescribeRepositories. "
-                    "Check IAM permissions for ecr:DescribeRepositories."
-                )
-            raise
-
-    def test_ecr_client_is_valid(self, ecr_client):
-        assert ecr_client is not None, "ECR client is not available"
-
-
 class Layer4TerraformStateExistenceTests:
     def test_state_bucket_exists(self, s3_client, state_bucket_name):
         try:
@@ -123,34 +76,6 @@ class Layer4TerraformStateExistenceTests:
         assert state_bucket_name, (
             "State bucket name is empty. "
             "Check shared config for name_for_terraform_state_bucket."
-        )
-
-
-class Layer5S3ConfigurationTests:
-    def test_state_bucket_is_encrypted(self, s3_client, state_bucket_name):
-        try:
-            response = s3_client.get_bucket_encryption(Bucket=state_bucket_name)
-            rules = response.get("ServerSideEncryptionConfiguration", {}).get(
-                "Rules", []
-            )
-            assert len(rules) > 0, (
-                f"State bucket '{state_bucket_name}' has no encryption rules. "
-                "Enable server-side encryption for security."
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "ServerSideEncryptionConfigurationNotFoundError":
-                pytest.fail(
-                    f"State bucket '{state_bucket_name}' has no encryption configured. "
-                    "Enable server-side encryption for security."
-                )
-            raise
-
-    def test_state_bucket_versioning_disabled(self, s3_client, state_bucket_name):
-        response = s3_client.get_bucket_versioning(Bucket=state_bucket_name)
-        status = response.get("Status", "")
-        assert status != "Enabled", (
-            f"State bucket '{state_bucket_name}' versioning is '{status}', "
-            "but versioning must be disabled per project policy."
         )
 
 
@@ -195,10 +120,6 @@ class Layer4IAMRoleExistenceTests:
         assert current_role_name, "Current role name could not be determined"
 
 
-class Layer4PrerequisiteExistenceTests(
-    Layer4IAMRoleExistenceTests, Layer4TerraformStateExistenceTests
-):
-    pass
 class Layer5IAMConfigurationTests:
     def test_role_has_administrator_access_policy(
         self, iam_client, current_role_name
@@ -239,26 +160,6 @@ class Layer5IAMConfigurationTests:
             raise
 
 
-class Layer5S3RegionTests:
-    def test_bucket_in_expected_region(
-        self, s3_client, state_bucket_name, state_bucket_region
-    ):
-        response = s3_client.get_bucket_location(Bucket=state_bucket_name)
-        location = response.get("LocationConstraint")
-        actual_region = location if location else "us-east-1"
-        assert actual_region == state_bucket_region, (
-            f"Bucket '{state_bucket_name}' is in region '{actual_region}', "
-            f"expected '{state_bucket_region}'."
-        )
-
-    def test_expected_region_is_configured(self, state_bucket_region):
-        assert state_bucket_region, "Expected bucket region is not configured"
-
-
-class Layer5PrerequisiteConfigurationTests(
-    Layer5IAMConfigurationTests, Layer5S3ConfigurationTests, Layer5S3RegionTests
-):
-    pass
 class Layer6IAMCapabilityTests:
     def test_can_list_buckets(self, s3_client):
         try:
@@ -324,49 +225,6 @@ class Layer6S3WriteCapabilityTests:
         finally:
             try:
                 s3_client.delete_object(Bucket=state_bucket_name, Key=test_key)
-            except ClientError:
-                pass
-
-
-class Layer6ECRCapabilityTests:
-    def test_can_create_ecr_repository(self, ecr_client):
-        test_repo_name = f"pre-deployment-test-{uuid.uuid4().hex[:8]}"
-        try:
-            ecr_client.create_repository(repositoryName=test_repo_name)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                pytest.fail(
-                    "No permission to call ecr:CreateRepository. "
-                    "Check IAM permissions for ecr:CreateRepository."
-                )
-            raise
-        finally:
-            try:
-                ecr_client.delete_repository(
-                    repositoryName=test_repo_name,
-                    force=True
-                )
-            except ClientError:
-                pass
-
-    def test_can_delete_ecr_repository(self, ecr_client):
-        test_repo_name = f"pre-deployment-test-{uuid.uuid4().hex[:8]}"
-        try:
-            ecr_client.create_repository(repositoryName=test_repo_name)
-            ecr_client.delete_repository(repositoryName=test_repo_name, force=True)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                pytest.fail(
-                    "No permission to call ecr:DeleteRepository. "
-                    "Check IAM permissions for ecr:DeleteRepository."
-                )
-            raise
-        finally:
-            try:
-                ecr_client.delete_repository(
-                    repositoryName=test_repo_name,
-                    force=True
-                )
             except ClientError:
                 pass
 
