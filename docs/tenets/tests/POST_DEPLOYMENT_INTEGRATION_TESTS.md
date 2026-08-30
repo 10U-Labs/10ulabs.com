@@ -8,7 +8,7 @@ These are the non-negotiable rules for post-deployment integration tests.
 - [Three-Layer Testing Model](#three-layer-testing-model)
 - [Test File Organization](#test-file-organization)
 - [The Three Layers](#the-three-layers)
-- [Fail Fast with Granular Diagnostics](#fail-fast-with-granular-diagnostics)
+- [Granular Diagnostics](#granular-diagnostics)
 - [Boundary with E2E Tests](#boundary-with-e2e-tests)
 - [No Cleanup Required](#no-cleanup-required)
 - [Fixture Usage](#fixture-usage)
@@ -71,12 +71,12 @@ Each connection the deployment made is asserted to be in place: one component at
 
 Wiring is asserted by reading what the platform reports about the connection, not by exercising it. Sending something through the connection to see whether it arrives is the tier above, and the difference matters: this layer says the link was declared, and only the tier above says traffic crosses it.
 
-## Fail Fast with Granular Diagnostics
+## Granular Diagnostics
 
 A failure that says only that something did not work is unacceptable.
 
 - Each test is atomic: one assertion per test
-- The layers run in order, and a layer that fails stops the ones above it
+- The layers run in order
 - A failure names exactly what is wrong, not merely that something is
 - A failure message carries the name of the thing and the value that was expected
 

@@ -8,7 +8,7 @@ These are the non-negotiable rules for pre-deployment integration tests.
 - [Seven-Layer Testing Model](#seven-layer-testing-model)
 - [Test File Organization](#test-file-organization)
 - [The Seven Layers](#the-seven-layers)
-- [Fail Fast with Granular Diagnostics](#fail-fast-with-granular-diagnostics)
+- [Granular Diagnostics](#granular-diagnostics)
 - [Cleanup After Capability Tests](#cleanup-after-capability-tests)
 - [Fixture Usage](#fixture-usage)
 - [Why Drift Detection Is Not a Separate Step](#why-drift-detection-is-not-a-separate-step)
@@ -116,12 +116,12 @@ The operations this deployment performs are asserted to be performable, by perfo
 
 A capability is not implied by a configuration. A permission can read as granted and still be denied in practice by something above it, and this layer is the only one that finds that out before the deployment does.
 
-## Fail Fast with Granular Diagnostics
+## Granular Diagnostics
 
 A failure that says only that something was refused is unacceptable.
 
 - Each test is atomic: one assertion per test
-- The layers run in order, and a layer that fails stops the ones above it
+- The layers run in order
 - A failure names the exact link in the chain that broke
 - A failure message carries the name of the thing and the value that was expected
 
