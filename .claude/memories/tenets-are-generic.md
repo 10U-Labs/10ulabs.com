@@ -21,4 +21,6 @@ The four tier files here hold to that. `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRAT
 
 ## The failure to watch for
 
+`6ecd5424` is the removal case working: both integration tenets promised that a layer which fails stops the ones above it, no invocation of either tier had ever passed `--exitfirst` or anything like it, and the behaviour had been dropped deliberately rather than lost. The clause came out and nothing went in its place, because writing down that every layer now runs and the lowest failure names the cause would have been a description of the implementation wearing a tenet's clothes.
+
 The failure to watch for is an issue asking to align the tenets to this repository, taken at face value: the four tier files get rewritten to describe the directory tree, the utility modules and the workflow step names, and the relationship inverts. Removing from a tenet what this repository does not use is right; replacing it with a description of what this repository does use is not. Pair with [read-test-tenets-first](read-test-tenets-first.md).

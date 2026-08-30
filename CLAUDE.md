@@ -145,7 +145,7 @@ We do TDD: the test is written first, then the code that makes it pass. Test-fir
 
 #### The tenets are generic
 
-The four tier files under `docs/tenets/tests/` — `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRATION_TESTS.md`, `POST_DEPLOYMENT_INTEGRATION_TESTS.md` and `E2E_TESTS.md` — are tenets, not a description of the suite. They name no language, tool, directory or resource, because the repository already states all of that and a second copy drifts. When a tenet and the repository disagree, the repository is what changes; editing a tenet to match the code is backwards.
+The four tier files under `docs/tenets/tests/` — `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRATION_TESTS.md`, `POST_DEPLOYMENT_INTEGRATION_TESTS.md` and `E2E_TESTS.md` — are tenets, not a description of the suite. They name no language, tool, directory or resource, because the repository already states all of that and a second copy drifts. When a tenet and the repository disagree, the repository is what changes; editing a tenet to match the code is backwards. Removal is the exception: taking out of a tenet a rule this repository deliberately stopped following is right, and `6ecd5424` did it for the promise that a failed layer stops the ones above it, which no invocation had implemented since the behaviour was dropped. What is still backwards is replacing such a rule with a description of what the repository does instead, which is the same copy arriving by another route.
 
 #### The tree splits on deployment phase
 
