@@ -338,6 +338,7 @@ jobs:
             botocore \
             mypy \
             pytest \
+            python-hcl2 \
             requests \
             types-requests
       - name: Run mypy
@@ -405,6 +406,7 @@ jobs:
             botocore \
             pylint \
             pytest \
+            python-hcl2 \
             requests
       - name: Run pylint
         run: |
