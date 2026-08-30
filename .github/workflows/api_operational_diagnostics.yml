@@ -297,6 +297,19 @@ jobs:
             test/lib/python/test_terraform_drift
             test/lib/python/test_test_fixtures
           verbose: "true"
+  assert-python-definition-is-used-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Assert every package is imported outside its own tests
+        uses: 10U-Labs/assert-python-definition-is-used@latest
+        with:
+          dont-search-in: test/lib/python/test_{package}
+          search-in: lib/python scripts src test
+          trees: lib/python
+          unimported-packages: "true"
+          verbose: "true"
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:
@@ -664,6 +677,7 @@ jobs:
       - assert-pytest-fixture-name-is-needed
       - assert-python-definition-is-used
       - assert-python-definition-is-used-in-tests
+      - assert-python-definition-is-used-packages
       - copy-paste-source
       - copy-paste-tests
       - mypy-source

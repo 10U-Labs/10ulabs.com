@@ -217,6 +217,19 @@ jobs:
             test/lib/python/test_terraform_config
             test/lib/python/test_test_fixtures
           verbose: "true"
+  assert-python-definition-is-used-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Assert every package is imported outside its own tests
+        uses: 10U-Labs/assert-python-definition-is-used@latest
+        with:
+          dont-search-in: test/lib/python/test_{package}
+          search-in: lib/python scripts src test
+          trees: lib/python
+          unimported-packages: "true"
+          verbose: "true"
   copy-paste-source:
     runs-on: ubuntu-latest
     steps:
