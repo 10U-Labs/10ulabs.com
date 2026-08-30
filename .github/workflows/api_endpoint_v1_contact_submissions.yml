@@ -27,7 +27,6 @@ jobs:
           lib/python/boto_mocks
           lib/python/lambda_response
           lib/python/module_utils
-          lib/python/naming_conventions
           lib/python/repo_utils
           lib/python/terraform_config
           lib/python/terraform_drift
@@ -49,8 +48,6 @@ jobs:
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
-          test/lib/python/test_naming_conventions
-          test/lib/python/test_naming_conventions_helpers
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_terraform_drift
@@ -79,7 +76,6 @@ jobs:
           lib/python/boto_mocks
           lib/python/lambda_response
           lib/python/module_utils
-          lib/python/naming_conventions
           lib/python/repo_utils
           lib/python/terraform_config
           lib/python/terraform_drift
@@ -101,8 +97,6 @@ jobs:
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
-          test/lib/python/test_naming_conventions
-          test/lib/python/test_naming_conventions_helpers
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_terraform_drift
@@ -129,7 +123,6 @@ jobs:
           lib/python/boto_mocks
           lib/python/lambda_response
           lib/python/module_utils
-          lib/python/naming_conventions
           lib/python/repo_utils
           lib/python/terraform_config
           lib/python/terraform_drift
@@ -140,8 +133,6 @@ jobs:
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
-          test/lib/python/test_naming_conventions
-          test/lib/python/test_naming_conventions_helpers
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_terraform_drift
@@ -179,8 +170,6 @@ jobs:
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
-          test/lib/python/test_naming_conventions
-          test/lib/python/test_naming_conventions_helpers
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_terraform_drift
@@ -231,8 +220,6 @@ jobs:
           test/lib/python/test_boto_mocks
           test/lib/python/test_lambda_response
           test/lib/python/test_module_utils
-          test/lib/python/test_naming_conventions
-          test/lib/python/test_naming_conventions_helpers
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
           test/lib/python/test_terraform_drift
@@ -281,8 +268,6 @@ jobs:
             test/lib/python/test_boto_mocks
             test/lib/python/test_lambda_response
             test/lib/python/test_module_utils
-            test/lib/python/test_naming_conventions
-            test/lib/python/test_naming_conventions_helpers
             test/lib/python/test_repo_utils
             test/lib/python/test_terraform_config
             test/lib/python/test_terraform_drift
@@ -316,7 +301,6 @@ jobs:
             lib/python/boto_mocks \
             lib/python/lambda_response \
             lib/python/module_utils \
-            lib/python/naming_conventions \
             lib/python/repo_utils \
             lib/python/terraform_config \
             lib/python/terraform_drift \
@@ -337,8 +321,6 @@ jobs:
             test/lib/python/test_boto_mocks \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
-            test/lib/python/test_naming_conventions \
-            test/lib/python/test_naming_conventions_helpers \
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
             test/lib/python/test_terraform_drift \
@@ -420,7 +402,6 @@ jobs:
             lib/python/boto_mocks \
             lib/python/lambda_response \
             lib/python/module_utils \
-            lib/python/naming_conventions \
             lib/python/repo_utils \
             lib/python/terraform_config \
             lib/python/terraform_drift \
@@ -463,8 +444,6 @@ jobs:
             test/lib/python/test_boto_mocks \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
-            test/lib/python/test_naming_conventions \
-            test/lib/python/test_naming_conventions_helpers \
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
             test/lib/python/test_terraform_drift \
@@ -593,7 +572,6 @@ jobs:
             lib/python/boto_mocks \
             lib/python/lambda_response \
             lib/python/module_utils \
-            lib/python/naming_conventions \
             lib/python/repo_utils \
             lib/python/terraform_config \
             lib/python/terraform_drift \
@@ -639,8 +617,6 @@ jobs:
             test/lib/python/test_boto_mocks \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
-            test/lib/python/test_naming_conventions \
-            test/lib/python/test_naming_conventions_helpers \
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
             test/lib/python/test_terraform_drift \
@@ -677,7 +653,6 @@ jobs:
       - test-boto-mocks
       - test-lambda-response
       - test-module-utils
-      - test-naming-conventions
       - test-repo-utils
       - test-terraform-config
       - test-terraform-drift
@@ -853,33 +828,6 @@ jobs:
             test/lib/python/test_module_utils/ \
             --confcutdir=test --verbose --pythonwarnings=error \
             --cov=module_utils \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
-  test-naming-conventions:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run naming_conventions tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_naming_conventions/ \
-            test/lib/python/test_naming_conventions_helpers/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=naming_conventions \
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
