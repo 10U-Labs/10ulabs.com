@@ -1,11 +1,4 @@
-from test.api.conftest import (
-    endpoint_is_deployed,
-    skip_if_endpoint_not_deployed,
-)
-
 import pytest
-
-__all__ = ['endpoint_is_deployed', 'skip_if_endpoint_not_deployed']
 
 
 @pytest.fixture(scope="module")

@@ -2,7 +2,6 @@ from unittest.mock import Mock
 
 import boto3
 import pytest
-import requests
 
 from repo_utils import REPO_ROOT
 from test_fixtures.terraform import terraform_init, terraform_output
@@ -35,34 +34,6 @@ def apigateway_client(aws_region):
 @pytest.fixture(scope="session")
 def ses_client(aws_region):
     return boto3.client("ses", region_name=aws_region)
-
-
-def endpoint_is_deployed(api_url: str, path: str, method: str = "GET") -> bool:
-    url = f"{api_url}{path}"
-    headers = {"x-test-mode": "true"}
-    try:
-        if method == "GET":
-            response = requests.get(url, headers=headers, timeout=5)
-        else:
-            response = requests.post(url, headers=headers, json={}, timeout=5)
-        if response.status_code == 404:
-            return False
-        if response.status_code == 500:
-            return False
-        try:
-            body = response.json()
-            if body.get("error") == "Not Found":
-                return False
-        except (ValueError, KeyError):
-            pass
-        return True
-    except requests.exceptions.RequestException:
-        return False
-
-
-def skip_if_endpoint_not_deployed(api_url: str, path: str, method: str = "GET"):
-    if not endpoint_is_deployed(api_url, path, method):
-        pytest.skip(f"Endpoint {path} not deployed (managed by separate workflow)")
 
 
 @pytest.fixture

@@ -1,10 +1,6 @@
-from test.api.conftest import skip_if_endpoint_not_deployed
-
 import boto3
 import pytest
 from test_fixtures.aws import get_log_group_info
-
-__all__ = ['skip_if_endpoint_not_deployed']
 
 
 @pytest.fixture(scope="session")

@@ -1,7 +1,7 @@
 import pytest
 import requests
 
-from ..conftest import skip_if_endpoint_not_deployed
+from test_fixtures.http_endpoint import skip_if_endpoint_not_deployed
 
 
 TEST_HEADERS = {"x-test-mode": "true"}
