@@ -1,11 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-import pytest
-from botocore.exceptions import ClientError
-
 from test_fixtures.aws import (
-    api_gateway_info,
     backup_client,
     caller_identity,
     _current_role_arn,
@@ -13,11 +9,8 @@ from test_fixtures.aws import (
     dynamodb_client,
     find_lifecycle_rule,
     get_log_group_info,
-    iam_client,
     iam_role_exists,
-    logs_client,
     scheduler_client,
-    ssm_client,
     stale_delete_markers,
 )
 
@@ -150,27 +143,6 @@ class TestGetLogGroupInfo:
 
 class TestClientFixturesExecution:
     @patch("test_fixtures.aws.boto3")
-    def test_iam_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-west-2"
-        iam_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "iam"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_ssm_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        ssm_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "ssm"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_logs_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        logs_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "logs"
-
-    @patch("test_fixtures.aws.boto3")
     def test_dynamodb_client_fixture_creates_client(self, mock_boto3):
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
@@ -234,91 +206,6 @@ class TestCurrentRoleNameFixtureExecution:
         mock_request.getfixturevalue.return_value = ""
         result = current_role_name.__wrapped__(mock_request)
         assert result == ""
-
-
-class TestApiGatewayInfoFixtureExecution:
-    def test_api_gateway_info_returns_not_found_when_no_id(self):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.side_effect = lambda name: {
-            "apigateway_client": MagicMock(),
-            "api_common_routing_outputs": {"api_gateway_id": None}
-        }[name]
-        result = api_gateway_info.__wrapped__(mock_request)
-        assert result == {"id": None, "exists": False, "accessible": False}
-
-    def _create_success_mock_request(self):
-        mock_request = MagicMock()
-        mock_client = MagicMock()
-        mock_client.get_rest_api.return_value = {
-            "endpointConfiguration": {"types": ["REGIONAL"]}
-        }
-        mock_client.get_paginator.return_value.paginate.return_value = [
-            {"items": [{"path": "/"}, {"path": "/items"}]}
-        ]
-        mock_request.getfixturevalue.side_effect = lambda name: {
-            "apigateway_client": mock_client,
-            "api_common_routing_outputs": {"api_gateway_id": "abc123"}
-        }[name]
-        return api_gateway_info.__wrapped__(mock_request)
-
-    def test_api_gateway_info_returns_correct_id_when_api_exists(self):
-        result = self._create_success_mock_request()
-        assert result["id"] == "abc123"
-
-    def test_api_gateway_info_returns_exists_true_when_api_exists(self):
-        result = self._create_success_mock_request()
-        assert result["exists"] is True
-
-    def test_api_gateway_info_returns_accessible_true_when_api_exists(self):
-        result = self._create_success_mock_request()
-        assert result["accessible"] is True
-
-    def test_api_gateway_info_returns_endpoint_types_when_api_exists(self):
-        result = self._create_success_mock_request()
-        assert result["endpoint_types"] == ["REGIONAL"]
-
-    def test_api_gateway_info_returns_paths_when_api_exists(self):
-        result = self._create_success_mock_request()
-        assert result["paths"] == ["/", "/items"]
-
-    def test_api_gateway_info_handles_access_denied(self):
-        mock_request = MagicMock()
-        mock_client = MagicMock()
-        mock_client.get_rest_api.side_effect = ClientError(
-            {"Error": {"Code": "AccessDeniedException"}}, "GetRestApi"
-        )
-        mock_request.getfixturevalue.side_effect = lambda name: {
-            "apigateway_client": mock_client,
-            "api_common_routing_outputs": {"api_gateway_id": "abc123"}
-        }[name]
-        result = api_gateway_info.__wrapped__(mock_request)
-        assert result == {"id": "abc123", "exists": None, "accessible": False}
-
-    def test_api_gateway_info_handles_not_found(self):
-        mock_request = MagicMock()
-        mock_client = MagicMock()
-        mock_client.get_rest_api.side_effect = ClientError(
-            {"Error": {"Code": "NotFoundException"}}, "GetRestApi"
-        )
-        mock_request.getfixturevalue.side_effect = lambda name: {
-            "apigateway_client": mock_client,
-            "api_common_routing_outputs": {"api_gateway_id": "abc123"}
-        }[name]
-        result = api_gateway_info.__wrapped__(mock_request)
-        assert result == {"id": "abc123", "exists": False, "accessible": True}
-
-    def test_api_gateway_info_reraises_other_errors(self):
-        mock_request = MagicMock()
-        mock_client = MagicMock()
-        mock_client.get_rest_api.side_effect = ClientError(
-            {"Error": {"Code": "InternalError", "Message": "Test"}}, "GetRestApi"
-        )
-        mock_request.getfixturevalue.side_effect = lambda name: {
-            "apigateway_client": mock_client,
-            "api_common_routing_outputs": {"api_gateway_id": "abc123"}
-        }[name]
-        with pytest.raises(ClientError, match="InternalError"):
-            api_gateway_info.__wrapped__(mock_request)
 
 
 class TestFindLifecycleRule:

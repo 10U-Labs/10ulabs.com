@@ -2,26 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import boto3
-from botocore.exceptions import ClientError
 import pytest
-
-
-@pytest.fixture(scope="session")
-def iam_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("iam", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def ssm_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("ssm", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def logs_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("logs", region_name=region)
 
 
 def iam_role_exists(client, role_name: str) -> bool:
@@ -106,35 +87,3 @@ def scheduler_client(request):
 def backup_client(request):
     region = request.getfixturevalue("aws_region")
     return boto3.client("backup", region_name=region)
-
-
-@pytest.fixture(scope="module")
-def api_gateway_info(request):
-    client = request.getfixturevalue("apigateway_client")
-    api_common_routing_outputs = request.getfixturevalue("api_common_routing_outputs")
-
-    api_id = api_common_routing_outputs.get("api_gateway_id")
-    if not api_id:
-        return {"id": None, "exists": False, "accessible": False}
-
-    try:
-        response = client.get_rest_api(restApiId=api_id)
-        endpoint_config = response.get("endpointConfiguration", {})
-        paginator = client.get_paginator("get_resources")
-        paths = []
-        for page in paginator.paginate(restApiId=api_id):
-            paths.extend([r.get("path", "") for r in page.get("items", [])])
-        return {
-            "id": api_id,
-            "exists": True,
-            "accessible": True,
-            "endpoint_types": endpoint_config.get("types", []),
-            "paths": paths
-        }
-    except ClientError as e:
-        error_code = e.response["Error"]["Code"]
-        if error_code == "AccessDeniedException":
-            return {"id": api_id, "exists": None, "accessible": False}
-        if error_code == "NotFoundException":
-            return {"id": api_id, "exists": False, "accessible": True}
-        raise
