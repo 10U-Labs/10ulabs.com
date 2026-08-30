@@ -1,15 +1,13 @@
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from test_fixtures.aws import (
-    backup_client,
     caller_identity,
     _current_role_arn,
     current_role_name,
     find_lifecycle_rule,
     get_log_group_info,
     iam_role_exists,
-    scheduler_client,
     stale_delete_markers,
 )
 
@@ -138,22 +136,6 @@ class TestGetLogGroupInfo:
         }
         result = get_log_group_info(mock_client, "/aws/lambda/target")
         assert result["exists"] is True
-
-
-class TestClientFixturesExecution:
-    @patch("test_fixtures.aws.boto3")
-    def test_scheduler_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        scheduler_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "scheduler"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_backup_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        backup_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "backup"
 
 
 def test_caller_identity_fixture_execution():

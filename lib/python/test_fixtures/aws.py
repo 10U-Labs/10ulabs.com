@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-import boto3
 import pytest
 
 
@@ -69,15 +68,3 @@ def current_role_name(request):
     if not role_arn:
         return ""
     return role_arn.split("/")[-1]
-
-
-@pytest.fixture(scope="session")
-def scheduler_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("scheduler", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def backup_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("backup", region_name=region)

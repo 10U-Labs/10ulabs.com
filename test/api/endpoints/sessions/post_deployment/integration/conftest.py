@@ -1,3 +1,4 @@
+import boto3
 import pytest
 
 
@@ -18,3 +19,15 @@ def sessions_config():
         "handler_log_group": "/aws/lambda/TenULabsSessionsHandler",
         "export_log_group": "/aws/lambda/TenULabsSessionsExport",
     }
+
+
+@pytest.fixture(scope="session")
+def scheduler_client(request):
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("scheduler", region_name=region)
+
+
+@pytest.fixture(scope="session")
+def backup_client(request):
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("backup", region_name=region)
