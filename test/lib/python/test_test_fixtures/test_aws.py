@@ -6,25 +6,19 @@ from botocore.exceptions import ClientError
 
 from test_fixtures.aws import (
     api_gateway_info,
-    api_key,
-    api_url,
-    apigateway_client,
     aws_region,
     backup_client,
     caller_identity,
     _current_role_arn,
     current_role_name,
     dynamodb_client,
-    ec2_client,
     find_lifecycle_rule,
     get_log_group_info,
     iam_client,
     iam_role_exists,
-    lambda_client,
     logs_client,
     s3_client,
     scheduler_client,
-    ses_client,
     shared_config,
     ssm_client,
     stale_delete_markers,
@@ -220,39 +214,11 @@ class TestClientFixturesExecution:
         assert mock_boto3.client.call_args[0][0] == "logs"
 
     @patch("test_fixtures.aws.boto3")
-    def test_lambda_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        lambda_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "lambda"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_apigateway_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        apigateway_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "apigateway"
-
-    @patch("test_fixtures.aws.boto3")
     def test_dynamodb_client_fixture_creates_client(self, mock_boto3):
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "us-east-1"
         dynamodb_client.__wrapped__(mock_request)
         assert mock_boto3.client.call_args[0][0] == "dynamodb"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_ec2_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        ec2_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "ec2"
-
-    @patch("test_fixtures.aws.boto3")
-    def test_ses_client_fixture_creates_client(self, mock_boto3):
-        mock_request = MagicMock()
-        mock_request.getfixturevalue.return_value = "us-east-1"
-        ses_client.__wrapped__(mock_request)
-        assert mock_boto3.client.call_args[0][0] == "ses"
 
     @patch("test_fixtures.aws.boto3")
     def test_scheduler_client_fixture_creates_client(self, mock_boto3):
@@ -396,25 +362,6 @@ class TestApiGatewayInfoFixtureExecution:
         }[name]
         with pytest.raises(ClientError, match="InternalError"):
             api_gateway_info.__wrapped__(mock_request)
-
-
-def test_api_url_fixture_execution():
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = {"api_fqdn": "api.example.com"}
-    result = api_url.__wrapped__(mock_request)
-    assert result == "https://api.example.com"
-
-
-def test_api_key_fixture_execution():
-    mock_request = MagicMock()
-    mock_client = MagicMock()
-    mock_client.get_parameter.return_value = {
-        "Parameter": {"Value": "secret-key-123"}
-    }
-    mock_request.getfixturevalue.return_value = mock_client
-    result = api_key.__wrapped__(mock_request)
-    assert result == "secret-key-123"
-    mock_client.get_parameter.assert_called_with(Name='/api/key', WithDecryption=True)
 
 
 class TestFindLifecycleRule:

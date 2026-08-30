@@ -121,33 +121,9 @@ def current_role_name(request):
 
 
 @pytest.fixture(scope="session")
-def lambda_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("lambda", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def apigateway_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("apigateway", region_name=region)
-
-
-@pytest.fixture(scope="session")
 def dynamodb_client(request):
     region = request.getfixturevalue("aws_region")
     return boto3.client("dynamodb", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def ec2_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("ec2", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def ses_client(request):
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("ses", region_name=region)
 
 
 @pytest.fixture(scope="session")
@@ -192,16 +168,3 @@ def api_gateway_info(request):
         if error_code == "NotFoundException":
             return {"id": api_id, "exists": False, "accessible": True}
         raise
-
-
-@pytest.fixture(scope="module")
-def api_url(request):
-    config = request.getfixturevalue("config")
-    return f"https://{config['api_fqdn']}"
-
-
-@pytest.fixture(scope="module")
-def api_key(request):
-    client = request.getfixturevalue("ssm_client")
-    param_response = client.get_parameter(Name='/api/key', WithDecryption=True)
-    return param_response['Parameter']['Value'] if param_response else None
