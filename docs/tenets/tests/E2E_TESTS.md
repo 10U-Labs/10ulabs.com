@@ -10,7 +10,6 @@ These are the non-negotiable rules for end-to-end tests.
 - [Last Line of Defense, Not First](#last-line-of-defense-not-first)
 - [Run During CI/CD](#run-during-cicd)
 - [Fail Fast](#fail-fast)
-- [Clear Ownership](#clear-ownership)
 - [Test File Organization](#test-file-organization)
 - [Fixture Requirements](#fixture-requirements)
 - [Reported Configuration vs Real-World Verification](#reported-configuration-vs-real-world-verification)
@@ -120,14 +119,6 @@ Don't wait for long timeouts. If the system is working, responses are fast.
 Every wait a test performs is a claim about how long the healthy system takes, so set each one just above that and let a breach fail the test. A generous timeout does not make a test more reliable; it makes a slow system indistinguishable from a working one, and it makes the run that reports the failure arrive minutes after it could have.
 
 Retrying compounds the same error. A loop that tries again until something succeeds converts a hard failure into a long one, and converts a system that is degraded into a system that looks fine. Where the effect being asserted on genuinely arrives after the request, wait for that effect with a bound, and fail when the bound is passed.
-
-## Clear Ownership
-
-**Each e2e test must document the user journey it validates.**
-
-The documentation states five things: the journey, the condition that starts it, the outcome that must follow, the path the journey takes, and what breaks for users when it fails. A test that says only what it tests is missing the part a reader needs, which is why it is worth the cost of this tier at all.
-
-That last line is what makes a failure actionable at the hour it arrives. Whoever reads the failed run was not there when the test was written, and the difference between an outage and a curiosity is not something they should have to work out from the assertion.
 
 ## Test File Organization
 
