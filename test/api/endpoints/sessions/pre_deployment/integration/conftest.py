@@ -14,7 +14,6 @@ def sessions_config(request):
     locals_tf.read_text()
 
     return {
-        "terraform_dir": SESSIONS_SRC_PATH,
         "lambda_handler_name": "TenULabsSessionsHandler",
         "export_function_name": "TenULabsSessionsExport",
         "handler_role_name": "TenULabsSessionsHandlerRole",
