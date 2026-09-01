@@ -5,12 +5,12 @@
 - [The rule](#the-rule)
 - [The question that decides it](#the-question-that-decides-it)
 - [Why a restatement is not a test](#why-a-restatement-is-not-a-test)
-- [Deriving from the source is not quoting it](#deriving-from-the-source-is-not-quoting-it)
+- [Deriving is not automatically the better half](#deriving-is-not-automatically-the-better-half)
 - [Where the repository stands](#where-the-repository-stands)
 
 ## The rule
 
-The test is written before the code it covers, so it cannot quote that code. What a test asserts is a property the program must have, never a copy of what the program says. A test that names a literal the source also names was written by reading the finished source, and a test derived from the code cannot have driven the code — see [tdd-workflow](tdd-workflow.md) for the authoring order this follows from.
+The test is written before the code it covers, so it cannot quote that code and cannot ask it for an answer either. What a test asserts is a property the program must have, never a copy of what the program says and never a value fetched back out of it. A test that names a literal the source also names was written by reading the finished source, and a test derived from the code cannot have driven the code — see [tdd-workflow](tdd-workflow.md) for the authoring order this follows from.
 
 ## The question that decides it
 
@@ -28,17 +28,21 @@ It cannot go red on the defect it was written for. The only edit that breaks it 
 
 `5359c061` deleted four of them from the sessions unit suite and reached the same place by another route: what they check has no consequence, because AWS accepts a dash, an underscore or a leading lower-case letter in an IAM role name, nothing downstream reads either name for its shape, and no deployment, caller or runtime answer changes when one is spelled differently. The only defect such a test can report is that somebody would have spelled a name another way.
 
-## Deriving from the source is not quoting it
+## Deriving is not automatically the better half
 
-The line is between deriving a value from the source and duplicating it, not between touching the source and not touching it.
+The line is not between touching the source and not touching it, and it is not between a literal and a lookup. It is what the value is for, which `docs/tenets/tests/TEST_FIRST.md` states as a tenet: if the value changed and the test should still pass it is configuration, and if it should go red it is an expectation.
 
-Reading a value from the place the deployment reads it is deriving. `sessions_config["handler_role_name"]` names a key rather than a name and can be written before any `locals.tf` holds one; `docs/tenets/tests/PRE_DEPLOYMENT_INTEGRATION_TESTS.md` gives this as one of the three things a fixture exists to do, and gives the reason — a test that hardcodes the value it is asserting on asserts that a constant equals itself.
+Configuration is read from where the deployment reads it. Which region, which account, which address: these decide where a test points, and a suite aimed at the wrong environment fails for a reason that is not about the deployment. `test/conftest.py` taking `aws_region` out of the shared module is this and is right.
 
-Asserting a property over a set of files is deriving. The set may be empty, may grow, and the assertion still means something.
+An expectation is written in the test and is never read out of the subject. A fixture that fills `handler_role_name` by parsing the `locals.tf` the deployment builds it from has handed the suite the answer: the suite then agrees with whatever that file says, a typo included, and passes on every spelling. It is worse than the literal it replaced, because it also never goes red — it has no literals, it survives every rename, and those are the two things that make it look like the more rigorous version.
+
+Asserting a property over a set of files is admissible. The set may be empty, may grow, and the assertion still means something.
+
+Asserting that two artifacts agree is admissible, and it is the one case where a test may read the thing it covers. Neither side is the expectation; the agreement is. `test/api/common/routing/pre_deployment/integration/test_openapi_targets.py` is the shape — it reads `openapi.json` and the `.tf` files and asserts every integrated route names a function some file declares, which was writable before either file existed.
 
 Reading a deployed response, a plan or an API answer is not reading source at all, and an `assert 'text/html' in content_type` over an HTTP response is not this shape.
 
-Restating is a fixture that types `"TenULabsSessionsHandlerRole"` as a literal, or a unit test that searches a `.tf` file for a name's spelling. Both have a second copy of a string the source owns.
+Restating is a unit test that searches a `.tf` file for a name's spelling. It holds a second copy of a string the source owns and reports only a rename.
 
 ## Where the repository stands
 

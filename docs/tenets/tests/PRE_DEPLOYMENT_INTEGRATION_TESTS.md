@@ -138,10 +138,10 @@ Nothing may be left behind. A leftover from a capability test is indistinguishab
 Fixtures exist to do three things:
 
 1. Build each client or connection once for the file that uses it, rather than once per test
-2. Load configuration from the place the rest of the system loads it from, rather than restating it
+2. Load configuration — where a test looks, never what it demands — from the place the rest of the system loads it from, rather than restating it
 3. Carry forward the identifiers an earlier layer discovered, so a later layer does not rediscover them
 
-The second of those is what keeps the suite honest. A test that hardcodes the value it is asserting on asserts that a constant equals itself; reading it from the same source the deployment reads it from is what makes the assertion mean anything.
+The second of those is bounded, and the boundary is what keeps the suite honest. Configuration decides where a test points; an expectation is what it asserts once it arrives. A fixture reads the first from the place the deployment reads it, because a suite aimed at the wrong environment fails for a reason that is not about the deployment. A fixture does not read the second from there. Handing a test the value the deployment intends to produce has handed it the answer, and the test then agrees with that intention whatever it is, a mistaken one included. Expectations are written in the suite, which is the only place they can have been written before the deployment they describe existed — see `TEST_FIRST.md`.
 
 ## Why Drift Detection Is Not a Separate Step
 
