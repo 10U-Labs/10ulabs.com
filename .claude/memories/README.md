@@ -43,6 +43,7 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 ## Tests
 
 - [tdd-workflow](tdd-workflow.md) — the test is written before the code, in the same commit
+- [a-test-does-not-restate-the-source](a-test-does-not-restate-the-source.md) — a test asserts a property the program must have, never a copy of what the source says, because it is written before the source exists
 - [read-test-tenets-first](read-test-tenets-first.md) — read `docs/tenets/tests/` before implementing, and cover every tier the change touches
 - [tenets-are-generic](tenets-are-generic.md) — the four tier files name no tool, language or directory and the repository follows them
 - [a-conftest-is-emptied-never-deleted](a-conftest-is-emptied-never-deleted.md) — a `conftest.py` whose last fixture goes is emptied to zero bytes and left in place, so the level stays visible to whoever writes the next one

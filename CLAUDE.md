@@ -24,6 +24,7 @@
   - [Markdown](#markdown)
     - [No column limit](#no-column-limit)
   - [Tests](#tests)
+    - [A test does not restate the source](#a-test-does-not-restate-the-source)
     - [An empty conftest stays](#an-empty-conftest-stays)
     - [Cover every tier the change touches](#cover-every-tier-the-change-touches)
     - [Test first](#test-first)
@@ -129,7 +130,11 @@ Markdown is not hard-wrapped, and neither is the body of a commit message. There
 
 ### Tests
 
-Longer: [tdd-workflow](.claude/memories/tdd-workflow.md), [read-test-tenets-first](.claude/memories/read-test-tenets-first.md), [tenets-are-generic](.claude/memories/tenets-are-generic.md), [the-test-tree-splits-on-deployment-phase](.claude/memories/the-test-tree-splits-on-deployment-phase.md), [test-code-is-placed-by-how-many-suites-use-it](.claude/memories/test-code-is-placed-by-how-many-suites-use-it.md), [a-conftest-is-emptied-never-deleted](.claude/memories/a-conftest-is-emptied-never-deleted.md).
+Longer: [tdd-workflow](.claude/memories/tdd-workflow.md), [a-test-does-not-restate-the-source](.claude/memories/a-test-does-not-restate-the-source.md), [read-test-tenets-first](.claude/memories/read-test-tenets-first.md), [tenets-are-generic](.claude/memories/tenets-are-generic.md), [the-test-tree-splits-on-deployment-phase](.claude/memories/the-test-tree-splits-on-deployment-phase.md), [test-code-is-placed-by-how-many-suites-use-it](.claude/memories/test-code-is-placed-by-how-many-suites-use-it.md), [a-conftest-is-emptied-never-deleted](.claude/memories/a-conftest-is-emptied-never-deleted.md).
+
+#### A test does not restate the source
+
+The test is written before the code, so it cannot quote the code. What a test asserts is a property the program must have, never a copy of what the program says. The question that decides which one is in hand is whether the test could have been written before the file it reads existed: `assert 'SessionsHandlerRole' in content` over `iam.tf` could not, because the literal was typed by someone with the finished file open, where `no .tf file outside locals.tf interpolates the resource prefix` could, because it is true of files not yet written. A restatement holds two copies of one string and passes while they agree rather than while the program is right, so the only edit that reddens it is an edit to one of its own copies — it reports a rename, which is the one change it should tolerate. Deriving is not quoting: reading a value from the place the deployment reads it, asserting a property over a set of files, or reading a deployed response are all allowed, and `docs/tenets/tests/PRE_DEPLOYMENT_INTEGRATION_TESTS.md` requires the first of them. The tree does not comply — 324 asserts of the form `assert <literal> in content` sit in 27 files that also open a `.tf` file, and `5359c061` deleted four of them on the neighbouring argument that a name's spelling has no consequence — so this holds every new test and the standing ones are a queue rather than a precedent.
 
 #### An empty conftest stays
 
