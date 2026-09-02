@@ -526,7 +526,7 @@ jobs:
             pytest \
             python-hcl2 \
             requests
-      - name: Run pylint
+      - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
             test/conftest.py \
