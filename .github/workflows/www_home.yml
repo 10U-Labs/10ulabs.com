@@ -361,7 +361,7 @@ jobs:
             python-hcl2 \
             requests \
             types-requests
-      - name: Run mypy
+      - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python:scripts python3 -m mypy \
             --explicit-package-bases \
