@@ -25,7 +25,7 @@ class TestLambdaHandlerContracts:
             handler_content = f.read()
 
         handler_match = _get_handler_reference_from_lambda_tf()
-        tf_handler_ref = handler_match.group(1)
+        tf_handler_ref = handler_match.group(1) if handler_match else ""
         expected_function = tf_handler_ref.split(".")[-1]
 
         assert f"def {expected_function}(" in handler_content, (
