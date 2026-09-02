@@ -367,7 +367,9 @@ jobs:
             lib/python/repo_utils \
             lib/python/terraform_config \
             lib/python/test_fixtures
-          MYPYPATH=lib/python python3 -m mypy --disallow-untyped-defs $SRC/lambda/tracker/
+          MYPYPATH=lib/python python3 -m mypy \
+            --disallow-untyped-defs \
+            $SRC/lambda/tracker/
   mypy-tests:
     runs-on: ubuntu-latest
     steps:
