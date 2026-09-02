@@ -1,11 +1,12 @@
 import uuid
+from typing import Any, Dict
 
 from botocore.exceptions import ClientError
 import pytest
 
 
 class Layer2IAMAuthorizationTests:
-    def test_can_call_iam_get_role_api(self, iam_client, current_role_name):
+    def test_can_call_iam_get_role_api(self, iam_client: Any, current_role_name: str) -> None:
         if not current_role_name:
             pytest.skip("Could not determine current role name")
         try:
@@ -21,7 +22,7 @@ class Layer2IAMAuthorizationTests:
             else:
                 raise
 
-    def test_can_list_attached_policies(self, iam_client, current_role_name):
+    def test_can_list_attached_policies(self, iam_client: Any, current_role_name: str) -> None:
         if not current_role_name:
             pytest.skip("Could not determine current role name")
         try:
@@ -39,7 +40,7 @@ class Layer2IAMAuthorizationTests:
 
 
 class Layer2S3AuthorizationTests:
-    def test_can_call_s3_head_bucket_api(self, s3_client, state_bucket_name):
+    def test_can_call_s3_head_bucket_api(self, s3_client: Any, state_bucket_name: str) -> None:
         try:
             s3_client.head_bucket(Bucket=state_bucket_name)
         except ClientError as e:
@@ -53,7 +54,7 @@ class Layer2S3AuthorizationTests:
             else:
                 raise
 
-    def test_state_bucket_name_configured(self, state_bucket_name):
+    def test_state_bucket_name_configured(self, state_bucket_name: str) -> None:
         assert state_bucket_name, (
             "State bucket name is not configured. "
             "Check shared config for name_for_terraform_state_bucket."
@@ -61,7 +62,7 @@ class Layer2S3AuthorizationTests:
 
 
 class Layer4TerraformStateExistenceTests:
-    def test_state_bucket_exists(self, s3_client, state_bucket_name):
+    def test_state_bucket_exists(self, s3_client: Any, state_bucket_name: str) -> None:
         try:
             s3_client.head_bucket(Bucket=state_bucket_name)
         except ClientError as e:
@@ -72,7 +73,7 @@ class Layer4TerraformStateExistenceTests:
                 )
             raise
 
-    def test_state_bucket_has_name(self, state_bucket_name):
+    def test_state_bucket_has_name(self, state_bucket_name: str) -> None:
         assert state_bucket_name, (
             "State bucket name is empty. "
             "Check shared config for name_for_terraform_state_bucket."
@@ -80,7 +81,7 @@ class Layer4TerraformStateExistenceTests:
 
 
 class Layer6S3CapabilityTests:
-    def test_can_list_bucket_objects(self, s3_client, state_bucket_name):
+    def test_can_list_bucket_objects(self, s3_client: Any, state_bucket_name: str) -> None:
         try:
             s3_client.list_objects_v2(Bucket=state_bucket_name, MaxKeys=1)
         except ClientError as e:
@@ -90,7 +91,7 @@ class Layer6S3CapabilityTests:
                 "Check IAM permissions for s3:ListBucket."
             )
 
-    def test_can_get_bucket_location(self, s3_client, state_bucket_name):
+    def test_can_get_bucket_location(self, s3_client: Any, state_bucket_name: str) -> None:
         try:
             s3_client.get_bucket_location(Bucket=state_bucket_name)
         except ClientError as e:
@@ -102,7 +103,7 @@ class Layer6S3CapabilityTests:
 
 
 class Layer4IAMRoleExistenceTests:
-    def test_iam_role_exists(self, iam_client, current_role_name):
+    def test_iam_role_exists(self, iam_client: Any, current_role_name: str) -> None:
         if not current_role_name:
             pytest.skip("Could not determine current role name")
         try:
@@ -116,14 +117,14 @@ class Layer4IAMRoleExistenceTests:
                 )
             raise
 
-    def test_current_role_name_is_configured(self, current_role_name):
+    def test_current_role_name_is_configured(self, current_role_name: str) -> None:
         assert current_role_name, "Current role name could not be determined"
 
 
 class Layer5IAMConfigurationTests:
     def test_role_has_administrator_access_policy(
-        self, iam_client, current_role_name
-    ):
+        self, iam_client: Any, current_role_name: str
+    ) -> None:
         if not current_role_name:
             pytest.skip("Could not determine current role name")
         try:
@@ -142,7 +143,7 @@ class Layer5IAMConfigurationTests:
                 )
             raise
 
-    def test_role_has_at_least_one_policy(self, iam_client, current_role_name):
+    def test_role_has_at_least_one_policy(self, iam_client: Any, current_role_name: str) -> None:
         if not current_role_name:
             pytest.skip("Could not determine current role name")
         try:
@@ -161,7 +162,7 @@ class Layer5IAMConfigurationTests:
 
 
 class Layer6IAMCapabilityTests:
-    def test_can_list_buckets(self, s3_client):
+    def test_can_list_buckets(self, s3_client: Any) -> None:
         try:
             s3_client.list_buckets()
         except ClientError as e:
@@ -172,7 +173,7 @@ class Layer6IAMCapabilityTests:
                 )
             raise
 
-    def test_can_list_roles(self, iam_client):
+    def test_can_list_roles(self, iam_client: Any) -> None:
         try:
             iam_client.list_roles(MaxItems=1)
         except ClientError as e:
@@ -185,7 +186,7 @@ class Layer6IAMCapabilityTests:
 
 
 class Layer6S3WriteCapabilityTests:
-    def test_can_write_to_bucket(self, s3_client, state_bucket_name):
+    def test_can_write_to_bucket(self, s3_client: Any, state_bucket_name: str) -> None:
         test_key = f".pre-deployment-test/{uuid.uuid4()}"
         try:
             s3_client.put_object(
@@ -206,7 +207,7 @@ class Layer6S3WriteCapabilityTests:
             except ClientError:
                 pass
 
-    def test_can_delete_from_bucket(self, s3_client, state_bucket_name):
+    def test_can_delete_from_bucket(self, s3_client: Any, state_bucket_name: str) -> None:
         test_key = f".pre-deployment-test/{uuid.uuid4()}"
         try:
             s3_client.put_object(
@@ -230,23 +231,23 @@ class Layer6S3WriteCapabilityTests:
 
 
 class Layer1EndpointAuthenticationTests:
-    def test_aws_credentials_are_valid(self, sts_client):
+    def test_aws_credentials_are_valid(self, sts_client: Any) -> None:
         response = sts_client.get_caller_identity()
         assert response["Account"] is not None, (
             "AWS credentials invalid - GetCallerIdentity returned no Account"
         )
 
-    def test_aws_credentials_return_account_id(self, sts_client):
+    def test_aws_credentials_return_account_id(self, sts_client: Any) -> None:
         response = sts_client.get_caller_identity()
         assert len(response["Account"]) == 12, (
             f"AWS account ID has unexpected length: {len(response['Account'])}"
         )
 
-    def test_aws_credentials_return_arn(self, sts_client):
+    def test_aws_credentials_return_arn(self, sts_client: Any) -> None:
         response = sts_client.get_caller_identity()
         assert "Arn" in response, "AWS credentials did not return an ARN"
 
-    def test_aws_credentials_arn_has_valid_format(self, sts_client):
+    def test_aws_credentials_arn_has_valid_format(self, sts_client: Any) -> None:
         response = sts_client.get_caller_identity()
         assert response["Arn"].startswith("arn:aws:"), (
             f"ARN has unexpected format: {response['Arn']}"
@@ -254,7 +255,7 @@ class Layer1EndpointAuthenticationTests:
 
 
 class Layer2APIGatewayAuthorizationTests:
-    def test_can_describe_rest_apis(self, apigateway_client):
+    def test_can_describe_rest_apis(self, apigateway_client: Any) -> None:
         try:
             apigateway_client.get_rest_apis(limit=1)
         except ClientError as e:
@@ -262,7 +263,7 @@ class Layer2APIGatewayAuthorizationTests:
                 pytest.fail("No permission to describe API Gateway REST APIs")
             raise
 
-    def test_can_access_specific_rest_api(self, api_gateway_info):
+    def test_can_access_specific_rest_api(self, api_gateway_info: Dict[str, Any]) -> None:
         if api_gateway_info["id"] is None:
             pytest.skip("api_gateway_id output not available")
         assert api_gateway_info["accessible"], (
@@ -271,7 +272,7 @@ class Layer2APIGatewayAuthorizationTests:
 
 
 class Layer2LambdaAndIAMAuthorizationTests:
-    def test_can_list_functions(self, lambda_client):
+    def test_can_list_functions(self, lambda_client: Any) -> None:
         try:
             lambda_client.list_functions(MaxItems=1)
         except ClientError as e:
@@ -279,7 +280,7 @@ class Layer2LambdaAndIAMAuthorizationTests:
                 pytest.fail("No permission to list Lambda functions")
             raise
 
-    def test_can_list_roles(self, iam_client):
+    def test_can_list_roles(self, iam_client: Any) -> None:
         try:
             iam_client.list_roles(MaxItems=1)
         except ClientError as e:
@@ -289,13 +290,17 @@ class Layer2LambdaAndIAMAuthorizationTests:
 
 
 class Layer4APIBackendPrerequisiteTests:
-    def test_api_gateway_id_output_exists(self, api_common_routing_outputs):
+    def test_api_gateway_id_output_exists(self, api_common_routing_outputs: Dict[str, Any]) -> None:
         assert api_common_routing_outputs.get("api_gateway_id"), (
             "api_gateway_id output not found in api_common_routing. "
             "Run terraform apply in src/api/common/routing/"
         )
 
-    def test_api_gateway_exists_in_aws(self, apigateway_client, api_common_routing_outputs):
+    def test_api_gateway_exists_in_aws(
+        self,
+        apigateway_client: Any,
+        api_common_routing_outputs: Dict[str, Any]
+    ) -> None:
         api_id = api_common_routing_outputs.get("api_gateway_id")
         if not api_id:
             pytest.skip("api_gateway_id output not available")
@@ -314,7 +319,7 @@ class Layer4APIBackendPrerequisiteTests:
 
 
 class Layer5APIGatewayRegionalTests:
-    def test_api_gateway_is_regional(self, api_gateway_info):
+    def test_api_gateway_is_regional(self, api_gateway_info: Dict[str, Any]) -> None:
         if api_gateway_info["id"] is None:
             pytest.skip("api_gateway_id output not available")
         if not api_gateway_info["exists"]:
@@ -324,12 +329,12 @@ class Layer5APIGatewayRegionalTests:
             f"API Gateway '{api_gateway_info['id']}' should be REGIONAL, got: {types}"
         )
 
-    def test_api_gateway_info_has_id(self, api_gateway_info):
+    def test_api_gateway_info_has_id(self, api_gateway_info: Dict[str, Any]) -> None:
         assert "id" in api_gateway_info, "API Gateway info missing 'id' field"
 
 
 class Layer6DeploymentCapabilityTests:
-    def test_can_get_lambda_function_configuration(self, lambda_client):
+    def test_can_get_lambda_function_configuration(self, lambda_client: Any) -> None:
         try:
             response = lambda_client.list_functions(MaxItems=1)
             functions = response.get("Functions", [])
@@ -344,7 +349,7 @@ class Layer6DeploymentCapabilityTests:
                 )
             raise
 
-    def test_can_create_log_group_dry_run(self, logs_client):
+    def test_can_create_log_group_dry_run(self, logs_client: Any) -> None:
         try:
             logs_client.describe_log_groups(limit=1)
         except ClientError as e:
@@ -354,7 +359,7 @@ class Layer6DeploymentCapabilityTests:
                 )
             raise
 
-    def test_can_get_iam_role_details(self, iam_client):
+    def test_can_get_iam_role_details(self, iam_client: Any) -> None:
         try:
             response = iam_client.list_roles(MaxItems=1)
             roles = response.get("Roles", [])

@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from repo_utils import REPO_ROOT
 
@@ -19,18 +19,18 @@ def create_remote_state_contract_tests(
     endpoint_name: str,
     lambda_file: str = "lambda.tf",
     required_outputs: Optional[list] = None,
-):
+) -> type:
     lambda_path = endpoint_src / lambda_file
     outputs_file = API_COMMON_ROUTING_OUTPUTS_FILE.relative_to(REPO_ROOT)
 
-    def get_api_remote_state_references():
+    def get_api_remote_state_references() -> set:
         with open(lambda_path, encoding="utf-8") as f:
             content = f.read()
         pattern = r'data\.terraform_remote_state\.api\.outputs\.(\w+)'
         return set(re.findall(pattern, content))
 
     class TestRemoteStateContract:
-        def test_all_api_remote_state_references_exist_in_api_common_routing_outputs(self):
+        def test_all_api_remote_state_references_exist_in_api_common_routing_outputs(self) -> None:
             references = get_api_remote_state_references()
             outputs = _get_api_common_routing_outputs()
             missing = references - outputs
@@ -40,14 +40,14 @@ def create_remote_state_contract_tests(
                 f"that don't exist: {missing}. Add these outputs to {outputs_file}"
             )
 
-        def test_lambda_file_exists(self):
+        def test_lambda_file_exists(self) -> None:
             assert lambda_path.exists(), f"{lambda_file} does not exist in endpoint"
 
     if required_outputs:
         for output_name in required_outputs:
 
-            def make_test(name):
-                def test_output_exists(_self):
+            def make_test(name: str) -> Callable[[Any], None]:
+                def test_output_exists(_self: Any) -> None:
                     outputs = _get_api_common_routing_outputs()
                     assert name in outputs, (
                         f"{name} output missing from {outputs_file}. "
@@ -64,14 +64,14 @@ def create_remote_state_contract_tests(
     return TestRemoteStateContract
 
 
-def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str):
+def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str) -> type:
     data_tf_path = endpoint_src / "data.tf"
 
     class TestRemoteStateConfig:
-        def test_data_tf_exists(self):
+        def test_data_tf_exists(self) -> None:
             assert data_tf_path.exists(), f"data.tf not found in {endpoint_name}"
 
-        def test_no_hardcoded_bucket_name(self):
+        def test_no_hardcoded_bucket_name(self) -> None:
             content = data_tf_path.read_text()
             hardcoded_patterns = [
                 r'bucket\s*=\s*"[a-z0-9]+-terraform-state',
@@ -85,7 +85,7 @@ def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str):
                     "Use module.common.name_for_terraform_state_bucket instead."
                 )
 
-        def test_no_hardcoded_region(self):
+        def test_no_hardcoded_region(self) -> None:
             content = data_tf_path.read_text()
             hardcoded_region = re.search(
                 r'region\s*=\s*"[a-z]+-[a-z]+-\d+"', content
@@ -95,7 +95,7 @@ def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str):
                 "Use local.aws_region or module.common.aws_region instead."
             )
 
-        def test_uses_correct_state_key_pattern(self):
+        def test_uses_correct_state_key_pattern(self) -> None:
             content = data_tf_path.read_text()
             if 'terraform_remote_state' in content and '"api"' in content:
                 correct_key = re.search(

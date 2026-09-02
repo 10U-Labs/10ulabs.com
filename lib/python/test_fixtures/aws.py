@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional
 
 
-def iam_role_exists(client, role_name: str) -> bool:
+def iam_role_exists(client: Any, role_name: str) -> bool:
     try:
         client.get_role(RoleName=role_name)
         return True
@@ -10,7 +10,7 @@ def iam_role_exists(client, role_name: str) -> bool:
         return False
 
 
-def get_log_group_info(client, log_group_name: str) -> dict:
+def get_log_group_info(client: Any, log_group_name: str) -> dict:
     response = client.describe_log_groups(
         logGroupNamePrefix=log_group_name,
         limit=1
@@ -24,7 +24,7 @@ def get_log_group_info(client, log_group_name: str) -> dict:
     }
 
 
-def find_lifecycle_rule(client, bucket_name: str, rule_id: str) -> Optional[dict]:
+def find_lifecycle_rule(client: Any, bucket_name: str, rule_id: str) -> Optional[dict]:
     lifecycle = client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
     for rule in lifecycle["Rules"]:
         if rule.get("ID") == rule_id:
@@ -32,7 +32,7 @@ def find_lifecycle_rule(client, bucket_name: str, rule_id: str) -> Optional[dict
     return None
 
 
-def stale_delete_markers(client, bucket_name: str, older_than_days: int = 7) -> list:
+def stale_delete_markers(client: Any, bucket_name: str, older_than_days: int = 7) -> list:
     cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
     stale: list = []
     paginator = client.get_paginator("list_object_versions")

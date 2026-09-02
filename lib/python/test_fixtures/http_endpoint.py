@@ -47,6 +47,6 @@ def endpoint_is_deployed(api_url: str, path: str, method: str = "GET") -> bool:
         return False
 
 
-def skip_if_endpoint_not_deployed(api_url: str, path: str, method: str = "GET"):
+def skip_if_endpoint_not_deployed(api_url: str, path: str, method: str = "GET") -> None:
     if not endpoint_is_deployed(api_url, path, method):
         pytest.skip(f"Endpoint {path} not deployed (managed by separate workflow)")

@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from botocore.exceptions import ClientError
 import pytest
 from test_fixtures.integration.helpers import (
@@ -7,7 +9,7 @@ from test_fixtures.integration.helpers import (
 )
 
 
-def _lambda_role_name(lambda_config):
+def _lambda_role_name(lambda_config: Dict[str, Any]) -> str:
     role_arn = lambda_config.get("Role", "")
     return role_arn.split("/")[-1] if "/" in role_arn else ""
 
@@ -15,9 +17,13 @@ def _lambda_role_name(lambda_config):
 def create_lambda_api_gateway_wiring_tests(
     function_name_config_key: str,
     default_function_name: str,
-):
+) -> type:
     class TestLambdaWiring:
-        def test_handler_has_api_gateway_permission(self, lambda_client, config):
+        def test_handler_has_api_gateway_permission(
+            self,
+            lambda_client: Any,
+            config: Dict[str, str]
+        ) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             try:
                 response = lambda_client.get_policy(FunctionName=function_name)
@@ -33,13 +39,21 @@ def create_lambda_api_gateway_wiring_tests(
                     )
                 raise
 
-        def test_handler_has_role_attached(self, lambda_client, config):
+        def test_handler_has_role_attached(
+            self,
+            lambda_client: Any,
+            config: Dict[str, str]
+        ) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             response = lambda_client.get_function(FunctionName=function_name)
             role_arn = response["Configuration"].get("Role", "")
             assert role_arn, f"Lambda '{function_name}' has no IAM role attached"
 
-        def test_handler_role_follows_naming_pattern(self, lambda_client, config):
+        def test_handler_role_follows_naming_pattern(
+            self,
+            lambda_client: Any,
+            config: Dict[str, str]
+        ) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             response = lambda_client.get_function(FunctionName=function_name)
             role_arn = response["Configuration"].get("Role", "")
@@ -57,22 +71,26 @@ def create_lambda_iam_wiring_tests(
     default_function_name: str,
     check_basic_execution: bool = True,
     check_lambda_trust: bool = True,
-):
+) -> type:
     class TestIAMPolicyWiring:
-        def test_config_has_function_name(self, config):
+        def test_config_has_function_name(self, config: Dict[str, str]) -> None:
             assert config.get(function_name_config_key) or default_function_name, (
                 f"Neither config key '{function_name_config_key}' nor default "
                 f"'{default_function_name}' is available"
             )
 
-        def test_service_role_name_follows_convention(self, config):
+        def test_service_role_name_follows_convention(self, config: Dict[str, str]) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             role_name = f"{function_name}ServiceRole"
             assert "ServiceRole" in role_name, "Role name should contain 'ServiceRole'"
 
     if check_basic_execution:
 
-        def test_handler_role_has_basic_execution_policy(_self, iam_client, config):
+        def test_handler_role_has_basic_execution_policy(
+            _self: Any,
+            iam_client: Any,
+            config: Dict[str, str]
+        ) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             role_name = f"{function_name}ServiceRole"
             response = iam_client.list_attached_role_policies(RoleName=role_name)
@@ -93,7 +111,11 @@ def create_lambda_iam_wiring_tests(
 
     if check_lambda_trust:
 
-        def test_handler_role_can_assume_lambda_service(_self, iam_client, config):
+        def test_handler_role_can_assume_lambda_service(
+            _self: Any,
+            iam_client: Any,
+            config: Dict[str, str]
+        ) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             role_name = f"{function_name}ServiceRole"
             response = iam_client.get_role(RoleName=role_name)
@@ -116,38 +138,42 @@ def create_lambda_iam_wiring_tests(
     return TestIAMPolicyWiring
 
 
-def create_lambda_execution_role_wiring_tests(fixture_name: str = "lambda_function"):
+def create_lambda_execution_role_wiring_tests(fixture_name: str = "lambda_function") -> type:
     class TestLambdaExecutionRole:
-        def test_lambda_has_execution_role_key(self, request):
+        def test_lambda_has_execution_role_key(self, request: pytest.FixtureRequest) -> None:
             lambda_config = request.getfixturevalue(fixture_name)
             assert "Role" in lambda_config
 
-        def test_lambda_has_execution_role_value(self, request):
+        def test_lambda_has_execution_role_value(self, request: pytest.FixtureRequest) -> None:
             lambda_config = request.getfixturevalue(fixture_name)
             assert lambda_config.get("Role")
 
-        def test_lambda_role_starts_with_iam_arn(self, request):
+        def test_lambda_role_starts_with_iam_arn(self, request: pytest.FixtureRequest) -> None:
             lambda_config = request.getfixturevalue(fixture_name)
             role_arn = lambda_config.get("Role", "")
             assert role_arn.startswith("arn:aws:iam::"), (
                 f"Lambda role '{role_arn}' is not a valid IAM ARN"
             )
 
-        def test_lambda_role_contains_role_path(self, request):
+        def test_lambda_role_contains_role_path(self, request: pytest.FixtureRequest) -> None:
             lambda_config = request.getfixturevalue(fixture_name)
             role_arn = lambda_config.get("Role", "")
             assert ":role/" in role_arn, (
                 f"Lambda role '{role_arn}' does not appear to be a role ARN"
             )
 
-        def test_lambda_role_exists(self, iam_client, request):
+        def test_lambda_role_exists(self, iam_client: Any, request: pytest.FixtureRequest) -> None:
             role_name = _lambda_role_name(request.getfixturevalue(fixture_name))
             if not role_name:
                 pytest.fail("Could not extract role name from Lambda configuration")
 
             check_iam_role_exists(iam_client, role_name, "the Lambda's deployment")
 
-        def test_lambda_role_can_be_assumed_by_lambda(self, iam_client, request):
+        def test_lambda_role_can_be_assumed_by_lambda(
+            self,
+            iam_client: Any,
+            request: pytest.FixtureRequest
+        ) -> None:
             role_name = _lambda_role_name(request.getfixturevalue(fixture_name))
             if not role_name:
                 pytest.skip("Could not extract role name from Lambda configuration")
@@ -175,13 +201,13 @@ def create_lambda_existence_tests(
     default_function_name: str,
     terraform_path: str,
     log_group_fixture: str | None = None,
-):
+) -> type:
     class TestDeployedResourcesExist:
-        def test_handler_lambda_exists(self, lambda_client, config):
+        def test_handler_lambda_exists(self, lambda_client: Any, config: Dict[str, str]) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             check_lambda_function_exists(lambda_client, function_name, terraform_path)
 
-        def test_handler_iam_role_exists(self, iam_client, config):
+        def test_handler_iam_role_exists(self, iam_client: Any, config: Dict[str, str]) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             role_name = f"{function_name}ServiceRole"
             try:
@@ -195,7 +221,7 @@ def create_lambda_existence_tests(
 
     if log_group_fixture:
 
-        def test_handler_log_group_exists(_self, request):
+        def test_handler_log_group_exists(_self: Any, request: pytest.FixtureRequest) -> None:
             log_group = request.getfixturevalue(log_group_fixture)
             assert log_group["exists"], (
                 f"CloudWatch log group '{log_group['name']}' does not exist"
@@ -216,9 +242,13 @@ def create_lambda_configuration_tests(
     expected_handler: str,
     expected_runtime: str = "python3.13",
     expected_architecture: str = "arm64",
-):
+) -> type:
     class TestLambdaConfiguration:
-        def test_handler_uses_python_runtime(self, lambda_client, config):
+        def test_handler_uses_python_runtime(
+            self,
+            lambda_client: Any,
+            config: Dict[str, str]
+        ) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             response = lambda_client.get_function(FunctionName=function_name)
             runtime = response["Configuration"]["Runtime"]
@@ -226,7 +256,11 @@ def create_lambda_configuration_tests(
                 f"Lambda runtime should be {expected_runtime}, got: {runtime}"
             )
 
-        def test_handler_uses_expected_architecture(self, lambda_client, config):
+        def test_handler_uses_expected_architecture(
+            self,
+            lambda_client: Any,
+            config: Dict[str, str]
+        ) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             response = lambda_client.get_function(FunctionName=function_name)
             architectures = response["Configuration"].get("Architectures", [])
@@ -234,7 +268,11 @@ def create_lambda_configuration_tests(
                 f"Lambda should use {expected_architecture} architecture, got: {architectures}"
             )
 
-        def test_handler_has_handler_configured(self, lambda_client, config):
+        def test_handler_has_handler_configured(
+            self,
+            lambda_client: Any,
+            config: Dict[str, str]
+        ) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             response = lambda_client.get_function(FunctionName=function_name)
             handler = response["Configuration"]["Handler"]
@@ -249,9 +287,9 @@ def create_deployed_resource_existence_tests(
     function_name_config_key: str,
     default_function_name: str,
     handler_display_name: str,
-):
+) -> type:
     class TestDeployedHandlerResourcesExist:
-        def test_handler_role_exists(self, iam_client, config):
+        def test_handler_role_exists(self, iam_client: Any, config: Dict[str, str]) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             role_name = f"{function_name}ServiceRole"
             try:
@@ -259,7 +297,7 @@ def create_deployed_resource_existence_tests(
             except iam_client.exceptions.NoSuchEntityException:
                 pytest.fail(f"IAM role '{role_name}' does not exist")
 
-        def test_handler_function_exists(self, lambda_client, config):
+        def test_handler_function_exists(self, lambda_client: Any, config: Dict[str, str]) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             try:
                 lambda_client.get_function(FunctionName=function_name)

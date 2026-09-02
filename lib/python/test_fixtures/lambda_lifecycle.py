@@ -43,19 +43,19 @@ def _check_lambda_lifecycle_rules(lambda_tf_path: Path) -> None:
 
 def create_lambda_lifecycle_tests(
     endpoint_src: Path, tf_files: Optional[list] = None
-):
+) -> type:
     if tf_files is None:
         tf_files = ["lambda.tf"]
 
     tf_paths = [endpoint_src / tf_file for tf_file in tf_files]
 
     class TestLambdaLifecycle:
-        def test_lambda_with_env_vars_has_lifecycle_rule(self):
+        def test_lambda_with_env_vars_has_lifecycle_rule(self) -> None:
             for tf_path in tf_paths:
                 if tf_path.exists():
                     _check_lambda_lifecycle_rules(tf_path)
 
-        def test_terraform_files_configured(self):
+        def test_terraform_files_configured(self) -> None:
             assert len(tf_paths) > 0, "No terraform files configured for testing"
 
     return TestLambdaLifecycle
