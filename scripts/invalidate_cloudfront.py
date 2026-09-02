@@ -2,10 +2,12 @@ import argparse
 import sys
 import time
 import uuid
+from typing import Any, Optional
+
 import boto3
 
 
-def find_distribution_id(cloudfront, fqdn):
+def find_distribution_id(cloudfront: Any, fqdn: str) -> Optional[str]:
     response = cloudfront.list_distributions()
     distribution_id = None
     for distribution in response.get("DistributionList", {}).get("Items", []):
@@ -15,8 +17,8 @@ def find_distribution_id(cloudfront, fqdn):
     return distribution_id
 
 
-def wait_for_invalidation(cloudfront, distribution_id, invalidation_id,
-                          max_attempts=20, poll_interval=5):
+def wait_for_invalidation(cloudfront: Any, distribution_id: str, invalidation_id: str,
+                          max_attempts: int = 20, poll_interval: int = 5) -> None:
     completed = False
     attempt = 0
     while not completed and attempt < max_attempts:
@@ -36,7 +38,7 @@ def wait_for_invalidation(cloudfront, distribution_id, invalidation_id,
         raise RuntimeError(f"Invalidation did not complete after {max_attempts} attempts")
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--fqdn", required=True)
     parser.add_argument("--region", required=True)
