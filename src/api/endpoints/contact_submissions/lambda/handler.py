@@ -20,7 +20,7 @@ def is_test_mode() -> bool:
     return _test_mode['enabled']
 
 
-def set_test_mode(enabled: bool):
+def set_test_mode(enabled: bool) -> None:
     _test_mode['enabled'] = enabled
 
 
@@ -33,13 +33,13 @@ def get_header_case_insensitive(headers: dict, header_name: str) -> str:
     return ''
 
 
-def get_ssm_client():
+def get_ssm_client() -> Any:
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')
     return _clients['ssm']
 
 
-def get_ses_client():
+def get_ses_client() -> Any:
     if 'ses' not in _clients:
         _clients['ses'] = boto3.client('ses')
     return _clients['ses']
@@ -235,7 +235,7 @@ ROUTE_MAP = {
 }
 
 
-def lambda_handler(event, _context):
+def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     logger.info("Received contact request: %s", json.dumps(event))
 
     headers = event.get('headers', {})

@@ -27,7 +27,7 @@ ROUTE_MAP = {
 }
 
 
-def lambda_handler(event, _context):
+def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     path = event.get('path', '')
     method = event.get('httpMethod', '')
     route_key = (path, method)

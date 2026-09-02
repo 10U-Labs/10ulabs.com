@@ -13,7 +13,7 @@ logger.setLevel(logging.INFO)
 _clients: Dict[str, Any] = {}
 
 
-def get_dynamodb_client():
+def get_dynamodb_client() -> Any:
     if 'dynamodb' not in _clients:
         _clients['dynamodb'] = boto3.client('dynamodb')
     return _clients['dynamodb']
@@ -157,7 +157,7 @@ def handle_events(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
-def lambda_handler(event, _context):
+def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     logger.info("Received API request: %s", json.dumps(event))
 
     method = event.get('httpMethod', '')

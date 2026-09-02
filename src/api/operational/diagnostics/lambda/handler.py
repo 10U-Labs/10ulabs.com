@@ -18,7 +18,7 @@ ROUTE_MAP = {
 }
 
 
-def lambda_handler(event, _context):
+def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     method = event.get('httpMethod', '')
     if method == 'OPTIONS':
         return {

@@ -1,4 +1,7 @@
-def lambda_handler(event, _context):
+from typing import Any, Dict
+
+
+def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     request = event["Records"][0]["cf"]["request"]
     host = request["headers"].get("host", [{}])[0].get("value", "")
     uri = request["uri"]

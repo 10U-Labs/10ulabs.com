@@ -1,7 +1,8 @@
 import json
+from typing import Any, Dict
 
 
-def lambda_handler(event, _context):
+def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     return {
         'statusCode': 404,
         'headers': {

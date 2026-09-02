@@ -1,9 +1,10 @@
 import os
 from datetime import datetime, timezone
+from typing import Any, Dict
 import boto3
 
 
-def lambda_handler(_event, _context):
+def lambda_handler(_event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     dynamodb = boto3.client('dynamodb')
     table_arn = os.environ['DYNAMODB_TABLE_ARN']
     s3_bucket = os.environ['S3_BUCKET']
