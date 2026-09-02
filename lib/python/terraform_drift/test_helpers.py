@@ -11,9 +11,9 @@ from terraform_drift import (
 def create_orphaned_resource_tests(
     terraform_dir: Path,
     region: str = "us-east-2",
-):
+) -> type:
     class TestOrphanedResources:
-        def test_terraform_initialized(self):
+        def test_terraform_initialized(self) -> None:
             terraform_lock = terraform_dir / ".terraform.lock.hcl"
             print(f"\nChecking terraform initialization: {terraform_dir}")
             assert terraform_lock.exists(), (
@@ -22,7 +22,7 @@ def create_orphaned_resource_tests(
             )
             print("  Terraform is initialized")
 
-        def test_no_orphaned_resources(self):
+        def test_no_orphaned_resources(self) -> None:
             print("\n" + "=" * 60)
             print("Running terraform plan to detect resources to create...")
             print(f"  Directory: {terraform_dir}")

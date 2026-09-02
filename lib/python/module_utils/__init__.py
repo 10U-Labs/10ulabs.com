@@ -2,7 +2,7 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, Callable
 
 
 def load_module_from_path(module_name: str, path: Path) -> ModuleType:
@@ -20,7 +20,7 @@ def reset_module_state(module: ModuleType, **state_vars: Any) -> None:
             setattr(module, var_name, default_value)
 
 
-def create_lambda_loader(lambdas_dir: Path):
+def create_lambda_loader(lambdas_dir: Path) -> Callable[[str, str], ModuleType]:
     def load_lambda_module(filename: str, module_name: str) -> ModuleType:
         handler_path = lambdas_dir / filename
         lambdas_dir_str = str(lambdas_dir)
