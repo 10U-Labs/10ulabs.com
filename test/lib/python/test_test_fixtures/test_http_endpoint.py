@@ -131,4 +131,4 @@ def test_skip_if_endpoint_not_deployed_skips_when_it_is_not() -> None:
 def test_skip_if_endpoint_not_deployed_returns_when_it_is() -> None:
     with patch("test_fixtures.http_endpoint.requests.get") as get:
         get.return_value = _reply()
-        assert skip_if_endpoint_not_deployed(BASE, PATH) is None
+        skip_if_endpoint_not_deployed(BASE, PATH)

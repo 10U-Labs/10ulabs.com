@@ -98,7 +98,7 @@ class TestWaitForInvalidation:
         cloudfront.get_invalidation.return_value = {
             "Invalidation": {"Status": "Completed"}
         }
-        assert wait_for_invalidation(cloudfront, "E1", "I1") is None
+        wait_for_invalidation(cloudfront, "E1", "I1")
 
     def test_sleeps_the_poll_interval_between_two_status_reads(self) -> None:
         cloudfront = MagicMock()

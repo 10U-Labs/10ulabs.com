@@ -26,7 +26,7 @@ class TestCheckLambdaFunctionExistsSuccess:
         mock_client.get_function.return_value = {
             "Configuration": {"FunctionName": "MyFunction"}
         }
-        assert check_lambda_function_exists(mock_client, "MyFunction", "terraform/path") is None
+        check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
 
     def test_calls_get_function_with_function_name(self) -> None:
         mock_client = MagicMock()
@@ -74,7 +74,7 @@ class TestCheckIAMRoleExistsSuccess:
     def test_does_not_raise_when_role_exists(self) -> None:
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
-        assert check_iam_role_exists(mock_client, "MyRole", "terraform/path") is None
+        check_iam_role_exists(mock_client, "MyRole", "terraform/path")
 
     def test_calls_get_role_with_role_name(self) -> None:
         mock_client = MagicMock()
@@ -110,7 +110,7 @@ class TestCheckLambdaRoleHasPolicySuccess:
         mock_client.list_role_policies.return_value = {
             "PolicyNames": ["MyPolicy", "OtherPolicy"]
         }
-        assert check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy") is None
+        check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
 
     def test_calls_list_role_policies_with_role_name(self) -> None:
         mock_client = MagicMock()
@@ -271,7 +271,7 @@ class TestHandleECRAuthorizationErrorAccessDenied:
 
 def test_handle_ecr_authorization_error_repository_not_found() -> None:
     error = create_client_error("RepositoryNotFoundException")
-    assert handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo") is None
+    handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo")
 
 
 def test_handle_ecr_authorization_error_other_errors() -> None:
@@ -284,7 +284,7 @@ class TestCheckS3HeadBucketPermissionSuccess:
     def test_does_not_raise_when_bucket_accessible(self) -> None:
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
-        assert check_s3_head_bucket_permission(mock_client, "my-bucket") is None
+        check_s3_head_bucket_permission(mock_client, "my-bucket")
 
     def test_calls_head_bucket_with_bucket_name(self) -> None:
         mock_client = MagicMock()
@@ -316,7 +316,7 @@ class TestCheckS3HeadBucketPermissionAccessDenied:
 def test_check_s3_head_bucket_permission_bucket_not_found() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("404")
-    assert check_s3_head_bucket_permission(mock_client, "my-bucket") is None
+    check_s3_head_bucket_permission(mock_client, "my-bucket")
 
 
 def test_check_s3_head_bucket_permission_other_errors() -> None:
@@ -328,7 +328,7 @@ def test_check_s3_head_bucket_permission_other_errors() -> None:
 
 def test_skip_if_api_gateway_unavailable_available() -> None:
     api_gateway_info = {"id": "abc123", "exists": True}
-    assert skip_if_api_gateway_unavailable(api_gateway_info) is None
+    skip_if_api_gateway_unavailable(api_gateway_info)
 
 
 def test_skip_if_api_gateway_unavailable_no_id() -> None:
@@ -347,9 +347,9 @@ class TestCheckStateFileReadableSuccess:
     def test_does_not_raise_when_file_readable(self) -> None:
         mock_client = MagicMock()
         mock_client.head_object.return_value = {}
-        assert check_state_file_readable(
-            mock_client, "my-bucket", "state/terraform.tfstate"
-        ) is None
+        check_state_file_readable(
+                    mock_client, "my-bucket", "state/terraform.tfstate"
+                )
 
     def test_calls_head_object_with_bucket_and_key(self) -> None:
         mock_client = MagicMock()
@@ -396,7 +396,7 @@ def test_check_state_file_readable_other_errors() -> None:
 
 def test_assert_api_gateway_exists_success() -> None:
     api_gateway_info = {"id": "abc123", "exists": True}
-    assert assert_api_gateway_exists(api_gateway_info) is None
+    assert_api_gateway_exists(api_gateway_info)
 
 
 def test_assert_api_gateway_exists_no_id() -> None:

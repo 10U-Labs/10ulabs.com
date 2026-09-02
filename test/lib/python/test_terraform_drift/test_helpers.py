@@ -38,7 +38,7 @@ class TestTerraformInitialized:
         TestClass = create_orphaned_resource_tests(tmp_path)
         instance = TestClass()
 
-        assert instance.test_terraform_initialized() is None
+        instance.test_terraform_initialized()
 
     def test_fails_when_lock_file_missing(self, tmp_path: Path) -> None:
         TestClass = create_orphaned_resource_tests(tmp_path)
@@ -62,7 +62,7 @@ def test_no_orphaned_resources_no_creates(mock_get_planned: MagicMock) -> None:
     TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
     instance = TestClass()
 
-    assert instance.test_no_orphaned_resources() is None
+    instance.test_no_orphaned_resources()
 
 
 def _setup_single_resource_mock(
@@ -91,7 +91,7 @@ class TestNoOrphanedResourcesNoOrphans:
         TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
         instance = TestClass()
 
-        assert instance.test_no_orphaned_resources() is None
+        instance.test_no_orphaned_resources()
 
     @patch("terraform_drift.test_helpers.check_resource_exists")
     @patch("terraform_drift.test_helpers.get_planned_creates")

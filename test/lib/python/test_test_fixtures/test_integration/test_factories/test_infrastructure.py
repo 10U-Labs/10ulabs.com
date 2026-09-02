@@ -207,7 +207,7 @@ class TestCreateWwwCommonS3ExistenceTestsBucketNameOutput:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
         outputs = {"bucket_name": "my-bucket"}
-        assert instance.test_bucket_name_output_exists(outputs) is None
+        instance.test_bucket_name_output_exists(outputs)
 
     def test_fails_when_output_missing(self) -> None:
         test_class = create_www_common_s3_existence_tests()
@@ -331,7 +331,7 @@ class TestWwwCommonS3ExistenceS3BucketExistsExecution:
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
         outputs = {"bucket_name": "my-bucket"}
-        assert instance.test_s3_bucket_exists(mock_client, outputs) is None
+        instance.test_s3_bucket_exists(mock_client, outputs)
 
     def test_s3_bucket_exists_skips_when_no_output(self) -> None:
         test_class = create_www_common_s3_existence_tests()
@@ -368,7 +368,7 @@ class TestSqsFifoQueueTestsExecution:
         mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "my-queue.fifo"
-        assert instance.test_queue_exists(mock_client, mock_request) is None
+        instance.test_queue_exists(mock_client, mock_request)
 
     def test_queue_exists_skips_on_non_existent(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name", fail_on_missing=False)
@@ -414,7 +414,7 @@ class TestSqsFifoQueueTestsExecution:
         }
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "my-queue.fifo"
-        assert instance.test_queue_is_fifo(mock_client, mock_request) is None
+        instance.test_queue_is_fifo(mock_client, mock_request)
 
     def test_queue_is_fifo_fails_when_not_fifo(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name")
@@ -445,7 +445,7 @@ class TestSqsFifoQueueTestsExecution:
         }
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = "my-queue.fifo"
-        assert instance.test_queue_has_deduplication(mock_client, mock_request) is None
+        instance.test_queue_has_deduplication(mock_client, mock_request)
 
     def test_queue_has_deduplication_fails_when_disabled(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name")
@@ -519,7 +519,7 @@ class TestLogGroupConfigurationExecution:
         instance = test_class()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 7}
-        assert instance.test_handler_log_group_has_retention_set(mock_request) is None
+        instance.test_handler_log_group_has_retention_set(mock_request)
 
     def test_log_group_has_retention_set_fails_when_none(self) -> None:
         test_class = create_log_group_configuration_tests("log_group_fixture")
@@ -536,7 +536,7 @@ class TestLogGroupConfigurationExecution:
         instance = test_class()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 7}
-        assert instance.test_handler_log_group_retention_is_expected(mock_request) is None
+        instance.test_handler_log_group_retention_is_expected(mock_request)
 
     def test_log_group_retention_is_expected_fails_when_different(self) -> None:
         test_class = create_log_group_configuration_tests("log_group_fixture", expected_retention=7)

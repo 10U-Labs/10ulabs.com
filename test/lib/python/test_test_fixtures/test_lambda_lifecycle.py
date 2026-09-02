@@ -263,12 +263,12 @@ class TestCreateLambdaLifecycleTestsDefaultTfFiles:
         tf_file.write_text('resource "aws_s3_bucket" "b" {}')
         TestClass = create_lambda_lifecycle_tests(tmp_path)
         instance = TestClass()
-        assert instance.test_lambda_with_env_vars_has_lifecycle_rule() is None
+        instance.test_lambda_with_env_vars_has_lifecycle_rule()
 
     def test_default_creates_single_tf_path(self, tmp_path: Path) -> None:
         TestClass = create_lambda_lifecycle_tests(tmp_path)
         instance = TestClass()
-        assert instance.test_terraform_files_configured() is None
+        instance.test_terraform_files_configured()
 
 
 class TestCreateLambdaLifecycleTestsCustomTfFiles:
@@ -277,14 +277,14 @@ class TestCreateLambdaLifecycleTestsCustomTfFiles:
         custom_tf.write_text('resource "aws_s3_bucket" "b" {}')
         TestClass = create_lambda_lifecycle_tests(tmp_path, tf_files=["custom.tf"])
         instance = TestClass()
-        assert instance.test_lambda_with_env_vars_has_lifecycle_rule() is None
+        instance.test_lambda_with_env_vars_has_lifecycle_rule()
 
     def test_accepts_multiple_tf_files(self, tmp_path: Path) -> None:
         for name in ["first.tf", "second.tf"]:
             (tmp_path / name).write_text('resource "aws_s3_bucket" "b" {}')
         TestClass = create_lambda_lifecycle_tests(tmp_path, tf_files=["first.tf", "second.tf"])
         instance = TestClass()
-        assert instance.test_terraform_files_configured() is None
+        instance.test_terraform_files_configured()
 
 
 class TestCreateLambdaLifecycleTestsTestMethodBehavior:
@@ -293,7 +293,7 @@ class TestCreateLambdaLifecycleTestsTestMethodBehavior:
         tf_file.write_text(LAMBDA_WITH_LIFECYCLE_TF)
         TestClass = create_lambda_lifecycle_tests(tmp_path)
         instance = TestClass()
-        assert instance.test_lambda_with_env_vars_has_lifecycle_rule() is None
+        instance.test_lambda_with_env_vars_has_lifecycle_rule()
 
     def test_lifecycle_test_fails_for_invalid_lambda(self, tmp_path: Path) -> None:
         tf_content = '''
@@ -314,17 +314,17 @@ resource "aws_lambda_function" "my_lambda" {
     def test_lifecycle_test_skips_nonexistent_files(self, tmp_path: Path) -> None:
         TestClass = create_lambda_lifecycle_tests(tmp_path, tf_files=["nonexistent.tf"])
         instance = TestClass()
-        assert instance.test_lambda_with_env_vars_has_lifecycle_rule() is None
+        instance.test_lambda_with_env_vars_has_lifecycle_rule()
 
     def test_configured_test_passes_with_default_config(self, tmp_path: Path) -> None:
         TestClass = create_lambda_lifecycle_tests(tmp_path)
         instance = TestClass()
-        assert instance.test_terraform_files_configured() is None
+        instance.test_terraform_files_configured()
 
     def test_configured_test_passes_with_custom_files(self, tmp_path: Path) -> None:
         TestClass = create_lambda_lifecycle_tests(tmp_path, tf_files=["a.tf", "b.tf"])
         instance = TestClass()
-        assert instance.test_terraform_files_configured() is None
+        instance.test_terraform_files_configured()
 
     def test_checks_all_configured_tf_files(self, tmp_path: Path) -> None:
         good_tf = '''

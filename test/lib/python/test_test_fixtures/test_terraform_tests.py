@@ -131,7 +131,7 @@ class TestCreateRemoteStateContractTests:
         lambda_file.write_text("# Lambda configuration")
         TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        assert instance.test_lambda_file_exists() is None
+        instance.test_lambda_file_exists()
 
     def test_lambda_file_exists_test_fails_when_file_missing(self, tmp_path: Path) -> None:
         TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
@@ -150,10 +150,7 @@ class TestCreateRemoteStateContractTests:
         mock_outputs.return_value = {"api_gateway_id"}
         TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        assert (
-            instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs()
-            is None
-        )
+        instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs()
 
     @patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
     def test_remote_state_references_test_fails_when_missing(
@@ -232,7 +229,7 @@ class TestCreateRemoteStateConfigTests:
         data_file.write_text("# Data configuration")
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        assert instance.test_data_tf_exists() is None
+        instance.test_data_tf_exists()
 
     def test_data_tf_exists_test_fails_when_file_missing(self, tmp_path: Path) -> None:
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
@@ -245,7 +242,7 @@ class TestCreateRemoteStateConfigTests:
         data_file.write_text('bucket = module.common.name_for_terraform_state_bucket')
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        assert instance.test_no_hardcoded_bucket_name() is None
+        instance.test_no_hardcoded_bucket_name()
 
     def test_no_hardcoded_bucket_fails_with_terraform_state_pattern(self, tmp_path: Path) -> None:
         data_file = tmp_path / "data.tf"
@@ -276,7 +273,7 @@ class TestCreateRemoteStateConfigTests:
         data_file.write_text('region = local.aws_region')
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        assert instance.test_no_hardcoded_region() is None
+        instance.test_no_hardcoded_region()
 
     def test_no_hardcoded_region_fails_with_hardcoded_region(self, tmp_path: Path) -> None:
         data_file = tmp_path / "data.tf"
@@ -299,7 +296,7 @@ class TestCreateRemoteStateConfigTests:
         data_file.write_text('# No remote state config')
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        assert instance.test_uses_correct_state_key_pattern() is None
+        instance.test_uses_correct_state_key_pattern()
 
     def test_state_key_passes_with_correct_api_key(self, tmp_path: Path) -> None:
         data_file = tmp_path / "data.tf"
@@ -310,7 +307,7 @@ terraform_remote_state "api" {
 ''')
         TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
         instance = TestClass()
-        assert instance.test_uses_correct_state_key_pattern() is None
+        instance.test_uses_correct_state_key_pattern()
 
     def test_state_key_fails_with_wrong_api_key(self, tmp_path: Path) -> None:
         data_file = tmp_path / "data.tf"
@@ -358,10 +355,7 @@ resource "aws_lambda_function" "my_func" {
             mock_outputs.return_value = {"api_endpoint", "api_gateway_id"}
             TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
             instance = TestClass()
-            assert (
-                instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs()
-                is None
-            )
+            instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs()
 
     def test_fails_when_referenced_output_missing_from_api_common_routing_outputs(
         self,

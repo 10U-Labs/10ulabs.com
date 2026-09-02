@@ -12,7 +12,7 @@ class TestLayer2IAMAuthorizationTestsExecution:
         instance = integration_module.Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {}}
-        assert instance.test_can_call_iam_get_role_api(mock_client, "MyRole") is None
+        instance.test_can_call_iam_get_role_api(mock_client, "MyRole")
 
     def test_can_call_iam_get_role_api_skips_when_no_role_name(self) -> None:
         instance = integration_module.Layer2IAMAuthorizationTests()
@@ -31,7 +31,7 @@ class TestLayer2IAMAuthorizationTestsExecution:
         instance = integration_module.Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
         mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
-        assert instance.test_can_call_iam_get_role_api(mock_client, "MyRole") is None
+        instance.test_can_call_iam_get_role_api(mock_client, "MyRole")
 
     def test_can_call_iam_get_role_api_reraises_other_errors(self) -> None:
         instance = integration_module.Layer2IAMAuthorizationTests()
@@ -44,7 +44,7 @@ class TestLayer2IAMAuthorizationTestsExecution:
         instance = integration_module.Layer2IAMAuthorizationTests()
         mock_client = MagicMock()
         mock_client.list_attached_role_policies.return_value = {"AttachedPolicies": []}
-        assert instance.test_can_list_attached_policies(mock_client, "MyRole") is None
+        instance.test_can_list_attached_policies(mock_client, "MyRole")
 
     def test_can_list_attached_policies_skips_when_no_role_name(self) -> None:
         instance = integration_module.Layer2IAMAuthorizationTests()
@@ -67,7 +67,7 @@ class TestLayer2IAMAuthorizationTestsExecution:
         mock_client.list_attached_role_policies.side_effect = create_client_error(
             "NoSuchEntity"
         )
-        assert instance.test_can_list_attached_policies(mock_client, "MyRole") is None
+        instance.test_can_list_attached_policies(mock_client, "MyRole")
 
     def test_can_list_attached_policies_reraises_other_errors(self) -> None:
         instance = integration_module.Layer2IAMAuthorizationTests()
@@ -84,7 +84,7 @@ class TestLayer2S3AuthorizationTestsExecution:
         instance = integration_module.Layer2S3AuthorizationTests()
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
-        assert instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket") is None
+        instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket")
 
     def test_can_call_s3_head_bucket_api_fails_on_403(self) -> None:
         instance = integration_module.Layer2S3AuthorizationTests()
@@ -97,7 +97,7 @@ class TestLayer2S3AuthorizationTestsExecution:
         instance = integration_module.Layer2S3AuthorizationTests()
         mock_client = MagicMock()
         mock_client.head_bucket.side_effect = create_client_error("404")
-        assert instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket") is None
+        instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket")
 
     def test_can_call_s3_head_bucket_api_reraises_other_errors(self) -> None:
         instance = integration_module.Layer2S3AuthorizationTests()
@@ -108,7 +108,7 @@ class TestLayer2S3AuthorizationTestsExecution:
 
     def test_state_bucket_name_configured_success(self) -> None:
         instance = integration_module.Layer2S3AuthorizationTests()
-        assert instance.test_state_bucket_name_configured("my-state-bucket") is None
+        instance.test_state_bucket_name_configured("my-state-bucket")
 
     def test_state_bucket_name_configured_fails_when_empty(self) -> None:
         instance = integration_module.Layer2S3AuthorizationTests()
@@ -121,7 +121,7 @@ class TestLayer4TerraformStateExistenceTestsExecution:
         instance = integration_module.Layer4TerraformStateExistenceTests()
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
-        assert instance.test_state_bucket_exists(mock_client, "my-state-bucket") is None
+        instance.test_state_bucket_exists(mock_client, "my-state-bucket")
 
     def test_state_bucket_exists_fails_on_404(self) -> None:
         instance = integration_module.Layer4TerraformStateExistenceTests()
@@ -139,7 +139,7 @@ class TestLayer4TerraformStateExistenceTestsExecution:
 
     def test_state_bucket_has_name_success(self) -> None:
         instance = integration_module.Layer4TerraformStateExistenceTests()
-        assert instance.test_state_bucket_has_name("my-state-bucket") is None
+        instance.test_state_bucket_has_name("my-state-bucket")
 
     def test_state_bucket_has_name_fails_when_empty(self) -> None:
         instance = integration_module.Layer4TerraformStateExistenceTests()
@@ -152,7 +152,7 @@ class TestLayer6S3CapabilityTestsExecution:
         instance = integration_module.Layer6S3CapabilityTests()
         mock_client = MagicMock()
         mock_client.list_objects_v2.return_value = {"Contents": []}
-        assert instance.test_can_list_bucket_objects(mock_client, "my-bucket") is None
+        instance.test_can_list_bucket_objects(mock_client, "my-bucket")
 
     def test_can_list_bucket_objects_fails_on_error(self) -> None:
         instance = integration_module.Layer6S3CapabilityTests()
@@ -165,7 +165,7 @@ class TestLayer6S3CapabilityTestsExecution:
         instance = integration_module.Layer6S3CapabilityTests()
         mock_client = MagicMock()
         mock_client.get_bucket_location.return_value = {"LocationConstraint": "us-west-2"}
-        assert instance.test_can_get_bucket_location(mock_client, "my-bucket") is None
+        instance.test_can_get_bucket_location(mock_client, "my-bucket")
 
     def test_can_get_bucket_location_fails_on_error(self) -> None:
         instance = integration_module.Layer6S3CapabilityTests()
@@ -180,7 +180,7 @@ class TestLayer4IAMRoleExistenceTestsExecution:
         instance = integration_module.Layer4IAMRoleExistenceTests()
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
-        assert instance.test_iam_role_exists(mock_client, "MyRole") is None
+        instance.test_iam_role_exists(mock_client, "MyRole")
 
     def test_iam_role_exists_skips_when_no_role_name(self) -> None:
         instance = integration_module.Layer4IAMRoleExistenceTests()
@@ -204,7 +204,7 @@ class TestLayer4IAMRoleExistenceTestsExecution:
 
     def test_current_role_name_is_configured_success(self) -> None:
         instance = integration_module.Layer4IAMRoleExistenceTests()
-        assert instance.test_current_role_name_is_configured("MyRole") is None
+        instance.test_current_role_name_is_configured("MyRole")
 
     def test_current_role_name_is_configured_fails_when_empty(self) -> None:
         instance = integration_module.Layer4IAMRoleExistenceTests()
@@ -219,7 +219,7 @@ class TestLayer5IAMConfigurationTestsExecution:
         mock_client.list_attached_role_policies.return_value = {
             "AttachedPolicies": [{"PolicyName": "AdministratorAccess", "PolicyArn": "arn:..."}]
         }
-        assert instance.test_role_has_administrator_access_policy(mock_client, "MyRole") is None
+        instance.test_role_has_administrator_access_policy(mock_client, "MyRole")
 
     def test_role_has_administrator_access_policy_skips_when_no_role(self) -> None:
         instance = integration_module.Layer5IAMConfigurationTests()
@@ -256,7 +256,7 @@ class TestLayer5IAMConfigurationTestsExecution:
         mock_client.list_attached_role_policies.return_value = {
             "AttachedPolicies": [{"PolicyName": "SomePolicy", "PolicyArn": "arn:..."}]
         }
-        assert instance.test_role_has_at_least_one_policy(mock_client, "MyRole") is None
+        instance.test_role_has_at_least_one_policy(mock_client, "MyRole")
 
     def test_role_has_at_least_one_policy_skips_when_no_role(self) -> None:
         instance = integration_module.Layer5IAMConfigurationTests()

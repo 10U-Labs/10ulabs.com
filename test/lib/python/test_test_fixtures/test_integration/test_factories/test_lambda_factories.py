@@ -49,7 +49,7 @@ class TestCreateLambdaApiGatewayWiringTestsExecution:
             "Policy": '{"Statement":[{"Principal":{"Service":"apigateway.amazonaws.com"}}]}'
         }
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_has_api_gateway_permission(mock_client, config) is None
+        instance.test_handler_has_api_gateway_permission(mock_client, config)
 
     def test_handler_has_api_gateway_permission_uses_default(self) -> None:
         test_class = create_lambda_api_gateway_wiring_tests("func_key", "DefaultFunc")
@@ -97,7 +97,7 @@ class TestCreateLambdaApiGatewayWiringTestsExecution:
             "Configuration": {"Role": "arn:aws:iam::123:role/MyFunctionServiceRole"}
         }
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_has_role_attached(mock_client, config) is None
+        instance.test_handler_has_role_attached(mock_client, config)
 
     def test_handler_has_role_attached_fails_when_no_role(self) -> None:
         test_class = create_lambda_api_gateway_wiring_tests("func_key", "DefaultFunc")
@@ -116,7 +116,7 @@ class TestCreateLambdaApiGatewayWiringTestsExecution:
             "Configuration": {"Role": "arn:aws:iam::123:role/MyFunctionServiceRole"}
         }
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_role_follows_naming_pattern(mock_client, config) is None
+        instance.test_handler_role_follows_naming_pattern(mock_client, config)
 
     def test_handler_role_follows_naming_pattern_fails_when_pattern_mismatch(self) -> None:
         test_class = create_lambda_api_gateway_wiring_tests("func_key", "DefaultFunc")
@@ -179,19 +179,19 @@ class TestCreateLambdaIamWiringTestsExecution:
         test_class = create_lambda_iam_wiring_tests("func_key", "DefaultFunc")
         instance = test_class()
         config = {"func_key": "MyFunction"}
-        assert instance.test_config_has_function_name(config) is None
+        instance.test_config_has_function_name(config)
 
     def test_config_has_function_name_uses_default(self) -> None:
         test_class = create_lambda_iam_wiring_tests("func_key", "DefaultFunc")
         instance = test_class()
         config: Dict[str, Any] = {}
-        assert instance.test_config_has_function_name(config) is None
+        instance.test_config_has_function_name(config)
 
     def test_service_role_name_follows_convention_success(self) -> None:
         test_class = create_lambda_iam_wiring_tests("func_key", "DefaultFunc")
         instance = test_class()
         config = {"func_key": "MyFunction"}
-        assert instance.test_service_role_name_follows_convention(config) is None
+        instance.test_service_role_name_follows_convention(config)
 
     def test_handler_role_has_basic_execution_policy_success(self) -> None:
         test_class = create_lambda_iam_wiring_tests(
@@ -286,14 +286,14 @@ class TestCreateLambdaExecutionRoleWiringTestsExecution:
         instance = test_class()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
-        assert instance.test_lambda_has_execution_role_key(mock_request) is None
+        instance.test_lambda_has_execution_role_key(mock_request)
 
     def test_lambda_has_execution_role_value_success(self) -> None:
         test_class = create_lambda_execution_role_wiring_tests("lambda_config")
         instance = test_class()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
-        assert instance.test_lambda_has_execution_role_value(mock_request) is None
+        instance.test_lambda_has_execution_role_value(mock_request)
 
     def test_lambda_has_execution_role_value_fails_when_empty(self) -> None:
         test_class = create_lambda_execution_role_wiring_tests("lambda_config")
@@ -308,7 +308,7 @@ class TestCreateLambdaExecutionRoleWiringTestsExecution:
         instance = test_class()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
-        assert instance.test_lambda_role_starts_with_iam_arn(mock_request) is None
+        instance.test_lambda_role_starts_with_iam_arn(mock_request)
 
     def test_lambda_role_starts_with_iam_arn_fails_when_invalid(self) -> None:
         test_class = create_lambda_execution_role_wiring_tests("lambda_config")
@@ -323,7 +323,7 @@ class TestCreateLambdaExecutionRoleWiringTestsExecution:
         instance = test_class()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
-        assert instance.test_lambda_role_contains_role_path(mock_request) is None
+        instance.test_lambda_role_contains_role_path(mock_request)
 
     def test_lambda_role_contains_role_path_fails_when_missing(self) -> None:
         test_class = create_lambda_execution_role_wiring_tests("lambda_config")
@@ -340,7 +340,7 @@ class TestCreateLambdaExecutionRoleWiringTestsExecution:
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
-        assert instance.test_lambda_role_exists(mock_client, mock_request) is None
+        instance.test_lambda_role_exists(mock_client, mock_request)
 
     def test_lambda_role_exists_fails_when_no_role_name_extracted(self) -> None:
         test_class = create_lambda_execution_role_wiring_tests("lambda_config")
@@ -367,7 +367,7 @@ class TestCreateLambdaExecutionRoleWiringTestsExecution:
         }
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"Role": "arn:aws:iam::123:role/MyRole"}
-        assert instance.test_lambda_role_can_be_assumed_by_lambda(mock_client, mock_request) is None
+        instance.test_lambda_role_can_be_assumed_by_lambda(mock_client, mock_request)
 
     def test_lambda_role_can_be_assumed_by_lambda_skips_when_no_role_name(self) -> None:
         test_class = create_lambda_execution_role_wiring_tests("lambda_config")
@@ -448,7 +448,7 @@ class TestCreateLambdaExistenceTestsExecution:
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyFunctionServiceRole"}}
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_iam_role_exists(mock_client, config) is None
+        instance.test_handler_iam_role_exists(mock_client, config)
 
     def test_handler_log_group_exists_success(self) -> None:
         test_class = create_lambda_existence_tests(
@@ -479,7 +479,7 @@ class TestCreateLambdaExistenceTestsExecution:
         mock_client = MagicMock()
         mock_client.get_function.return_value = {"Configuration": {"FunctionName": "MyFunction"}}
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_lambda_exists(mock_client, config) is None
+        instance.test_handler_lambda_exists(mock_client, config)
 
     def test_handler_iam_role_exists_fails_when_no_such_entity(self) -> None:
         test_class = create_lambda_existence_tests("func_key", "DefaultFunc", "tf/path")
@@ -551,7 +551,7 @@ class TestCreateLambdaConfigurationTestsExecution:
             "Configuration": {"Runtime": "python3.13"}
         }
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_uses_python_runtime(mock_client, config) is None
+        instance.test_handler_uses_python_runtime(mock_client, config)
 
     def test_handler_uses_python_runtime_fails_when_different(self) -> None:
         test_class = create_lambda_configuration_tests(
@@ -576,7 +576,7 @@ class TestCreateLambdaConfigurationTestsExecution:
             "Configuration": {"Architectures": ["arm64"]}
         }
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_uses_expected_architecture(mock_client, config) is None
+        instance.test_handler_uses_expected_architecture(mock_client, config)
 
     def test_handler_uses_expected_architecture_fails_when_different(self) -> None:
         test_class = create_lambda_configuration_tests(
@@ -601,7 +601,7 @@ class TestCreateLambdaConfigurationTestsExecution:
             "Configuration": {"Handler": "handler.lambda_handler"}
         }
         config = {"func_key": "MyFunction"}
-        assert instance.test_handler_has_handler_configured(mock_client, config) is None
+        instance.test_handler_has_handler_configured(mock_client, config)
 
     def test_handler_has_handler_configured_fails_when_different(self) -> None:
         test_class = create_lambda_configuration_tests(
@@ -657,7 +657,7 @@ class TestCreateDeployedResourceExistenceTestsExecution:
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyFunctionServiceRole"}}
         config = {"func_key": "MyFunction"}
-        assert existence_tests.test_handler_role_exists(mock_client, config) is None
+        existence_tests.test_handler_role_exists(mock_client, config)
 
     def test_iam_role_exists_fails_when_not_found(self, existence_tests: Any) -> None:
         mock_client = MagicMock()
@@ -675,7 +675,7 @@ class TestCreateDeployedResourceExistenceTestsExecution:
         mock_client = MagicMock()
         mock_client.get_function.return_value = {"Configuration": {"FunctionName": "MyFunction"}}
         config = {"func_key": "MyFunction"}
-        assert existence_tests.test_handler_function_exists(mock_client, config) is None
+        existence_tests.test_handler_function_exists(mock_client, config)
 
     def test_lambda_function_exists_fails_when_not_found(self, existence_tests: Any) -> None:
         mock_client = MagicMock()
