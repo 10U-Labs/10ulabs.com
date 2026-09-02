@@ -63,6 +63,25 @@ def create_www_common_s3_existence_tests() -> type:
     return TestWWWCommonS3Existence
 
 
+def _queue_attribute(
+    sqs_client: Any,
+    queue_name: str,
+    attribute: str,
+    description: str
+) -> Any:
+    try:
+        queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
+        attrs = sqs_client.get_queue_attributes(
+            QueueUrl=queue_url,
+            AttributeNames=[attribute]
+        )
+    except ClientError as err:
+        if err.response["Error"]["Code"] == "AWS.SimpleQueueService.NonExistentQueue":
+            pytest.skip(f"{description} {queue_name} not deployed yet")
+        raise
+    return attrs.get("Attributes", {}).get(attribute)
+
+
 def create_sqs_fifo_queue_tests(
     queue_name_fixture: str,
     queue_description: str = "queue",
@@ -92,22 +111,13 @@ def create_sqs_fifo_queue_tests(
 
         def test_queue_is_fifo(self, sqs_client: Any, request: pytest.FixtureRequest) -> None:
             queue_name = request.getfixturevalue(queue_name_fixture)
-            try:
-                queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-                attrs = sqs_client.get_queue_attributes(
-                    QueueUrl=queue_url,
-                    AttributeNames=["FifoQueue"]
-                )
-
-                fifo_attr = attrs.get("Attributes", {}).get("FifoQueue")
-                assert fifo_attr == "true", (
-                    f"{queue_description} {queue_name} FifoQueue attribute is "
-                    f"'{fifo_attr}', expected 'true'"
-                )
-            except ClientError as err:
-                if err.response["Error"]["Code"] == "AWS.SimpleQueueService.NonExistentQueue":
-                    pytest.skip(f"{queue_description} {queue_name} not deployed yet")
-                raise
+            fifo_attr = _queue_attribute(
+                sqs_client, queue_name, "FifoQueue", queue_description
+            )
+            assert fifo_attr == "true", (
+                f"{queue_description} {queue_name} FifoQueue attribute is "
+                f"'{fifo_attr}', expected 'true'"
+            )
 
         def test_queue_has_deduplication(
             self,
@@ -115,22 +125,13 @@ def create_sqs_fifo_queue_tests(
             request: pytest.FixtureRequest
         ) -> None:
             queue_name = request.getfixturevalue(queue_name_fixture)
-            try:
-                queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-                attrs = sqs_client.get_queue_attributes(
-                    QueueUrl=queue_url,
-                    AttributeNames=["ContentBasedDeduplication"]
-                )
-
-                dedup_attr = attrs.get("Attributes", {}).get("ContentBasedDeduplication")
-                assert dedup_attr == "true", (
-                    f"{queue_description} {queue_name} ContentBasedDeduplication is "
-                    f"'{dedup_attr}', expected 'true'"
-                )
-            except ClientError as err:
-                if err.response["Error"]["Code"] == "AWS.SimpleQueueService.NonExistentQueue":
-                    pytest.skip(f"{queue_description} {queue_name} not deployed yet")
-                raise
+            dedup_attr = _queue_attribute(
+                sqs_client, queue_name, "ContentBasedDeduplication", queue_description
+            )
+            assert dedup_attr == "true", (
+                f"{queue_description} {queue_name} ContentBasedDeduplication is "
+                f"'{dedup_attr}', expected 'true'"
+            )
 
     return TestSQSFIFOQueue
 

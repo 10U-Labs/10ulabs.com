@@ -1,7 +1,24 @@
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import requests
+
+
+_ASSET_PATTERNS = {
+    "js": r'src="(/assets/[^"]+\.js)"',
+    "css": r'href="(/assets/[^"]+\.css)"',
+}
+
+
+def _linked_asset_response(
+    website_response: requests.Response,
+    website_url: str,
+    kind: str
+) -> Optional[requests.Response]:
+    match = re.search(_ASSET_PATTERNS[kind], website_response.text)
+    if match is None:
+        return None
+    return requests.get(f"{website_url}{match.group(1)}", timeout=30)
 
 
 def test_website_redirects_http_to_https(config: Dict[str, Any]) -> None:
@@ -120,11 +137,8 @@ def test_assets_js_returns_200_status(
     website_response: requests.Response,
     website_url: str
 ) -> None:
-    html = website_response.text
-    js_match = re.search(r'src="(/assets/[^"]+\.js)"', html)
-    if js_match:
-        js_path = js_match.group(1)
-        response = requests.get(f"{website_url}{js_path}", timeout=30)
+    response = _linked_asset_response(website_response, website_url, "js")
+    if response is not None:
         assert response.status_code == 200
 
 
@@ -132,11 +146,8 @@ def test_assets_js_returns_javascript_content_type(
     website_response: requests.Response,
     website_url: str
 ) -> None:
-    html = website_response.text
-    js_match = re.search(r'src="(/assets/[^"]+\.js)"', html)
-    if js_match:
-        js_path = js_match.group(1)
-        response = requests.get(f"{website_url}{js_path}", timeout=30)
+    response = _linked_asset_response(website_response, website_url, "js")
+    if response is not None:
         content_type = response.headers.get("Content-Type", "")
         assert "javascript" in content_type.lower()
 
@@ -145,11 +156,8 @@ def test_assets_css_returns_200_status(
     website_response: requests.Response,
     website_url: str
 ) -> None:
-    html = website_response.text
-    css_match = re.search(r'href="(/assets/[^"]+\.css)"', html)
-    if css_match:
-        css_path = css_match.group(1)
-        response = requests.get(f"{website_url}{css_path}", timeout=30)
+    response = _linked_asset_response(website_response, website_url, "css")
+    if response is not None:
         assert response.status_code == 200
 
 
@@ -157,10 +165,7 @@ def test_assets_css_returns_css_content_type(
     website_response: requests.Response,
     website_url: str
 ) -> None:
-    html = website_response.text
-    css_match = re.search(r'href="(/assets/[^"]+\.css)"', html)
-    if css_match:
-        css_path = css_match.group(1)
-        response = requests.get(f"{website_url}{css_path}", timeout=30)
+    response = _linked_asset_response(website_response, website_url, "css")
+    if response is not None:
         content_type = response.headers.get("Content-Type", "")
         assert "css" in content_type.lower()

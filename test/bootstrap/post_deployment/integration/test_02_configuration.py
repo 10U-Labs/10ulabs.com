@@ -31,6 +31,27 @@ def central_logs_bucket_attrs_fixture(tfstate: Any) -> Any:
     return find_tfstate_resource(tfstate, 'aws_s3_bucket', 'central_logs')
 
 
+def _central_logs_transitions(s3_client: Any, config: Dict[str, Any]) -> list:
+    bucket_name = config['name_for_central_logs_bucket']
+    lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
+    rule = lifecycle['Rules'][0]
+    return [t['StorageClass'] for t in rule['Transitions']]
+
+
+def _cloudtrail_bucket_public_access(s3_client: Any, cloudtrail_client: Any) -> Any:
+    trails = cloudtrail_client.describe_trails()
+    bucket_name = trails['trailList'][0]['S3BucketName']
+    public_access = s3_client.get_public_access_block(Bucket=bucket_name)
+    return public_access['PublicAccessBlockConfiguration']
+
+
+def _cloudtrail_event_selector(cloudtrail_client: Any) -> Any:
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    selectors = cloudtrail_client.get_event_selectors(TrailName=trail['Name'])
+    return selectors['EventSelectors'][0]
+
+
 def test_central_logs_bucket_has_encryption(s3_client: Any, config: Dict[str, Any]) -> None:
     bucket_name = config['name_for_central_logs_bucket']
     encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
@@ -116,18 +137,12 @@ def test_central_logs_bucket_has_standard_ia_transition(
     s3_client: Any,
     config: Dict[str, Any]
 ) -> None:
-    bucket_name = config['name_for_central_logs_bucket']
-    lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
-    rule = lifecycle['Rules'][0]
-    storage_classes = [t['StorageClass'] for t in rule['Transitions']]
+    storage_classes = _central_logs_transitions(s3_client, config)
     assert 'STANDARD_IA' in storage_classes
 
 
 def test_central_logs_bucket_has_glacier_transition(s3_client: Any, config: Dict[str, Any]) -> None:
-    bucket_name = config['name_for_central_logs_bucket']
-    lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
-    rule = lifecycle['Rules'][0]
-    storage_classes = [t['StorageClass'] for t in rule['Transitions']]
+    storage_classes = _central_logs_transitions(s3_client, config)
     assert 'GLACIER' in storage_classes
 
 
@@ -266,29 +281,17 @@ def test_cloudtrail_s3_bucket_has_encryption(s3_client: Any, cloudtrail_client: 
 
 
 def test_cloudtrail_s3_bucket_blocks_public_acls(s3_client: Any, cloudtrail_client: Any) -> None:
-    trails = cloudtrail_client.describe_trails()
-    trail = trails['trailList'][0]
-    bucket_name = trail['S3BucketName']
-    public_access = s3_client.get_public_access_block(Bucket=bucket_name)
-    block_config = public_access['PublicAccessBlockConfiguration']
+    block_config = _cloudtrail_bucket_public_access(s3_client, cloudtrail_client)
     assert block_config['BlockPublicAcls'] is True
 
 
 def test_cloudtrail_s3_bucket_blocks_public_policy(s3_client: Any, cloudtrail_client: Any) -> None:
-    trails = cloudtrail_client.describe_trails()
-    trail = trails['trailList'][0]
-    bucket_name = trail['S3BucketName']
-    public_access = s3_client.get_public_access_block(Bucket=bucket_name)
-    block_config = public_access['PublicAccessBlockConfiguration']
+    block_config = _cloudtrail_bucket_public_access(s3_client, cloudtrail_client)
     assert block_config['BlockPublicPolicy'] is True
 
 
 def test_cloudtrail_s3_bucket_ignores_public_acls(s3_client: Any, cloudtrail_client: Any) -> None:
-    trails = cloudtrail_client.describe_trails()
-    trail = trails['trailList'][0]
-    bucket_name = trail['S3BucketName']
-    public_access = s3_client.get_public_access_block(Bucket=bucket_name)
-    block_config = public_access['PublicAccessBlockConfiguration']
+    block_config = _cloudtrail_bucket_public_access(s3_client, cloudtrail_client)
     assert block_config['IgnorePublicAcls'] is True
 
 
@@ -296,11 +299,7 @@ def test_cloudtrail_s3_bucket_restricts_public_buckets(
     s3_client: Any,
     cloudtrail_client: Any
 ) -> None:
-    trails = cloudtrail_client.describe_trails()
-    trail = trails['trailList'][0]
-    bucket_name = trail['S3BucketName']
-    public_access = s3_client.get_public_access_block(Bucket=bucket_name)
-    block_config = public_access['PublicAccessBlockConfiguration']
+    block_config = _cloudtrail_bucket_public_access(s3_client, cloudtrail_client)
     assert block_config['RestrictPublicBuckets'] is True
 
 
@@ -328,18 +327,12 @@ def test_cloudtrail_log_group_has_one_year_retention(
 
 
 def test_cloudtrail_captures_read_and_write_events(cloudtrail_client: Any) -> None:
-    trails = cloudtrail_client.describe_trails()
-    trail = trails['trailList'][0]
-    selectors = cloudtrail_client.get_event_selectors(TrailName=trail['Name'])
-    selector = selectors['EventSelectors'][0]
+    selector = _cloudtrail_event_selector(cloudtrail_client)
     assert selector['ReadWriteType'] == 'All'
 
 
 def test_cloudtrail_includes_management_events(cloudtrail_client: Any) -> None:
-    trails = cloudtrail_client.describe_trails()
-    trail = trails['trailList'][0]
-    selectors = cloudtrail_client.get_event_selectors(TrailName=trail['Name'])
-    selector = selectors['EventSelectors'][0]
+    selector = _cloudtrail_event_selector(cloudtrail_client)
     assert selector['IncludeManagementEvents'] is True
 
 

@@ -5,6 +5,32 @@ import pytest
 from test_fixtures.integration import create_deployed_resource_existence_tests
 
 
+def _api_distribution_config(cloudfront_client: Any, api_distribution_id: Optional[str]) -> Any:
+    if api_distribution_id is None:
+        pytest.skip("API CloudFront distribution not found")
+    config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
+    return config['DistributionConfig']
+
+
+def _api_custom_origins(cloudfront_client: Any, api_distribution_id: Optional[str]) -> list:
+    dist_config = _api_distribution_config(cloudfront_client, api_distribution_id)
+    origins = dist_config['Origins']['Items']
+    return [o['CustomOriginConfig'] for o in origins if 'CustomOriginConfig' in o]
+
+
+def _prod_stage(apigateway_client: Any, api_gateway_id: Optional[str]) -> Any:
+    if api_gateway_id is None:
+        pytest.skip("API Gateway not found")
+    return apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
+
+
+def _firehose_s3_destination(firehose_client: Any, config: Dict[str, Any]) -> Any:
+    stream_name = config['firehose_delivery_stream_name']
+    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
+    destinations = response['DeliveryStreamDescription']['Destinations']
+    return destinations[0]['ExtendedS3DestinationDescription']
+
+
 def test_lambda_catchall_handler_runtime_is_python313(
     lambda_client: Any,
     shared_config: Dict[str, Any]
@@ -110,10 +136,8 @@ def test_cloudfront_aliases_include_api_fqdn(
     api_distribution_id: Optional[str],
     config: Dict[str, Any]
 ) -> None:
-    if api_distribution_id is None:
-        pytest.skip("API CloudFront distribution not found")
-    dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    aliases = dist_config['DistributionConfig'].get('Aliases', {}).get('Items', [])
+    dist_config = _api_distribution_config(cloudfront_client, api_distribution_id)
+    aliases = dist_config.get('Aliases', {}).get('Items', [])
     assert config['api_fqdn'] in aliases
 
 
@@ -121,36 +145,23 @@ def test_cloudfront_api_origin_protocol_is_https_only(
     cloudfront_client: Any,
     api_distribution_id: Optional[str]
 ) -> None:
-    if api_distribution_id is None:
-        pytest.skip("API CloudFront distribution not found")
-    dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    origins = dist_config['DistributionConfig']['Origins']['Items']
-    for origin in origins:
-        if 'CustomOriginConfig' in origin:
-            assert origin['CustomOriginConfig']['OriginProtocolPolicy'] == 'https-only'
+    for origin in _api_custom_origins(cloudfront_client, api_distribution_id):
+        assert origin['OriginProtocolPolicy'] == 'https-only'
 
 
 def test_cloudfront_api_origin_ssl_protocols_tls_1_2(
     cloudfront_client: Any,
     api_distribution_id: Optional[str]
 ) -> None:
-    if api_distribution_id is None:
-        pytest.skip("API CloudFront distribution not found")
-    dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    origins = dist_config['DistributionConfig']['Origins']['Items']
-    for origin in origins:
-        if 'CustomOriginConfig' in origin:
-            ssl_protocols = origin['CustomOriginConfig']['OriginSslProtocols']['Items']
-            assert 'TLSv1.2' in ssl_protocols
+    for origin in _api_custom_origins(cloudfront_client, api_distribution_id):
+        assert 'TLSv1.2' in origin['OriginSslProtocols']['Items']
 
 
 def test_cloudfront_default_cache_behavior_uses_caching_disabled(
     cloudfront_client: Any, api_distribution_id: Optional[str]
 ) -> None:
-    if api_distribution_id is None:
-        pytest.skip("API CloudFront distribution not found")
-    dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    default_behavior = dist_config['DistributionConfig']['DefaultCacheBehavior']
+    dist_config = _api_distribution_config(cloudfront_client, api_distribution_id)
+    default_behavior = dist_config['DefaultCacheBehavior']
     cache_policy_id = default_behavior.get('CachePolicyId', '')
     assert cache_policy_id != '' or 'ForwardedValues' in default_behavior
 
@@ -160,10 +171,8 @@ def _cache_behavior_matching(
     api_distribution_id: Optional[str],
     path_pattern: str
 ) -> Any:
-    if api_distribution_id is None:
-        pytest.skip("API CloudFront distribution not found")
-    dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    behaviors = dist_config['DistributionConfig'].get('CacheBehaviors', {})
+    dist_config = _api_distribution_config(cloudfront_client, api_distribution_id)
+    behaviors = dist_config.get('CacheBehaviors', {})
     cache_behaviors = behaviors.get('Items', [])
     return next(
         (b for b in cache_behaviors if path_pattern in b.get('PathPattern', '')), None
@@ -194,10 +203,8 @@ def test_cloudfront_docs_cache_behavior_uses_s3_origin(
     cloudfront_client: Any,
     api_distribution_id: Optional[str]
 ) -> None:
-    if api_distribution_id is None:
-        pytest.skip("API CloudFront distribution not found")
-    dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    origins = dist_config['DistributionConfig']['Origins']['Items']
+    dist_config = _api_distribution_config(cloudfront_client, api_distribution_id)
+    origins = dist_config['Origins']['Items']
     has_s3_origin = any(
         's3' in o['Id'].lower() or 's3' in o.get('DomainName', '').lower()
         for o in origins
@@ -209,10 +216,8 @@ def test_cloudfront_distribution_price_class(
     cloudfront_client: Any,
     api_distribution_id: Optional[str]
 ) -> None:
-    if api_distribution_id is None:
-        pytest.skip("API CloudFront distribution not found")
-    dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
-    price_class = dist_config['DistributionConfig'].get('PriceClass', '')
+    dist_config = _api_distribution_config(cloudfront_client, api_distribution_id)
+    price_class = dist_config.get('PriceClass', '')
     assert price_class.startswith('PriceClass_')
 
 
@@ -325,34 +330,22 @@ def test_firehose_destination_is_extended_s3(firehose_client: Any, config: Dict[
 
 
 def test_firehose_s3_prefix_is_correct(firehose_client: Any, config: Dict[str, Any]) -> None:
-    stream_name = config['firehose_delivery_stream_name']
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    destinations = response['DeliveryStreamDescription']['Destinations']
-    s3_config = destinations[0]['ExtendedS3DestinationDescription']
+    s3_config = _firehose_s3_destination(firehose_client, config)
     assert s3_config['Prefix'] == 'cloudwatch-logs/api/'
 
 
 def test_firehose_s3_error_prefix_is_correct(firehose_client: Any, config: Dict[str, Any]) -> None:
-    stream_name = config['firehose_delivery_stream_name']
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    destinations = response['DeliveryStreamDescription']['Destinations']
-    s3_config = destinations[0]['ExtendedS3DestinationDescription']
+    s3_config = _firehose_s3_destination(firehose_client, config)
     assert s3_config['ErrorOutputPrefix'] == 'cloudwatch-logs/api-errors/'
 
 
 def test_firehose_compression_is_gzip(firehose_client: Any, config: Dict[str, Any]) -> None:
-    stream_name = config['firehose_delivery_stream_name']
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    destinations = response['DeliveryStreamDescription']['Destinations']
-    s3_config = destinations[0]['ExtendedS3DestinationDescription']
+    s3_config = _firehose_s3_destination(firehose_client, config)
     assert s3_config['CompressionFormat'] == 'GZIP'
 
 
 def test_firehose_buffering_size_is_5mb(firehose_client: Any, config: Dict[str, Any]) -> None:
-    stream_name = config['firehose_delivery_stream_name']
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    destinations = response['DeliveryStreamDescription']['Destinations']
-    s3_config = destinations[0]['ExtendedS3DestinationDescription']
+    s3_config = _firehose_s3_destination(firehose_client, config)
     assert s3_config['BufferingHints']['SizeInMBs'] == 5
 
 
@@ -360,10 +353,7 @@ def test_firehose_buffering_interval_is_300_seconds(
     firehose_client: Any,
     config: Dict[str, Any]
 ) -> None:
-    stream_name = config['firehose_delivery_stream_name']
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    destinations = response['DeliveryStreamDescription']['Destinations']
-    s3_config = destinations[0]['ExtendedS3DestinationDescription']
+    s3_config = _firehose_s3_destination(firehose_client, config)
     assert s3_config['BufferingHints']['IntervalInSeconds'] == 300
 
 
@@ -387,17 +377,13 @@ def test_api_gateway_stage_access_log_format_configured(
     apigateway_client: Any,
     api_gateway_id: Optional[str]
 ) -> None:
-    if api_gateway_id is None:
-        pytest.skip("API Gateway not found")
-    response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
+    response = _prod_stage(apigateway_client, api_gateway_id)
     access_log = response.get('accessLogSettings', {})
     assert 'format' in access_log
 
 
 def _stage_method_settings(apigateway_client: Any, api_gateway_id: Optional[str]) -> Any:
-    if api_gateway_id is None:
-        pytest.skip("API Gateway not found")
-    response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
+    response = _prod_stage(apigateway_client, api_gateway_id)
     return response.get('methodSettings', {})
 
 
@@ -453,9 +439,7 @@ def test_api_gateway_stage_has_logging_enabled(
     apigateway_client: Any,
     api_gateway_id: Optional[str]
 ) -> None:
-    if api_gateway_id is None:
-        pytest.skip("API Gateway not found")
-    response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
+    response = _prod_stage(apigateway_client, api_gateway_id)
     access_log = response.get('accessLogSettings', {})
     assert 'destinationArn' in access_log
 
@@ -464,9 +448,7 @@ def test_api_gateway_stage_has_xray_tracing_disabled(
     apigateway_client: Any,
     api_gateway_id: Optional[str]
 ) -> None:
-    if api_gateway_id is None:
-        pytest.skip("API Gateway not found")
-    response = apigateway_client.get_stage(restApiId=api_gateway_id, stageName='prod')
+    response = _prod_stage(apigateway_client, api_gateway_id)
     assert 'tracingEnabled' in response
 
 
@@ -483,10 +465,7 @@ def test_firehose_cloudwatch_logs_bucket_is_central_logs(
     firehose_client: Any,
     config: Dict[str, Any]
 ) -> None:
-    stream_name = config['firehose_delivery_stream_name']
-    response = firehose_client.describe_delivery_stream(DeliveryStreamName=stream_name)
-    destinations = response['DeliveryStreamDescription']['Destinations']
-    s3_config = destinations[0]['ExtendedS3DestinationDescription']
+    s3_config = _firehose_s3_destination(firehose_client, config)
     assert config['central_logs_bucket'] in s3_config['BucketARN']
 
 

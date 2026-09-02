@@ -1,4 +1,10 @@
 from typing import Any, Dict
+def _cloudtrail_logs_role_name(cloudtrail_client: Any) -> str:
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    return trail.get('CloudWatchLogsRoleArn', '').split('/')[-1]
+
+
 def test_cloudtrail_writes_logs_to_s3(s3_client: Any, cloudtrail_client: Any) -> None:
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
@@ -33,10 +39,8 @@ def test_cloudtrail_iam_role_trust_policy_allows_cloudtrail(
     iam_client: Any,
     cloudtrail_client: Any
 ) -> None:
-    trails = cloudtrail_client.describe_trails()
-    trail = trails['trailList'][0]
-    if 'CloudWatchLogsRoleArn' in trail:
-        role_name = trail['CloudWatchLogsRoleArn'].split('/')[-1]
+    role_name = _cloudtrail_logs_role_name(cloudtrail_client)
+    if role_name:
         response = iam_client.get_role(RoleName=role_name)
         trust_policy = response['Role']['AssumeRolePolicyDocument']
         principals = []
@@ -51,10 +55,8 @@ def test_cloudtrail_iam_role_trust_policy_allows_cloudtrail(
 
 
 def test_cloudtrail_iam_role_has_inline_policy(iam_client: Any, cloudtrail_client: Any) -> None:
-    trails = cloudtrail_client.describe_trails()
-    trail = trails['trailList'][0]
-    if 'CloudWatchLogsRoleArn' in trail:
-        role_name = trail['CloudWatchLogsRoleArn'].split('/')[-1]
+    role_name = _cloudtrail_logs_role_name(cloudtrail_client)
+    if role_name:
         response = iam_client.list_role_policies(RoleName=role_name)
         assert len(response['PolicyNames']) > 0
 
@@ -63,10 +65,8 @@ def test_cloudtrail_iam_role_policy_allows_log_actions(
     iam_client: Any,
     cloudtrail_client: Any
 ) -> None:
-    trails = cloudtrail_client.describe_trails()
-    trail = trails['trailList'][0]
-    if 'CloudWatchLogsRoleArn' in trail:
-        role_name = trail['CloudWatchLogsRoleArn'].split('/')[-1]
+    role_name = _cloudtrail_logs_role_name(cloudtrail_client)
+    if role_name:
         policies = iam_client.list_role_policies(RoleName=role_name)
         policy_name = policies['PolicyNames'][0]
         policy = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)

@@ -14,6 +14,11 @@ def _lambda_role_name(lambda_config: Dict[str, Any]) -> str:
     return role_arn.split("/")[-1] if "/" in role_arn else ""
 
 
+def _deployed_role_arn(lambda_client: Any, function_name: str) -> str:
+    response = lambda_client.get_function(FunctionName=function_name)
+    return response["Configuration"].get("Role", "")
+
+
 def create_lambda_api_gateway_wiring_tests(
     function_name_config_key: str,
     default_function_name: str,
@@ -45,8 +50,7 @@ def create_lambda_api_gateway_wiring_tests(
             config: Dict[str, str]
         ) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
-            response = lambda_client.get_function(FunctionName=function_name)
-            role_arn = response["Configuration"].get("Role", "")
+            role_arn = _deployed_role_arn(lambda_client, function_name)
             assert role_arn, f"Lambda '{function_name}' has no IAM role attached"
 
         def test_handler_role_follows_naming_pattern(
@@ -55,8 +59,7 @@ def create_lambda_api_gateway_wiring_tests(
             config: Dict[str, str]
         ) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
-            response = lambda_client.get_function(FunctionName=function_name)
-            role_arn = response["Configuration"].get("Role", "")
+            role_arn = _deployed_role_arn(lambda_client, function_name)
             expected_role_suffix = f"{function_name}ServiceRole"
             assert expected_role_suffix in role_arn, (
                 f"Lambda role ARN '{role_arn}' doesn't match expected pattern "

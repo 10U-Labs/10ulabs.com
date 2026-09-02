@@ -18,6 +18,7 @@ from test_fixtures.integration.helpers import (
     handle_ecr_authorization_error,
     skip_if_api_gateway_unavailable,
 )
+from test_fixtures.outcomes import accepted
 
 
 class TestCheckLambdaFunctionExistsSuccess:
@@ -27,6 +28,7 @@ class TestCheckLambdaFunctionExistsSuccess:
             "Configuration": {"FunctionName": "MyFunction"}
         }
         check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
+        assert mock_client.get_function.called
 
     def test_calls_get_function_with_function_name(self) -> None:
         mock_client = MagicMock()
@@ -75,6 +77,7 @@ class TestCheckIAMRoleExistsSuccess:
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
         check_iam_role_exists(mock_client, "MyRole", "terraform/path")
+        assert mock_client.get_role.called
 
     def test_calls_get_role_with_role_name(self) -> None:
         mock_client = MagicMock()
@@ -111,6 +114,7 @@ class TestCheckLambdaRoleHasPolicySuccess:
             "PolicyNames": ["MyPolicy", "OtherPolicy"]
         }
         check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
+        assert mock_client.list_role_policies.called
 
     def test_calls_list_role_policies_with_role_name(self) -> None:
         mock_client = MagicMock()
@@ -271,7 +275,7 @@ class TestHandleECRAuthorizationErrorAccessDenied:
 
 def test_handle_ecr_authorization_error_repository_not_found() -> None:
     error = create_client_error("RepositoryNotFoundException")
-    handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo")
+    assert accepted(handle_ecr_authorization_error, error, "ecr:DescribeRepositories", "my-repo")
 
 
 def test_handle_ecr_authorization_error_other_errors() -> None:
@@ -285,6 +289,7 @@ class TestCheckS3HeadBucketPermissionSuccess:
         mock_client = MagicMock()
         mock_client.head_bucket.return_value = {}
         check_s3_head_bucket_permission(mock_client, "my-bucket")
+        assert mock_client.head_bucket.called
 
     def test_calls_head_bucket_with_bucket_name(self) -> None:
         mock_client = MagicMock()
@@ -317,6 +322,7 @@ def test_check_s3_head_bucket_permission_bucket_not_found() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("404")
     check_s3_head_bucket_permission(mock_client, "my-bucket")
+    assert mock_client.head_bucket.called
 
 
 def test_check_s3_head_bucket_permission_other_errors() -> None:
@@ -328,7 +334,7 @@ def test_check_s3_head_bucket_permission_other_errors() -> None:
 
 def test_skip_if_api_gateway_unavailable_available() -> None:
     api_gateway_info = {"id": "abc123", "exists": True}
-    skip_if_api_gateway_unavailable(api_gateway_info)
+    assert accepted(skip_if_api_gateway_unavailable, api_gateway_info)
 
 
 def test_skip_if_api_gateway_unavailable_no_id() -> None:
@@ -350,6 +356,7 @@ class TestCheckStateFileReadableSuccess:
         check_state_file_readable(
                     mock_client, "my-bucket", "state/terraform.tfstate"
                 )
+        assert mock_client.head_object.called
 
     def test_calls_head_object_with_bucket_and_key(self) -> None:
         mock_client = MagicMock()
@@ -396,7 +403,7 @@ def test_check_state_file_readable_other_errors() -> None:
 
 def test_assert_api_gateway_exists_success() -> None:
     api_gateway_info = {"id": "abc123", "exists": True}
-    assert_api_gateway_exists(api_gateway_info)
+    assert accepted(assert_api_gateway_exists, api_gateway_info)
 
 
 def test_assert_api_gateway_exists_no_id() -> None:

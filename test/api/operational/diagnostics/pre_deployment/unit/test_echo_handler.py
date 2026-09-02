@@ -20,6 +20,16 @@ def assert_cors_headers(response: Dict[str, Any]) -> None:
     assert 'Access-Control-Allow-Origin' in response['headers']
 
 
+def _echoed_body(
+    echo_handler: ModuleType,
+    echo_post_event_factory: Callable[..., Dict[str, Any]],
+    lambda_context: Mock
+) -> Dict[str, Any]:
+    event = echo_post_event_factory()
+    response = echo_handler.lambda_handler(event, lambda_context)
+    return parse_response_body(response)
+
+
 def test_echo_handler_returns_200_status_code(
     echo_handler: ModuleType,
     echo_post_event_factory: Callable[..., Dict[str, Any]],
@@ -68,9 +78,7 @@ def test_echo_handler_includes_received_at(
     echo_post_event_factory: Callable[..., Dict[str, Any]],
     lambda_context: Mock
 ) -> None:
-    event = echo_post_event_factory()
-    response = echo_handler.lambda_handler(event, lambda_context)
-    body = parse_response_body(response)
+    body = _echoed_body(echo_handler, echo_post_event_factory, lambda_context)
     has_received_at = 'received_at' in body
     assert has_received_at
 
@@ -91,9 +99,7 @@ def test_echo_handler_body_contains_echo_key(
     echo_post_event_factory: Callable[..., Dict[str, Any]],
     lambda_context: Mock
 ) -> None:
-    event = echo_post_event_factory()
-    response = echo_handler.lambda_handler(event, lambda_context)
-    body = parse_response_body(response)
+    body = _echoed_body(echo_handler, echo_post_event_factory, lambda_context)
     has_echo_key = 'echo' in body
     assert has_echo_key
 

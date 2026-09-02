@@ -29,6 +29,12 @@ def make_event(host: str = "www.example.com", uri: str = "/") -> Dict[str, Any]:
     }
 
 
+def _event_without_host_header() -> Dict[str, Any]:
+    event = make_event(uri="/about")
+    event["Records"][0]["cf"]["request"]["headers"] = {}
+    return event
+
+
 class TestApexRedirect:
     def test_apex_returns_301_status(self) -> None:
         event = make_event(host="example.com", uri="/about")
@@ -171,59 +177,23 @@ class TestSpaRouting:
 
 class TestEdgeCases:
     def test_missing_host_header_returns_301(self) -> None:
-        event = {
-            "Records": [{
-                "cf": {
-                    "request": {
-                        "headers": {},
-                        "uri": "/about"
-                    }
-                }
-            }]
-        }
+        event = _event_without_host_header()
         response = handler(event, None)
         assert response["status"] == "301"
 
     def test_missing_host_header_redirects_to_www(self) -> None:
-        event = {
-            "Records": [{
-                "cf": {
-                    "request": {
-                        "headers": {},
-                        "uri": "/about"
-                    }
-                }
-            }]
-        }
+        event = _event_without_host_header()
         response = handler(event, None)
         location = response["headers"]["location"][0]["value"]
         assert location == "https://www./about"
 
     def test_empty_host_header_returns_301(self) -> None:
-        event = {
-            "Records": [{
-                "cf": {
-                    "request": {
-                        "headers": {"host": [{"value": ""}]},
-                        "uri": "/about"
-                    }
-                }
-            }]
-        }
+        event = make_event(host="", uri="/about")
         response = handler(event, None)
         assert response["status"] == "301"
 
     def test_empty_host_header_redirects_to_www(self) -> None:
-        event = {
-            "Records": [{
-                "cf": {
-                    "request": {
-                        "headers": {"host": [{"value": ""}]},
-                        "uri": "/about"
-                    }
-                }
-            }]
-        }
+        event = make_event(host="", uri="/about")
         response = handler(event, None)
         location = response["headers"]["location"][0]["value"]
         assert location == "https://www./about"

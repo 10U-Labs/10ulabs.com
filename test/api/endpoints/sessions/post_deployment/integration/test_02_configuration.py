@@ -1,4 +1,18 @@
 from typing import Any, Dict
+def _export_environment(lambda_client: Any, sessions_config: Dict[str, Any]) -> Dict[str, str]:
+    response = lambda_client.get_function_configuration(
+        FunctionName=sessions_config["export_function_name"]
+    )
+    return response.get("Environment", {}).get("Variables", {})
+
+
+def _table_index_names(dynamodb_client: Any, sessions_config: Dict[str, Any]) -> list:
+    response = dynamodb_client.describe_table(
+        TableName=sessions_config["dynamodb_table_name"]
+    )
+    return [g["IndexName"] for g in response["Table"].get("GlobalSecondaryIndexes", [])]
+
+
 class TestHandlerLambdaConfiguration:
     def test_handler_lambda_has_10_second_timeout(
         self,
@@ -68,10 +82,7 @@ class TestExportLambdaConfiguration:
         lambda_client: Any,
         sessions_config: Dict[str, Any]
     ) -> None:
-        response = lambda_client.get_function_configuration(
-            FunctionName=sessions_config["export_function_name"]
-        )
-        env_vars = response.get("Environment", {}).get("Variables", {})
+        env_vars = _export_environment(lambda_client, sessions_config)
         assert "DYNAMODB_TABLE_ARN" in env_vars
 
     def test_export_lambda_has_s3_bucket_env_var(
@@ -79,10 +90,7 @@ class TestExportLambdaConfiguration:
         lambda_client: Any,
         sessions_config: Dict[str, Any]
     ) -> None:
-        response = lambda_client.get_function_configuration(
-            FunctionName=sessions_config["export_function_name"]
-        )
-        env_vars = response.get("Environment", {}).get("Variables", {})
+        env_vars = _export_environment(lambda_client, sessions_config)
         assert "S3_BUCKET" in env_vars
 
     def test_export_lambda_has_s3_prefix_env_var(
@@ -90,10 +98,7 @@ class TestExportLambdaConfiguration:
         lambda_client: Any,
         sessions_config: Dict[str, Any]
     ) -> None:
-        response = lambda_client.get_function_configuration(
-            FunctionName=sessions_config["export_function_name"]
-        )
-        env_vars = response.get("Environment", {}).get("Variables", {})
+        env_vars = _export_environment(lambda_client, sessions_config)
         assert "S3_PREFIX" in env_vars
 
 
@@ -148,11 +153,7 @@ class TestDynamoDbConfiguration:
         dynamodb_client: Any,
         sessions_config: Dict[str, Any]
     ) -> None:
-        response = dynamodb_client.describe_table(
-            TableName=sessions_config["dynamodb_table_name"]
-        )
-        gsis = response["Table"].get("GlobalSecondaryIndexes", [])
-        gsi_names = [g["IndexName"] for g in gsis]
+        gsi_names = _table_index_names(dynamodb_client, sessions_config)
         assert "event_type-index" in gsi_names
 
     def test_dynamodb_table_has_device_id_gsi(
@@ -160,11 +161,7 @@ class TestDynamoDbConfiguration:
         dynamodb_client: Any,
         sessions_config: Dict[str, Any]
     ) -> None:
-        response = dynamodb_client.describe_table(
-            TableName=sessions_config["dynamodb_table_name"]
-        )
-        gsis = response["Table"].get("GlobalSecondaryIndexes", [])
-        gsi_names = [g["IndexName"] for g in gsis]
+        gsi_names = _table_index_names(dynamodb_client, sessions_config)
         assert "device_id-index" in gsi_names
 
 

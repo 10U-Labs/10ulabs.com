@@ -278,17 +278,21 @@ def test_send_contact_email_returns_false_on_client_error(contact_handler: Modul
         assert result_is_false
 
 
-def test_handler_returns_cors_headers_for_options_request(
-    contact_handler: ModuleType,
-    lambda_context: Mock
-) -> None:
+def _options_response(contact_handler: ModuleType, lambda_context: Mock) -> Any:
     event: Dict[str, Any] = {
         "httpMethod": "OPTIONS",
         "path": "/v1/contact-submissions",
         "headers": {},
         "body": None
     }
-    response = contact_handler.lambda_handler(event, lambda_context)
+    return contact_handler.lambda_handler(event, lambda_context)
+
+
+def test_handler_returns_cors_headers_for_options_request(
+    contact_handler: ModuleType,
+    lambda_context: Mock
+) -> None:
+    response = _options_response(contact_handler, lambda_context)
     assert response['statusCode'] == 200
 
 
@@ -296,13 +300,7 @@ def test_handler_returns_cors_allow_origin_header(
     contact_handler: ModuleType,
     lambda_context: Mock
 ) -> None:
-    event: Dict[str, Any] = {
-        "httpMethod": "OPTIONS",
-        "path": "/v1/contact-submissions",
-        "headers": {},
-        "body": None
-    }
-    response = contact_handler.lambda_handler(event, lambda_context)
+    response = _options_response(contact_handler, lambda_context)
     header_is_star = response['headers']['Access-Control-Allow-Origin'] == '*'
     assert header_is_star
 

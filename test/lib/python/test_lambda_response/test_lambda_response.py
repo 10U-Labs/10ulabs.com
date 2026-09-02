@@ -8,6 +8,7 @@ from lambda_response import (
     assert_json_content_type,
     assert_cors_headers,
 )
+from test_fixtures.outcomes import accepted
 
 
 class TestParseResponseBody:
@@ -45,11 +46,11 @@ class TestParseResponseBody:
 class TestAssertResponseStatus:
     def test_passes_for_matching_status(self) -> None:
         response = {"statusCode": 200}
-        assert_response_status(response, 200)
+        assert accepted(assert_response_status, response, 200)
 
     def test_passes_for_404_status(self) -> None:
         response = {"statusCode": 404}
-        assert_response_status(response, 404)
+        assert accepted(assert_response_status, response, 404)
 
     def test_fails_for_mismatched_status(self) -> None:
         response = {"statusCode": 500}
@@ -65,11 +66,11 @@ class TestAssertResponseStatus:
 class TestAssertJsonContentType:
     def test_passes_for_application_json(self) -> None:
         response = {"headers": {"Content-Type": "application/json"}}
-        assert_json_content_type(response)
+        assert accepted(assert_json_content_type, response)
 
     def test_passes_for_json_with_charset(self) -> None:
         response = {"headers": {"Content-Type": "application/json; charset=utf-8"}}
-        assert_json_content_type(response)
+        assert accepted(assert_json_content_type, response)
 
     def test_fails_for_text_html(self) -> None:
         response = {"headers": {"Content-Type": "text/html"}}
@@ -85,11 +86,11 @@ class TestAssertJsonContentType:
 class TestAssertCorsHeaders:
     def test_passes_with_allow_origin(self) -> None:
         response = {"headers": {"Access-Control-Allow-Origin": "*"}}
-        assert_cors_headers(response)
+        assert accepted(assert_cors_headers, response)
 
     def test_passes_with_specific_origin(self) -> None:
         response = {"headers": {"Access-Control-Allow-Origin": "https://example.com"}}
-        assert_cors_headers(response)
+        assert accepted(assert_cors_headers, response)
 
     def test_fails_without_cors_header(self) -> None:
         response = {"headers": {"Content-Type": "application/json"}}

@@ -1,8 +1,15 @@
 import uuid
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import pytest
 from botocore.exceptions import ClientError
+
+
+def _deployment_bucket_and_key(www_common_outputs: Dict[str, str]) -> Tuple[str, str]:
+    bucket_name = www_common_outputs.get("bucket_name")
+    if not bucket_name:
+        pytest.skip("bucket_name output not available")
+    return bucket_name, f"home/.pre-deployment-test/{uuid.uuid4()}.txt"
 
 
 class TestS3WriteCapability:
@@ -11,10 +18,7 @@ class TestS3WriteCapability:
         s3_client: Any,
         www_common_outputs: Dict[str, str]
     ) -> None:
-        bucket_name = www_common_outputs.get("bucket_name")
-        if not bucket_name:
-            pytest.skip("bucket_name output not available")
-        test_key = f"home/.pre-deployment-test/{uuid.uuid4()}.txt"
+        bucket_name, test_key = _deployment_bucket_and_key(www_common_outputs)
         try:
             s3_client.put_object(
                 Bucket=bucket_name,
@@ -39,10 +43,7 @@ class TestS3WriteCapability:
         s3_client: Any,
         www_common_outputs: Dict[str, str]
     ) -> None:
-        bucket_name = www_common_outputs.get("bucket_name")
-        if not bucket_name:
-            pytest.skip("bucket_name output not available")
-        test_key = f"home/.pre-deployment-test/{uuid.uuid4()}.txt"
+        bucket_name, test_key = _deployment_bucket_and_key(www_common_outputs)
         try:
             s3_client.put_object(
                 Bucket=bucket_name,

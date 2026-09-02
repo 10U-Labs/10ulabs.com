@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from terraform_drift.test_helpers import create_orphaned_resource_tests
+from test_fixtures.outcomes import accepted
 
 
 class TestCreateOrphanedResourceTestsReturnValue:
@@ -38,7 +39,7 @@ class TestTerraformInitialized:
         TestClass = create_orphaned_resource_tests(tmp_path)
         instance = TestClass()
 
-        instance.test_terraform_initialized()
+        assert accepted(instance.test_terraform_initialized)
 
     def test_fails_when_lock_file_missing(self, tmp_path: Path) -> None:
         TestClass = create_orphaned_resource_tests(tmp_path)
@@ -62,7 +63,7 @@ def test_no_orphaned_resources_no_creates(mock_get_planned: MagicMock) -> None:
     TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
     instance = TestClass()
 
-    instance.test_no_orphaned_resources()
+    assert accepted(instance.test_no_orphaned_resources)
 
 
 def _setup_single_resource_mock(
@@ -80,6 +81,17 @@ def _setup_single_resource_mock(
     mock_check_exists.return_value = exists
 
 
+def _resource_checked_in_us_west_2(
+    mock_get_planned: MagicMock,
+    mock_check_exists: MagicMock
+) -> tuple:
+    _setup_single_resource_mock(mock_get_planned, mock_check_exists)
+    TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"), region="us-west-2")
+    instance = TestClass()
+    instance.test_no_orphaned_resources()
+    return mock_check_exists.call_args[0]
+
+
 class TestNoOrphanedResourcesNoOrphans:
     @patch("terraform_drift.test_helpers.check_resource_exists")
     @patch("terraform_drift.test_helpers.get_planned_creates")
@@ -91,52 +103,34 @@ class TestNoOrphanedResourcesNoOrphans:
         TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
         instance = TestClass()
 
-        instance.test_no_orphaned_resources()
+        assert accepted(instance.test_no_orphaned_resources)
 
     @patch("terraform_drift.test_helpers.check_resource_exists")
     @patch("terraform_drift.test_helpers.get_planned_creates")
     def test_calls_check_resource_exists_with_correct_type(
         self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
     ) -> None:
-        _setup_single_resource_mock(mock_get_planned, mock_check_exists)
+        call_args = _resource_checked_in_us_west_2(mock_get_planned, mock_check_exists)
 
-        TestClass = create_orphaned_resource_tests(
-            Path("/tmp/terraform"), region="us-west-2"
-        )
-        instance = TestClass()
-        instance.test_no_orphaned_resources()
-
-        assert mock_check_exists.call_args[0][0] == "aws_lambda_function"
+        assert call_args[0] == "aws_lambda_function"
 
     @patch("terraform_drift.test_helpers.check_resource_exists")
     @patch("terraform_drift.test_helpers.get_planned_creates")
     def test_calls_check_resource_exists_with_correct_name(
         self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
     ) -> None:
-        _setup_single_resource_mock(mock_get_planned, mock_check_exists)
+        call_args = _resource_checked_in_us_west_2(mock_get_planned, mock_check_exists)
 
-        TestClass = create_orphaned_resource_tests(
-            Path("/tmp/terraform"), region="us-west-2"
-        )
-        instance = TestClass()
-        instance.test_no_orphaned_resources()
-
-        assert mock_check_exists.call_args[0][1] == "MyFunction"
+        assert call_args[1] == "MyFunction"
 
     @patch("terraform_drift.test_helpers.check_resource_exists")
     @patch("terraform_drift.test_helpers.get_planned_creates")
     def test_calls_check_resource_exists_with_correct_region(
         self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
     ) -> None:
-        _setup_single_resource_mock(mock_get_planned, mock_check_exists)
+        call_args = _resource_checked_in_us_west_2(mock_get_planned, mock_check_exists)
 
-        TestClass = create_orphaned_resource_tests(
-            Path("/tmp/terraform"), region="us-west-2"
-        )
-        instance = TestClass()
-        instance.test_no_orphaned_resources()
-
-        assert mock_check_exists.call_args[0][2] == "us-west-2"
+        assert call_args[2] == "us-west-2"
 
     @patch("terraform_drift.test_helpers.check_resource_exists")
     @patch("terraform_drift.test_helpers.get_planned_creates")
