@@ -325,6 +325,7 @@ jobs:
         run: |
           MYPYPATH=lib/python:scripts python3 -m mypy \
             --explicit-package-bases \
+            --disallow-untyped-defs \
             test/conftest.py \
             test/www/conftest.py \
             test/www/paths/conftest.py \

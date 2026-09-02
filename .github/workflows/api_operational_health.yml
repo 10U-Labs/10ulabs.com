@@ -399,6 +399,7 @@ jobs:
         run: |
           MYPYPATH=lib/python:scripts python3 -m mypy \
             --explicit-package-bases \
+            --disallow-untyped-defs \
             test/conftest.py \
             test/lib/terraform/conftest.py \
             test/api/conftest.py \
