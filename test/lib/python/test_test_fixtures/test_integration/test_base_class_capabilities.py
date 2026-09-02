@@ -310,7 +310,9 @@ class TestLayer5APIGatewayRegionalTestsExecution:
 
     def test_api_gateway_is_regional_skips_when_id_none(self) -> None:
         instance = integration_module.Layer5APIGatewayRegionalTests()
-        api_gateway_info = {"id": None, "exists": False, "endpoint_types": []}
+        api_gateway_info: Dict[str, Any] = {
+            "id": None, "exists": False, "endpoint_types": []
+        }
         with pytest.raises(pytest.skip.Exception):
             instance.test_api_gateway_is_regional(api_gateway_info)
 

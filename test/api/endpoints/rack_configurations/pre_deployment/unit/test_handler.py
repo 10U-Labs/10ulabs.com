@@ -153,7 +153,7 @@ def test_handle_post_success(mock_boto_client: MagicMock, handler: ModuleType) -
 
 
 def test_handle_get_missing_config_hash(handler: ModuleType) -> None:
-    event = {'pathParameters': {}, 'headers': {}}
+    event: Dict[str, Any] = {'pathParameters': {}, 'headers': {}}
     response = handler.handle_get(event)
     assert response['statusCode'] == 400
 
@@ -228,7 +228,9 @@ def test_lambda_handler_unknown_path_returns_404(handler: ModuleType) -> None:
 def test_handle_post_with_device_id(mock_boto_client: MagicMock, handler: ModuleType) -> None:
     mock_boto_client.return_value = create_mock_dynamodb_client('put_item')
     reset_module_state(handler, _clients={})
-    payload = {'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}}
+    payload: Dict[str, Any] = {
+        'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
+    }
     payload['device_id'] = 'test-device-123'
     event = {'body': json.dumps(payload), 'headers': {}}
     with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):

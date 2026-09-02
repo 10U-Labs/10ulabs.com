@@ -6,8 +6,8 @@ from typing import Any, Dict, Iterator
 from unittest.mock import patch, MagicMock
 
 import pytest
-from botocore.exceptions import ClientError
 
+from boto_mocks import create_client_error
 from test_fixtures.unit import create_mock_dynamodb_client, reset_module_state
 
 
@@ -267,8 +267,9 @@ class TestSaveAnalyticsEvents:
 
     def test_returns_success_false_on_client_error(self, handler: ModuleType) -> None:
         mock_dynamodb = MagicMock()
-        error_response = {'Error': {'Code': 'ValidationException', 'Message': 'Error'}}
-        mock_dynamodb.batch_write_item.side_effect = ClientError(error_response, 'BatchWriteItem')
+        mock_dynamodb.batch_write_item.side_effect = create_client_error(
+            'ValidationException', 'BatchWriteItem'
+        )
         events = [{'event_type': 'test', 'timestamp': '2024-01-15T10:30:00Z'}]
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             result = handler.save_analytics_events('session1', 'device1', events, None)
@@ -294,8 +295,9 @@ class TestHandleEventsErrorHandling:
 
     def test_dynamodb_error_returns_500(self, handler: ModuleType) -> None:
         mock_dynamodb = MagicMock()
-        error_response = {'Error': {'Code': 'InternalError', 'Message': 'Error'}}
-        mock_dynamodb.batch_write_item.side_effect = ClientError(error_response, 'BatchWriteItem')
+        mock_dynamodb.batch_write_item.side_effect = create_client_error(
+            'InternalError', 'BatchWriteItem'
+        )
         event = _one_event_post_request()
         with patch.object(handler, 'get_dynamodb_client', return_value=mock_dynamodb):
             response = handler.handle_events(event)

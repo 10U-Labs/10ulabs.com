@@ -59,7 +59,7 @@ class TestParseBody:
         assert result == {}
 
     def test_handles_empty_dict_body(self) -> None:
-        event = {'body': {}}
+        event: Dict[str, Any] = {'body': {}}
         result = parse_body(event)
         assert result == {}
 

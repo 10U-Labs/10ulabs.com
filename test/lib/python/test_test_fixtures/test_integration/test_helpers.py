@@ -194,7 +194,7 @@ class TestCheckServiceCanAssumeRoleNotAllowed:
 
 class TestCheckServiceCanAssumeRoleEmptyPolicy:
     def test_returns_false_with_empty_statements(self) -> None:
-        trust_policy = {"Statement": []}
+        trust_policy: Dict[str, Any] = {"Statement": []}
         result = check_service_can_assume_role(trust_policy, "lambda.amazonaws.com")
         assert result is False
 

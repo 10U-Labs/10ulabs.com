@@ -59,7 +59,7 @@ class TestResetModuleState:
             f.write("counter = 10\n")
             f.flush()
             module = load_module_from_path("counter_module", Path(f.name))
-            module.counter = 100
+            setattr(module, "counter", 100)
             reset_module_state(module, counter=0)
             assert module.counter == 0
 
@@ -81,8 +81,8 @@ class TestResetModuleState:
             f.write("a = 1\nb = 2\nc = 3\n")
             f.flush()
             module = load_module_from_path("multi_module", Path(f.name))
-            module.a = 100
-            module.b = 200
+            setattr(module, "a", 100)
+            setattr(module, "b", 200)
             reset_module_state(module, a=0, b=0)
             return module
 

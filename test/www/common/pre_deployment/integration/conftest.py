@@ -7,7 +7,7 @@ from terraform_config import TEST_AWS_REGION
 from test_fixtures.terraform import terraform_init, terraform_output
 
 
-def pytest_configure(config: Dict[str, Any]) -> None:
+def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
         "layer(num): mark test as belonging to layer N"

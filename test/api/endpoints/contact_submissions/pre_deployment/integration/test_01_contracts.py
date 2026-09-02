@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
 import pytest
 
@@ -65,7 +65,7 @@ def test_lambda_directory_exists() -> None:
 
 
 @pytest.mark.parametrize("tf_file", ["lambda.tf", "iam.tf", "variables.tf"])
-def test_terraform_file_exists(tf_file: Callable[[str], Path]) -> None:
+def test_terraform_file_exists(tf_file: str) -> None:
     tf_path = ENDPOINT_SRC / tf_file
     file_exists = tf_path.exists()
     assert file_exists

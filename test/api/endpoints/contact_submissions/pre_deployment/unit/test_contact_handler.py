@@ -1,5 +1,6 @@
 import json
 import urllib.error
+from email.message import Message
 from types import ModuleType
 from typing import Any, Dict
 from unittest.mock import Mock
@@ -281,7 +282,7 @@ def test_handler_returns_cors_headers_for_options_request(
     contact_handler: ModuleType,
     lambda_context: Mock
 ) -> None:
-    event = {
+    event: Dict[str, Any] = {
         "httpMethod": "OPTIONS",
         "path": "/v1/contact-submissions",
         "headers": {},
@@ -295,7 +296,7 @@ def test_handler_returns_cors_allow_origin_header(
     contact_handler: ModuleType,
     lambda_context: Mock
 ) -> None:
-    event = {
+    event: Dict[str, Any] = {
         "httpMethod": "OPTIONS",
         "path": "/v1/contact-submissions",
         "headers": {},
@@ -426,7 +427,7 @@ def test_verify_recaptcha_returns_false_on_url_error(contact_handler: ModuleType
 def test_verify_recaptcha_returns_false_on_http_error(contact_handler: ModuleType) -> None:
     with patch("urllib.request.urlopen") as mock_urlopen:
         mock_urlopen.side_effect = urllib.error.HTTPError(
-            "http://test", 500, "Server Error", {}, None
+            "http://test", 500, "Server Error", Message(), None
         )
         result = contact_handler.verify_recaptcha("test-token", "test-secret")
         result_is_false = result is False

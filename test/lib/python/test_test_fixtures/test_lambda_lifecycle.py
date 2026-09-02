@@ -90,7 +90,7 @@ class TestCheckLambdaLifecycleRulesPass:
     ) -> None:
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(LAMBDA_WITH_LIFECYCLE_TF)
-        assert _check_lambda_lifecycle_rules(tf_file) is None
+        _check_lambda_lifecycle_rules(tf_file)
 
     def test_passes_for_lambda_without_environment_variables(self, tmp_path: Path) -> None:
         tf_content = '''
@@ -101,7 +101,7 @@ resource "aws_lambda_function" "simple_lambda" {
 '''
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
-        assert _check_lambda_lifecycle_rules(tf_file) is None
+        _check_lambda_lifecycle_rules(tf_file)
 
     def test_passes_for_multiple_lambdas_all_with_lifecycle(self, tmp_path: Path) -> None:
         tf_content = '''
@@ -127,12 +127,12 @@ resource "aws_lambda_function" "lambda_two" {
 '''
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
-        assert _check_lambda_lifecycle_rules(tf_file) is None
+        _check_lambda_lifecycle_rules(tf_file)
 
     def test_passes_for_empty_file(self, tmp_path: Path) -> None:
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text("")
-        assert _check_lambda_lifecycle_rules(tf_file) is None
+        _check_lambda_lifecycle_rules(tf_file)
 
     def test_passes_for_file_with_no_lambda_resources(self, tmp_path: Path) -> None:
         tf_content = '''
@@ -142,7 +142,7 @@ resource "aws_s3_bucket" "my_bucket" {
 '''
         tf_file = tmp_path / "lambda.tf"
         tf_file.write_text(tf_content)
-        assert _check_lambda_lifecycle_rules(tf_file) is None
+        _check_lambda_lifecycle_rules(tf_file)
 
 
 class TestCheckLambdaLifecycleRulesFail:
