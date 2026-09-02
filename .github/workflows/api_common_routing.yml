@@ -397,6 +397,7 @@ jobs:
         run: |
           SRC=src/api/common/routing
           MYPYPATH=lib/python python3 -m mypy \
+            --disallow-untyped-defs \
             $SRC/lambda/*.py \
             lib/python/boto_mocks \
             lib/python/lambda_response \

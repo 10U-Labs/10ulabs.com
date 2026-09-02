@@ -369,6 +369,7 @@ jobs:
         run: |
           SRC=src/api/endpoints/contact_submissions
           MYPYPATH=lib/python python3 -m mypy \
+            --disallow-untyped-defs \
             $SRC/lambda/ \
             lib/python/boto_mocks \
             lib/python/lambda_response \
