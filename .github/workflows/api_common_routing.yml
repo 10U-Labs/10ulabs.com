@@ -133,6 +133,39 @@ jobs:
           test/lib/python/test_terraform_config
           test/lib/python/test_terraform_drift
           test/lib/python/test_test_fixtures
+  assert-no-pytest-plugin-declarations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-no-pytest-plugin-declarations
+      - name: Assert no pytest plugin declarations
+        run: >-
+          assert-no-pytest-plugin-declarations
+          --verbose
+          test/conftest.py
+          test/lib/terraform/conftest.py
+          test/api/conftest.py
+          test/api/common/conftest.py
+          test/lib/terraform/common
+          test/lib/terraform/s3_bucket
+          test/lib/terraform/unit
+          test/api/common/routing
+          test/lib/python/test_boto_mocks
+          test/lib/python/test_lambda_response
+          test/lib/python/test_module_utils
+          test/lib/python/test_repo_utils
+          test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
+          test/lib/python/test_test_fixtures
+          lib/python/test_fixtures
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -627,6 +660,7 @@ jobs:
       - assert-no-comments
       - assert-no-inline-directives
       - assert-no-linter-config-files
+      - assert-no-pytest-plugin-declarations
       - assert-one-assert-per-pytest
       - assert-opentofu-resource-is-used
       - assert-pytest-fixture-name-is-needed
