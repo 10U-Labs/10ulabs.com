@@ -30,7 +30,7 @@ It cannot go red on the defect it was written for. The only edit that breaks it 
 
 ## Deriving is not automatically the better half
 
-The line is not between touching the source and not touching it, and it is not between a literal and a lookup. It is what the value is for, which `docs/tenets/tests/TEST_FIRST.md` states as a tenet: if the value changed and the test should still pass it is configuration, and if it should go red it is an expectation.
+The line is not between touching the source and not touching it, and it is not between a literal and a lookup. It is what the value is for, which [docs/tenets/tests/TEST_FIRST.md](../../docs/tenets/tests/TEST_FIRST.md) states as a tenet: if the value changed and the test should still pass it is configuration, and if it should go red it is an expectation.
 
 Configuration is read from where the deployment reads it. Which region, which account, which address: these decide where a test points, and a suite aimed at the wrong environment fails for a reason that is not about the deployment. `test/conftest.py` taking `aws_region` out of the shared module is this and is right.
 

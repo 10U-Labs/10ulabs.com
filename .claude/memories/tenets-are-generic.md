@@ -9,7 +9,7 @@
 
 ## What a tenet is
 
-`docs/tenets/tests/` holds tenets, not documentation of the test suite. A tenet is true whatever the repository holds: it names no language, no tool, no directory, no resource and no count. The repository is what has to change to match, never the other way round.
+[docs/tenets/tests/](../../docs/tenets/tests/) holds tenets, not documentation of the test suite. A tenet is true whatever the repository holds: it names no language, no tool, no directory, no resource and no count. The repository is what has to change to match, never the other way round.
 
 ## What belongs to the repository instead
 

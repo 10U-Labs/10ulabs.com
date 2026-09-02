@@ -41,4 +41,4 @@ Code under `lib/` deploys nothing of its own and carries no such split, and this
 
 ## Related notes
 
-What each tier is required to assert is in `docs/tenets/tests/` — see [read-test-tenets-first](read-test-tenets-first.md).
+What each tier is required to assert is in [docs/tenets/tests/](../../docs/tenets/tests/) — see [read-test-tenets-first](read-test-tenets-first.md).

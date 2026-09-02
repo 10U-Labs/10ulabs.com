@@ -47,7 +47,7 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [tdd-workflow](tdd-workflow.md) — the test is written before the code, in the same commit
 - [a-test-does-not-restate-the-source](a-test-does-not-restate-the-source.md) — a test asserts a property the program must have, never a copy of what the source says, because it is written before the source exists
 - [a-test-says-what-it-checked](a-test-says-what-it-checked.md) — one assertion per pytest and it has to be able to fail; `assert f(...) is None` over a `-> None` function is refused by mypy and its deletion by the assert job
-- [read-test-tenets-first](read-test-tenets-first.md) — read `docs/tenets/tests/` before implementing, and cover every tier the change touches
+- [read-test-tenets-first](read-test-tenets-first.md) — read [docs/tenets/tests/](../../docs/tenets/tests/) before implementing, and cover every tier the change touches
 - [tenets-are-generic](tenets-are-generic.md) — the four tier files name no tool, language or directory and the repository follows them
 - [a-conftest-is-emptied-never-deleted](a-conftest-is-emptied-never-deleted.md) — a `conftest.py` whose last fixture goes is emptied to zero bytes and left in place, so the level stays visible to whoever writes the next one
 - [test-code-is-placed-by-how-many-suites-use-it](test-code-is-placed-by-how-many-suites-use-it.md) — a fixture goes at the highest level that applies, and a helper is shared by its number of callers rather than by its name

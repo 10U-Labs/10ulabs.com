@@ -8,7 +8,7 @@
 
 ## What to read
 
-Before implementing a change, read `docs/tenets/tests/`. Four files sit there and they are all the same kind of document: `UNIT_TESTS.md`, `PRE_DEPLOYMENT_INTEGRATION_TESTS.md`, `POST_DEPLOYMENT_INTEGRATION_TESTS.md` and `E2E_TESTS.md` say what each tier is held to and name no tool or directory. That a tenet loses to nothing, the repository being what changes when the two disagree, is in [tenets-are-generic](tenets-are-generic.md).
+Before implementing a change, read [docs/tenets/tests/](../../docs/tenets/tests/). Five files sit there and they are all the same kind of document: the four tier files [UNIT_TESTS.md](../../docs/tenets/tests/UNIT_TESTS.md), [PRE_DEPLOYMENT_INTEGRATION_TESTS.md](../../docs/tenets/tests/PRE_DEPLOYMENT_INTEGRATION_TESTS.md), [POST_DEPLOYMENT_INTEGRATION_TESTS.md](../../docs/tenets/tests/POST_DEPLOYMENT_INTEGRATION_TESTS.md) and [E2E_TESTS.md](../../docs/tenets/tests/E2E_TESTS.md) say what each tier is held to, and [TEST_FIRST.md](../../docs/tenets/tests/TEST_FIRST.md) holds at every tier; none of them names a tool or a directory. That a tenet loses to nothing, the repository being what changes when the two disagree, is in [tenets-are-generic](tenets-are-generic.md).
 
 ## What the tenets require
 
