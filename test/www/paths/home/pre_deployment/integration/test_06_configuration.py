@@ -1,11 +1,13 @@
+from typing import Any, Dict
+
 import pytest
 from botocore.exceptions import ClientError
 
 
 class TestCloudFrontConfiguration:
     def test_cloudfront_distribution_is_deployed(
-        self, cloudfront_distribution, www_common_outputs
-    ):
+        self, cloudfront_distribution: Any, www_common_outputs: Dict[str, str]
+    ) -> None:
         distribution_id = www_common_outputs.get("cloudfront_distribution_id")
         if not distribution_id:
             pytest.skip("cloudfront_distribution_id output not available")
@@ -19,8 +21,8 @@ class TestCloudFrontConfiguration:
         )
 
     def test_cloudfront_distribution_is_enabled(
-        self, cloudfront_distribution, www_common_outputs
-    ):
+        self, cloudfront_distribution: Any, www_common_outputs: Dict[str, str]
+    ) -> None:
         distribution_id = www_common_outputs.get("cloudfront_distribution_id")
         if not distribution_id:
             pytest.skip("cloudfront_distribution_id output not available")
@@ -36,7 +38,11 @@ class TestCloudFrontConfiguration:
 
 
 class TestS3BucketConfiguration:
-    def test_s3_bucket_location_is_retrievable(self, s3_client, www_common_outputs):
+    def test_s3_bucket_location_is_retrievable(
+        self,
+        s3_client: Any,
+        www_common_outputs: Dict[str, str]
+    ) -> None:
         bucket_name = www_common_outputs.get("bucket_name")
         if not bucket_name:
             pytest.skip("bucket_name output not available")
@@ -49,7 +55,11 @@ class TestS3BucketConfiguration:
                 pytest.skip("Bucket does not exist")
             raise
 
-    def test_s3_bucket_accepts_list_operations(self, s3_client, www_common_outputs):
+    def test_s3_bucket_accepts_list_operations(
+        self,
+        s3_client: Any,
+        www_common_outputs: Dict[str, str]
+    ) -> None:
         bucket_name = www_common_outputs.get("bucket_name")
         if not bucket_name:
             pytest.skip("bucket_name output not available")

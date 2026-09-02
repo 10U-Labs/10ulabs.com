@@ -1,8 +1,14 @@
+from typing import Any, Dict
+
 from botocore.exceptions import ClientError
 
 
 class TestNoOrphanedLambdaFunctions:
-    def test_handler_lambda_not_orphaned(self, lambda_client, sessions_config):
+    def test_handler_lambda_not_orphaned(
+        self,
+        lambda_client: Any,
+        sessions_config: Dict[str, Any]
+    ) -> None:
         checked = False
         try:
             lambda_client.get_function(
@@ -16,7 +22,11 @@ class TestNoOrphanedLambdaFunctions:
                 raise
         assert checked
 
-    def test_export_lambda_not_orphaned(self, lambda_client, sessions_config):
+    def test_export_lambda_not_orphaned(
+        self,
+        lambda_client: Any,
+        sessions_config: Dict[str, Any]
+    ) -> None:
         checked = False
         try:
             lambda_client.get_function(
@@ -31,7 +41,10 @@ class TestNoOrphanedLambdaFunctions:
         assert checked
 
 
-def test_no_orphaned_dynamo_db_tables(dynamodb_client, sessions_config):
+def test_no_orphaned_dynamo_db_tables(
+    dynamodb_client: Any,
+    sessions_config: Dict[str, Any]
+) -> None:
     checked = False
     try:
         dynamodb_client.describe_table(
@@ -47,7 +60,11 @@ def test_no_orphaned_dynamo_db_tables(dynamodb_client, sessions_config):
 
 
 class TestNoOrphanedIamRoles:
-    def test_handler_role_not_orphaned(self, iam_client, sessions_config):
+    def test_handler_role_not_orphaned(
+        self,
+        iam_client: Any,
+        sessions_config: Dict[str, Any]
+    ) -> None:
         checked = False
         try:
             iam_client.get_role(RoleName=sessions_config["handler_role_name"])
@@ -59,7 +76,11 @@ class TestNoOrphanedIamRoles:
                 raise
         assert checked
 
-    def test_export_role_not_orphaned(self, iam_client, sessions_config):
+    def test_export_role_not_orphaned(
+        self,
+        iam_client: Any,
+        sessions_config: Dict[str, Any]
+    ) -> None:
         checked = False
         try:
             iam_client.get_role(RoleName=sessions_config["export_role_name"])

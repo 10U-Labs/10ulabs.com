@@ -1,11 +1,16 @@
 import uuid
+from typing import Any, Dict
 
 import pytest
 from botocore.exceptions import ClientError
 
 
 class TestS3WriteCapability:
-    def test_can_write_to_s3_bucket(self, s3_client, www_common_outputs):
+    def test_can_write_to_s3_bucket(
+        self,
+        s3_client: Any,
+        www_common_outputs: Dict[str, str]
+    ) -> None:
         bucket_name = www_common_outputs.get("bucket_name")
         if not bucket_name:
             pytest.skip("bucket_name output not available")
@@ -29,7 +34,11 @@ class TestS3WriteCapability:
             except ClientError:
                 pass
 
-    def test_can_delete_from_s3_bucket(self, s3_client, www_common_outputs):
+    def test_can_delete_from_s3_bucket(
+        self,
+        s3_client: Any,
+        www_common_outputs: Dict[str, str]
+    ) -> None:
         bucket_name = www_common_outputs.get("bucket_name")
         if not bucket_name:
             pytest.skip("bucket_name output not available")
@@ -50,7 +59,11 @@ class TestS3WriteCapability:
 
 
 class TestCloudFrontInvalidationCapability:
-    def test_can_list_invalidations(self, cloudfront_client, www_common_outputs):
+    def test_can_list_invalidations(
+        self,
+        cloudfront_client: Any,
+        www_common_outputs: Dict[str, str]
+    ) -> None:
         distribution_id = www_common_outputs.get("cloudfront_distribution_id")
         if not distribution_id:
             pytest.skip("cloudfront_distribution_id output not available")
@@ -70,7 +83,11 @@ class TestCloudFrontInvalidationCapability:
                 pytest.skip("Distribution does not exist")
             raise
 
-    def test_can_get_distribution_config(self, cloudfront_client, www_common_outputs):
+    def test_can_get_distribution_config(
+        self,
+        cloudfront_client: Any,
+        www_common_outputs: Dict[str, str]
+    ) -> None:
         distribution_id = www_common_outputs.get("cloudfront_distribution_id")
         if not distribution_id:
             pytest.skip("cloudfront_distribution_id output not available")

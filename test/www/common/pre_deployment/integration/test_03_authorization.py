@@ -1,9 +1,11 @@
+from typing import Any
+
 import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration.helpers import check_s3_head_bucket_permission
 
 
-def test_can_call_iam_get_role(iam_client, github_actions_role_name):
+def test_can_call_iam_get_role(iam_client: Any, github_actions_role_name: str) -> None:
     try:
         iam_client.get_role(RoleName=github_actions_role_name)
     except ClientError as e:
@@ -14,7 +16,10 @@ def test_can_call_iam_get_role(iam_client, github_actions_role_name):
     assert True
 
 
-def test_can_call_iam_list_attached_role_policies(iam_client, github_actions_role_name):
+def test_can_call_iam_list_attached_role_policies(
+    iam_client: Any,
+    github_actions_role_name: str
+) -> None:
     try:
         iam_client.list_attached_role_policies(RoleName=github_actions_role_name)
     except ClientError as e:
@@ -25,12 +30,12 @@ def test_can_call_iam_list_attached_role_policies(iam_client, github_actions_rol
     assert True
 
 
-def test_can_call_s3_head_bucket(s3_client, state_bucket_name):
+def test_can_call_s3_head_bucket(s3_client: Any, state_bucket_name: str) -> None:
     check_s3_head_bucket_permission(s3_client, state_bucket_name)
     assert True
 
 
-def test_can_call_route53_get_hosted_zone(route53_client, hosted_zone_id):
+def test_can_call_route53_get_hosted_zone(route53_client: Any, hosted_zone_id: str) -> None:
     try:
         route53_client.get_hosted_zone(Id=hosted_zone_id)
     except ClientError as e:
@@ -42,7 +47,10 @@ def test_can_call_route53_get_hosted_zone(route53_client, hosted_zone_id):
     assert True
 
 
-def test_can_call_route53_list_resource_record_sets(route53_client, hosted_zone_id):
+def test_can_call_route53_list_resource_record_sets(
+    route53_client: Any,
+    hosted_zone_id: str
+) -> None:
     try:
         route53_client.list_resource_record_sets(HostedZoneId=hosted_zone_id, MaxItems="1")
     except ClientError as e:

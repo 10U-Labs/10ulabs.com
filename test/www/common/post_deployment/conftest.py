@@ -1,17 +1,19 @@
+from typing import Any
+
 import boto3
 import pytest
 
 
 @pytest.fixture(scope="session")
-def cloudfront_client():
+def cloudfront_client() -> Any:
     return boto3.client("cloudfront")
 
 
 @pytest.fixture(scope="session")
-def acm_client():
+def acm_client() -> Any:
     return boto3.client("acm", region_name="us-east-1")
 
 
 @pytest.fixture(scope="session")
-def route53_client():
+def route53_client() -> Any:
     return boto3.client("route53")

@@ -4,37 +4,37 @@ from test_fixtures.website import create_website_fixtures
 
 
 class TestCreateWebsiteFixtures:
-    def test_returns_tuple(self):
+    def test_returns_tuple(self) -> None:
         result = create_website_fixtures()
         assert isinstance(result, tuple)
 
-    def test_returns_two_fixtures(self):
+    def test_returns_two_fixtures(self) -> None:
         result = create_website_fixtures()
         assert len(result) == 2
 
-    def test_website_url_fixture_is_callable(self):
+    def test_website_url_fixture_is_callable(self) -> None:
         website_url, _ = create_website_fixtures()
         assert callable(website_url)
 
-    def test_website_response_fixture_is_callable(self):
+    def test_website_response_fixture_is_callable(self) -> None:
         _, website_response = create_website_fixtures()
         assert callable(website_response)
 
 
 class TestWebsiteUrlFixture:
-    def test_website_url_constructs_https_url(self):
+    def test_website_url_constructs_https_url(self) -> None:
         website_url_fixture, _ = create_website_fixtures()
         mock_config = {'website_fqdn': 'www.example.com'}
         result = website_url_fixture.__wrapped__(mock_config)
         assert result == 'https://www.example.com'
 
-    def test_website_url_uses_config_fqdn(self):
+    def test_website_url_uses_config_fqdn(self) -> None:
         website_url_fixture, _ = create_website_fixtures()
         mock_config = {'website_fqdn': 'www.test-site.org'}
         result = website_url_fixture.__wrapped__(mock_config)
         assert 'www.test-site.org' in result
 
-    def test_website_url_has_https_prefix(self):
+    def test_website_url_has_https_prefix(self) -> None:
         website_url_fixture, _ = create_website_fixtures()
         mock_config = {'website_fqdn': 'any-domain.com'}
         result = website_url_fixture.__wrapped__(mock_config)
@@ -43,7 +43,7 @@ class TestWebsiteUrlFixture:
 
 class TestWebsiteResponseFixture:
     @patch('test_fixtures.website.requests.get')
-    def test_website_response_calls_requests_get(self, mock_get):
+    def test_website_response_calls_requests_get(self, mock_get: MagicMock) -> None:
         _, website_response_fixture = create_website_fixtures()
         mock_response = MagicMock()
         mock_get.return_value = mock_response
@@ -51,7 +51,7 @@ class TestWebsiteResponseFixture:
         assert mock_get.call_count == 1
 
     @patch('test_fixtures.website.requests.get')
-    def test_website_response_passes_url(self, mock_get):
+    def test_website_response_passes_url(self, mock_get: MagicMock) -> None:
         _, website_response_fixture = create_website_fixtures()
         mock_response = MagicMock()
         mock_get.return_value = mock_response
@@ -59,7 +59,7 @@ class TestWebsiteResponseFixture:
         assert mock_get.call_args[0][0] == 'https://www.test.com'
 
     @patch('test_fixtures.website.requests.get')
-    def test_website_response_uses_30_second_timeout(self, mock_get):
+    def test_website_response_uses_30_second_timeout(self, mock_get: MagicMock) -> None:
         _, website_response_fixture = create_website_fixtures()
         mock_response = MagicMock()
         mock_get.return_value = mock_response
@@ -68,7 +68,7 @@ class TestWebsiteResponseFixture:
         assert call_kwargs['timeout'] == 30
 
     @patch('test_fixtures.website.requests.get')
-    def test_website_response_returns_response_object(self, mock_get):
+    def test_website_response_returns_response_object(self, mock_get: MagicMock) -> None:
         _, website_response_fixture = create_website_fixtures()
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -79,7 +79,7 @@ class TestWebsiteResponseFixture:
 
 class TestFixtureIntegration:
     @patch('test_fixtures.website.requests.get')
-    def test_url_fixture_produces_correct_url(self, mock_get):
+    def test_url_fixture_produces_correct_url(self, mock_get: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_get.return_value = mock_response
@@ -93,7 +93,7 @@ class TestFixtureIntegration:
         assert url == 'https://www.example.com'
 
     @patch('test_fixtures.website.requests.get')
-    def test_response_fixture_returns_valid_response(self, mock_get):
+    def test_response_fixture_returns_valid_response(self, mock_get: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_get.return_value = mock_response

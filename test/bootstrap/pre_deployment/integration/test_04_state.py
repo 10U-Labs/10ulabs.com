@@ -34,7 +34,7 @@ def _is_terraform_initialized() -> bool:
     not _has_existing_state(),
     reason="Cold state - no prior Terraform state to validate against"
 )
-def test_no_orphaned_resources():
+def test_no_orphaned_resources() -> None:
     creates = get_planned_creates(BOOTSTRAP_DIR)
 
     if not creates:

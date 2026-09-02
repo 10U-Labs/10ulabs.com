@@ -1,8 +1,10 @@
+from typing import Any, Dict
+
 import boto3
 import pytest
 
 
-def pytest_configure(config):
+def pytest_configure(config: Dict[str, Any]) -> None:
     config.addinivalue_line(
         "markers",
         "layer(num): mark test as belonging to layer N"
@@ -10,7 +12,7 @@ def pytest_configure(config):
 
 
 @pytest.fixture(name="distribution_config", scope="module")
-def distribution_config_fixture(cloudfront_client, config):
+def distribution_config_fixture(cloudfront_client: Any, config: Dict[str, Any]) -> Any:
     distributions = cloudfront_client.list_distributions()
     if distributions["DistributionList"]["Quantity"] > 0:
         for item in distributions["DistributionList"]["Items"]:
@@ -22,32 +24,32 @@ def distribution_config_fixture(cloudfront_client, config):
 
 
 @pytest.fixture(scope="module")
-def logging_config(distribution_config):
+def logging_config(distribution_config: Any) -> Any:
     return distribution_config["DistributionConfig"].get("Logging", {})
 
 
 @pytest.fixture(scope="module")
-def default_cache_behavior(distribution_config):
+def default_cache_behavior(distribution_config: Any) -> Any:
     return distribution_config["DistributionConfig"]["DefaultCacheBehavior"]
 
 
 @pytest.fixture(scope="module")
-def public_access_block(s3_client, config):
+def public_access_block(s3_client: Any, config: Dict[str, Any]) -> Any:
     response = s3_client.get_public_access_block(Bucket=config["website_bucket_name"])
     return response["PublicAccessBlockConfiguration"]
 
 
 @pytest.fixture(name="lambda_client_us_east_1", scope="module")
-def lambda_client_us_east_1_fixture():
+def lambda_client_us_east_1_fixture() -> Any:
     return boto3.client("lambda", region_name="us-east-1")
 
 
 @pytest.fixture(name="spa_routing_lambda", scope="module")
-def spa_routing_lambda_fixture(lambda_client_us_east_1, config):
+def spa_routing_lambda_fixture(lambda_client_us_east_1: Any, config: Dict[str, Any]) -> Any:
     function_name = f"{config['resource_prefix']}SpaRouting"
     return lambda_client_us_east_1.get_function(FunctionName=function_name)
 
 
 @pytest.fixture(scope="module")
-def spa_routing_lambda_config(spa_routing_lambda):
+def spa_routing_lambda_config(spa_routing_lambda: Any) -> Any:
     return spa_routing_lambda["Configuration"]

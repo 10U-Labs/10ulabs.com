@@ -6,21 +6,21 @@ GTAG_SCRIPT_URL = f"https://www.googletagmanager.com/gtag/js?id={GOOGLE_ANALYTIC
 GTAG_CONFIG = f"gtag('config', '{GOOGLE_ANALYTICS_ID}')"
 
 
-def test_index_html_has_gtag_script():
+def test_index_html_has_gtag_script() -> None:
     content = (HOME_PAGE_SRC / "index.html").read_text()
     assert GTAG_SCRIPT_URL in content
 
 
-def test_index_html_has_gtag_config():
+def test_index_html_has_gtag_config() -> None:
     content = (HOME_PAGE_SRC / "index.html").read_text()
     assert GTAG_CONFIG in content
 
 
-def test_privacy_html_has_gtag_script():
+def test_privacy_html_has_gtag_script() -> None:
     content = (HOME_PAGE_SRC / "public" / "privacy.html").read_text()
     assert GTAG_SCRIPT_URL in content
 
 
-def test_privacy_html_has_gtag_config():
+def test_privacy_html_has_gtag_config() -> None:
     content = (HOME_PAGE_SRC / "public" / "privacy.html").read_text()
     assert GTAG_CONFIG in content

@@ -1,12 +1,13 @@
 import time
+from typing import Any, Dict
 
 import dns.resolver
 import pytest
 
 
 def test_can_create_and_resolve_record(
-    route53_client, hosted_zone, config, public_dns_resolver
-):
+    route53_client: Any, hosted_zone: Any, config: Dict[str, Any], public_dns_resolver: Any
+) -> None:
     domain_name = config['domain_name']
     test_record_name = f"e2e-test.{domain_name}"
     test_value = "e2e-test-value-12345"
@@ -50,7 +51,10 @@ def test_can_create_and_resolve_record(
         )
 
 
-def test_google_verification_record_resolves(public_dns_resolver, config):
+def test_google_verification_record_resolves(
+    public_dns_resolver: Any,
+    config: Dict[str, Any]
+) -> None:
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 
@@ -66,7 +70,10 @@ def test_google_verification_record_resolves(public_dns_resolver, config):
         pytest.fail(f"No TXT records found for {domain_name}")
 
 
-def test_google_verification_record_has_correct_content(public_dns_resolver, config):
+def test_google_verification_record_has_correct_content(
+    public_dns_resolver: Any,
+    config: Dict[str, Any]
+) -> None:
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 
@@ -77,7 +84,7 @@ def test_google_verification_record_has_correct_content(public_dns_resolver, con
     assert any(expected_prefix in txt for txt in txt_values)
 
 
-def test_mx_record_resolves(public_dns_resolver, config):
+def test_mx_record_resolves(public_dns_resolver: Any, config: Dict[str, Any]) -> None:
     domain_name = config['domain_name']
 
     try:
@@ -89,7 +96,10 @@ def test_mx_record_resolves(public_dns_resolver, config):
         pytest.fail(f"No MX records found for {domain_name}")
 
 
-def test_mx_record_returns_correct_priority(public_dns_resolver, config):
+def test_mx_record_returns_correct_priority(
+    public_dns_resolver: Any,
+    config: Dict[str, Any]
+) -> None:
     domain_name = config['domain_name']
 
     answers = public_dns_resolver.resolve(domain_name, 'MX')
@@ -97,7 +107,7 @@ def test_mx_record_returns_correct_priority(public_dns_resolver, config):
     assert 1 in priorities
 
 
-def test_mx_record_returns_smtp_hostname(public_dns_resolver, config):
+def test_mx_record_returns_smtp_hostname(public_dns_resolver: Any, config: Dict[str, Any]) -> None:
     domain_name = config['domain_name']
 
     answers = public_dns_resolver.resolve(domain_name, 'MX')
@@ -105,14 +115,14 @@ def test_mx_record_returns_smtp_hostname(public_dns_resolver, config):
     assert any('smtp.google.com' in exchange for exchange in exchanges)
 
 
-def test_mx_record_has_correct_ttl(public_dns_resolver, config):
+def test_mx_record_has_correct_ttl(public_dns_resolver: Any, config: Dict[str, Any]) -> None:
     domain_name = config['domain_name']
 
     answers = public_dns_resolver.resolve(domain_name, 'MX')
     assert answers.rrset.ttl == 300
 
 
-def test_txt_record_has_correct_ttl(public_dns_resolver, config):
+def test_txt_record_has_correct_ttl(public_dns_resolver: Any, config: Dict[str, Any]) -> None:
     domain_name = config['domain_name']
 
     answers = public_dns_resolver.resolve(domain_name, 'TXT')

@@ -1,68 +1,69 @@
 import json
+from typing import Any, Dict
 
 from lambda_http import json_response, parse_body
 
 
 class TestJsonResponse:
-    def test_returns_correct_status_code(self):
+    def test_returns_correct_status_code(self) -> None:
         response = json_response(200, {'key': 'value'})
         assert response['statusCode'] == 200
 
-    def test_returns_404_status_code(self):
+    def test_returns_404_status_code(self) -> None:
         response = json_response(404, {'error': 'not found'})
         assert response['statusCode'] == 404
 
-    def test_returns_json_content_type(self):
+    def test_returns_json_content_type(self) -> None:
         response = json_response(200, {})
         assert response['headers']['Content-Type'] == 'application/json'
 
-    def test_returns_cors_allow_origin(self):
+    def test_returns_cors_allow_origin(self) -> None:
         response = json_response(200, {})
         assert response['headers']['Access-Control-Allow-Origin'] == '*'
 
-    def test_returns_cors_allow_methods(self):
+    def test_returns_cors_allow_methods(self) -> None:
         response = json_response(200, {})
         assert response['headers']['Access-Control-Allow-Methods'] == 'GET,POST,DELETE,OPTIONS'
 
-    def test_returns_cors_allow_headers(self):
+    def test_returns_cors_allow_headers(self) -> None:
         response = json_response(200, {})
         assert 'x-api-key' in response['headers']['Access-Control-Allow-Headers']
 
-    def test_serializes_body_as_json(self):
+    def test_serializes_body_as_json(self) -> None:
         response = json_response(200, {'key': 'value'})
         assert json.loads(response['body']) == {'key': 'value'}
 
-    def test_serializes_empty_body(self):
+    def test_serializes_empty_body(self) -> None:
         response = json_response(200, {})
         assert json.loads(response['body']) == {}
 
-    def test_serializes_nested_body(self):
+    def test_serializes_nested_body(self) -> None:
         response = json_response(200, {'nested': {'key': 'value'}})
         assert json.loads(response['body']) == {'nested': {'key': 'value'}}
 
 
 class TestParseBody:
-    def test_parses_json_string_body(self):
+    def test_parses_json_string_body(self) -> None:
         event = {'body': '{"key": "value"}'}
         result = parse_body(event)
         assert result == {'key': 'value'}
 
-    def test_returns_dict_body_unchanged(self):
+    def test_returns_dict_body_unchanged(self) -> None:
         event = {'body': {'key': 'value'}}
         result = parse_body(event)
         assert result == {'key': 'value'}
 
-    def test_handles_missing_body(self):
-        event = {}
+    def test_handles_missing_body(self) -> None:
+        event: Dict[str, Any] = {}
         result = parse_body(event)
         assert result == {}
 
-    def test_handles_empty_dict_body(self):
+    def test_handles_empty_dict_body(self) -> None:
         event = {'body': {}}
         result = parse_body(event)
         assert result == {}
 
-    def test_parses_nested_json(self):
+    def test_parses_nested_json(self) -> None:
         event = {'body': '{"nested": {"key": "value"}}'}
         result = parse_body(event)
         assert result == {'nested': {'key': 'value'}}

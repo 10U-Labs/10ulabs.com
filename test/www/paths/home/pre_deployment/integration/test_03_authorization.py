@@ -1,9 +1,15 @@
+from typing import Any, Dict
+
 import pytest
 from botocore.exceptions import ClientError
 
 
 class TestS3Authorization:
-    def test_can_describe_s3_bucket(self, s3_client, www_common_outputs):
+    def test_can_describe_s3_bucket(
+        self,
+        s3_client: Any,
+        www_common_outputs: Dict[str, str]
+    ) -> None:
         bucket_name = www_common_outputs.get("bucket_name")
         if not bucket_name:
             pytest.skip("bucket_name output not available")
@@ -19,7 +25,11 @@ class TestS3Authorization:
                 has_permission = True
         assert has_permission, "Should have permission to describe S3 bucket"
 
-    def test_can_list_s3_bucket_objects(self, s3_client, www_common_outputs):
+    def test_can_list_s3_bucket_objects(
+        self,
+        s3_client: Any,
+        www_common_outputs: Dict[str, str]
+    ) -> None:
         bucket_name = www_common_outputs.get("bucket_name")
         if not bucket_name:
             pytest.skip("bucket_name output not available")
@@ -38,8 +48,8 @@ class TestS3Authorization:
 
 class TestCloudFrontAuthorization:
     def test_can_describe_cloudfront_distribution(
-        self, cloudfront_client, www_common_outputs
-    ):
+        self, cloudfront_client: Any, www_common_outputs: Dict[str, str]
+    ) -> None:
         distribution_id = www_common_outputs.get("cloudfront_distribution_id")
         if not distribution_id:
             pytest.skip("cloudfront_distribution_id output not available")
@@ -55,7 +65,7 @@ class TestCloudFrontAuthorization:
                 has_permission = True
         assert has_permission, "Should have permission to describe CloudFront distribution"
 
-    def test_can_list_cloudfront_distributions(self, cloudfront_client):
+    def test_can_list_cloudfront_distributions(self, cloudfront_client: Any) -> None:
         has_permission = False
         try:
             cloudfront_client.list_distributions(MaxItems="1")

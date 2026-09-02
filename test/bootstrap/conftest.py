@@ -1,4 +1,6 @@
 import re
+from pathlib import Path
+from typing import Any, Dict
 
 import pytest
 from repo_utils import REPO_ROOT
@@ -34,12 +36,12 @@ def _get_locals_derived_values(shared: dict) -> dict:
 
 
 @pytest.fixture(scope="module", name='bootstrap_dir')
-def bootstrap_dir_fixture():
+def bootstrap_dir_fixture() -> Path:
     return BOOTSTRAP_DIR
 
 
 @pytest.fixture(scope="module")
-def config(shared_config, bootstrap_dir):
+def config(shared_config: Dict[str, Any], bootstrap_dir: Path) -> Dict[str, str]:
     tfvars_path = bootstrap_dir / "terraform.tfvars"
     config_dict = dict(shared_config)
     config_dict.update(_get_locals_derived_values(shared_config))

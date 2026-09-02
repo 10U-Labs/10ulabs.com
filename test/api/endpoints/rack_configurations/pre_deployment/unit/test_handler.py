@@ -1,5 +1,7 @@
 import base64
 import json
+from types import ModuleType
+from typing import Any, Dict, Optional
 from unittest.mock import MagicMock, patch
 
 from test_fixtures.unit import (
@@ -9,20 +11,20 @@ from test_fixtures.unit import (
 )
 
 
-def test_generate_config_hash_returns_9_char_string(handler):
+def test_generate_config_hash_returns_9_char_string(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     result = handler.generate_config_hash(config)
     assert len(result) == 9
 
 
-def test_generate_config_hash_uses_only_valid_chars(handler):
+def test_generate_config_hash_uses_only_valid_chars(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     result = handler.generate_config_hash(config)
     valid_chars = set('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
     assert all(c in valid_chars for c in result)
 
 
-def test_generate_config_hash_same_config_same_hash(handler):
+def test_generate_config_hash_same_config_same_hash(handler: ModuleType) -> None:
     config1 = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     config2 = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     result1 = handler.generate_config_hash(config1)
@@ -30,7 +32,7 @@ def test_generate_config_hash_same_config_same_hash(handler):
     assert result1 == result2
 
 
-def test_generate_config_hash_different_config_different_hash(handler):
+def test_generate_config_hash_different_config_different_hash(handler: ModuleType) -> None:
     config1 = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     config2 = {'rackHeight': 24, 'rackCount': 3, 'placedParts': []}
     result1 = handler.generate_config_hash(config1)
@@ -38,7 +40,7 @@ def test_generate_config_hash_different_config_different_hash(handler):
     assert result1 != result2
 
 
-def test_generate_config_hash_order_independent(handler):
+def test_generate_config_hash_order_independent(handler: ModuleType) -> None:
     config1 = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     config2 = {'placedParts': [], 'rackCount': 3, 'rackHeight': 12}
     result1 = handler.generate_config_hash(config1)
@@ -46,67 +48,67 @@ def test_generate_config_hash_order_independent(handler):
     assert result1 == result2
 
 
-def test_validate_rack_configuration_missing_rack_height(handler):
+def test_validate_rack_configuration_missing_rack_height(handler: ModuleType) -> None:
     config = {'rackCount': 3, 'placedParts': []}
     result = handler.validate_rack_configuration(config)
     assert result == 'Missing required field: rackHeight'
 
 
-def test_validate_rack_configuration_missing_rack_count(handler):
+def test_validate_rack_configuration_missing_rack_count(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'placedParts': []}
     result = handler.validate_rack_configuration(config)
     assert result == 'Missing required field: rackCount'
 
 
-def test_validate_rack_configuration_missing_placed_parts(handler):
+def test_validate_rack_configuration_missing_placed_parts(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'rackCount': 3}
     result = handler.validate_rack_configuration(config)
     assert result == 'Missing required field: placedParts'
 
 
-def test_validate_rack_configuration_invalid_rack_height_type(handler):
+def test_validate_rack_configuration_invalid_rack_height_type(handler: ModuleType) -> None:
     config = {'rackHeight': '12', 'rackCount': 3, 'placedParts': []}
     result = handler.validate_rack_configuration(config)
     assert result == 'rackHeight must be an integer'
 
 
-def test_validate_rack_configuration_invalid_rack_count_type(handler):
+def test_validate_rack_configuration_invalid_rack_count_type(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'rackCount': '3', 'placedParts': []}
     result = handler.validate_rack_configuration(config)
     assert result == 'rackCount must be an integer'
 
 
-def test_validate_rack_configuration_invalid_placed_parts_type(handler):
+def test_validate_rack_configuration_invalid_placed_parts_type(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': 'not a list'}
     result = handler.validate_rack_configuration(config)
     assert result == 'placedParts must be an array'
 
 
-def test_validate_rack_configuration_rack_height_too_low(handler):
+def test_validate_rack_configuration_rack_height_too_low(handler: ModuleType) -> None:
     config = {'rackHeight': 0, 'rackCount': 3, 'placedParts': []}
     result = handler.validate_rack_configuration(config)
     assert result == 'rackHeight must be between 1 and 42'
 
 
-def test_validate_rack_configuration_rack_height_too_high(handler):
+def test_validate_rack_configuration_rack_height_too_high(handler: ModuleType) -> None:
     config = {'rackHeight': 43, 'rackCount': 3, 'placedParts': []}
     result = handler.validate_rack_configuration(config)
     assert result == 'rackHeight must be between 1 and 42'
 
 
-def test_validate_rack_configuration_rack_count_too_low(handler):
+def test_validate_rack_configuration_rack_count_too_low(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'rackCount': 0, 'placedParts': []}
     result = handler.validate_rack_configuration(config)
     assert result == 'rackCount must be at least 1'
 
 
-def test_validate_rack_configuration_valid_config_returns_none(handler):
+def test_validate_rack_configuration_valid_config_returns_none(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     result = handler.validate_rack_configuration(config)
     assert result is None
 
 
-def test_handle_post_missing_device_id(handler):
+def test_handle_post_missing_device_id(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     event = {
         'body': json.dumps({'configuration': config}),
@@ -116,13 +118,13 @@ def test_handle_post_missing_device_id(handler):
     assert response['statusCode'] == 400
 
 
-def test_handle_post_missing_configuration(handler):
+def test_handle_post_missing_configuration(handler: ModuleType) -> None:
     event = {'body': json.dumps({'device_id': 'test-device'}), 'headers': {}}
     response = handler.handle_post(event)
     assert response['statusCode'] == 400
 
 
-def test_handle_post_invalid_configuration(handler):
+def test_handle_post_invalid_configuration(handler: ModuleType) -> None:
     event = {
         'body': json.dumps({
             'configuration': {'rackCount': 3, 'placedParts': []},
@@ -135,7 +137,7 @@ def test_handle_post_invalid_configuration(handler):
 
 
 @patch('boto3.client')
-def test_handle_post_success(mock_boto_client, handler):
+def test_handle_post_success(mock_boto_client: MagicMock, handler: ModuleType) -> None:
     mock_boto_client.return_value = create_mock_dynamodb_client('put_item')
     reset_module_state(handler, _clients={})
     event = {
@@ -150,19 +152,23 @@ def test_handle_post_success(mock_boto_client, handler):
     assert response['statusCode'] == 200
 
 
-def test_handle_get_missing_config_hash(handler):
+def test_handle_get_missing_config_hash(handler: ModuleType) -> None:
     event = {'pathParameters': {}, 'headers': {}}
     response = handler.handle_get(event)
     assert response['statusCode'] == 400
 
 
-def test_handle_get_invalid_config_hash_format(handler):
+def test_handle_get_invalid_config_hash_format(handler: ModuleType) -> None:
     event = {'pathParameters': {'config_hash': 'invalid'}, 'headers': {}}
     response = handler.handle_get(event)
     assert response['statusCode'] == 400
 
 
-def _run_handle_get(mock_boto_client, handler, return_item=None):
+def _run_handle_get(
+    mock_boto_client: MagicMock,
+    handler: ModuleType,
+    return_item: Any = None
+) -> Any:
     mock_boto_client.return_value = create_mock_dynamodb_client('get_item', return_item)
     reset_module_state(handler, _clients={})
     event = {'pathParameters': {'config_hash': 'ABCD12345'}, 'headers': {}}
@@ -171,26 +177,26 @@ def _run_handle_get(mock_boto_client, handler, return_item=None):
 
 
 @patch('boto3.client')
-def test_handle_get_not_found(mock_boto_client, handler):
+def test_handle_get_not_found(mock_boto_client: MagicMock, handler: ModuleType) -> None:
     response = _run_handle_get(mock_boto_client, handler)
     assert response['statusCode'] == 404
 
 
 @patch('boto3.client')
-def test_handle_get_success(mock_boto_client, handler):
+def test_handle_get_success(mock_boto_client: MagicMock, handler: ModuleType) -> None:
     config_json = json.dumps({'rackHeight': 12, 'rackCount': 3, 'placedParts': []})
     item = {'Item': {'config_hash': {'S': 'ABCD12345'}, 'configuration': {'S': config_json}}}
     response = _run_handle_get(mock_boto_client, handler, item)
     assert response['statusCode'] == 200
 
 
-def test_lambda_handler_options_returns_cors(handler):
+def test_lambda_handler_options_returns_cors(handler: ModuleType) -> None:
     event = {'httpMethod': 'OPTIONS', 'path': '/v1/rack-configurations'}
     response = handler.lambda_handler(event, None)
     assert response['statusCode'] == 200
 
 
-def test_lambda_handler_routes_post(handler):
+def test_lambda_handler_routes_post(handler: ModuleType) -> None:
     mock_return = {'statusCode': 200, 'body': '{}'}
     with patch.object(handler, 'handle_post', return_value=mock_return) as mock_handler:
         event = {'httpMethod': 'POST', 'path': '/v1/rack-configurations', 'headers': {}}
@@ -199,7 +205,7 @@ def test_lambda_handler_routes_post(handler):
     assert True
 
 
-def test_lambda_handler_routes_get(handler):
+def test_lambda_handler_routes_get(handler: ModuleType) -> None:
     mock_return = {'statusCode': 200, 'body': '{}'}
     with patch.object(handler, 'handle_get', return_value=mock_return) as mock_handler:
         event = {
@@ -212,14 +218,14 @@ def test_lambda_handler_routes_get(handler):
     assert True
 
 
-def test_lambda_handler_unknown_path_returns_404(handler):
+def test_lambda_handler_unknown_path_returns_404(handler: ModuleType) -> None:
     event = {'httpMethod': 'GET', 'path': '/v1/unknown', 'headers': {}}
     response = handler.lambda_handler(event, None)
     assert response['statusCode'] == 404
 
 
 @patch('boto3.client')
-def test_handle_post_with_device_id(mock_boto_client, handler):
+def test_handle_post_with_device_id(mock_boto_client: MagicMock, handler: ModuleType) -> None:
     mock_boto_client.return_value = create_mock_dynamodb_client('put_item')
     reset_module_state(handler, _clients={})
     payload = {'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}}
@@ -230,7 +236,11 @@ def test_handle_post_with_device_id(mock_boto_client, handler):
     assert response['statusCode'] == 200
 
 
-def _run_save_rack_configuration(mock_boto_client, handler, device_id=None):
+def _run_save_rack_configuration(
+    mock_boto_client: MagicMock,
+    handler: ModuleType,
+    device_id: Optional[str] = None
+) -> Any:
     mock_dynamodb = create_mock_dynamodb_client('put_item')
     mock_boto_client.return_value = mock_dynamodb
     reset_module_state(handler, _clients={})
@@ -244,24 +254,33 @@ def _run_save_rack_configuration(mock_boto_client, handler, device_id=None):
 
 
 @patch('boto3.client')
-def test_save_rack_configuration_stores_created_at(mock_boto_client, handler):
+def test_save_rack_configuration_stores_created_at(
+    mock_boto_client: MagicMock,
+    handler: ModuleType
+) -> None:
     item = _run_save_rack_configuration(mock_boto_client, handler)
     assert 'created_at' in item
 
 
 @patch('boto3.client')
-def test_save_rack_configuration_stores_device_id(mock_boto_client, handler):
+def test_save_rack_configuration_stores_device_id(
+    mock_boto_client: MagicMock,
+    handler: ModuleType
+) -> None:
     item = _run_save_rack_configuration(mock_boto_client, handler, 'test-device-123')
     assert item['device_id'] == {'S': 'test-device-123'}
 
 
 @patch('boto3.client')
-def test_save_rack_configuration_without_device_id(mock_boto_client, handler):
+def test_save_rack_configuration_without_device_id(
+    mock_boto_client: MagicMock,
+    handler: ModuleType
+) -> None:
     item = _run_save_rack_configuration(mock_boto_client, handler)
     assert 'device_id' not in item
 
 
-def test_parse_body_decodes_base64_when_flagged(handler):
+def test_parse_body_decodes_base64_when_flagged(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     encoded_body = base64.b64encode(json.dumps(config).encode('utf-8')).decode('utf-8')
     event = {'body': encoded_body, 'isBase64Encoded': True}
@@ -269,32 +288,32 @@ def test_parse_body_decodes_base64_when_flagged(handler):
     assert result == config
 
 
-def test_parse_body_returns_dict_when_not_base64(handler):
+def test_parse_body_returns_dict_when_not_base64(handler: ModuleType) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     event = {'body': json.dumps(config), 'isBase64Encoded': False}
     result = handler.parse_body(event)
     assert result == config
 
 
-def test_parse_body_returns_empty_dict_when_body_is_none(handler):
+def test_parse_body_returns_empty_dict_when_body_is_none(handler: ModuleType) -> None:
     event = {'body': None}
     result = handler.parse_body(event)
     assert result == {}
 
 
-def test_parse_body_returns_empty_dict_when_body_is_empty_string(handler):
+def test_parse_body_returns_empty_dict_when_body_is_empty_string(handler: ModuleType) -> None:
     event = {'body': ''}
     result = handler.parse_body(event)
     assert result == {}
 
 
-def _create_save_error_mock(error_code):
+def _create_save_error_mock(error_code: str) -> MagicMock:
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.side_effect = create_client_error(error_code, 'PutItem')
     return mock_dynamodb
 
 
-def _run_save_with_error(mock_boto_client, handler, error_code):
+def _run_save_with_error(mock_boto_client: MagicMock, handler: ModuleType, error_code: str) -> Any:
     mock_boto_client.return_value = _create_save_error_mock(error_code)
     reset_module_state(handler, _clients={})
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
@@ -304,8 +323,8 @@ def _run_save_with_error(mock_boto_client, handler, error_code):
 
 @patch('boto3.client')
 def test_save_rack_configuration_returns_success_on_conditional_check_failed(
-    mock_boto_client, handler
-):
+    mock_boto_client: MagicMock, handler: ModuleType
+) -> None:
     result = _run_save_with_error(
         mock_boto_client, handler, 'ConditionalCheckFailedException'
     )
@@ -313,12 +332,15 @@ def test_save_rack_configuration_returns_success_on_conditional_check_failed(
 
 
 @patch('boto3.client')
-def test_save_rack_configuration_returns_error_on_client_error(mock_boto_client, handler):
+def test_save_rack_configuration_returns_error_on_client_error(
+    mock_boto_client: MagicMock,
+    handler: ModuleType
+) -> None:
     result = _run_save_with_error(mock_boto_client, handler, 'InternalServerError')
     assert result['success'] is False
 
 
-def _create_load_mock_with_item(config_hash, config):
+def _create_load_mock_with_item(config_hash: str, config: Dict[str, Any]) -> MagicMock:
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.return_value = {
         'Item': {
@@ -331,7 +353,12 @@ def _create_load_mock_with_item(config_hash, config):
     return mock_dynamodb
 
 
-def _run_load_configuration(mock_boto_client, handler, config_hash, mock_dynamodb):
+def _run_load_configuration(
+    mock_boto_client: MagicMock,
+    handler: ModuleType,
+    config_hash: str,
+    mock_dynamodb: MagicMock
+) -> Any:
     mock_boto_client.return_value = mock_dynamodb
     reset_module_state(handler, _clients={})
     with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
@@ -339,7 +366,10 @@ def _run_load_configuration(mock_boto_client, handler, config_hash, mock_dynamod
 
 
 @patch('boto3.client')
-def test_load_rack_configuration_returns_error_on_client_error(mock_boto_client, handler):
+def test_load_rack_configuration_returns_error_on_client_error(
+    mock_boto_client: MagicMock,
+    handler: ModuleType
+) -> None:
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.side_effect = create_client_error('InternalServerError', 'GetItem')
     result = _run_load_configuration(mock_boto_client, handler, 'ABCD12345', mock_dynamodb)
@@ -348,8 +378,8 @@ def test_load_rack_configuration_returns_error_on_client_error(mock_boto_client,
 
 @patch('boto3.client')
 def test_load_rack_configuration_triggers_migration_for_8_char_hash(
-    mock_boto_client, handler
-):
+    mock_boto_client: MagicMock, handler: ModuleType
+) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     mock_dynamodb = _create_load_mock_with_item('ABCD1234', config)
     result = _run_load_configuration(mock_boto_client, handler, 'ABCD1234', mock_dynamodb)
@@ -358,15 +388,21 @@ def test_load_rack_configuration_triggers_migration_for_8_char_hash(
 
 @patch('boto3.client')
 def test_load_rack_configuration_skips_migration_for_9_char_hash(
-    mock_boto_client, handler
-):
+    mock_boto_client: MagicMock, handler: ModuleType
+) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     mock_dynamodb = _create_load_mock_with_item('ABCD12345', config)
     result = _run_load_configuration(mock_boto_client, handler, 'ABCD12345', mock_dynamodb)
     assert result == {'success': True, 'config_hash': 'ABCD12345', 'configuration': config}
 
 
-def _run_migrate(mock_boto_client, handler, old_hash, config, mock_dynamodb=None):
+def _run_migrate(
+    mock_boto_client: MagicMock,
+    handler: ModuleType,
+    old_hash: str,
+    config: Dict[str, Any],
+    mock_dynamodb: Optional[MagicMock] = None
+) -> Any:
     if mock_dynamodb is None:
         mock_dynamodb = MagicMock()
         mock_dynamodb.put_item.return_value = {}
@@ -379,8 +415,8 @@ def _run_migrate(mock_boto_client, handler, old_hash, config, mock_dynamodb=None
 
 @patch('boto3.client')
 def test_migrate_rack_configuration_returns_none_when_hash_unchanged(
-    mock_boto_client, handler
-):
+    mock_boto_client: MagicMock, handler: ModuleType
+) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     new_hash = handler.generate_config_hash(config)
     result = _run_migrate(mock_boto_client, handler, new_hash, config)
@@ -389,8 +425,8 @@ def test_migrate_rack_configuration_returns_none_when_hash_unchanged(
 
 @patch('boto3.client')
 def test_migrate_rack_configuration_returns_new_hash_on_success(
-    mock_boto_client, handler
-):
+    mock_boto_client: MagicMock, handler: ModuleType
+) -> None:
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     result = _run_migrate(mock_boto_client, handler, 'OLDHASH8', config)
     assert len(result) == 9
@@ -398,8 +434,8 @@ def test_migrate_rack_configuration_returns_new_hash_on_success(
 
 @patch('boto3.client')
 def test_migrate_rack_configuration_returns_none_on_client_error(
-    mock_boto_client, handler
-):
+    mock_boto_client: MagicMock, handler: ModuleType
+) -> None:
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.side_effect = create_client_error('InternalServerError', 'PutItem')
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
@@ -407,39 +443,39 @@ def test_migrate_rack_configuration_returns_none_on_client_error(
     assert result is None
 
 
-def test_error_response_includes_details_when_provided(handler):
+def test_error_response_includes_details_when_provided(handler: ModuleType) -> None:
     response = handler.error_response(500, 'Test error', 'Additional details')
     body = json.loads(response['body'])
     assert body['details'] == 'Additional details'
 
 
-def test_error_response_omits_details_when_empty(handler):
+def test_error_response_omits_details_when_empty(handler: ModuleType) -> None:
     response = handler.error_response(400, 'Test error', '')
     body = json.loads(response['body'])
     assert 'details' not in body
 
 
-def test_error_response_sets_correct_status_code(handler):
+def test_error_response_sets_correct_status_code(handler: ModuleType) -> None:
     response = handler.error_response(503, 'Service unavailable')
     assert response['statusCode'] == 503
 
 
-def test_json_response_includes_cors_allow_origin(handler):
+def test_json_response_includes_cors_allow_origin(handler: ModuleType) -> None:
     response = handler.json_response(200, {'data': 'test'})
     assert response['headers']['Access-Control-Allow-Origin'] == '*'
 
 
-def test_json_response_includes_cors_allow_methods(handler):
+def test_json_response_includes_cors_allow_methods(handler: ModuleType) -> None:
     response = handler.json_response(200, {'data': 'test'})
     assert 'GET' in response['headers']['Access-Control-Allow-Methods']
 
 
-def test_json_response_sets_content_type_json(handler):
+def test_json_response_sets_content_type_json(handler: ModuleType) -> None:
     response = handler.json_response(200, {'data': 'test'})
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def _create_valid_post_event():
+def _create_valid_post_event() -> Dict[str, Any]:
     return {
         'body': json.dumps({
             'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []},
@@ -450,7 +486,10 @@ def _create_valid_post_event():
 
 
 @patch('boto3.client')
-def test_handle_post_returns_500_on_save_failure(mock_boto_client, handler):
+def test_handle_post_returns_500_on_save_failure(
+    mock_boto_client: MagicMock,
+    handler: ModuleType
+) -> None:
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.side_effect = create_client_error('InternalServerError', 'PutItem')
     mock_boto_client.return_value = mock_dynamodb
@@ -460,26 +499,26 @@ def test_handle_post_returns_500_on_save_failure(mock_boto_client, handler):
     assert response['statusCode'] == 500
 
 
-def test_handle_post_returns_500_on_value_error(handler):
+def test_handle_post_returns_500_on_value_error(handler: ModuleType) -> None:
     with patch.object(handler, 'generate_config_hash', side_effect=ValueError("test error")):
         response = handler.handle_post(_create_valid_post_event())
     assert response['statusCode'] == 500
 
 
-def test_handle_post_value_error_includes_details(handler):
+def test_handle_post_value_error_includes_details(handler: ModuleType) -> None:
     with patch.object(handler, 'generate_config_hash', side_effect=ValueError("test error")):
         response = handler.handle_post(_create_valid_post_event())
     body = json.loads(response['body'])
     assert body['details'] == 'test error'
 
 
-def test_handle_post_returns_500_on_key_error(handler):
+def test_handle_post_returns_500_on_key_error(handler: ModuleType) -> None:
     with patch.object(handler, 'generate_config_hash', side_effect=KeyError("missing_key")):
         response = handler.handle_post(_create_valid_post_event())
     assert response['statusCode'] == 500
 
 
-def test_handle_post_key_error_includes_details(handler):
+def test_handle_post_key_error_includes_details(handler: ModuleType) -> None:
     with patch.object(handler, 'generate_config_hash', side_effect=KeyError("missing_key")):
         response = handler.handle_post(_create_valid_post_event())
     body = json.loads(response['body'])

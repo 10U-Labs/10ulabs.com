@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from types import ModuleType
 from typing import Any, Dict
 
 import pytest
@@ -21,10 +22,10 @@ def openapi_spec() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def catchall_handler():
+def catchall_handler() -> ModuleType:
     return load_lambda_module("handler.py", "catchall_handler")
 
 
 @pytest.fixture
-def catchall_unknown_event():
+def catchall_unknown_event() -> Dict[str, Any]:
     return {'path': '/unknown', 'httpMethod': 'GET'}

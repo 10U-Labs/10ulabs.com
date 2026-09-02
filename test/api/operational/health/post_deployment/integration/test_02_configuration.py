@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from test_fixtures.integration import (
     create_lambda_configuration_tests,
     create_log_group_configuration_tests,
@@ -16,7 +18,7 @@ TestCloudWatchLogsConfiguration = create_log_group_configuration_tests(
     expected_retention=7,
 )
 
-def test_health_handler_has_10_second_timeout(lambda_client, config):
+def test_health_handler_has_10_second_timeout(lambda_client: Any, config: Dict[str, Any]) -> None:
     function_name = config.get(
         'health_handler_function_name', 'TenULabsHealthHandler'
     )
@@ -27,7 +29,10 @@ def test_health_handler_has_10_second_timeout(lambda_client, config):
     )
 
 
-def test_health_handler_arn_names_the_authenticated_account(lambda_client, config):
+def test_health_handler_arn_names_the_authenticated_account(
+    lambda_client: Any,
+    config: Dict[str, Any]
+) -> None:
     function_name = config.get(
         'health_handler_function_name', 'TenULabsHealthHandler'
     )

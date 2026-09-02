@@ -1,24 +1,26 @@
+from typing import Any, Dict, Optional
+
 import boto3
 import pytest
 
 
 @pytest.fixture(scope="module")
-def sqs_client(aws_region):
+def sqs_client(aws_region: str) -> Any:
     return boto3.client("sqs", region_name=aws_region)
 
 
 @pytest.fixture(name="api_gateway_id", scope="module")
-def api_gateway_id_fixture(apigateway_client, config):
+def api_gateway_id_fixture(apigateway_client: Any, config: Dict[str, Any]) -> Optional[str]:
     return get_api_gateway_id_by_name(apigateway_client, config['api_gateway_name'])
 
 
 @pytest.fixture(name="cloudfront_client", scope="module")
-def cloudfront_client_fixture():
+def cloudfront_client_fixture() -> Any:
     return boto3.client("cloudfront")
 
 
 @pytest.fixture(scope="module")
-def api_distribution_id(cloudfront_client, config):
+def api_distribution_id(cloudfront_client: Any, config: Dict[str, Any]) -> Optional[str]:
     distributions = cloudfront_client.list_distributions()
     api_fqdn = config['api_fqdn']
     dist_id = None
@@ -31,7 +33,7 @@ def api_distribution_id(cloudfront_client, config):
 
 
 @pytest.fixture(scope="module")
-def first_cloudfront_dist_config(cloudfront_client):
+def first_cloudfront_dist_config(cloudfront_client: Any) -> Any:
     distributions = cloudfront_client.list_distributions()
     if distributions['DistributionList']['Quantity'] > 0:
         dist_id = distributions['DistributionList']['Items'][0]['Id']
@@ -41,16 +43,16 @@ def first_cloudfront_dist_config(cloudfront_client):
 
 
 @pytest.fixture(scope="module")
-def acm_client():
+def acm_client() -> Any:
     return boto3.client("acm", region_name="us-east-1")
 
 
 @pytest.fixture(scope="module")
-def firehose_client(aws_region):
+def firehose_client(aws_region: str) -> Any:
     return boto3.client("firehose", region_name=aws_region)
 
 
-def get_api_gateway_id_by_name(client, api_name):
+def get_api_gateway_id_by_name(client: Any, api_name: str) -> Optional[str]:
     apis = client.get_rest_apis()
     api_id = None
     for api in apis['items']:
@@ -61,12 +63,12 @@ def get_api_gateway_id_by_name(client, api_name):
 
 
 @pytest.fixture(scope="module")
-def ssm_client(aws_region):
+def ssm_client(aws_region: str) -> Any:
     return boto3.client("ssm", region_name=aws_region)
 
 
 @pytest.fixture(scope="module")
-def usage_plan_id(apigateway_client, api_gateway_id):
+def usage_plan_id(apigateway_client: Any, api_gateway_id: Optional[str]) -> Optional[str]:
     if api_gateway_id is None:
         return None
     usage_plans = apigateway_client.get_usage_plans()
@@ -76,7 +78,7 @@ def usage_plan_id(apigateway_client, api_gateway_id):
 
 
 @pytest.fixture(scope="module")
-def api_route53_records(config):
+def api_route53_records(config: Dict[str, Any]) -> Any:
     route53 = boto3.client('route53')
     hosted_zones = route53.list_hosted_zones_by_name(DNSName=config['domain'])
     if not hosted_zones['HostedZones']:

@@ -2,6 +2,7 @@ import sys
 import tempfile
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import pytest
 
@@ -13,7 +14,7 @@ from module_utils import (
 
 
 class TestLoadModuleFromPath:
-    def test_loads_module_from_file(self):
+    def test_loads_module_from_file(self) -> None:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False
         ) as f:
@@ -22,7 +23,7 @@ class TestLoadModuleFromPath:
             module = load_module_from_path("test_module", Path(f.name))
             assert module.VALUE == 42
 
-    def test_returns_module_type(self):
+    def test_returns_module_type(self) -> None:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False
         ) as f:
@@ -31,7 +32,7 @@ class TestLoadModuleFromPath:
             module = load_module_from_path("test_module", Path(f.name))
             assert isinstance(module, ModuleType)
 
-    def test_module_has_correct_name(self):
+    def test_module_has_correct_name(self) -> None:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False
         ) as f:
@@ -40,7 +41,7 @@ class TestLoadModuleFromPath:
             module = load_module_from_path("custom_name", Path(f.name))
             assert module.__name__ == "custom_name"
 
-    def test_loads_module_with_functions(self):
+    def test_loads_module_with_functions(self) -> None:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False
         ) as f:
@@ -51,7 +52,7 @@ class TestLoadModuleFromPath:
 
 
 class TestResetModuleState:
-    def test_resets_existing_attribute(self):
+    def test_resets_existing_attribute(self) -> None:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False
         ) as f:
@@ -62,7 +63,7 @@ class TestResetModuleState:
             reset_module_state(module, counter=0)
             assert module.counter == 0
 
-    def test_ignores_nonexistent_attribute(self):
+    def test_ignores_nonexistent_attribute(self) -> None:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False
         ) as f:
@@ -73,7 +74,7 @@ class TestResetModuleState:
             assert not hasattr(module, "nonexistent")
 
     @pytest.fixture
-    def multi_attr_module_after_reset(self):
+    def multi_attr_module_after_reset(self) -> ModuleType:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False
         ) as f:
@@ -85,18 +86,18 @@ class TestResetModuleState:
             reset_module_state(module, a=0, b=0)
             return module
 
-    def test_resets_multiple_attributes_first(self, multi_attr_module_after_reset):
+    def test_resets_multiple_attributes_first(self, multi_attr_module_after_reset: Any) -> None:
         assert multi_attr_module_after_reset.a == 0
 
-    def test_resets_multiple_attributes_second(self, multi_attr_module_after_reset):
+    def test_resets_multiple_attributes_second(self, multi_attr_module_after_reset: Any) -> None:
         assert multi_attr_module_after_reset.b == 0
 
     def test_resets_multiple_attributes_leaves_third(
-        self, multi_attr_module_after_reset
-    ):
+        self, multi_attr_module_after_reset: Any
+    ) -> None:
         assert multi_attr_module_after_reset.c == 3
 
-    def test_resets_dict_attribute(self):
+    def test_resets_dict_attribute(self) -> None:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False
         ) as f:
@@ -109,12 +110,12 @@ class TestResetModuleState:
 
 
 class TestCreateLambdaLoader:
-    def test_returns_callable(self):
+    def test_returns_callable(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             loader = create_lambda_loader(Path(tmpdir))
             assert callable(loader)
 
-    def test_loader_loads_module(self):
+    def test_loader_loads_module(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             handler_path = Path(tmpdir) / "handler.py"
             handler_path.write_text("HANDLER_VALUE = 'loaded'\n")
@@ -123,7 +124,7 @@ class TestCreateLambdaLoader:
             module = loader("handler.py", "handler_module")
             assert module.HANDLER_VALUE == "loaded"
 
-    def test_loader_adds_dir_to_path(self):
+    def test_loader_adds_dir_to_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             handler_path = Path(tmpdir) / "handler.py"
             handler_path.write_text("pass\n")
@@ -135,7 +136,7 @@ class TestCreateLambdaLoader:
             loader("handler.py", "handler_module")
             assert tmpdir in sys.path
 
-    def test_loader_does_not_duplicate_path(self):
+    def test_loader_does_not_duplicate_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             handler_path = Path(tmpdir) / "handler.py"
             handler_path.write_text("pass\n")

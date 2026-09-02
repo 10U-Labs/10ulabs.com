@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 import boto3
 import pytest
 from repo_utils import REPO_ROOT
@@ -5,7 +7,7 @@ from terraform_config import TEST_AWS_REGION
 from test_fixtures.terraform import terraform_init, terraform_output
 
 
-def pytest_configure(config):
+def pytest_configure(config: Dict[str, Any]) -> None:
     config.addinivalue_line(
         "markers",
         "layer(num): mark test as belonging to layer N"
@@ -35,32 +37,32 @@ def _get_bootstrap_outputs() -> dict:
 
 
 @pytest.fixture(scope="session")
-def aws_region():
+def aws_region() -> str:
     return TEST_AWS_REGION
 
 
 @pytest.fixture(scope="session")
-def s3_client():
+def s3_client() -> Any:
     return boto3.client("s3", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
-def iam_client():
+def iam_client() -> Any:
     return boto3.client("iam", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
-def route53_client():
+def route53_client() -> Any:
     return boto3.client("route53", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
-def sts_client():
+def sts_client() -> Any:
     return boto3.client("sts", region_name=TEST_AWS_REGION)
 
 
 @pytest.fixture(scope="session")
-def bootstrap_outputs():
+def bootstrap_outputs() -> Dict[str, str]:
     outputs = _get_bootstrap_outputs()
     if not outputs:
         pytest.skip("Terraform init failed for bootstrap")
@@ -68,7 +70,7 @@ def bootstrap_outputs():
 
 
 @pytest.fixture(scope="session")
-def state_bucket_name(request):
+def state_bucket_name(request: pytest.FixtureRequest) -> str:
     outputs = request.getfixturevalue("bootstrap_outputs")
     arn = outputs.get("state_bucket_arn", "")
     if not arn:
@@ -77,7 +79,7 @@ def state_bucket_name(request):
 
 
 @pytest.fixture(scope="session")
-def github_actions_role_arn(request):
+def github_actions_role_arn(request: pytest.FixtureRequest) -> str:
     outputs = request.getfixturevalue("bootstrap_outputs")
     arn = outputs.get("github_actions_role_arn", "")
     if not arn:
@@ -86,7 +88,7 @@ def github_actions_role_arn(request):
 
 
 @pytest.fixture(scope="session")
-def github_actions_role_name(request):
+def github_actions_role_name(request: pytest.FixtureRequest) -> str:
     outputs = request.getfixturevalue("bootstrap_outputs")
     name = outputs.get("github_actions_role_name", "")
     if not name:
@@ -95,7 +97,7 @@ def github_actions_role_name(request):
 
 
 @pytest.fixture(scope="session")
-def hosted_zone_id(request):
+def hosted_zone_id(request: pytest.FixtureRequest) -> str:
     outputs = request.getfixturevalue("bootstrap_outputs")
     zone_id = outputs.get("hosted_zone_id", "")
     if not zone_id:
@@ -104,6 +106,6 @@ def hosted_zone_id(request):
 
 
 @pytest.fixture(scope="session")
-def current_identity(request):
+def current_identity(request: pytest.FixtureRequest) -> Any:
     client = request.getfixturevalue("sts_client")
     return client.get_caller_identity()

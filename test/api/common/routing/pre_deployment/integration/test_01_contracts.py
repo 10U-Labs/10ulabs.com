@@ -37,15 +37,15 @@ def _extract_templatefile_vars(apigateway_path: Path) -> set[str]:
     return set(re.findall(var_pattern, vars_block, re.MULTILINE))
 
 
-def test_openapi_json_exists(openapi_path: Path):
+def test_openapi_json_exists(openapi_path: Path) -> None:
     assert openapi_path.exists(), f"openapi.json not found at {openapi_path}"
 
 
-def test_apigateway_tf_exists(apigateway_path: Path):
+def test_apigateway_tf_exists(apigateway_path: Path) -> None:
     assert apigateway_path.exists(), f"apigateway.tf not found at {apigateway_path}"
 
 
-def test_openapi_template_vars_all_provided(openapi_path: Path, apigateway_path: Path):
+def test_openapi_template_vars_all_provided(openapi_path: Path, apigateway_path: Path) -> None:
     if not openapi_path.exists() or not apigateway_path.exists():
         pytest.skip("Required files do not exist")
 
@@ -61,7 +61,7 @@ def test_openapi_template_vars_all_provided(openapi_path: Path, apigateway_path:
     )
 
 
-def test_templatefile_vars_all_used(openapi_path: Path, apigateway_path: Path):
+def test_templatefile_vars_all_used(openapi_path: Path, apigateway_path: Path) -> None:
     if not openapi_path.exists() or not apigateway_path.exists():
         pytest.skip("Required files do not exist")
 
@@ -107,7 +107,7 @@ def _extract_function_names_from_py(py_path: Path) -> set[str]:
 
 def test_lambda_handler_exports_match_terraform_references(
     lambda_tf_path: Path, lambda_dir: Path
-):
+) -> None:
     if not lambda_tf_path.exists():
         pytest.skip("lambda.tf not found")
 
@@ -153,7 +153,7 @@ def _lambda_sources_the_unit_setup_opens() -> list[str]:
 
 
 @pytest.mark.parametrize("lambda_source", _lambda_sources_the_unit_setup_opens())
-def test_unit_setup_opens_a_lambda_source_that_exists(lambda_source: str):
+def test_unit_setup_opens_a_lambda_source_that_exists(lambda_source: str) -> None:
     assert (LAMBDA_DIR / lambda_source).exists(), (
         f"The unit tier's setup opens '{lambda_source}', which is not in "
         f"{LAMBDA_DIR}. A test requesting that fixture dies with "
@@ -172,7 +172,7 @@ def _derived_resource_names() -> list[str]:
 
 
 @pytest.mark.parametrize("derived_name", _derived_resource_names())
-def test_derived_resource_name_is_built_by_this_terraform(derived_name: str):
+def test_derived_resource_name_is_built_by_this_terraform(derived_name: str) -> None:
     terraform = "\n".join(path.read_text() for path in sorted(ROUTING_SRC.glob("*.tf")))
     assert derived_name in terraform, (
         f"The shared setup derives a name ending '{derived_name}', which no "

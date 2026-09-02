@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration import (
@@ -11,7 +13,7 @@ class TestAPIGatewayAuthorization(Layer3APIGatewayAuthorizationTests):
 class TestLambdaAndIAMAuthorization(Layer3LambdaAndIAMAuthorizationTests):
     pass
 class TestSESAndSSMAuthorization:
-    def test_can_get_account_sending_enabled(self, ses_client):
+    def test_can_get_account_sending_enabled(self, ses_client: Any) -> None:
         try:
             ses_client.get_account_sending_enabled()
         except ClientError as e:
@@ -20,7 +22,7 @@ class TestSESAndSSMAuthorization:
             raise
         assert True
 
-    def test_can_list_identities(self, ses_client):
+    def test_can_list_identities(self, ses_client: Any) -> None:
         try:
             ses_client.list_identities(MaxItems=1)
         except ClientError as e:
@@ -29,7 +31,7 @@ class TestSESAndSSMAuthorization:
             raise
         assert True
 
-    def test_can_describe_parameters(self, ssm_client):
+    def test_can_describe_parameters(self, ssm_client: Any) -> None:
         try:
             ssm_client.describe_parameters(MaxResults=1)
         except ClientError as e:

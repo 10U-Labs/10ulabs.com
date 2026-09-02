@@ -8,7 +8,7 @@ HEALTH_SRC = REPO_ROOT / "src" / "api" / "operational" / "health"
 
 
 class TestLambdaHandlerContract:
-    def test_handler_module_exports_handler_function(self):
+    def test_handler_module_exports_handler_function(self) -> None:
         handler_path = HEALTH_SRC / "lambda" / "handler.py"
         handler_content = handler_path.read_text()
 
@@ -23,7 +23,7 @@ class TestLambdaHandlerContract:
             "(referenced by lambda.tf as handler = \"handler.lambda_handler\")"
         )
 
-    def test_handler_function_accepts_event_and_context(self):
+    def test_handler_function_accepts_event_and_context(self) -> None:
         handler_path = HEALTH_SRC / "lambda" / "handler.py"
         handler_content = handler_path.read_text()
 

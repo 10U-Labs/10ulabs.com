@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration import create_layer2_s3_authorization_tests
@@ -6,7 +8,7 @@ from test_fixtures.integration import create_layer2_s3_authorization_tests
 TestS3Authorization = create_layer2_s3_authorization_tests()
 
 
-def test_can_call_s3_get_object(s3_client, state_bucket_name):
+def test_can_call_s3_get_object(s3_client: Any, state_bucket_name: str) -> None:
     try:
         s3_client.get_object(Bucket=state_bucket_name, Key="bootstrap/terraform.tfstate")
     except ClientError as e:

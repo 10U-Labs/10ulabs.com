@@ -1,7 +1,8 @@
+from typing import Any, Dict
 class TestLambdaConfiguration:
     def test_contact_handler_uses_python_runtime(
-        self, lambda_client, shared_config
-    ):
+        self, lambda_client: Any, shared_config: Dict[str, Any]
+    ) -> None:
         function_name = shared_config.get("lambda_handler_names", {}).get(
             "contact", "TenULabsContactHandler"
         )
@@ -12,8 +13,8 @@ class TestLambdaConfiguration:
         )
 
     def test_contact_handler_uses_arm64_architecture(
-        self, lambda_client, shared_config
-    ):
+        self, lambda_client: Any, shared_config: Dict[str, Any]
+    ) -> None:
         function_name = shared_config.get("lambda_handler_names", {}).get(
             "contact", "TenULabsContactHandler"
         )
@@ -24,8 +25,8 @@ class TestLambdaConfiguration:
         )
 
     def test_contact_handler_has_handler_configured(
-        self, lambda_client, shared_config
-    ):
+        self, lambda_client: Any, shared_config: Dict[str, Any]
+    ) -> None:
         function_name = shared_config.get("lambda_handler_names", {}).get(
             "contact", "TenULabsContactHandler"
         )
@@ -36,8 +37,8 @@ class TestLambdaConfiguration:
         )
 
     def test_contact_handler_has_10_second_timeout(
-        self, lambda_client, shared_config
-    ):
+        self, lambda_client: Any, shared_config: Dict[str, Any]
+    ) -> None:
         function_name = shared_config.get("lambda_handler_names", {}).get(
             "contact", "TenULabsContactHandler"
         )
@@ -48,15 +49,15 @@ class TestLambdaConfiguration:
         )
 
     def test_contact_handler_has_contact_email_env_var(
-        self, contact_handler_env_vars
-    ):
+        self, contact_handler_env_vars: Any
+    ) -> None:
         assert "CONTACT_EMAIL" in contact_handler_env_vars, (
             "Lambda missing CONTACT_EMAIL environment variable"
         )
 
     def test_contact_handler_has_recaptcha_param_env_var(
-        self, contact_handler_env_vars
-    ):
+        self, contact_handler_env_vars: Any
+    ) -> None:
         assert "RECAPTCHA_SECRET_PARAMETER_NAME" in contact_handler_env_vars, (
             "Lambda missing RECAPTCHA_SECRET_PARAMETER_NAME environment variable"
         )
@@ -64,16 +65,16 @@ class TestLambdaConfiguration:
 
 class TestCloudWatchLogsConfiguration:
     def test_contact_handler_log_group_has_retention_set(
-        self, contact_handler_log_group
-    ):
+        self, contact_handler_log_group: Any
+    ) -> None:
         assert contact_handler_log_group["retention"] is not None, (
             f"Log group '{contact_handler_log_group['name']}' "
             "should have retention set"
         )
 
     def test_contact_handler_log_group_retention_is_7_days(
-        self, contact_handler_log_group
-    ):
+        self, contact_handler_log_group: Any
+    ) -> None:
         retention = contact_handler_log_group["retention"]
         assert retention == 7, (
             f"Log group retention should be 7 days, got: {retention}"

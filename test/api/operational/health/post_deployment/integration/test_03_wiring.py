@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from test_fixtures.integration import (
     create_lambda_api_gateway_wiring_tests,
     create_lambda_iam_wiring_tests,
@@ -18,7 +20,11 @@ TestIAMPolicyWiring = create_lambda_iam_wiring_tests(
 
 
 class TestHealthSpecificIAMWiring:
-    def test_health_handler_role_has_kms_inline_policy(self, iam_client, config):
+    def test_health_handler_role_has_kms_inline_policy(
+        self,
+        iam_client: Any,
+        config: Dict[str, Any]
+    ) -> None:
         function_name = config.get(
             'health_handler_function_name', 'TenULabsHealthHandler'
         )
@@ -30,7 +36,11 @@ class TestHealthSpecificIAMWiring:
             f"Found policies: {inline_policies}"
         )
 
-    def test_health_handler_role_has_lambda_trust_relationship(self, iam_client, config):
+    def test_health_handler_role_has_lambda_trust_relationship(
+        self,
+        iam_client: Any,
+        config: Dict[str, Any]
+    ) -> None:
         function_name = config.get(
             'health_handler_function_name', 'TenULabsHealthHandler'
         )

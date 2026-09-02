@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Any, Dict
 
 import boto3
 import pytest
@@ -18,7 +18,7 @@ def _get_hosted_zone_id(domain_name: str) -> str:
 
 
 @pytest.fixture(scope="module")
-def config(shared_config) -> Dict[str, str]:
+def config(shared_config: Dict[str, Any]) -> Dict[str, str]:
     locals_path = REPO_ROOT / "src" / "www" / "common" / "locals.tf"
     hosted_zone_id = _get_hosted_zone_id(shared_config.get('domain_name', ''))
     return create_website_config(locals_path, shared_config, hosted_zone_id)

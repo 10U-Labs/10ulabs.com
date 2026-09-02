@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration import (
@@ -14,7 +16,10 @@ class TestIAMAuthorization(Layer2IAMAuthorizationTests):
     pass
 
 
-def test_can_call_s3_head_bucket_on_central_logs(s3_client, central_logs_bucket_name):
+def test_can_call_s3_head_bucket_on_central_logs(
+    s3_client: Any,
+    central_logs_bucket_name: str
+) -> None:
     if not central_logs_bucket_name:
         pytest.skip("central_logs_bucket_name not available")
     try:

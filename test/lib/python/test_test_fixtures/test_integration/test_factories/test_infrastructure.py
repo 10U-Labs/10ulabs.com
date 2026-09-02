@@ -1,3 +1,4 @@
+from typing import Any, Dict, Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -16,7 +17,7 @@ from test_fixtures.integration.factories.infrastructure import (
 )
 
 
-def _create_nonexistent_queue_mocks():
+def _create_nonexistent_queue_mocks() -> Tuple[MagicMock, MagicMock]:
     mock_client = MagicMock()
     mock_client.get_queue_url.side_effect = create_client_error(
         "AWS.SimpleQueueService.NonExistentQueue"
@@ -26,7 +27,7 @@ def _create_nonexistent_queue_mocks():
     return mock_client, mock_request
 
 
-def _create_sqs_service_error_mocks():
+def _create_sqs_service_error_mocks() -> Tuple[MagicMock, MagicMock]:
     mock_client = MagicMock()
     mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
     mock_client.get_queue_attributes.side_effect = create_client_error("ServiceException")
@@ -35,7 +36,11 @@ def _create_sqs_service_error_mocks():
     return mock_client, mock_request
 
 
-def _www_common_outputs(monkeypatch, terraform_outputs, **kwargs):
+def _www_common_outputs(
+    monkeypatch: pytest.MonkeyPatch,
+    terraform_outputs: Any,
+    **kwargs: Any
+) -> Any:
     monkeypatch.setattr(
         "test_fixtures.integration.factories.infrastructure.terraform_output",
         MagicMock(side_effect=terraform_outputs)
@@ -47,41 +52,41 @@ def _www_common_outputs(monkeypatch, terraform_outputs, **kwargs):
 
 
 class TestCreateWwwCommonFixturesReturnsFixtures:
-    def test_returns_tuple(self):
+    def test_returns_tuple(self) -> None:
         result = create_www_common_fixtures()
         assert isinstance(result, tuple)
 
-    def test_returns_two_fixtures(self):
+    def test_returns_two_fixtures(self) -> None:
         result = create_www_common_fixtures()
         assert len(result) == 2
 
-    def test_first_fixture_is_callable(self):
+    def test_first_fixture_is_callable(self) -> None:
         result = create_www_common_fixtures()
         assert callable(result[0])
 
-    def test_second_fixture_is_callable(self):
+    def test_second_fixture_is_callable(self) -> None:
         result = create_www_common_fixtures()
         assert callable(result[1])
 
-    def test_first_fixture_has_correct_name(self):
+    def test_first_fixture_has_correct_name(self) -> None:
         result = create_www_common_fixtures()
         assert result[0].__name__ == "www_common_terraform_initialized"
 
-    def test_second_fixture_has_correct_name(self):
+    def test_second_fixture_has_correct_name(self) -> None:
         result = create_www_common_fixtures()
         assert result[1].__name__ == "www_common_outputs"
 
 
 class TestCreateWwwCommonFixturesOptions:
-    def test_accepts_include_cloudfront(self):
+    def test_accepts_include_cloudfront(self) -> None:
         result = create_www_common_fixtures(include_cloudfront=True)
         assert len(result) == 2
 
-    def test_accepts_include_website_domain(self):
+    def test_accepts_include_website_domain(self) -> None:
         result = create_www_common_fixtures(include_website_domain=True)
         assert len(result) == 2
 
-    def test_accepts_both_options(self):
+    def test_accepts_both_options(self) -> None:
         result = create_www_common_fixtures(
             include_cloudfront=True, include_website_domain=True
         )
@@ -89,7 +94,10 @@ class TestCreateWwwCommonFixturesOptions:
 
 
 class TestWwwCommonFixturesExecution:
-    def test_terraform_initialized_calls_terraform_init(self, monkeypatch):
+    def test_terraform_initialized_calls_terraform_init(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         mock_init = MagicMock(return_value=True)
         monkeypatch.setattr(
             "test_fixtures.integration.factories.infrastructure.terraform_init",
@@ -100,7 +108,7 @@ class TestWwwCommonFixturesExecution:
         assert result is True
         mock_init.assert_called_once()
 
-    def test_outputs_skips_when_init_fails(self, monkeypatch):
+    def test_outputs_skips_when_init_fails(self, monkeypatch: pytest.MonkeyPatch) -> None:
         mock_init = MagicMock(return_value=False)
         mock_output = MagicMock(return_value="value")
         monkeypatch.setattr(
@@ -117,19 +125,22 @@ class TestWwwCommonFixturesExecution:
         with pytest.raises(pytest.skip.Exception):
             outputs_fixture.__wrapped__(mock_request)
 
-    def test_outputs_returns_bucket_name(self, monkeypatch):
+    def test_outputs_returns_bucket_name(self, monkeypatch: pytest.MonkeyPatch) -> None:
         result = _www_common_outputs(
             monkeypatch, ["my-bucket", "arn:aws:s3:::my-bucket"]
         )
         assert "bucket_name" in result
 
-    def test_outputs_returns_bucket_arn(self, monkeypatch):
+    def test_outputs_returns_bucket_arn(self, monkeypatch: pytest.MonkeyPatch) -> None:
         result = _www_common_outputs(
             monkeypatch, ["my-bucket", "arn:aws:s3:::my-bucket"]
         )
         assert "bucket_arn" in result
 
-    def test_outputs_includes_website_domain_when_requested(self, monkeypatch):
+    def test_outputs_includes_website_domain_when_requested(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         result = _www_common_outputs(
             monkeypatch,
             ["my-bucket", "arn:aws:s3:::my-bucket", "example.com"],
@@ -137,7 +148,10 @@ class TestWwwCommonFixturesExecution:
         )
         assert "website_domain_name" in result
 
-    def test_outputs_includes_cloudfront_when_requested(self, monkeypatch):
+    def test_outputs_includes_cloudfront_when_requested(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         result = _www_common_outputs(
             monkeypatch,
             ["my-bucket", "arn:aws:s3:::my-bucket", "E123456789"],
@@ -145,7 +159,10 @@ class TestWwwCommonFixturesExecution:
         )
         assert "cloudfront_distribution_id" in result
 
-    def test_outputs_includes_website_domain_when_both_requested(self, monkeypatch):
+    def test_outputs_includes_website_domain_when_both_requested(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         result = _www_common_outputs(
             monkeypatch,
             ["my-bucket", "arn:aws:s3:::my-bucket", "example.com", "E123456789"],
@@ -153,7 +170,10 @@ class TestWwwCommonFixturesExecution:
         )
         assert "website_domain_name" in result
 
-    def test_outputs_includes_cloudfront_when_both_requested(self, monkeypatch):
+    def test_outputs_includes_cloudfront_when_both_requested(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         result = _www_common_outputs(
             monkeypatch,
             ["my-bucket", "arn:aws:s3:::my-bucket", "example.com", "E123456789"],
@@ -163,101 +183,101 @@ class TestWwwCommonFixturesExecution:
 
 
 class TestCreateWwwCommonS3ExistenceTestsReturnsClass:
-    def test_returns_class(self):
+    def test_returns_class(self) -> None:
         test_class = create_www_common_s3_existence_tests()
         assert isinstance(test_class, type)
 
-    def test_returns_class_with_name(self):
+    def test_returns_class_with_name(self) -> None:
         test_class = create_www_common_s3_existence_tests()
         assert test_class.__name__ == "TestWWWCommonS3Existence"
 
 
 class TestCreateWwwCommonS3ExistenceTestsHasMethods:
-    def test_has_test_bucket_name_output_exists(self):
+    def test_has_test_bucket_name_output_exists(self) -> None:
         test_class = create_www_common_s3_existence_tests()
         assert hasattr(test_class, "test_bucket_name_output_exists")
 
-    def test_has_test_s3_bucket_exists(self):
+    def test_has_test_s3_bucket_exists(self) -> None:
         test_class = create_www_common_s3_existence_tests()
         assert hasattr(test_class, "test_s3_bucket_exists")
 
 
 class TestCreateWwwCommonS3ExistenceTestsBucketNameOutput:
-    def test_does_not_raise_when_output_exists(self):
+    def test_does_not_raise_when_output_exists(self) -> None:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
         outputs = {"bucket_name": "my-bucket"}
         assert instance.test_bucket_name_output_exists(outputs) is None
 
-    def test_fails_when_output_missing(self):
+    def test_fails_when_output_missing(self) -> None:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
-        outputs = {}
+        outputs: Dict[str, str] = {}
         with pytest.raises(AssertionError):
             instance.test_bucket_name_output_exists(outputs)
 
 
 class TestCreateSqsFifoQueueTestsReturnsClass:
-    def test_returns_class(self):
+    def test_returns_class(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name_fixture")
         assert isinstance(test_class, type)
 
-    def test_returns_class_with_name(self):
+    def test_returns_class_with_name(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name_fixture")
         assert test_class.__name__ == "TestSQSFIFOQueue"
 
 
 class TestCreateSqsFifoQueueTestsHasMethods:
-    def test_has_test_queue_exists(self):
+    def test_has_test_queue_exists(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name_fixture")
         assert hasattr(test_class, "test_queue_exists")
 
-    def test_has_test_queue_is_fifo(self):
+    def test_has_test_queue_is_fifo(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name_fixture")
         assert hasattr(test_class, "test_queue_is_fifo")
 
-    def test_has_test_queue_has_deduplication(self):
+    def test_has_test_queue_has_deduplication(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name_fixture")
         assert hasattr(test_class, "test_queue_has_deduplication")
 
 
-def test_handle_ecr_error_repository_not_found():
+def test_handle_ecr_error_repository_not_found() -> None:
     error = create_client_error("RepositoryNotFoundException")
     with pytest.raises(pytest.skip.Exception):
         handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
 
 class TestHandleEcrErrorAccessDenied:
-    def test_fails_on_access_denied(self):
+    def test_fails_on_access_denied(self) -> None:
         error = create_client_error("AccessDeniedException")
         with pytest.raises(pytest.fail.Exception):
             handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
-    def test_error_message_contains_operation(self):
+    def test_error_message_contains_operation(self) -> None:
         error = create_client_error("AccessDeniedException")
         with pytest.raises(pytest.fail.Exception, match="ecr:ListImages"):
             handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
-    def test_error_message_contains_repository_name(self):
+    def test_error_message_contains_repository_name(self) -> None:
         error = create_client_error("AccessDeniedException")
         with pytest.raises(pytest.fail.Exception, match="my-repo"):
             handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
 
-def test_handle_ecr_error_other_errors():
+def test_handle_ecr_error_other_errors() -> None:
     error = create_client_error("ServiceException")
     with pytest.raises(ClientError, match="ServiceException"):
         handle_ecr_error(error, "ecr:ListImages", "my-repo")
 
 
 class TestCreateSecurityGroupExistenceTestReturnsFunction:
-    def test_returns_callable(self):
+    def test_returns_callable(self) -> None:
         test_func = create_security_group_existence_test(
             "outputs_fixture", "security_group_id", "src/api/common/routing"
         )
         assert callable(test_func)
 
-    def test_returns_function_with_name(self):
+    def test_returns_function_with_name(self) -> None:
         test_func = create_security_group_existence_test(
             "outputs_fixture", "security_group_id", "src/api/common/routing"
         )
@@ -265,47 +285,47 @@ class TestCreateSecurityGroupExistenceTestReturnsFunction:
 
 
 class TestCreateLogGroupConfigurationTestsReturnsClass:
-    def test_returns_class(self):
+    def test_returns_class(self) -> None:
         test_class = create_log_group_configuration_tests("log_group_fixture")
         assert isinstance(test_class, type)
 
-    def test_returns_class_with_name(self):
+    def test_returns_class_with_name(self) -> None:
         test_class = create_log_group_configuration_tests("log_group_fixture")
         assert test_class.__name__ == "TestCloudWatchLogsConfiguration"
 
 
 class TestCreateLogGroupConfigurationTestsHasMethods:
-    def test_has_test_handler_log_group_has_retention_set(self):
+    def test_has_test_handler_log_group_has_retention_set(self) -> None:
         test_class = create_log_group_configuration_tests("log_group_fixture")
         assert hasattr(test_class, "test_handler_log_group_has_retention_set")
 
-    def test_has_test_handler_log_group_retention_is_expected(self):
+    def test_has_test_handler_log_group_retention_is_expected(self) -> None:
         test_class = create_log_group_configuration_tests("log_group_fixture")
         assert hasattr(test_class, "test_handler_log_group_retention_is_expected")
 
 
 class TestCreateLambdaRoleExistenceTestReturnsFunction:
-    def test_returns_callable(self):
+    def test_returns_callable(self) -> None:
         test_func = create_lambda_role_existence_test("role_name_fixture", "terraform/path")
         assert callable(test_func)
 
-    def test_returns_function_with_name(self):
+    def test_returns_function_with_name(self) -> None:
         test_func = create_lambda_role_existence_test("role_name_fixture", "terraform/path")
         assert test_func.__name__ == "test_lambda_execution_role_exists"
 
 
 class TestCreateKmsPolicyTestReturnsFunction:
-    def test_returns_callable(self):
+    def test_returns_callable(self) -> None:
         test_func = create_kms_policy_test("role_name_fixture")
         assert callable(test_func)
 
-    def test_returns_function_with_name(self):
+    def test_returns_function_with_name(self) -> None:
         test_func = create_kms_policy_test("role_name_fixture")
         assert test_func.__name__ == "test_lambda_role_has_kms_policy"
 
 
 class TestWwwCommonS3ExistenceS3BucketExistsExecution:
-    def test_s3_bucket_exists_success(self):
+    def test_s3_bucket_exists_success(self) -> None:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
         mock_client = MagicMock()
@@ -313,15 +333,15 @@ class TestWwwCommonS3ExistenceS3BucketExistsExecution:
         outputs = {"bucket_name": "my-bucket"}
         assert instance.test_s3_bucket_exists(mock_client, outputs) is None
 
-    def test_s3_bucket_exists_skips_when_no_output(self):
+    def test_s3_bucket_exists_skips_when_no_output(self) -> None:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
         mock_client = MagicMock()
-        outputs = {}
+        outputs: Dict[str, str] = {}
         with pytest.raises(pytest.skip.Exception):
             instance.test_s3_bucket_exists(mock_client, outputs)
 
-    def test_s3_bucket_exists_fails_on_404(self):
+    def test_s3_bucket_exists_fails_on_404(self) -> None:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
         mock_client = MagicMock()
@@ -330,7 +350,7 @@ class TestWwwCommonS3ExistenceS3BucketExistsExecution:
         with pytest.raises(pytest.fail.Exception):
             instance.test_s3_bucket_exists(mock_client, outputs)
 
-    def test_s3_bucket_exists_reraises_other_errors(self):
+    def test_s3_bucket_exists_reraises_other_errors(self) -> None:
         test_class = create_www_common_s3_existence_tests()
         instance = test_class()
         mock_client = MagicMock()
@@ -341,7 +361,7 @@ class TestWwwCommonS3ExistenceS3BucketExistsExecution:
 
 
 class TestSqsFifoQueueTestsExecution:
-    def test_queue_exists_success(self):
+    def test_queue_exists_success(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
         mock_client = MagicMock()
@@ -350,7 +370,7 @@ class TestSqsFifoQueueTestsExecution:
         mock_request.getfixturevalue.return_value = "my-queue.fifo"
         assert instance.test_queue_exists(mock_client, mock_request) is None
 
-    def test_queue_exists_skips_on_non_existent(self):
+    def test_queue_exists_skips_on_non_existent(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name", fail_on_missing=False)
         instance = test_class()
         mock_client = MagicMock()
@@ -362,7 +382,7 @@ class TestSqsFifoQueueTestsExecution:
         with pytest.raises(pytest.skip.Exception):
             instance.test_queue_exists(mock_client, mock_request)
 
-    def test_queue_exists_fails_on_non_existent_when_fail_on_missing(self):
+    def test_queue_exists_fails_on_non_existent_when_fail_on_missing(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name", fail_on_missing=True)
         instance = test_class()
         mock_client = MagicMock()
@@ -374,7 +394,7 @@ class TestSqsFifoQueueTestsExecution:
         with pytest.raises(pytest.fail.Exception):
             instance.test_queue_exists(mock_client, mock_request)
 
-    def test_queue_exists_reraises_other_errors(self):
+    def test_queue_exists_reraises_other_errors(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
         mock_client = MagicMock()
@@ -384,7 +404,7 @@ class TestSqsFifoQueueTestsExecution:
         with pytest.raises(ClientError):
             instance.test_queue_exists(mock_client, mock_request)
 
-    def test_queue_is_fifo_success(self):
+    def test_queue_is_fifo_success(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
         mock_client = MagicMock()
@@ -396,7 +416,7 @@ class TestSqsFifoQueueTestsExecution:
         mock_request.getfixturevalue.return_value = "my-queue.fifo"
         assert instance.test_queue_is_fifo(mock_client, mock_request) is None
 
-    def test_queue_is_fifo_fails_when_not_fifo(self):
+    def test_queue_is_fifo_fails_when_not_fifo(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
         mock_client = MagicMock()
@@ -409,13 +429,13 @@ class TestSqsFifoQueueTestsExecution:
         with pytest.raises(AssertionError):
             instance.test_queue_is_fifo(mock_client, mock_request)
 
-    def test_queue_is_fifo_skips_on_non_existent(self):
+    def test_queue_is_fifo_skips_on_non_existent(self) -> None:
         instance = create_sqs_fifo_queue_tests("queue_name")()
         mock_client, mock_request = _create_nonexistent_queue_mocks()
         with pytest.raises(pytest.skip.Exception):
             instance.test_queue_is_fifo(mock_client, mock_request)
 
-    def test_queue_has_deduplication_success(self):
+    def test_queue_has_deduplication_success(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
         mock_client = MagicMock()
@@ -427,7 +447,7 @@ class TestSqsFifoQueueTestsExecution:
         mock_request.getfixturevalue.return_value = "my-queue.fifo"
         assert instance.test_queue_has_deduplication(mock_client, mock_request) is None
 
-    def test_queue_has_deduplication_fails_when_disabled(self):
+    def test_queue_has_deduplication_fails_when_disabled(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
         mock_client = MagicMock()
@@ -440,7 +460,7 @@ class TestSqsFifoQueueTestsExecution:
         with pytest.raises(AssertionError):
             instance.test_queue_has_deduplication(mock_client, mock_request)
 
-    def test_queue_has_deduplication_skips_on_non_existent(self):
+    def test_queue_has_deduplication_skips_on_non_existent(self) -> None:
         instance = create_sqs_fifo_queue_tests("queue_name")()
         mock_client, mock_request = _create_nonexistent_queue_mocks()
         with pytest.raises(pytest.skip.Exception):
@@ -448,7 +468,7 @@ class TestSqsFifoQueueTestsExecution:
 
 
 class TestSecurityGroupExistenceExecution:
-    def test_security_group_exists_success(self):
+    def test_security_group_exists_success(self) -> None:
         test_func = create_security_group_existence_test(
             "outputs_fixture", "security_group_id", "src/api/common/routing"
         )
@@ -458,7 +478,7 @@ class TestSecurityGroupExistenceExecution:
         mock_request.getfixturevalue.return_value = {"security_group_id": "sg-123"}
         assert test_func(None, mock_client, mock_request) is None
 
-    def test_security_group_exists_skips_when_no_output(self):
+    def test_security_group_exists_skips_when_no_output(self) -> None:
         test_func = create_security_group_existence_test(
             "outputs_fixture", "security_group_id", "src/api/common/routing"
         )
@@ -468,7 +488,7 @@ class TestSecurityGroupExistenceExecution:
         with pytest.raises(pytest.skip.Exception):
             test_func(None, mock_client, mock_request)
 
-    def test_security_group_exists_fails_on_not_found(self):
+    def test_security_group_exists_fails_on_not_found(self) -> None:
         test_func = create_security_group_existence_test(
             "outputs_fixture", "security_group_id", "src/api/common/routing"
         )
@@ -481,7 +501,7 @@ class TestSecurityGroupExistenceExecution:
         with pytest.raises(pytest.fail.Exception):
             test_func(None, mock_client, mock_request)
 
-    def test_security_group_exists_reraises_other_errors(self):
+    def test_security_group_exists_reraises_other_errors(self) -> None:
         test_func = create_security_group_existence_test(
             "outputs_fixture", "security_group_id", "src/api/common/routing"
         )
@@ -494,14 +514,14 @@ class TestSecurityGroupExistenceExecution:
 
 
 class TestLogGroupConfigurationExecution:
-    def test_log_group_has_retention_set_success(self):
+    def test_log_group_has_retention_set_success(self) -> None:
         test_class = create_log_group_configuration_tests("log_group_fixture")
         instance = test_class()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 7}
         assert instance.test_handler_log_group_has_retention_set(mock_request) is None
 
-    def test_log_group_has_retention_set_fails_when_none(self):
+    def test_log_group_has_retention_set_fails_when_none(self) -> None:
         test_class = create_log_group_configuration_tests("log_group_fixture")
         instance = test_class()
         mock_request = MagicMock()
@@ -511,14 +531,14 @@ class TestLogGroupConfigurationExecution:
         with pytest.raises(AssertionError):
             instance.test_handler_log_group_has_retention_set(mock_request)
 
-    def test_log_group_retention_is_expected_success(self):
+    def test_log_group_retention_is_expected_success(self) -> None:
         test_class = create_log_group_configuration_tests("log_group_fixture", expected_retention=7)
         instance = test_class()
         mock_request = MagicMock()
         mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 7}
         assert instance.test_handler_log_group_retention_is_expected(mock_request) is None
 
-    def test_log_group_retention_is_expected_fails_when_different(self):
+    def test_log_group_retention_is_expected_fails_when_different(self) -> None:
         test_class = create_log_group_configuration_tests("log_group_fixture", expected_retention=7)
         instance = test_class()
         mock_request = MagicMock()
@@ -528,14 +548,14 @@ class TestLogGroupConfigurationExecution:
 
 
 class TestSqsFifoQueueTestsErrorReRaise:
-    def test_queue_is_fifo_reraises_other_errors(self):
+    def test_queue_is_fifo_reraises_other_errors(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
         mock_client, mock_request = _create_sqs_service_error_mocks()
         with pytest.raises(ClientError):
             instance.test_queue_is_fifo(mock_client, mock_request)
 
-    def test_queue_has_deduplication_reraises_other_errors(self):
+    def test_queue_has_deduplication_reraises_other_errors(self) -> None:
         test_class = create_sqs_fifo_queue_tests("queue_name")
         instance = test_class()
         mock_client, mock_request = _create_sqs_service_error_mocks()
@@ -544,7 +564,7 @@ class TestSqsFifoQueueTestsErrorReRaise:
 
 
 class TestLambdaRoleExistenceExecution:
-    def test_lambda_execution_role_exists_calls_helper(self):
+    def test_lambda_execution_role_exists_calls_helper(self) -> None:
         test_func = create_lambda_role_existence_test("role_name_fixture", "terraform/path")
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "my-role"}}
@@ -553,7 +573,7 @@ class TestLambdaRoleExistenceExecution:
         assert test_func(None, mock_client, mock_request) is None
         mock_client.get_role.assert_called_once_with(RoleName="my-role")
 
-    def test_lambda_execution_role_exists_fails_when_role_missing(self):
+    def test_lambda_execution_role_exists_fails_when_role_missing(self) -> None:
         test_func = create_lambda_role_existence_test("role_name_fixture", "terraform/path")
         mock_client = MagicMock()
         mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
@@ -564,7 +584,7 @@ class TestLambdaRoleExistenceExecution:
 
 
 class TestKmsPolicyExecution:
-    def test_lambda_role_has_kms_policy_calls_helper(self):
+    def test_lambda_role_has_kms_policy_calls_helper(self) -> None:
         test_func = create_kms_policy_test("role_name_fixture")
         mock_client = MagicMock()
         mock_client.list_role_policies.return_value = {
@@ -574,7 +594,7 @@ class TestKmsPolicyExecution:
         mock_request.getfixturevalue.return_value = "my-role"
         assert test_func(None, mock_client, mock_request) is None
 
-    def test_lambda_role_has_kms_policy_fails_when_policy_missing(self):
+    def test_lambda_role_has_kms_policy_fails_when_policy_missing(self) -> None:
         test_func = create_kms_policy_test("role_name_fixture")
         mock_client = MagicMock()
         mock_client.list_role_policies.return_value = {

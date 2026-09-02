@@ -1,5 +1,6 @@
 from pathlib import Path
 from types import ModuleType
+from typing import Any, Dict
 
 import pytest
 
@@ -21,7 +22,7 @@ def health_handler() -> ModuleType:
 
 
 @pytest.fixture
-def health_get_event():
+def health_get_event() -> Dict[str, Any]:
     return {'path': '/health', 'httpMethod': 'GET'}
 
 

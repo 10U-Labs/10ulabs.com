@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration import (
@@ -11,7 +13,7 @@ class TestAPIGatewayAuthorization(Layer3APIGatewayAuthorizationTests):
 class TestLambdaAndIAMAuthorization(Layer3LambdaAndIAMAuthorizationTests):
     pass
 class TestDynamoDBAndS3Authorization:
-    def test_can_list_tables(self, dynamodb_client):
+    def test_can_list_tables(self, dynamodb_client: Any) -> None:
         try:
             dynamodb_client.list_tables(Limit=1)
         except ClientError as e:
@@ -20,7 +22,7 @@ class TestDynamoDBAndS3Authorization:
             raise
         assert True
 
-    def test_can_list_buckets(self, s3_client):
+    def test_can_list_buckets(self, s3_client: Any) -> None:
         try:
             s3_client.list_buckets()
         except ClientError as e:

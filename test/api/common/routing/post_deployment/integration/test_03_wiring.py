@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 import pytest
 from botocore.exceptions import ClientError
@@ -11,7 +12,7 @@ import requests
 TEST_HEADERS = {"x-test-mode": "true"}
 
 
-def _extract_policy_actions(policy):
+def _extract_policy_actions(policy: Any) -> List[str]:
     actions = []
     for stmt in policy.get('Statement', []):
         stmt_actions = stmt.get('Action', [])
@@ -22,7 +23,7 @@ def _extract_policy_actions(policy):
     return actions
 
 
-def _extract_policy_resources(policy):
+def _extract_policy_resources(policy: Any) -> List[str]:
     resources = []
     for stmt in policy.get('Statement', []):
         stmt_resources = stmt.get('Resource', [])
@@ -33,7 +34,10 @@ def _extract_policy_resources(policy):
     return resources
 
 
-def test_api_gateway_has_permission_to_invoke_health_lambda(lambda_client, config):
+def test_api_gateway_has_permission_to_invoke_health_lambda(
+    lambda_client: Any,
+    config: Dict[str, Any]
+) -> None:
     function_name = config["health_handler_function_name"]
     try:
         response = lambda_client.get_policy(FunctionName=function_name)
@@ -45,8 +49,8 @@ def test_api_gateway_has_permission_to_invoke_health_lambda(lambda_client, confi
 
 
 def test_api_gateway_usage_plan_associated_with_prod_stage(
-    apigateway_client, api_gateway_id, usage_plan_id
-):
+    apigateway_client: Any, api_gateway_id: Optional[str], usage_plan_id: Optional[str]
+) -> None:
     if usage_plan_id is None:
         pytest.skip("Usage plan not found")
     plan = apigateway_client.get_usage_plan(usagePlanId=usage_plan_id)
@@ -58,14 +62,20 @@ def test_api_gateway_usage_plan_associated_with_prod_stage(
     assert True
 
 
-def test_api_gateway_usage_plan_key_links_key_to_plan(apigateway_client, usage_plan_id):
+def test_api_gateway_usage_plan_key_links_key_to_plan(
+    apigateway_client: Any,
+    usage_plan_id: Optional[str]
+) -> None:
     if usage_plan_id is None:
         pytest.skip("Usage plan not found")
     keys = apigateway_client.get_usage_plan_keys(usagePlanId=usage_plan_id)
     assert len(keys['items']) > 0
 
 
-def test_api_gateway_usage_plan_key_type_is_api_key(apigateway_client, usage_plan_id):
+def test_api_gateway_usage_plan_key_type_is_api_key(
+    apigateway_client: Any,
+    usage_plan_id: Optional[str]
+) -> None:
     if usage_plan_id is None:
         pytest.skip("Usage plan not found")
     keys = apigateway_client.get_usage_plan_keys(usagePlanId=usage_plan_id)
@@ -73,7 +83,10 @@ def test_api_gateway_usage_plan_key_type_is_api_key(apigateway_client, usage_pla
         assert keys['items'][0]['type'] == 'API_KEY'
 
 
-def test_api_gateway_cloudwatch_role_has_push_logs_policy(iam_client, config):
+def test_api_gateway_cloudwatch_role_has_push_logs_policy(
+    iam_client: Any,
+    config: Dict[str, Any]
+) -> None:
     role_name = config['api_gateway_cloudwatch_role_name']
     response = iam_client.list_attached_role_policies(RoleName=role_name)
     policy_arns = [p['PolicyArn'] for p in response['AttachedPolicies']]
@@ -83,7 +96,10 @@ def test_api_gateway_cloudwatch_role_has_push_logs_policy(iam_client, config):
     assert has_cloudwatch_policy
 
 
-def test_lambda_catchall_permission_source_arn_covers_all_methods(lambda_client, shared_config):
+def test_lambda_catchall_permission_source_arn_covers_all_methods(
+    lambda_client: Any,
+    shared_config: Dict[str, Any]
+) -> None:
     function_name = shared_config['lambda_handler_names']['catchall']
     try:
         response = lambda_client.get_policy(FunctionName=function_name)
@@ -98,7 +114,7 @@ def test_lambda_catchall_permission_source_arn_covers_all_methods(lambda_client,
         raise
 
 
-def test_cloudfront_distribution_origin_points_to_s3(cloudfront_client):
+def test_cloudfront_distribution_origin_points_to_s3(cloudfront_client: Any) -> None:
     distributions = cloudfront_client.list_distributions()
     if distributions['DistributionList']['Quantity'] > 0:
         dist_id = distributions['DistributionList']['Items'][0]['Id']
@@ -108,8 +124,8 @@ def test_cloudfront_distribution_origin_points_to_s3(cloudfront_client):
 
 
 def test_cloudfront_logging_bucket_is_central_logs(
-    cloudfront_client, api_distribution_id, config
-):
+    cloudfront_client: Any, api_distribution_id: Optional[str], config: Dict[str, Any]
+) -> None:
     if api_distribution_id is None:
         pytest.skip("API CloudFront distribution not found")
     dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
@@ -120,7 +136,10 @@ def test_cloudfront_logging_bucket_is_central_logs(
     assert config['central_logs_bucket'] in bucket
 
 
-def test_cloudfront_logging_prefix_is_correct(cloudfront_client, api_distribution_id):
+def test_cloudfront_logging_prefix_is_correct(
+    cloudfront_client: Any,
+    api_distribution_id: Optional[str]
+) -> None:
     if api_distribution_id is None:
         pytest.skip("API CloudFront distribution not found")
     dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
@@ -129,7 +148,7 @@ def test_cloudfront_logging_prefix_is_correct(cloudfront_client, api_distributio
     assert prefix == 'cloudfront-logs/api/'
 
 
-def test_s3_bucket_policy_allows_cloudfront_oac(s3_client, config):
+def test_s3_bucket_policy_allows_cloudfront_oac(s3_client: Any, config: Dict[str, Any]) -> None:
     bucket_name = config["api_fqdn"]
     response = s3_client.get_bucket_policy(Bucket=bucket_name)
     policy = json.loads(response['Policy'])
@@ -140,7 +159,10 @@ def test_s3_bucket_policy_allows_cloudfront_oac(s3_client, config):
     assert has_cloudfront_condition
 
 
-def test_route53_api_record_alias_target_is_cloudfront(api_route53_records, config):
+def test_route53_api_record_alias_target_is_cloudfront(
+    api_route53_records: Any,
+    config: Dict[str, Any]
+) -> None:
     if api_route53_records is None:
         pytest.skip("Hosted zone not found")
     for record in api_route53_records:
@@ -149,7 +171,10 @@ def test_route53_api_record_alias_target_is_cloudfront(api_route53_records, conf
             assert 'cloudfront.net' in alias_target.get('DNSName', '')
 
 
-def test_cloudfront_uses_acm_certificate(cloudfront_client, api_distribution_id):
+def test_cloudfront_uses_acm_certificate(
+    cloudfront_client: Any,
+    api_distribution_id: Optional[str]
+) -> None:
     if api_distribution_id is None:
         pytest.skip("API CloudFront distribution not found")
     dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
@@ -158,37 +183,46 @@ def test_cloudfront_uses_acm_certificate(cloudfront_client, api_distribution_id)
     assert 'arn:aws:acm' in acm_cert_arn
 
 
-def test_cloudfront_returns_404_for_nonexistent_endpoint(api_url):
+def test_cloudfront_returns_404_for_nonexistent_endpoint(api_url: str) -> None:
     response = requests.get(f"{api_url}/nonexistent", headers=TEST_HEADERS, timeout=10)
     assert response.status_code == 404
 
 
-def test_cloudfront_404_page_contains_error_message(api_url):
+def test_cloudfront_404_page_contains_error_message(api_url: str) -> None:
     response = requests.get(f"{api_url}/nonexistent", headers=TEST_HEADERS, timeout=10)
     data = json.loads(response.text)
     assert "error" in data
 
 
-def test_cloudfront_404_page_contains_not_found_text(api_url):
+def test_cloudfront_404_page_contains_not_found_text(api_url: str) -> None:
     response = requests.get(f"{api_url}/nonexistent", headers=TEST_HEADERS, timeout=10)
     assert "Not Found" in response.text or "Endpoint not found" in response.text
 
 
-def test_catchall_handler_subscription_filter_exists(logs_client, config):
+def test_catchall_handler_subscription_filter_exists(
+    logs_client: Any,
+    config: Dict[str, Any]
+) -> None:
     log_group = config['catchall_handler_log_group_name']
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     filter_names = [f['filterName'] for f in response['subscriptionFilters']]
     assert 'catchall-handler-to-firehose' in filter_names
 
 
-def test_catchall_handler_subscription_destinations_firehose(logs_client, config):
+def test_catchall_handler_subscription_destinations_firehose(
+    logs_client: Any,
+    config: Dict[str, Any]
+) -> None:
     log_group = config['catchall_handler_log_group_name']
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     destination_arn = response['subscriptionFilters'][0]['destinationArn']
     assert 'firehose' in destination_arn
 
 
-def test_health_handler_subscription_filter_exists(logs_client, config):
+def test_health_handler_subscription_filter_exists(
+    logs_client: Any,
+    config: Dict[str, Any]
+) -> None:
     log_group = config['health_handler_log_group_name']
     try:
         response = logs_client.describe_subscription_filters(logGroupName=log_group)
@@ -200,14 +234,14 @@ def test_health_handler_subscription_filter_exists(logs_client, config):
     assert 'health-handler-to-firehose' in filter_names
 
 
-def test_api_gateway_subscription_filter_exists(logs_client, config):
+def test_api_gateway_subscription_filter_exists(logs_client: Any, config: Dict[str, Any]) -> None:
     log_group = config['api_gateway_log_group_name']
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     filter_names = [f['filterName'] for f in response['subscriptionFilters']]
     assert 'api-gateway-to-firehose' in filter_names
 
 
-def test_firehose_role_trusts_firehose_service(iam_client, config):
+def test_firehose_role_trusts_firehose_service(iam_client: Any, config: Dict[str, Any]) -> None:
     response = iam_client.get_role(RoleName=config['firehose_role_name'])
     assume_role_policy = response['Role']['AssumeRolePolicyDocument']
     statements = assume_role_policy['Statement']
@@ -215,7 +249,10 @@ def test_firehose_role_trusts_firehose_service(iam_client, config):
     assert service_principal == 'firehose.amazonaws.com'
 
 
-def test_cloudwatch_logs_firehose_role_trusts_logs_service(iam_client, config):
+def test_cloudwatch_logs_firehose_role_trusts_logs_service(
+    iam_client: Any,
+    config: Dict[str, Any]
+) -> None:
     role_name = config['cloudwatch_logs_firehose_role_name']
     response = iam_client.get_role(RoleName=role_name)
     assume_role_policy = response['Role']['AssumeRolePolicyDocument']
@@ -224,12 +261,15 @@ def test_cloudwatch_logs_firehose_role_trusts_logs_service(iam_client, config):
     assert f"logs.{config['aws_region']}.amazonaws.com" == service_principal
 
 
-def test_firehose_role_has_s3_access_policy(iam_client, config):
+def test_firehose_role_has_s3_access_policy(iam_client: Any, config: Dict[str, Any]) -> None:
     response = iam_client.list_role_policies(RoleName=config['firehose_role_name'])
     assert 'S3Access' in response['PolicyNames']
 
 
-def test_firehose_s3_policy_has_all_required_actions(iam_client, config):
+def test_firehose_s3_policy_has_all_required_actions(
+    iam_client: Any,
+    config: Dict[str, Any]
+) -> None:
     response = iam_client.get_role_policy(
         RoleName=config['firehose_role_name'], PolicyName='S3Access'
     )
@@ -237,13 +277,19 @@ def test_firehose_s3_policy_has_all_required_actions(iam_client, config):
     assert any('s3:PutObject' in a or 's3:*' in a for a in actions)
 
 
-def test_cloudwatch_logs_firehose_role_has_firehose_access_policy(iam_client, config):
+def test_cloudwatch_logs_firehose_role_has_firehose_access_policy(
+    iam_client: Any,
+    config: Dict[str, Any]
+) -> None:
     role_name = config['cloudwatch_logs_firehose_role_name']
     response = iam_client.list_role_policies(RoleName=role_name)
     assert 'FirehoseAccess' in response['PolicyNames']
 
 
-def test_catchall_subscription_uses_correct_firehose_role(logs_client, config):
+def test_catchall_subscription_uses_correct_firehose_role(
+    logs_client: Any,
+    config: Dict[str, Any]
+) -> None:
     log_group = config['catchall_handler_log_group_name']
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     if response['subscriptionFilters']:
@@ -251,7 +297,10 @@ def test_catchall_subscription_uses_correct_firehose_role(logs_client, config):
         assert config['cloudwatch_logs_firehose_role_name'] in role_arn
 
 
-def test_api_gateway_subscription_uses_correct_firehose_role(logs_client, config):
+def test_api_gateway_subscription_uses_correct_firehose_role(
+    logs_client: Any,
+    config: Dict[str, Any]
+) -> None:
     log_group = config['api_gateway_log_group_name']
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     if response['subscriptionFilters']:
@@ -259,7 +308,10 @@ def test_api_gateway_subscription_uses_correct_firehose_role(logs_client, config
         assert config['cloudwatch_logs_firehose_role_name'] in role_arn
 
 
-def test_lambda_role_has_basic_execution_policy(iam_client, shared_config):
+def test_lambda_role_has_basic_execution_policy(
+    iam_client: Any,
+    shared_config: Dict[str, Any]
+) -> None:
     role_name = f"{shared_config['resource_prefix']}CatchAllHandlerServiceRole"
     response = iam_client.list_attached_role_policies(RoleName=role_name)
     policy_arns = [p['PolicyArn'] for p in response['AttachedPolicies']]
@@ -267,14 +319,17 @@ def test_lambda_role_has_basic_execution_policy(iam_client, shared_config):
     assert has_basic_exec
 
 
-def test_cloudwatch_logs_firehose_policy_allows_put_record(iam_client, config):
+def test_cloudwatch_logs_firehose_policy_allows_put_record(
+    iam_client: Any,
+    config: Dict[str, Any]
+) -> None:
     role_name = config['cloudwatch_logs_firehose_role_name']
     response = iam_client.get_role_policy(RoleName=role_name, PolicyName='FirehoseAccess')
     actions = _extract_policy_actions(response['PolicyDocument'])
     assert any('firehose:PutRecord' in a for a in actions)
 
 
-def _firehose_metric(config, aws_region, metric_name):
+def _firehose_metric(config: Dict[str, Any], aws_region: str, metric_name: str) -> Any:
     cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
     end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=24)
@@ -290,17 +345,17 @@ def _firehose_metric(config, aws_region, metric_name):
     )
 
 
-def test_firehose_receives_incoming_records(config, aws_region):
+def test_firehose_receives_incoming_records(config: Dict[str, Any], aws_region: str) -> None:
     response = _firehose_metric(config, aws_region, 'IncomingRecords')
     assert 'Datapoints' in response
 
 
-def test_firehose_delivery_to_s3_is_successful(config, aws_region):
+def test_firehose_delivery_to_s3_is_successful(config: Dict[str, Any], aws_region: str) -> None:
     response = _firehose_metric(config, aws_region, 'DeliveryToS3.Success')
     assert 'Datapoints' in response
 
 
-def test_s3_cloudwatch_logs_prefix_accessible(config, aws_region):
+def test_s3_cloudwatch_logs_prefix_accessible(config: Dict[str, Any], aws_region: str) -> None:
     s3 = boto3.client('s3', region_name=aws_region)
     response = s3.list_objects_v2(
         Bucket=config['central_logs_bucket'],
@@ -310,7 +365,7 @@ def test_s3_cloudwatch_logs_prefix_accessible(config, aws_region):
     assert 'Contents' in response or 'KeyCount' in response
 
 
-def test_s3_cloudfront_logs_prefix_accessible(config, aws_region):
+def test_s3_cloudfront_logs_prefix_accessible(config: Dict[str, Any], aws_region: str) -> None:
     s3 = boto3.client('s3', region_name=aws_region)
     response = s3.list_objects_v2(
         Bucket=config['central_logs_bucket'],
@@ -320,7 +375,10 @@ def test_s3_cloudfront_logs_prefix_accessible(config, aws_region):
     assert 'Contents' in response or 'KeyCount' in response
 
 
-def test_api_gateway_cloudwatch_role_trusts_apigateway_service(iam_client, config):
+def test_api_gateway_cloudwatch_role_trusts_apigateway_service(
+    iam_client: Any,
+    config: Dict[str, Any]
+) -> None:
     role_name = config['api_gateway_cloudwatch_role_name']
     response = iam_client.get_role(RoleName=role_name)
     assume_role_policy = response['Role']['AssumeRolePolicyDocument']

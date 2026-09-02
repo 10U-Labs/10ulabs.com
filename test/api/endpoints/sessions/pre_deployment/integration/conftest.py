@@ -1,8 +1,10 @@
+from typing import Dict
+
 import pytest
 
 
 @pytest.fixture(scope="module")
-def sessions_config(request):
+def sessions_config(request: pytest.FixtureRequest) -> Dict[str, str]:
     if not request.getfixturevalue("sessions_terraform_initialized"):
         pytest.skip("Terraform init failed for sessions")
 

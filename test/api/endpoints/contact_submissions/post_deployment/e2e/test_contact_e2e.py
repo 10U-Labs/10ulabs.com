@@ -1,4 +1,5 @@
 import time
+from typing import Any, Dict
 
 import requests
 
@@ -6,7 +7,7 @@ import requests
 TEST_HEADERS = {"x-test-mode": "true", "Content-Type": "application/json"}
 
 
-def create_contact_payload():
+def create_contact_payload() -> Dict[str, Any]:
     return {
         "name": "E2E Test User",
         "email": "e2e-test@example.com",
@@ -16,7 +17,7 @@ def create_contact_payload():
 
 
 class TestContactFormSubmission:
-    def test_contact_form_submission_returns_success(self, api_url):
+    def test_contact_form_submission_returns_success(self, api_url: str) -> None:
         payload = create_contact_payload()
         response = requests.post(
             f"{api_url}/v1/contact-submissions",
@@ -26,7 +27,7 @@ class TestContactFormSubmission:
             f"Expected 200, got {response.status_code}: {response.text}"
         )
 
-    def test_contact_form_submission_returns_json(self, api_url):
+    def test_contact_form_submission_returns_json(self, api_url: str) -> None:
         payload = create_contact_payload()
         response = requests.post(
             f"{api_url}/v1/contact-submissions",
@@ -37,7 +38,7 @@ class TestContactFormSubmission:
             f"Expected JSON content type, got: {content_type}"
         )
 
-    def test_contact_form_submission_confirms_test_mode(self, api_url):
+    def test_contact_form_submission_confirms_test_mode(self, api_url: str) -> None:
         payload = create_contact_payload()
         response = requests.post(
             f"{api_url}/v1/contact-submissions",
@@ -50,13 +51,13 @@ class TestContactFormSubmission:
 
 
 class TestContactEndpointCORS:
-    def test_options_request_returns_200(self, api_url):
+    def test_options_request_returns_200(self, api_url: str) -> None:
         response = requests.options(f"{api_url}/v1/contact-submissions", timeout=10)
         assert response.status_code == 200, (
             f"Expected 200, got {response.status_code}"
         )
 
-    def test_cors_header_present_in_response(self, api_url):
+    def test_cors_header_present_in_response(self, api_url: str) -> None:
         payload = create_contact_payload()
         response = requests.post(
             f"{api_url}/v1/contact-submissions",
@@ -68,7 +69,7 @@ class TestContactEndpointCORS:
 
 
 class TestContactEndpointPerformance:
-    def test_response_time_under_5_seconds(self, api_url):
+    def test_response_time_under_5_seconds(self, api_url: str) -> None:
         payload = create_contact_payload()
         start = time.time()
         requests.post(
@@ -80,7 +81,7 @@ class TestContactEndpointPerformance:
             f"Response time {elapsed:.2f}s exceeds 5 second limit"
         )
 
-    def test_stable_over_multiple_requests(self, api_url):
+    def test_stable_over_multiple_requests(self, api_url: str) -> None:
         payload = create_contact_payload()
         statuses = []
         for _ in range(3):
@@ -95,7 +96,7 @@ class TestContactEndpointPerformance:
 
 
 class TestContactEndpointValidation:
-    def test_missing_name_returns_400(self, api_url):
+    def test_missing_name_returns_400(self, api_url: str) -> None:
         payload = create_contact_payload()
         payload["name"] = ""
         response = requests.post(
@@ -106,7 +107,7 @@ class TestContactEndpointValidation:
             f"Expected 400 for missing name, got {response.status_code}"
         )
 
-    def test_invalid_email_returns_400(self, api_url):
+    def test_invalid_email_returns_400(self, api_url: str) -> None:
         payload = create_contact_payload()
         payload["email"] = "not-an-email"
         response = requests.post(

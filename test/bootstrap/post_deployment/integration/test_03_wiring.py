@@ -1,4 +1,5 @@
-def test_cloudtrail_writes_logs_to_s3(s3_client, cloudtrail_client):
+from typing import Any, Dict
+def test_cloudtrail_writes_logs_to_s3(s3_client: Any, cloudtrail_client: Any) -> None:
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -7,7 +8,7 @@ def test_cloudtrail_writes_logs_to_s3(s3_client, cloudtrail_client):
     assert key_count > 0
 
 
-def test_cloudtrail_writes_logs_to_cloudwatch(logs_client, cloudtrail_client):
+def test_cloudtrail_writes_logs_to_cloudwatch(logs_client: Any, cloudtrail_client: Any) -> None:
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     log_group_arn = trail['CloudWatchLogsLogGroupArn']
@@ -21,14 +22,17 @@ def test_cloudtrail_writes_logs_to_cloudwatch(logs_client, cloudtrail_client):
     assert len(streams['logStreams']) > 0
 
 
-def test_central_logs_write_policy_exists(iam_client):
+def test_central_logs_write_policy_exists(iam_client: Any) -> None:
     policy_name = 'central-logs-write-policy'
     response = iam_client.list_policies(Scope='Local')
     policy_names = [p['PolicyName'] for p in response['Policies']]
     assert policy_name in policy_names
 
 
-def test_cloudtrail_iam_role_trust_policy_allows_cloudtrail(iam_client, cloudtrail_client):
+def test_cloudtrail_iam_role_trust_policy_allows_cloudtrail(
+    iam_client: Any,
+    cloudtrail_client: Any
+) -> None:
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     if 'CloudWatchLogsRoleArn' in trail:
@@ -46,7 +50,7 @@ def test_cloudtrail_iam_role_trust_policy_allows_cloudtrail(iam_client, cloudtra
         assert 'cloudtrail.amazonaws.com' in principals
 
 
-def test_cloudtrail_iam_role_has_inline_policy(iam_client, cloudtrail_client):
+def test_cloudtrail_iam_role_has_inline_policy(iam_client: Any, cloudtrail_client: Any) -> None:
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     if 'CloudWatchLogsRoleArn' in trail:
@@ -55,7 +59,10 @@ def test_cloudtrail_iam_role_has_inline_policy(iam_client, cloudtrail_client):
         assert len(response['PolicyNames']) > 0
 
 
-def test_cloudtrail_iam_role_policy_allows_log_actions(iam_client, cloudtrail_client):
+def test_cloudtrail_iam_role_policy_allows_log_actions(
+    iam_client: Any,
+    cloudtrail_client: Any
+) -> None:
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     if 'CloudWatchLogsRoleArn' in trail:
@@ -67,7 +74,10 @@ def test_cloudtrail_iam_role_policy_allows_log_actions(iam_client, cloudtrail_cl
         assert 'logs:CreateLogStream' in policy_doc or 'logs:*' in policy_doc
 
 
-def test_terraform_state_bucket_policy_allows_github_actions_role(s3_client, config):
+def test_terraform_state_bucket_policy_allows_github_actions_role(
+    s3_client: Any,
+    config: Dict[str, Any]
+) -> None:
     bucket_name = config['name_for_terraform_state_bucket']
     policy = s3_client.get_bucket_policy(Bucket=bucket_name)
     policy_doc = policy['Policy']
@@ -75,7 +85,10 @@ def test_terraform_state_bucket_policy_allows_github_actions_role(s3_client, con
     assert role_name in policy_doc
 
 
-def test_github_actions_role_is_attached_to_oidc_provider(iam_client, config):
+def test_github_actions_role_is_attached_to_oidc_provider(
+    iam_client: Any,
+    config: Dict[str, Any]
+) -> None:
     role_name = config['name_for_github_actions_role']
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']

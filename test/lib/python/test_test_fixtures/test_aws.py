@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import Any, Dict
 from unittest.mock import MagicMock
 
 from test_fixtures.aws import (
@@ -10,7 +11,7 @@ from test_fixtures.aws import (
 
 
 class TestIamRoleExists:
-    def test_returns_true_when_role_exists(self):
+    def test_returns_true_when_role_exists(self) -> None:
         mock_client = MagicMock()
         mock_client.get_role.return_value = {
             "Role": {"RoleName": "test-role", "Arn": "arn:aws:iam::123456:role/test-role"}
@@ -18,7 +19,7 @@ class TestIamRoleExists:
         result = iam_role_exists(mock_client, "test-role")
         assert result is True
 
-    def test_returns_false_when_role_not_found(self):
+    def test_returns_false_when_role_not_found(self) -> None:
         mock_client = MagicMock()
         mock_client.exceptions.NoSuchEntityException = type(
             "NoSuchEntityException", (Exception,), {}
@@ -27,13 +28,13 @@ class TestIamRoleExists:
         result = iam_role_exists(mock_client, "nonexistent-role")
         assert result is False
 
-    def test_calls_get_role_with_role_name(self):
+    def test_calls_get_role_with_role_name(self) -> None:
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {"RoleName": "my-role"}}
         iam_role_exists(mock_client, "my-role")
         assert mock_client.get_role.call_args[1]["RoleName"] == "my-role"
 
-    def test_passes_role_name_argument(self):
+    def test_passes_role_name_argument(self) -> None:
         mock_client = MagicMock()
         mock_client.get_role.return_value = {"Role": {}}
         iam_role_exists(mock_client, "custom-role-name")
@@ -42,19 +43,19 @@ class TestIamRoleExists:
 
 
 class TestGetLogGroupInfo:
-    def test_returns_dict_type(self):
+    def test_returns_dict_type(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {"logGroups": []}
         result = get_log_group_info(mock_client, "/aws/lambda/test")
         assert isinstance(result, dict)
 
-    def test_returns_name_in_result(self):
+    def test_returns_name_in_result(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {"logGroups": []}
         result = get_log_group_info(mock_client, "/aws/lambda/my-function")
         assert result["name"] == "/aws/lambda/my-function"
 
-    def test_returns_exists_true_when_log_group_found(self):
+    def test_returns_exists_true_when_log_group_found(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {
             "logGroups": [
@@ -64,13 +65,13 @@ class TestGetLogGroupInfo:
         result = get_log_group_info(mock_client, "/aws/lambda/my-function")
         assert result["exists"] is True
 
-    def test_returns_exists_false_when_log_group_not_found(self):
+    def test_returns_exists_false_when_log_group_not_found(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {"logGroups": []}
         result = get_log_group_info(mock_client, "/aws/lambda/nonexistent")
         assert result["exists"] is False
 
-    def test_returns_retention_days_when_set(self):
+    def test_returns_retention_days_when_set(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {
             "logGroups": [
@@ -80,13 +81,13 @@ class TestGetLogGroupInfo:
         result = get_log_group_info(mock_client, "/aws/lambda/test")
         assert result["retention"] == 30
 
-    def test_returns_retention_none_when_not_found(self):
+    def test_returns_retention_none_when_not_found(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {"logGroups": []}
         result = get_log_group_info(mock_client, "/aws/lambda/missing")
         assert result["retention"] is None
 
-    def test_returns_retention_none_when_not_set(self):
+    def test_returns_retention_none_when_not_set(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {
             "logGroups": [{"logGroupName": "/aws/lambda/test"}]
@@ -94,27 +95,27 @@ class TestGetLogGroupInfo:
         result = get_log_group_info(mock_client, "/aws/lambda/test")
         assert result["retention"] is None
 
-    def test_calls_describe_log_groups_with_prefix(self):
+    def test_calls_describe_log_groups_with_prefix(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {"logGroups": []}
         get_log_group_info(mock_client, "/aws/lambda/test-fn")
         assert mock_client.describe_log_groups.call_count == 1
 
-    def test_calls_describe_log_groups_with_correct_prefix(self):
+    def test_calls_describe_log_groups_with_correct_prefix(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {"logGroups": []}
         get_log_group_info(mock_client, "/aws/lambda/test-fn")
         call_args = mock_client.describe_log_groups.call_args
         assert call_args[1]["logGroupNamePrefix"] == "/aws/lambda/test-fn"
 
-    def test_calls_describe_log_groups_with_limit_one(self):
+    def test_calls_describe_log_groups_with_limit_one(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {"logGroups": []}
         get_log_group_info(mock_client, "/aws/lambda/test")
         call_args = mock_client.describe_log_groups.call_args
         assert call_args[1]["limit"] == 1
 
-    def test_filters_by_exact_log_group_name(self):
+    def test_filters_by_exact_log_group_name(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {
             "logGroups": [
@@ -124,7 +125,7 @@ class TestGetLogGroupInfo:
         result = get_log_group_info(mock_client, "/aws/lambda/test-function")
         assert result["exists"] is False
 
-    def test_handles_multiple_log_groups_in_response(self):
+    def test_handles_multiple_log_groups_in_response(self) -> None:
         mock_client = MagicMock()
         mock_client.describe_log_groups.return_value = {
             "logGroups": [
@@ -137,22 +138,22 @@ class TestGetLogGroupInfo:
 
 class TestFindLifecycleRule:
     @staticmethod
-    def _client(*rules):
+    def _client(*rules: Any) -> MagicMock:
         client = MagicMock()
         client.get_bucket_lifecycle_configuration.return_value = {"Rules": list(rules)}
         return client
 
-    def test_returns_the_rule_whose_id_matches(self):
+    def test_returns_the_rule_whose_id_matches(self) -> None:
         wanted = {"ID": "expire-delete-markers", "Status": "Enabled"}
         found = find_lifecycle_rule(self._client(wanted), "a-bucket", "expire-delete-markers")
         assert found == wanted
 
-    def test_returns_none_when_no_rule_carries_that_id(self):
+    def test_returns_none_when_no_rule_carries_that_id(self) -> None:
         other = {"ID": "abort-multipart-uploads", "Status": "Enabled"}
         found = find_lifecycle_rule(self._client(other), "a-bucket", "expire-delete-markers")
         assert found is None
 
-    def test_reaches_a_rule_that_is_not_the_first(self):
+    def test_reaches_a_rule_that_is_not_the_first(self) -> None:
         wanted = {"ID": "expire-delete-markers", "Status": "Enabled"}
         first = {"ID": "abort-multipart-uploads", "Status": "Disabled"}
         found = find_lifecycle_rule(
@@ -163,24 +164,24 @@ class TestFindLifecycleRule:
 
 class TestStaleDeleteMarkers:
     @staticmethod
-    def _client(*pages):
+    def _client(*pages: Any) -> MagicMock:
         client = MagicMock()
         client.get_paginator.return_value.paginate.return_value = list(pages)
         return client
 
     @staticmethod
-    def _marker(key, **age):
+    def _marker(key: str, **age: Any) -> Dict[str, Any]:
         return {"Key": key, "LastModified": datetime.now(timezone.utc) - timedelta(**age)}
 
-    def test_returns_the_key_of_a_marker_older_than_the_cutoff(self):
+    def test_returns_the_key_of_a_marker_older_than_the_cutoff(self) -> None:
         pages = self._client({"DeleteMarkers": [self._marker("left-behind", days=30)]})
         assert stale_delete_markers(pages, "a-bucket") == ["left-behind"]
 
-    def test_omits_a_marker_newer_than_the_cutoff(self):
+    def test_omits_a_marker_newer_than_the_cutoff(self) -> None:
         pages = self._client({"DeleteMarkers": [self._marker("just-deleted", minutes=5)]})
         assert not stale_delete_markers(pages, "a-bucket")
 
-    def test_reads_every_page_the_paginator_yields(self):
+    def test_reads_every_page_the_paginator_yields(self) -> None:
         pages = self._client(
             {"DeleteMarkers": [self._marker("first-page", days=30)]},
             {"DeleteMarkers": [self._marker("second-page", days=30)]},

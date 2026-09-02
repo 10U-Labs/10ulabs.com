@@ -1,15 +1,17 @@
+from typing import Any, Dict
+
 import boto3
 import pytest
 from test_fixtures.aws import get_log_group_info
 
 
 @pytest.fixture(scope="session")
-def iam_client(aws_region):
+def iam_client(aws_region: str) -> Any:
     return boto3.client("iam", region_name=aws_region)
 
 
 @pytest.fixture(scope="module")
-def diagnostics_handler_log_group(logs_client, config):
+def diagnostics_handler_log_group(logs_client: Any, config: Dict[str, Any]) -> Any:
     function_name = config.get(
         'diagnostics_handler_function_name', 'TenULabsDiagnosticsHandler'
     )

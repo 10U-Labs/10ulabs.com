@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from test_fixtures.integration import (
     create_lambda_api_gateway_wiring_tests,
     create_lambda_iam_wiring_tests,
@@ -19,7 +21,11 @@ TestIAMPolicyWiring = create_lambda_iam_wiring_tests(
 
 
 class TestContactHandlerInlinePolicies:
-    def test_contact_handler_role_has_ssm_policy(self, iam_client, config):
+    def test_contact_handler_role_has_ssm_policy(
+        self,
+        iam_client: Any,
+        config: Dict[str, Any]
+    ) -> None:
         resource_prefix = config.get("resource_prefix", "TenULabs")
         role_name = f"{resource_prefix}ContactHandlerServiceRole"
         response = iam_client.list_role_policies(RoleName=role_name)
@@ -29,7 +35,11 @@ class TestContactHandlerInlinePolicies:
             f"Available policies: {inline_policies}"
         )
 
-    def test_contact_handler_role_has_kms_policy(self, iam_client, config):
+    def test_contact_handler_role_has_kms_policy(
+        self,
+        iam_client: Any,
+        config: Dict[str, Any]
+    ) -> None:
         resource_prefix = config.get("resource_prefix", "TenULabs")
         role_name = f"{resource_prefix}ContactHandlerServiceRole"
         response = iam_client.list_role_policies(RoleName=role_name)
@@ -39,7 +49,11 @@ class TestContactHandlerInlinePolicies:
             f"Available policies: {inline_policies}"
         )
 
-    def test_contact_handler_role_has_ses_policy(self, iam_client, config):
+    def test_contact_handler_role_has_ses_policy(
+        self,
+        iam_client: Any,
+        config: Dict[str, Any]
+    ) -> None:
         resource_prefix = config.get("resource_prefix", "TenULabs")
         role_name = f"{resource_prefix}ContactHandlerServiceRole"
         response = iam_client.list_role_policies(RoleName=role_name)

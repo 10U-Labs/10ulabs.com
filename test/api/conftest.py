@@ -1,3 +1,4 @@
+from typing import Any, Dict
 from unittest.mock import Mock
 
 import boto3
@@ -12,12 +13,12 @@ API_COMMON_ROUTING_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"
 
 
 @pytest.fixture(scope="session")
-def api_common_routing_terraform_initialized():
+def api_common_routing_terraform_initialized() -> bool:
     return terraform_init(API_COMMON_ROUTING_DIR)
 
 
 @pytest.fixture(scope="session")
-def api_common_routing_outputs(request):
+def api_common_routing_outputs(request: pytest.FixtureRequest) -> Dict[str, str]:
     if not request.getfixturevalue("api_common_routing_terraform_initialized"):
         pytest.skip("Terraform init failed for api_common_routing")
     return {
@@ -28,45 +29,45 @@ def api_common_routing_outputs(request):
 
 
 @pytest.fixture(scope="session")
-def apigateway_client(aws_region):
+def apigateway_client(aws_region: str) -> Any:
     return boto3.client("apigateway", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
-def ses_client(aws_region):
+def ses_client(aws_region: str) -> Any:
     return boto3.client("ses", region_name=aws_region)
 
 
 @pytest.fixture
-def lambda_context():
+def lambda_context() -> Mock:
     return Mock()
 
 
 @pytest.fixture(scope="session")
-def lambda_client(aws_region):
+def lambda_client(aws_region: str) -> Any:
     return boto3.client("lambda", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
-def iam_client(request):
+def iam_client(request: pytest.FixtureRequest) -> Any:
     region = request.getfixturevalue("aws_region")
     return boto3.client("iam", region_name=region)
 
 
 @pytest.fixture(scope="session")
-def ssm_client(request):
+def ssm_client(request: pytest.FixtureRequest) -> Any:
     region = request.getfixturevalue("aws_region")
     return boto3.client("ssm", region_name=region)
 
 
 @pytest.fixture(scope="session")
-def logs_client(request):
+def logs_client(request: pytest.FixtureRequest) -> Any:
     region = request.getfixturevalue("aws_region")
     return boto3.client("logs", region_name=region)
 
 
 @pytest.fixture(scope="module")
-def api_gateway_info(request):
+def api_gateway_info(request: pytest.FixtureRequest) -> Dict[str, Any]:
     client = request.getfixturevalue("apigateway_client")
     routing_outputs = request.getfixturevalue("api_common_routing_outputs")
 

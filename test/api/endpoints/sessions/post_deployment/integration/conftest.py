@@ -1,9 +1,11 @@
+from typing import Any, Dict
+
 import boto3
 import pytest
 
 
 @pytest.fixture(scope="module")
-def sessions_config():
+def sessions_config() -> Dict[str, str]:
     return {
         "handler_function_name": "TenULabsSessionsHandler",
         "export_function_name": "TenULabsSessionsExport",
@@ -22,12 +24,12 @@ def sessions_config():
 
 
 @pytest.fixture(scope="session")
-def scheduler_client(request):
+def scheduler_client(request: pytest.FixtureRequest) -> Any:
     region = request.getfixturevalue("aws_region")
     return boto3.client("scheduler", region_name=region)
 
 
 @pytest.fixture(scope="session")
-def backup_client(request):
+def backup_client(request: pytest.FixtureRequest) -> Any:
     region = request.getfixturevalue("aws_region")
     return boto3.client("backup", region_name=region)

@@ -1,13 +1,16 @@
+from pathlib import Path
+from typing import Any, Dict
+
 import hcl2
 import pytest
 
 
-def _load_state_tf(bootstrap_dir, v7_compatible):
+def _load_state_tf(bootstrap_dir: Path, v7_compatible: Any) -> Dict[str, Any]:
     with open(bootstrap_dir / "state.tf", encoding='utf-8') as f:
         return hcl2.load(f, serialization_options=v7_compatible)
 
 
-def _find_resource(tf_config, resource_type, resource_name):
+def _find_resource(tf_config: Any, resource_type: str, resource_name: str) -> Any:
     for resource in tf_config.get('resource', []):
         if resource_type in resource:
             if resource_name in resource[resource_type]:
@@ -15,7 +18,7 @@ def _find_resource(tf_config, resource_type, resource_name):
     return None
 
 
-def _find_lifecycle_rule(tf_config, rule_id):
+def _find_lifecycle_rule(tf_config: Any, rule_id: str) -> Dict[str, Any]:
     lifecycle = _find_resource(
         tf_config,
         'aws_s3_bucket_lifecycle_configuration',
@@ -27,19 +30,25 @@ def _find_lifecycle_rule(tf_config, rule_id):
     return {}
 
 
-def test_terraform_state_bucket_exists_in_state_tf(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_exists_in_state_tf(bootstrap_dir: Path, v7_compatible: Any) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     bucket = _find_resource(tf_config, 'aws_s3_bucket', 'terraform_state')
     assert bucket is not None
 
 
-def test_terraform_state_bucket_versioning_is_suspended(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_versioning_is_suspended(
+    bootstrap_dir: Path,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     versioning = _find_resource(tf_config, 'aws_s3_bucket_versioning', 'terraform_state')
     assert versioning['versioning_configuration'][0]['status'] == 'Suspended'
 
 
-def test_terraform_state_bucket_encryption_resource_exists(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_encryption_resource_exists(
+    bootstrap_dir: Path,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     encryption = _find_resource(
         tf_config,
@@ -49,7 +58,10 @@ def test_terraform_state_bucket_encryption_resource_exists(bootstrap_dir, v7_com
     assert encryption is not None
 
 
-def test_terraform_state_bucket_public_access_block_exists(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_public_access_block_exists(
+    bootstrap_dir: Path,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     block = _find_resource(
         tf_config,
@@ -65,7 +77,11 @@ def test_terraform_state_bucket_public_access_block_exists(bootstrap_dir, v7_com
     "ignore_public_acls",
     "restrict_public_buckets",
 ])
-def test_terraform_state_bucket_public_access_block_setting(bootstrap_dir, setting, v7_compatible):
+def test_terraform_state_bucket_public_access_block_setting(
+    bootstrap_dir: Path,
+    setting: Any,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     block = _find_resource(
         tf_config,
@@ -75,7 +91,10 @@ def test_terraform_state_bucket_public_access_block_setting(bootstrap_dir, setti
     assert block[setting] is True
 
 
-def test_terraform_state_bucket_logging_resource_exists(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_logging_resource_exists(
+    bootstrap_dir: Path,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     logging = _find_resource(
         tf_config,
@@ -85,13 +104,19 @@ def test_terraform_state_bucket_logging_resource_exists(bootstrap_dir, v7_compat
     assert logging is not None
 
 
-def test_terraform_state_bucket_policy_resource_exists(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_policy_resource_exists(
+    bootstrap_dir: Path,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     policy = _find_resource(tf_config, 'aws_s3_bucket_policy', 'terraform_state')
     assert policy is not None
 
 
-def test_terraform_state_bucket_encryption_uses_aes256(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_encryption_uses_aes256(
+    bootstrap_dir: Path,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     config = _find_resource(
         tf_config,
@@ -103,27 +128,39 @@ def test_terraform_state_bucket_encryption_uses_aes256(bootstrap_dir, v7_compati
     assert default['sse_algorithm'] == 'AES256'
 
 
-def test_terraform_state_bucket_expires_delete_markers(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_expires_delete_markers(
+    bootstrap_dir: Path,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
     expiration = (rule.get('expiration') or [{}])[0]
     assert expiration.get('expired_object_delete_marker') is True
 
 
-def test_terraform_state_bucket_delete_marker_rule_sets_no_age(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_delete_marker_rule_sets_no_age(
+    bootstrap_dir: Path,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
     expiration = (rule.get('expiration') or [{}])[0]
     assert set(expiration) == {'expired_object_delete_marker'}
 
 
-def test_terraform_state_bucket_delete_marker_rule_has_one_filter(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_delete_marker_rule_has_one_filter(
+    bootstrap_dir: Path,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
     assert len(rule.get('filter')) == 1
 
 
-def test_terraform_state_bucket_delete_marker_rule_covers_every_key(bootstrap_dir, v7_compatible):
+def test_terraform_state_bucket_delete_marker_rule_covers_every_key(
+    bootstrap_dir: Path,
+    v7_compatible: Any
+) -> None:
     tf_config = _load_state_tf(bootstrap_dir, v7_compatible)
     rule = _find_lifecycle_rule(tf_config, 'expire-delete-markers')
     assert not rule.get('filter')[0]

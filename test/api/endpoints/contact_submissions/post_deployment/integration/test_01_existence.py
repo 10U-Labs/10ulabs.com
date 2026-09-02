@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration import create_lambda_existence_tests
@@ -12,7 +14,7 @@ TestLambdaAndIAMExistence = create_lambda_existence_tests(
 
 
 class TestSSMAndSESExistence:
-    def test_recaptcha_secret_parameter_exists(self, ssm_client):
+    def test_recaptcha_secret_parameter_exists(self, ssm_client: Any) -> None:
         parameter_name = "/10ulabs/contact/recaptcha-secret-key"
         try:
             ssm_client.get_parameter(Name=parameter_name, WithDecryption=False)
@@ -25,7 +27,11 @@ class TestSSMAndSESExistence:
             raise
         assert True
 
-    def test_contact_email_identity_exists(self, ses_client, shared_config):
+    def test_contact_email_identity_exists(
+        self,
+        ses_client: Any,
+        shared_config: Dict[str, Any]
+    ) -> None:
         domain_name = shared_config.get("domain_name", "10ulabs.com")
         contact_email = f"contact@{domain_name}"
         response = ses_client.list_identities(IdentityType="EmailAddress")

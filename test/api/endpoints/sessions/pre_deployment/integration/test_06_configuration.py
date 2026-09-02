@@ -1,7 +1,9 @@
+from typing import Any, Optional
+
 import pytest
 
 
-def test_api_gateway_configuration(apigateway_client, api_gateway_id):
+def test_api_gateway_configuration(apigateway_client: Any, api_gateway_id: Optional[str]) -> None:
     if api_gateway_id is None:
         pytest.skip("API Gateway ID not available")
     response = apigateway_client.get_resources(restApiId=api_gateway_id)

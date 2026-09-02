@@ -1,4 +1,5 @@
 import uuid
+from typing import Any
 
 import pytest
 from botocore.exceptions import ClientError
@@ -13,13 +14,17 @@ from test_fixtures.integration import (
 class TestIAMCapabilities(Layer6IAMCapabilityTests):
     pass
 class TestS3StateCapabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTests):
-    def test_can_read_state_file(self, s3_client, state_bucket_name):
+    def test_can_read_state_file(self, s3_client: Any, state_bucket_name: str) -> None:
         check_state_file_readable(s3_client, state_bucket_name, "api/terraform.tfstate")
         assert True
 
 
 class TestCentralLogsBucketCapabilities:
-    def test_can_write_to_central_logs_bucket(self, s3_client, central_logs_bucket_name):
+    def test_can_write_to_central_logs_bucket(
+        self,
+        s3_client: Any,
+        central_logs_bucket_name: str
+    ) -> None:
         if not central_logs_bucket_name:
             pytest.skip("central_logs_bucket_name not available")
         test_key = f"pre-deployment-test/{uuid.uuid4()}"
@@ -45,8 +50,8 @@ class TestCentralLogsBucketCapabilities:
         assert True
 
     def test_can_delete_from_central_logs_bucket(
-        self, s3_client, central_logs_bucket_name
-    ):
+        self, s3_client: Any, central_logs_bucket_name: str
+    ) -> None:
         if not central_logs_bucket_name:
             pytest.skip("central_logs_bucket_name not available")
         test_key = f"pre-deployment-test/{uuid.uuid4()}"

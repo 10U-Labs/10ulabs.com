@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from types import ModuleType
+from typing import Any, Callable, Dict
 
 import pytest
 
@@ -27,8 +28,12 @@ def echo_handler() -> ModuleType:
 
 
 @pytest.fixture
-def echo_post_event_factory():
-    def _create_event(body_data=None, is_base64_encoded=False, content_type='application/json'):
+def echo_post_event_factory() -> Callable[..., Dict[str, Any]]:
+    def _create_event(
+        body_data: Any = None,
+        is_base64_encoded: bool = False,
+        content_type: str = 'application/json'
+    ) -> Dict[str, Any]:
         if body_data is None:
             body_data = {'test': 'data'}
         return {

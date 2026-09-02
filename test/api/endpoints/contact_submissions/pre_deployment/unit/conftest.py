@@ -1,5 +1,6 @@
 import json
 from types import ModuleType
+from typing import Any, Dict
 from unittest.mock import patch
 
 import pytest
@@ -21,7 +22,7 @@ def contact_handler() -> ModuleType:
 
 
 @pytest.fixture
-def contact_post_event():
+def contact_post_event() -> Dict[str, Any]:
     return {
         'path': '/v1/contact-submissions',
         'httpMethod': 'POST',
@@ -37,7 +38,7 @@ def contact_post_event():
 
 
 @pytest.fixture
-def successful_contact_response(request):
+def successful_contact_response(request: pytest.FixtureRequest) -> Any:
     handler = request.getfixturevalue("contact_handler")
     event = request.getfixturevalue("contact_post_event")
     ctx = request.getfixturevalue("lambda_context")

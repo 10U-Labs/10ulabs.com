@@ -33,7 +33,7 @@ def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
 
 
 @pytest.fixture(name="config", scope="module")
-def config_fixture(shared_config) -> Dict[str, Any]:
+def config_fixture(shared_config: Dict[str, Any]) -> Dict[str, Any]:
     base = Path(__file__).parent.parent.parent.parent.parent
     tfvars_path = base / "src" / "api" / "common" / "routing" / "terraform.tfvars"
     result: Dict[str, Any] = dict(parse_tfvars_file(tfvars_path))
@@ -60,5 +60,5 @@ def config_fixture(shared_config) -> Dict[str, Any]:
 
 
 @pytest.fixture
-def logs_client(aws_region):
+def logs_client(aws_region: str) -> Any:
     return boto3.client('logs', region_name=aws_region)

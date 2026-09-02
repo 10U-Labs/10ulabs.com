@@ -1,4 +1,6 @@
 import os
+from types import ModuleType
+from typing import Iterator, Tuple
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -15,14 +17,14 @@ load_analytics_module = create_lambda_loader(SESSIONS_EXPORTER_PATH)
 
 
 @pytest.fixture
-def handler():
+def handler() -> ModuleType:
     module = load_lambda_module("handler.py", "handler")
     reset_module_state(module, _clients={})
     return module
 
 
 @pytest.fixture
-def export_module():
+def export_module() -> Iterator[Tuple[ModuleType, MagicMock]]:
     os.environ['DYNAMODB_TABLE_ARN'] = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-events'
     os.environ['S3_BUCKET'] = 'test-bucket'
     os.environ['S3_PREFIX'] = 'exports/events'

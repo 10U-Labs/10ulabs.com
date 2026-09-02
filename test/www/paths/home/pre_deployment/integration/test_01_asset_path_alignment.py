@@ -7,7 +7,7 @@ LAMBDA_FILE = REPO_ROOT / "src" / "www" / "common" / "lambda" / "handler.py"
 
 
 class TestAssetPathAlignment:
-    def test_dist_directory_structure_valid(self):
+    def test_dist_directory_structure_valid(self) -> None:
         index_path = DIST_DIR / "index.html"
         if not index_path.exists():
             return
@@ -15,7 +15,7 @@ class TestAssetPathAlignment:
         is_html = "<!DOCTYPE html>" in content or "<html" in content.lower()
         assert is_html, "dist/index.html should be valid HTML"
 
-    def test_asset_js_files_exist(self):
+    def test_asset_js_files_exist(self) -> None:
         index_path = DIST_DIR / "index.html"
         if not index_path.exists():
             return
@@ -27,7 +27,7 @@ class TestAssetPathAlignment:
                 f"index.html references {ref} but file not found at {asset_path}"
             )
 
-    def test_asset_css_files_exist(self):
+    def test_asset_css_files_exist(self) -> None:
         index_path = DIST_DIR / "index.html"
         if not index_path.exists():
             return
@@ -41,24 +41,24 @@ class TestAssetPathAlignment:
 
 
 class TestLambdaAssetRewrite:
-    def test_lambda_file_exists(self):
+    def test_lambda_file_exists(self) -> None:
         assert LAMBDA_FILE.exists(), (
             f"Lambda file not found at {LAMBDA_FILE}"
         )
 
-    def test_lambda_has_assets_prefix_check(self):
+    def test_lambda_has_assets_prefix_check(self) -> None:
         if not LAMBDA_FILE.exists():
             return
         content = LAMBDA_FILE.read_text()
         assert 'uri.startswith("/assets/")' in content
 
-    def test_lambda_has_home_rewrite(self):
+    def test_lambda_has_home_rewrite(self) -> None:
         if not LAMBDA_FILE.exists():
             return
         content = LAMBDA_FILE.read_text()
         assert '"/home"' in content or "/home" in content
 
-    def test_lambda_rewrite_before_extension_passthrough(self):
+    def test_lambda_rewrite_before_extension_passthrough(self) -> None:
         if not LAMBDA_FILE.exists():
             return
         content = LAMBDA_FILE.read_text()

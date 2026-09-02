@@ -1,7 +1,9 @@
+from typing import Any
+
 from botocore.exceptions import ClientError
 
 
-def test_terraform_state_capability(s3_client, state_bucket_name):
+def test_terraform_state_capability(s3_client: Any, state_bucket_name: str) -> None:
     has_capability = True
     try:
         s3_client.list_objects_v2(

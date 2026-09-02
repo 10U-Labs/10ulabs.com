@@ -1,3 +1,5 @@
+from typing import Any, Dict, Optional
+
 import boto3
 import pytest
 
@@ -5,12 +7,12 @@ from test_fixtures.aws import get_log_group_info
 
 
 @pytest.fixture(scope="module")
-def website_url(config):
+def website_url(config: Dict[str, Any]) -> str:
     return f"https://www.{config['domain_name']}"
 
 
 @pytest.fixture(scope="module")
-def handler_log_group(logs_client, shared_config):
+def handler_log_group(logs_client: Any, shared_config: Dict[str, Any]) -> Any:
     function_name = shared_config.get("lambda_handler_names", {}).get(
         "rack_configurations", "TenULabsRackConfigurationsHandler"
     )
@@ -19,47 +21,47 @@ def handler_log_group(logs_client, shared_config):
 
 
 @pytest.fixture(scope="module")
-def test_device_id():
+def test_device_id() -> str:
     return "integration-test-device"
 
 
 @pytest.fixture(scope="session")
-def dynamodb_client(aws_region):
+def dynamodb_client(aws_region: str) -> Any:
     return boto3.client("dynamodb", region_name=aws_region)
 
 
 @pytest.fixture(scope="module")
-def resource_prefix(shared_config):
+def resource_prefix(shared_config: Dict[str, Any]) -> str:
     return shared_config.get("resource_prefix", "TenULabs")
 
 
 @pytest.fixture(scope="module")
-def handler_function_name(shared_config):
+def handler_function_name(shared_config: Dict[str, Any]) -> str:
     return shared_config.get("lambda_handler_names", {}).get(
         "rack_configurations", "TenULabsRackConfigurationsHandler"
     )
 
 
 @pytest.fixture(scope="module")
-def handler_role_name(request):
+def handler_role_name(request: pytest.FixtureRequest) -> str:
     prefix = request.getfixturevalue("resource_prefix")
     return f"{prefix}RackConfigurationsLambdaRole"
 
 
 @pytest.fixture(scope="module")
-def backup_role_name(request):
+def backup_role_name(request: pytest.FixtureRequest) -> str:
     prefix = request.getfixturevalue("resource_prefix")
     return f"{prefix}RackConfigurationsBackupRole"
 
 
 @pytest.fixture(scope="module")
-def configurations_table_name(request):
+def configurations_table_name(request: pytest.FixtureRequest) -> str:
     prefix = request.getfixturevalue("resource_prefix")
     return f"{prefix}-rack-configurations-configurations"
 
 
 @pytest.fixture(scope="module")
-def configurations_table_arn(request):
+def configurations_table_arn(request: pytest.FixtureRequest) -> str:
     client = request.getfixturevalue("dynamodb_client")
     table_name = request.getfixturevalue("configurations_table_name")
     response = client.describe_table(TableName=table_name)
@@ -67,18 +69,18 @@ def configurations_table_arn(request):
 
 
 @pytest.fixture(scope="module")
-def backup_plan_name(request):
+def backup_plan_name(request: pytest.FixtureRequest) -> str:
     prefix = request.getfixturevalue("resource_prefix")
     return f"{prefix}-rack-configurations-backup"
 
 
 @pytest.fixture(scope="session")
-def backup_client(aws_region):
+def backup_client(aws_region: str) -> Any:
     return boto3.client("backup", region_name=aws_region)
 
 
 @pytest.fixture(scope="module")
-def backup_plan_id(request):
+def backup_plan_id(request: pytest.FixtureRequest) -> Optional[str]:
     client = request.getfixturevalue("backup_client")
     plan_name = request.getfixturevalue("backup_plan_name")
     plans = client.list_backup_plans()

@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration import (
@@ -11,33 +13,37 @@ class TestIAMAndStateExistence(
 ):
     pass
 class TestBootstrapPrerequisites:
-    def test_bootstrap_terraform_initialized(self, bootstrap_initialized):
+    def test_bootstrap_terraform_initialized(self, bootstrap_initialized: bool) -> None:
         assert bootstrap_initialized, (
             "Terraform init failed for src/bootstrap/. "
             "Check AWS credentials and S3 backend configuration."
         )
 
-    def test_central_logs_bucket_arn_output_exists(self, bootstrap_outputs):
+    def test_central_logs_bucket_arn_output_exists(self, bootstrap_outputs: Dict[str, str]) -> None:
         arn = bootstrap_outputs.get("arn_for_central_logs_bucket")
         assert arn, (
             "arn_for_central_logs_bucket output not found in bootstrap. "
             "Check src/bootstrap/outputs.tf"
         )
 
-    def test_github_actions_role_arn_output_exists(self, bootstrap_outputs):
+    def test_github_actions_role_arn_output_exists(self, bootstrap_outputs: Dict[str, str]) -> None:
         arn = bootstrap_outputs.get("arn_for_github_actions_role")
         assert arn, (
             "arn_for_github_actions_role output not found in bootstrap. "
             "Check src/bootstrap/outputs.tf"
         )
 
-    def test_central_logs_bucket_name_extracted(self, central_logs_bucket_name):
+    def test_central_logs_bucket_name_extracted(self, central_logs_bucket_name: str) -> None:
         assert central_logs_bucket_name, (
             "Could not extract bucket name from arn_for_central_logs_bucket. "
             "Check bootstrap outputs."
         )
 
-    def test_central_logs_bucket_exists(self, s3_client, central_logs_bucket_name):
+    def test_central_logs_bucket_exists(
+        self,
+        s3_client: Any,
+        central_logs_bucket_name: str
+    ) -> None:
         if not central_logs_bucket_name:
             pytest.skip("central_logs_bucket_name not available")
         try:

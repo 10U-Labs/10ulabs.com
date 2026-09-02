@@ -1,4 +1,5 @@
 import re
+from typing import Any, Dict
 
 import pytest
 
@@ -10,12 +11,12 @@ BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 
 
 @pytest.fixture(scope="session", name="bootstrap_initialized")
-def bootstrap_initialized_fixture():
+def bootstrap_initialized_fixture() -> bool:
     return terraform_init(BOOTSTRAP_DIR)
 
 
 @pytest.fixture(scope="session", name="bootstrap_outputs")
-def bootstrap_outputs_fixture(bootstrap_initialized):
+def bootstrap_outputs_fixture(bootstrap_initialized: bool) -> Dict[str, str]:
     if not bootstrap_initialized:
         pytest.skip("Terraform init failed for bootstrap")
     return {
@@ -32,7 +33,7 @@ def bootstrap_outputs_fixture(bootstrap_initialized):
 
 
 @pytest.fixture(scope="session")
-def central_logs_bucket_name(bootstrap_outputs):
+def central_logs_bucket_name(bootstrap_outputs: Dict[str, str]) -> str:
     arn = bootstrap_outputs.get("arn_for_central_logs_bucket", "")
     if not arn:
         return ""
@@ -41,13 +42,13 @@ def central_logs_bucket_name(bootstrap_outputs):
 
 
 @pytest.fixture(scope="session")
-def caller_identity(request):
+def caller_identity(request: pytest.FixtureRequest) -> Any:
     client = request.getfixturevalue("sts_client")
     return client.get_caller_identity()
 
 
 @pytest.fixture(scope="session")
-def _current_role_arn(request):
+def _current_role_arn(request: pytest.FixtureRequest) -> str:
     identity = request.getfixturevalue("caller_identity")
     arn = identity.get("Arn", "")
     if ":assumed-role/" in arn:
@@ -58,7 +59,7 @@ def _current_role_arn(request):
 
 
 @pytest.fixture(scope="session")
-def current_role_name(request):
+def current_role_name(request: pytest.FixtureRequest) -> str:
     role_arn = request.getfixturevalue("_current_role_arn")
     if not role_arn:
         return ""
