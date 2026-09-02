@@ -25,6 +25,7 @@
     - [No column limit](#no-column-limit)
   - [Tests](#tests)
     - [A test does not restate the source](#a-test-does-not-restate-the-source)
+    - [A test says what it checked](#a-test-says-what-it-checked)
     - [An empty conftest stays](#an-empty-conftest-stays)
     - [Cover every tier the change touches](#cover-every-tier-the-change-touches)
     - [Test first](#test-first)
@@ -32,8 +33,10 @@
     - [The tree splits on deployment phase](#the-tree-splits-on-deployment-phase)
     - [Where test code that is not a test goes](#where-test-code-that-is-not-a-test-goes)
   - [Verification](#verification)
+    - [A mypy flag reaches every module it follows](#a-mypy-flag-reaches-every-module-it-follows)
     - [A push starts more than one workflow](#a-push-starts-more-than-one-workflow)
     - [A workflow runs the suites of the packages it executes](#a-workflow-runs-the-suites-of-the-packages-it-executes)
+    - [An annotation can turn a near-duplicate into a clone](#an-annotation-can-turn-a-near-duplicate-into-a-clone)
     - [An eslint config is read from wherever eslint was started](#an-eslint-config-is-read-from-wherever-eslint-was-started)
     - [CI is the source of truth](#ci-is-the-source-of-truth)
     - [Every tool is installed at latest](#every-tool-is-installed-at-latest)
@@ -130,11 +133,15 @@ Markdown is not hard-wrapped, and neither is the body of a commit message. There
 
 ### Tests
 
-Longer: [tdd-workflow](.claude/memories/tdd-workflow.md), [a-test-does-not-restate-the-source](.claude/memories/a-test-does-not-restate-the-source.md), [read-test-tenets-first](.claude/memories/read-test-tenets-first.md), [tenets-are-generic](.claude/memories/tenets-are-generic.md), [the-test-tree-splits-on-deployment-phase](.claude/memories/the-test-tree-splits-on-deployment-phase.md), [test-code-is-placed-by-how-many-suites-use-it](.claude/memories/test-code-is-placed-by-how-many-suites-use-it.md), [a-conftest-is-emptied-never-deleted](.claude/memories/a-conftest-is-emptied-never-deleted.md).
+Longer: [tdd-workflow](.claude/memories/tdd-workflow.md), [a-test-does-not-restate-the-source](.claude/memories/a-test-does-not-restate-the-source.md), [a-test-says-what-it-checked](.claude/memories/a-test-says-what-it-checked.md), [read-test-tenets-first](.claude/memories/read-test-tenets-first.md), [tenets-are-generic](.claude/memories/tenets-are-generic.md), [the-test-tree-splits-on-deployment-phase](.claude/memories/the-test-tree-splits-on-deployment-phase.md), [test-code-is-placed-by-how-many-suites-use-it](.claude/memories/test-code-is-placed-by-how-many-suites-use-it.md), [a-conftest-is-emptied-never-deleted](.claude/memories/a-conftest-is-emptied-never-deleted.md).
 
 #### A test does not restate the source
 
 The test is written before the code, so it cannot quote the code. What a test asserts is a property the program must have, never a copy of what the program says. The question that decides which one is in hand is whether the test could have been written before the file it reads existed: `assert 'SessionsHandlerRole' in content` over `iam.tf` could not, because the literal was typed by someone with the finished file open, where `no .tf file outside locals.tf interpolates the resource prefix` could, because it is true of files not yet written. A restatement holds two copies of one string and passes while they agree rather than while the program is right, so the only edit that reddens it is an edit to one of its own copies — it reports a rename, which is the one change it should tolerate. Deriving is not automatically the better half, and what decides it is what the value is for rather than whether the source was touched. Asserting a property over a set of files is allowed, and so is asserting that two artifacts agree, because neither takes an answer from the thing under test. Reading configuration — which environment, which address, which account, the values that decide where a test points — from where the deployment reads it is allowed for the same reason. Reading the expected value itself from the source under test is not, however indirect the route: that test agrees with whatever the source says, a mistake included, so it passes on every spelling and reports nothing, which is worse than the restatement it replaced because it also never goes red. `docs/tenets/tests/TEST_FIRST.md` states the split and the question that settles a given value — if the value changed and the test should still pass it is configuration, and if it should go red it is an expectation and belongs in the test. The tree does not comply — 324 asserts of the form `assert <literal> in content` sit in 27 files that also open a `.tf` file, and `5359c061` deleted four of them on the neighbouring argument that a name's spelling has no consequence — so this holds every new test and the standing ones are a queue rather than a precedent.
+
+#### A test says what it checked
+
+A pytest carries exactly one assertion and that assertion has to be able to fail. `assert f(...) is None` over a function annotated `-> None` cannot: the call returns `None` however it behaved. Two jobs refuse it from opposite sides, which is what makes it hard to escape by halves — `mypy` reports `func-returns-value` as soon as the enclosing body is annotated and therefore read, and deleting the assertion leaves a test the `assert-one-assert-per-pytest` job reports as a `:0` finding. That job counts `pytest.raises` blocks as well as `assert` statements, which is why 195 assert-free tests are green: every one of them raises. Where a mock was handed to the code under test, assert the call it was configured for actually happened, taking the deepest one where a test configures several. Where the meaning is that a checker accepts its input and nothing is observable, `accepted` in `lib/python/test_fixtures/outcomes.py` returns whether the check came back rather than raising, so `assert accepted(check, ...)` can fail where the `is None` could not. `865ebc81` gave 111 such tests an assertion; until then each of them checked nothing at all.
 
 #### An empty conftest stays
 
@@ -162,7 +169,11 @@ Test code that is not itself a test — a fixture, a mock factory, a loader — 
 
 ### Verification
 
-Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [every-tool-is-installed-at-latest](.claude/memories/every-tool-is-installed-at-latest.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md), [four-static-analysis-passes-per-workflow](.claude/memories/four-static-analysis-passes-per-workflow.md), [a-workflow-reads-the-library-it-executes](.claude/memories/a-workflow-reads-the-library-it-executes.md), [a-workflow-runs-the-suites-of-the-packages-it-executes](.claude/memories/a-workflow-runs-the-suites-of-the-packages-it-executes.md), [an-eslint-config-is-read-from-wherever-eslint-was-started](.claude/memories/an-eslint-config-is-read-from-wherever-eslint-was-started.md).
+Longer: [verification-in-ci-only](.claude/memories/verification-in-ci-only.md), [every-tool-is-installed-at-latest](.claude/memories/every-tool-is-installed-at-latest.md), [a-mypy-flag-reaches-every-module-it-follows](.claude/memories/a-mypy-flag-reaches-every-module-it-follows.md), [an-annotation-can-turn-a-near-duplicate-into-a-clone](.claude/memories/an-annotation-can-turn-a-near-duplicate-into-a-clone.md), [find-a-run-by-the-full-hash](.claude/memories/find-a-run-by-the-full-hash.md), [four-static-analysis-passes-per-workflow](.claude/memories/four-static-analysis-passes-per-workflow.md), [a-workflow-reads-the-library-it-executes](.claude/memories/a-workflow-reads-the-library-it-executes.md), [a-workflow-runs-the-suites-of-the-packages-it-executes](.claude/memories/a-workflow-runs-the-suites-of-the-packages-it-executes.md), [an-eslint-config-is-read-from-wherever-eslint-was-started](.claude/memories/an-eslint-config-is-read-from-wherever-eslint-was-started.md).
+
+#### A mypy flag reaches every module it follows
+
+A `mypy` command's argument list says where the reading starts rather than where it stops. `mypy` follows every import out of the files it is given, and the flags on the command apply to what it finds, so `--disallow-untyped-defs` on the eleven `mypy-tests` commands — which name only paths under `test/` — refuses an unannotated function in `lib/python/` and `scripts/` too, because `MYPYPATH=lib/python:scripts` resolves those imports. `#575` said its fix was "entirely in `test/`" and that it was independent of `#744` through `#748` in both directions; the first push under it was rejected with 138 of its 172 errors in `lib/python/` and three in `scripts/`, so the four were one piece of work. Expand the closure rather than the argument list before scoping an issue about a flag, and where the closure crosses another issue that is a real `blocked_by` edge. Annotating a function is separately what puts its body in front of `mypy`, flag or no flag, so a commit that only adds annotations can turn a step red that the issue was not about.
 
 #### A push starts more than one workflow
 
@@ -171,6 +182,10 @@ A push starts every workflow whose `paths` filter the commit touches, and the ch
 #### A workflow runs the suites of the packages it executes
 
 A workflow runs the suite of every package under `lib/python/` that the workflow executes, each in a job of its own named after its package and carrying the `--cov=<package> --cov-branch --cov-report=term-missing --cov-fail-under=100` gate `a2558ccc` gave the ten jobs in `api_common_routing.yml`. What a workflow executes is the same set the static analysis reads. The reason is that the workflow runs the code and the code can make its run red: a defect in a package a workflow imports is reported by that workflow either way, and the job is what makes it reported against the package that broke rather than against whichever of the workflow's own suites reached the broken line first. A workflow that deploys is gated twice over, its `reconciliation` job being what stops an apply over a broken library; a workflow that deploys nothing carries the jobs on the first reason alone, which is the case `scripts.yml` was left in when `39e1ad90` deleted its twelve `test-*` jobs and the ten issues that put them back elsewhere all argued from the deployment gate. A package reached only through another package travels with it, so the workflow that runs the reaching package's suite runs the reached package's suite too: `boto_mocks` is imported outside test code by one file only, `lib/python/test_fixtures/unit.py`, and without the corollary its suite would run in no workflow at all. The `paths` filter carries the same set, so an edit to a package starts every workflow that runs its suite.
+
+#### An annotation can turn a near-duplicate into a clone
+
+`copy-paste-source` and `copy-paste-tests` run `jscpd --threshold 0`, so one clone fails the job, and `jscpd` counts tokens against a floor of fifty rather than counting lines. Two sibling tests are kept apart by their names, so what they share is the parameter list and the body up to the line that differs; an annotated parameter list is four times the tokens of a bare one, which lengthens that shared run for every pair in the file at once. `0845841b` and `271cd405` added no duplication and produced 31 clone pairs across thirteen files that way. This is `#690` and `72b32527` with the cause on the other side — there the tool changed and the tree stood still — and the answer is the same: fix what it found, by extracting the shared prologue into a helper named for the value it returns, or by deleting a hand-rolled copy of a helper the file already has. Shortening an annotation to spend fewer tokens is a pin in another costume.
 
 #### An eslint config is read from wherever eslint was started
 

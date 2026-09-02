@@ -23,6 +23,8 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 - [a-workflow-runs-the-suites-of-the-packages-it-executes](a-workflow-runs-the-suites-of-the-packages-it-executes.md) — the running half of the same rule: a `test-*` job per `lib/python/` package the workflow executes, a package reached only through another travelling with it
 - [an-eslint-config-is-read-from-wherever-eslint-was-started](an-eslint-config-is-read-from-wherever-eslint-was-started.md) — a glob in a flat eslint config is anchored at the working directory when the file is passed with `--config` and at the file itself when eslint found it
 - [every-tool-is-installed-at-latest](every-tool-is-installed-at-latest.md) — every package a workflow installs is named with no version specifier on purpose, so a checker's new release is a finding here the day it ships
+- [a-mypy-flag-reaches-every-module-it-follows](a-mypy-flag-reaches-every-module-it-follows.md) — a mypy command's argument list says where the reading starts, not where it stops; the flags apply to the whole import closure
+- [an-annotation-can-turn-a-near-duplicate-into-a-clone](an-annotation-can-turn-a-near-duplicate-into-a-clone.md) — `jscpd` counts tokens against a floor of fifty, so lengthening every signature in a file crosses it for pairs that had sat under it
 - [commit-straight-to-main](commit-straight-to-main.md) — direct commits, no branches and no pull requests, one commit per issue with its closing line
 - [a-rejected-push-is-fixed-forward](a-rejected-push-is-fixed-forward.md) — a failed run is answered with a follow-up commit, never an amended force-push
 - [markdown-is-not-hard-wrapped](markdown-is-not-hard-wrapped.md) — no column limit on `.md` files, on issue bodies or on commit message bodies
@@ -44,6 +46,7 @@ A convention learned in a session belongs here — a paragraph in `CLAUDE.md` an
 
 - [tdd-workflow](tdd-workflow.md) — the test is written before the code, in the same commit
 - [a-test-does-not-restate-the-source](a-test-does-not-restate-the-source.md) — a test asserts a property the program must have, never a copy of what the source says, because it is written before the source exists
+- [a-test-says-what-it-checked](a-test-says-what-it-checked.md) — one assertion per pytest and it has to be able to fail; `assert f(...) is None` over a `-> None` function is refused by mypy and its deletion by the assert job
 - [read-test-tenets-first](read-test-tenets-first.md) — read `docs/tenets/tests/` before implementing, and cover every tier the change touches
 - [tenets-are-generic](tenets-are-generic.md) — the four tier files name no tool, language or directory and the repository follows them
 - [a-conftest-is-emptied-never-deleted](a-conftest-is-emptied-never-deleted.md) — a `conftest.py` whose last fixture goes is emptied to zero bytes and left in place, so the level stays visible to whoever writes the next one
