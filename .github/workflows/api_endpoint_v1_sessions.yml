@@ -296,6 +296,7 @@ jobs:
             lib/python/module_utils \
             lib/python/repo_utils \
             lib/python/terraform_config \
+            lib/python/terraform_drift \
             lib/python/test_fixtures
   copy-paste-tests:
     runs-on: ubuntu-latest
@@ -315,6 +316,7 @@ jobs:
             test/lib/python/test_module_utils \
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
+            test/lib/python/test_terraform_drift \
             test/lib/python/test_test_fixtures
   e2e-tests:
     if: github.ref == 'refs/heads/main'
@@ -397,6 +399,7 @@ jobs:
             lib/python/module_utils \
             lib/python/repo_utils \
             lib/python/terraform_config \
+            lib/python/terraform_drift \
             lib/python/test_fixtures
           MYPYPATH=lib/python python3 -m mypy \
             --disallow-untyped-defs \
@@ -438,6 +441,7 @@ jobs:
             test/lib/python/test_module_utils \
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
+            test/lib/python/test_terraform_drift \
             test/lib/python/test_test_fixtures
   post-deployment-integration-tests:
     if: github.ref == 'refs/heads/main'
@@ -566,6 +570,7 @@ jobs:
             lib/python/module_utils \
             lib/python/repo_utils \
             lib/python/terraform_config \
+            lib/python/terraform_drift \
             lib/python/test_fixtures \
             --recursive=y \
             --disable=missing-module-docstring \
@@ -605,6 +610,7 @@ jobs:
             test/lib/python/test_module_utils \
             test/lib/python/test_repo_utils \
             test/lib/python/test_terraform_config \
+            test/lib/python/test_terraform_drift \
             test/lib/python/test_test_fixtures \
             --recursive=y \
             --disable=missing-module-docstring \
@@ -641,6 +647,7 @@ jobs:
       - test-module-utils
       - test-repo-utils
       - test-terraform-config
+      - test-terraform-drift
       - test-test-fixtures
       - tflint
       - unit-tests
@@ -864,6 +871,32 @@ jobs:
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
+  test-terraform-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run terraform_drift tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_terraform_drift/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=terraform_drift \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
   test-test-fixtures:
     runs-on: ubuntu-latest
     steps:
@@ -1016,6 +1049,7 @@ on:
       - lib/python/module_utils/**
       - lib/python/repo_utils/**
       - lib/python/terraform_config/**
+      - lib/python/terraform_drift/**
       - lib/python/test_fixtures/**
       - lib/terraform/common/**
       - src/api/endpoints/sessions/**
@@ -1028,6 +1062,7 @@ on:
       - test/lib/python/test_module_utils/**
       - test/lib/python/test_repo_utils/**
       - test/lib/python/test_terraform_config/**
+      - test/lib/python/test_terraform_drift/**
       - test/lib/python/test_test_fixtures/**
       - test/lib/terraform/common/**
       - test/lib/terraform/conftest.py
