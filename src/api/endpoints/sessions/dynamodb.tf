@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "events" {
-  name         = "${local.resource_prefix}-session-events"
+  name         = local.dynamodb_table_name
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "session_id"
   range_key    = "timestamp"
@@ -43,6 +43,6 @@ resource "aws_dynamodb_table" "events" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-session-events"
+    Name = local.dynamodb_table_name
   })
 }
