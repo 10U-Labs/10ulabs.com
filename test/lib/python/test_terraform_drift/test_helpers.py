@@ -306,4 +306,3 @@ class TestNoOrphanedResourcesRequiringExistingState:
 
         with pytest.raises(pytest.skip.Exception, match="Cold state"):
             run_check()
-
