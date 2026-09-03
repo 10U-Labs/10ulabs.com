@@ -29,6 +29,7 @@ jobs:
           lib/python/module_utils
           lib/python/repo_utils
           lib/python/terraform_config
+          lib/python/terraform_drift
           lib/python/test_fixtures
           lib/terraform/common
           test/conftest.py
@@ -43,6 +44,7 @@ jobs:
           test/lib/python/test_module_utils
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
           test/lib/python/test_test_fixtures
   assert-no-inline-directives:
     runs-on: ubuntu-latest
@@ -70,6 +72,7 @@ jobs:
           lib/python/module_utils
           lib/python/repo_utils
           lib/python/terraform_config
+          lib/python/terraform_drift
           lib/python/test_fixtures
           lib/terraform/common
           test/conftest.py
@@ -84,6 +87,7 @@ jobs:
           test/lib/python/test_module_utils
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
           test/lib/python/test_test_fixtures
   assert-no-linter-config-files:
     runs-on: ubuntu-latest
@@ -109,6 +113,7 @@ jobs:
           lib/python/module_utils
           lib/python/repo_utils
           lib/python/terraform_config
+          lib/python/terraform_drift
           lib/python/test_fixtures
           test/lib/terraform/common
           test/lib/terraform/unit
@@ -118,6 +123,7 @@ jobs:
           test/lib/python/test_module_utils
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
           test/lib/python/test_test_fixtures
   assert-no-pytest-plugin-declarations:
     runs-on: ubuntu-latest
@@ -148,6 +154,7 @@ jobs:
           test/lib/python/test_module_utils
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
           test/lib/python/test_test_fixtures
           lib/python/test_fixtures
   assert-one-assert-per-pytest:
@@ -179,6 +186,7 @@ jobs:
           test/lib/python/test_module_utils
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
           test/lib/python/test_test_fixtures
   assert-opentofu-resource-is-used:
     runs-on: ubuntu-latest
@@ -222,6 +230,7 @@ jobs:
           test/lib/python/test_module_utils
           test/lib/python/test_repo_utils
           test/lib/python/test_terraform_config
+          test/lib/python/test_terraform_drift
           test/lib/python/test_test_fixtures
           lib/python/test_fixtures
   assert-python-definition-is-used:
@@ -264,6 +273,7 @@ jobs:
             test/lib/python/test_module_utils
             test/lib/python/test_repo_utils
             test/lib/python/test_terraform_config
+            test/lib/python/test_terraform_drift
             test/lib/python/test_test_fixtures
           verbose: "true"
   assert-python-definition-is-used-packages:
