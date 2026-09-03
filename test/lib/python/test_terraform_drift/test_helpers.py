@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Callable
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -266,3 +267,43 @@ def test_multiple_resources(mock_get_planned: MagicMock, mock_check_exists: Magi
     instance.test_no_orphaned_resources()
 
     assert mock_check_exists.call_count == 3
+
+
+def _orphan_check_over_state(mock_run: MagicMock, state: str) -> Callable[[], None]:
+    mock_run.return_value = MagicMock(returncode=0, stdout=state)
+    TestClass = create_orphaned_resource_tests(
+        Path("/tmp/terraform"),
+        require_existing_state=True,
+    )
+    return TestClass().test_no_orphaned_resources
+
+
+class TestNoOrphanedResourcesRequiringExistingState:
+    @patch("terraform_drift.test_helpers.check_resource_exists")
+    @patch("terraform_drift.test_helpers.get_planned_creates")
+    @patch("terraform_drift.test_helpers.subprocess.run")
+    def test_reports_an_orphan_when_state_is_not_empty(
+        self,
+        mock_run: MagicMock,
+        mock_get_planned: MagicMock,
+        mock_check_exists: MagicMock,
+    ) -> None:
+        _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=True)
+        run_check = _orphan_check_over_state(mock_run, "aws_s3_bucket.state\n")
+
+        with pytest.raises(pytest.fail.Exception, match="ORPHANED RESOURCES DETECTED"):
+            run_check()
+
+    @patch("terraform_drift.test_helpers.get_planned_creates")
+    @patch("terraform_drift.test_helpers.subprocess.run")
+    def test_skips_when_state_is_empty(
+        self,
+        mock_run: MagicMock,
+        mock_get_planned: MagicMock,
+    ) -> None:
+        mock_get_planned.return_value = []
+        run_check = _orphan_check_over_state(mock_run, "")
+
+        with pytest.raises(pytest.skip.Exception, match="Cold state"):
+            run_check()
+

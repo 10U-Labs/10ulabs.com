@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -8,9 +9,22 @@ from terraform_drift import (
 )
 
 
+def _has_existing_state(terraform_dir: Path) -> bool:
+    result = subprocess.run(
+        ["terraform", "state", "list"],
+        cwd=terraform_dir,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    return result.returncode == 0 and len(result.stdout.strip()) > 0
+
+
 def create_orphaned_resource_tests(
     terraform_dir: Path,
     region: str = "us-east-2",
+    require_existing_state: bool = False,
 ) -> type:
     class TestOrphanedResources:
         def test_terraform_initialized(self) -> None:
@@ -23,6 +37,9 @@ def create_orphaned_resource_tests(
             print("  Terraform is initialized")
 
         def test_no_orphaned_resources(self) -> None:
+            if require_existing_state and not _has_existing_state(terraform_dir):
+                pytest.skip("Cold state - no prior Terraform state to validate against")
+
             print("\n" + "=" * 60)
             print("Running terraform plan to detect resources to create...")
             print(f"  Directory: {terraform_dir}")
