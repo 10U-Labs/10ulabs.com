@@ -90,18 +90,6 @@ def get_resource_prefix() -> str:
     return _parse_locals().get("resource_prefix", "TenULabs")
 
 
-def _resolve_local_interpolations(value: str, local_values: Dict[str, str]) -> str:
-    max_iterations = 10
-    for _ in range(max_iterations):
-        new_value = value
-        for local_name, local_value in local_values.items():
-            new_value = new_value.replace(f"${{local.{local_name}}}", local_value)
-        if new_value == value:
-            break
-        value = new_value
-    return value
-
-
 def packaged_lambda_sources(tf_file: Path) -> list:
     pattern = r'(?:source_file\s*=|content\s*=\s*file\()\s*"\$\{path\.module\}/([^"]+)"'
     content = tf_file.read_text(encoding="utf-8")

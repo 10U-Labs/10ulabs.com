@@ -5,7 +5,6 @@ from unittest.mock import patch
 from terraform_config import (
     TEST_AWS_REGION,
     _parse_map_block,
-    _resolve_local_interpolations,
     get_resource_prefix,
     get_shared_config,
     packaged_lambda_archives,
@@ -56,45 +55,6 @@ class TestParseMapBlock:
         '''
         result = _parse_map_block(content, "empty_map")
         assert not result
-
-
-class TestResolveLocalInterpolations:
-    def test_resolves_single_local(self) -> None:
-        value = "${local.my_var}"
-        local_values = {"my_var": "resolved_value"}
-        result = _resolve_local_interpolations(value, local_values)
-        assert result == "resolved_value"
-
-    def test_resolves_nested_locals(self) -> None:
-        value = "${local.outer}"
-        local_values = {
-            "outer": "${local.inner}",
-            "inner": "final_value",
-        }
-        result = _resolve_local_interpolations(value, local_values)
-        assert result == "final_value"
-
-    def test_resolves_deeply_nested_locals(self) -> None:
-        value = "${local.level1}"
-        local_values = {
-            "level1": "${local.level2}",
-            "level2": "${local.level3}",
-            "level3": "final_value",
-        }
-        result = _resolve_local_interpolations(value, local_values)
-        assert result == "final_value"
-
-    def test_returns_unchanged_when_local_not_found(self) -> None:
-        value = "${local.missing_var}"
-        local_values = {"other_var": "value"}
-        result = _resolve_local_interpolations(value, local_values)
-        assert result == "${local.missing_var}"
-
-    def test_resolves_multiple_locals_in_string(self) -> None:
-        value = "${local.prefix}-${local.suffix}"
-        local_values = {"prefix": "start", "suffix": "end"}
-        result = _resolve_local_interpolations(value, local_values)
-        assert result == "start-end"
 
 
 class TestParseLocals:
@@ -163,25 +123,6 @@ class TestGetResourcePrefix:
         assert len(result) > 0
 
 
-class TestResolveLocalInterpolationsMaxIterations:
-    def test_handles_circular_reference_without_infinite_loop(self) -> None:
-        value = "${local.a}"
-        local_values = {
-            "a": "${local.b}",
-            "b": "${local.a}",
-        }
-        result = _resolve_local_interpolations(value, local_values)
-        assert result in ["${local.a}", "${local.b}"]
-
-    def test_handles_deep_nesting_beyond_resolution(self) -> None:
-        value = "${local.level0}"
-        local_values = {f"level{i}": f"${{local.level{i+1}}}" for i in range(15)}
-        local_values["level15"] = "final"
-
-        result = _resolve_local_interpolations(value, local_values)
-        assert "${local." in result or result == "final"
-
-
 class TestGetSharedConfigDomainName:
     @patch('terraform_config._parse_locals')
     @patch('terraform_config._parse_outputs')
@@ -221,29 +162,6 @@ class TestGetSharedConfigDomainName:
 
         result = get_shared_config()
         assert "api_fqdn" not in result
-
-
-class TestResolveLocalInterpolationsMaxIterationsExhaustion:
-    def test_exhausts_max_iterations_leaves_unresolved_reference(self) -> None:
-        value = "${local.a}"
-        local_values = {"a": "x${local.a}y"}
-
-        result = _resolve_local_interpolations(value, local_values)
-        assert "${local.a}" in result
-
-    def test_exhausts_max_iterations_adds_prefix_each_iteration(self) -> None:
-        value = "${local.a}"
-        local_values = {"a": "x${local.a}y"}
-
-        result = _resolve_local_interpolations(value, local_values)
-        assert result.count("x") == 10
-
-    def test_exhausts_max_iterations_adds_suffix_each_iteration(self) -> None:
-        value = "${local.a}"
-        local_values = {"a": "x${local.a}y"}
-
-        result = _resolve_local_interpolations(value, local_values)
-        assert result.count("y") == 10
 
 
 def test_packaged_lambda_sources_reads_a_single_packaged_file(tmp_path: Path) -> None:
