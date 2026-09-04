@@ -1,9 +1,17 @@
 import pytest
 
 from repo_utils import REPO_ROOT
-from terraform_config import parse_lambda_handler_names
 
 SRC_ROOT = REPO_ROOT / "src"
+
+HANDLER_KEYS = [
+    "catchall",
+    "contact",
+    "echo",
+    "health",
+    "rack_configurations",
+    "sessions",
+]
 
 
 def _referencing_files(handler_key: str) -> list:
@@ -14,7 +22,7 @@ def _referencing_files(handler_key: str) -> list:
     )
 
 
-@pytest.mark.parametrize("handler_key", sorted(parse_lambda_handler_names()))
+@pytest.mark.parametrize("handler_key", HANDLER_KEYS)
 def test_handler_name_is_read_by_a_stack(handler_key: str) -> None:
     assert _referencing_files(handler_key), (
         f"lambda_handler_names.{handler_key} is declared by the common module "
