@@ -5,15 +5,9 @@ from unittest.mock import patch
 from terraform_config import (
     TEST_AWS_REGION,
     _parse_map_block,
-    _resolve_all_refs,
-    _resolve_lambda_function_name,
     _resolve_local_interpolations,
-    _resolve_prefix_refs,
-    extract_lambda_function_names,
-    get_endpoint_local_values,
     get_resource_prefix,
     get_shared_config,
-    get_tfvars_values,
     packaged_lambda_archives,
     packaged_lambda_sources,
     parse_lambda_handler_names,
@@ -64,28 +58,6 @@ class TestParseMapBlock:
         assert not result
 
 
-class TestResolvePrefixRefs:
-    def test_resolves_module_shared_resource_prefix(self) -> None:
-        value = "${module.common.resource_prefix}MyFunction"
-        result = _resolve_prefix_refs(value, "TenULabs")
-        assert result == "TenULabsMyFunction"
-
-    def test_resolves_local_resource_prefix(self) -> None:
-        value = "${local.resource_prefix}MyFunction"
-        result = _resolve_prefix_refs(value, "TenULabs")
-        assert result == "TenULabsMyFunction"
-
-    def test_resolves_multiple_refs(self) -> None:
-        value = "${local.resource_prefix}-${module.common.resource_prefix}"
-        result = _resolve_prefix_refs(value, "Prefix")
-        assert result == "Prefix-Prefix"
-
-    def test_returns_unchanged_when_no_refs(self) -> None:
-        value = "StaticValue"
-        result = _resolve_prefix_refs(value, "TenULabs")
-        assert result == "StaticValue"
-
-
 class TestResolveLocalInterpolations:
     def test_resolves_single_local(self) -> None:
         value = "${local.my_var}"
@@ -123,90 +95,6 @@ class TestResolveLocalInterpolations:
         local_values = {"prefix": "start", "suffix": "end"}
         result = _resolve_local_interpolations(value, local_values)
         assert result == "start-end"
-
-
-class TestResolveAllRefs:
-    def test_resolves_prefix_and_handler_names(self) -> None:
-        value = "${module.common.resource_prefix}-${module.common.lambda_handler_names.webhook}"
-        handler_names = {"webhook": "TenULabsWebhook"}
-        result = _resolve_all_refs(value, "TenULabs", handler_names)
-        assert result == "TenULabs-TenULabsWebhook"
-
-    def test_resolves_only_prefix_when_no_handlers(self) -> None:
-        value = "${module.common.resource_prefix}Function"
-        result = _resolve_all_refs(value, "TenULabs", {})
-        assert result == "TenULabsFunction"
-
-    def test_returns_unchanged_when_handler_not_found(self) -> None:
-        value = "${module.common.lambda_handler_names.missing}"
-        result = _resolve_all_refs(value, "TenULabs", {"webhook": "Handler"})
-        assert result == "${module.common.lambda_handler_names.missing}"
-
-
-class TestResolveLambdaFunctionName:
-    def test_resolves_quoted_string(self) -> None:
-        block = '''
-        function_name = "${module.common.resource_prefix}MyFunction"
-        runtime       = "python3.11"
-        '''
-        result = _resolve_lambda_function_name(block, "TenULabs", {}, {}, {})
-        assert result == "TenULabsMyFunction"
-
-    def test_resolves_local_reference(self) -> None:
-        block = '''
-        function_name = local.handler_name
-        runtime       = "python3.11"
-        '''
-        locals_map = {"handler_name": "MyHandler"}
-        result = _resolve_lambda_function_name(block, "TenULabs", locals_map, {}, {})
-        assert result == "MyHandler"
-
-    def test_resolves_var_reference(self) -> None:
-        block = '''
-        function_name = var.lambda_name
-        runtime       = "python3.11"
-        '''
-        tfvars = {"lambda_name": "VarHandler"}
-        result = _resolve_lambda_function_name(block, "TenULabs", {}, tfvars, {})
-        assert result == "VarHandler"
-
-    def test_resolves_module_shared_handler_reference(self) -> None:
-        block = '''
-        function_name = module.common.lambda_handler_names.webhook
-        runtime       = "python3.11"
-        '''
-        handlers = {"webhook": "TenULabsWebhookHandler"}
-        result = _resolve_lambda_function_name(block, "TenULabs", {}, {}, handlers)
-        assert result == "TenULabsWebhookHandler"
-
-    def test_returns_none_when_no_function_name(self) -> None:
-        block = '''
-        runtime = "python3.11"
-        handler = "index.handler"
-        '''
-        result = _resolve_lambda_function_name(block, "TenULabs", {}, {}, {})
-        assert result is None
-
-    def test_returns_none_for_local_not_in_map(self) -> None:
-        block = '''
-        function_name = local.missing_name
-        '''
-        result = _resolve_lambda_function_name(block, "TenULabs", {"other": "value"}, {}, {})
-        assert result is None
-
-    def test_returns_none_for_var_not_in_tfvars(self) -> None:
-        block = '''
-        function_name = var.missing_name
-        '''
-        result = _resolve_lambda_function_name(block, "TenULabs", {}, {"other": "value"}, {})
-        assert result is None
-
-    def test_returns_none_for_handler_not_in_map(self) -> None:
-        block = '''
-        function_name = module.common.lambda_handler_names.missing
-        '''
-        result = _resolve_lambda_function_name(block, "TenULabs", {}, {}, {"other": "value"})
-        assert result is None
 
 
 class TestParseLocals:
@@ -275,95 +163,6 @@ class TestGetResourcePrefix:
         assert len(result) > 0
 
 
-class TestGetTfvarsValues:
-    def test_returns_empty_for_nonexistent_dir(self) -> None:
-        result = get_tfvars_values(Path("/nonexistent/path"))
-        assert not result
-
-    def test_parses_string_values(self, tmp_path: Path) -> None:
-        tfvars_file = tmp_path / "terraform.tfvars"
-        tfvars_file.write_text('my_var = "my_value"\n')
-        result = get_tfvars_values(tmp_path)
-        assert result == {"my_var": "my_value"}
-
-    def test_parses_list_values(self, tmp_path: Path) -> None:
-        tfvars_file = tmp_path / "terraform.tfvars"
-        tfvars_file.write_text('my_list = ["a", "b", "c"]\n')
-        result = get_tfvars_values(tmp_path)
-        assert result == {"my_list": ["a", "b", "c"]}
-
-    def test_ignores_comments(self, tmp_path: Path) -> None:
-        tfvars_file = tmp_path / "terraform.tfvars"
-        tfvars_file.write_text('# This is a comment\nmy_var = "value"\n')
-        result = get_tfvars_values(tmp_path)
-        assert result == {"my_var": "value"}
-
-
-class TestGetEndpointLocalValues:
-    def test_returns_empty_for_nonexistent_file(self) -> None:
-        result = get_endpoint_local_values(Path("/nonexistent/path"))
-        assert not result
-
-    def test_parses_local_values(self, tmp_path: Path) -> None:
-        locals_file = tmp_path / "locals.tf"
-        locals_file.write_text('locals {\n  my_local = "my_value"\n}\n')
-        result = get_endpoint_local_values(tmp_path)
-        assert result.get("my_local") == "my_value"
-
-    def test_parses_module_shared_handler_reference(self, tmp_path: Path) -> None:
-        locals_file = tmp_path / "locals.tf"
-        locals_file.write_text(
-            'locals {\n  handler = module.common.lambda_handler_names.webhook\n}\n'
-        )
-        with patch("terraform_config.parse_lambda_handler_names") as mock_handlers:
-            mock_handlers.return_value = {"webhook": "TenULabsWebhook"}
-            with patch("terraform_config.get_resource_prefix") as mock_prefix:
-                mock_prefix.return_value = "TenULabs"
-                result = get_endpoint_local_values(tmp_path)
-        assert result.get("handler") == "TenULabsWebhook"
-
-
-class TestExtractLambdaFunctionNames:
-    def test_returns_empty_for_nonexistent_file(self) -> None:
-        result = extract_lambda_function_names(Path("/nonexistent/file.tf"))
-        assert not result
-
-    def test_extracts_quoted_name_returns_single_result(self, tmp_path: Path) -> None:
-        lambda_file = tmp_path / "lambda.tf"
-        lambda_file.write_text('''
-resource "aws_lambda_function" "my_func" {
-  function_name = "MyFunctionName"
-  handler = "index.handler"
-  runtime = "python3.11"
-}
-''')
-        result = extract_lambda_function_names(lambda_file)
-        assert len(result) == 1
-
-    def test_extracts_quoted_name_returns_correct_tuple(self, tmp_path: Path) -> None:
-        lambda_file = tmp_path / "lambda.tf"
-        lambda_file.write_text('''
-resource "aws_lambda_function" "my_func" {
-  function_name = "MyFunctionName"
-  handler = "index.handler"
-  runtime = "python3.11"
-}
-''')
-        result = extract_lambda_function_names(lambda_file)
-        assert result[0] == ("my_func", "MyFunctionName")
-
-    def test_with_use_handler_names_returns_single_result(self, tmp_path: Path) -> None:
-        lambda_file = tmp_path / "lambda.tf"
-        lambda_file.write_text('''
-resource "aws_lambda_function" "my_func" {
-  function_name = "StaticName"
-  runtime = "python3.11"
-}
-''')
-        result = extract_lambda_function_names(lambda_file, use_handler_names=True)
-        assert len(result) == 1
-
-
 class TestResolveLocalInterpolationsMaxIterations:
     def test_handles_circular_reference_without_infinite_loop(self) -> None:
         value = "${local.a}"
@@ -381,47 +180,6 @@ class TestResolveLocalInterpolationsMaxIterations:
 
         result = _resolve_local_interpolations(value, local_values)
         assert "${local." in result or result == "final"
-
-
-class TestGetTfvarsValuesAdditional:
-    def test_parses_string_values(self, tmp_path: Path) -> None:
-        tfvars_file = tmp_path / "terraform.tfvars"
-        tfvars_file.write_text('region = "us-east-1"\n')
-
-        result = get_tfvars_values(tmp_path)
-        assert result.get("region") == "us-east-1"
-
-    def test_parses_list_values(self, tmp_path: Path) -> None:
-        tfvars_file = tmp_path / "terraform.tfvars"
-        tfvars_file.write_text('tags = ["tag1", "tag2"]\n')
-
-        result = get_tfvars_values(tmp_path)
-        assert result.get("tags") == ["tag1", "tag2"]
-
-    def test_skips_comments_and_empty_lines(self, tmp_path: Path) -> None:
-        tfvars_file = tmp_path / "terraform.tfvars"
-        tfvars_file.write_text('# comment\n\nregion = "us-east-1"\n')
-
-        result = get_tfvars_values(tmp_path)
-        assert result.get("region") == "us-east-1"
-
-    def test_skips_non_matching_number_lines(self, tmp_path: Path) -> None:
-        tfvars_file = tmp_path / "terraform.tfvars"
-        tfvars_file.write_text('some_number = 42\nregion = "us-east-1"\n')
-
-        result = get_tfvars_values(tmp_path)
-        assert "some_number" not in result
-
-    def test_parses_string_after_skipping_number(self, tmp_path: Path) -> None:
-        tfvars_file = tmp_path / "terraform.tfvars"
-        tfvars_file.write_text('some_number = 42\nregion = "us-east-1"\n')
-
-        result = get_tfvars_values(tmp_path)
-        assert result.get("region") == "us-east-1"
-
-    def test_returns_empty_dict_when_file_missing(self, tmp_path: Path) -> None:
-        result = get_tfvars_values(tmp_path)
-        assert not result
 
 
 class TestGetSharedConfigDomainName:
@@ -486,34 +244,6 @@ class TestResolveLocalInterpolationsMaxIterationsExhaustion:
 
         result = _resolve_local_interpolations(value, local_values)
         assert result.count("y") == 10
-
-
-def test_get_endpoint_local_values_skips_an_unknown_handler(tmp_path: Path) -> None:
-    locals_file = tmp_path / "locals.tf"
-    locals_file.write_text(
-        'locals {\n  handler = module.common.lambda_handler_names.nonexistent\n}\n'
-    )
-    with patch("terraform_config.parse_lambda_handler_names") as mock_handlers:
-        mock_handlers.return_value = {"webhook": "WebhookHandler"}
-        with patch("terraform_config.get_resource_prefix") as mock_prefix:
-            mock_prefix.return_value = "TenULabs"
-            result = get_endpoint_local_values(tmp_path)
-    assert "handler" not in result
-
-
-def test_extract_lambda_function_names_skips_an_unresolvable_name(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text('''
-resource "aws_lambda_function" "my_func" {
-  function_name = data.aws_caller_identity.current.account_id
-  handler = "index.handler"
-  runtime = "python3.11"
-}
-''')
-    (tmp_path / "locals.tf").write_text("")
-    (tmp_path / "terraform.tfvars").write_text("")
-    result = extract_lambda_function_names(lambda_file)
-    assert len(result) == 0
 
 
 def test_packaged_lambda_sources_reads_a_single_packaged_file(tmp_path: Path) -> None:
