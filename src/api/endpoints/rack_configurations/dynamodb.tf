@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "configurations" {
-  name         = "${local.resource_prefix}-rack-configurations-configurations"
+  name         = local.dynamodb_table_name
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "config_hash"
 
@@ -13,6 +13,6 @@ resource "aws_dynamodb_table" "configurations" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-configurations-configurations"
+    Name = local.dynamodb_table_name
   })
 }

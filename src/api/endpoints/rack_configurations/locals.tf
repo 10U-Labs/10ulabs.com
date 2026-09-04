@@ -4,6 +4,7 @@ locals {
   github_repo_full = "${module.common.github_org}/${module.common.name_for_github_repo}"
   resource_prefix  = module.common.resource_prefix
 
+  dynamodb_table_name   = "${local.resource_prefix}-rack-configurations-configurations"
   handler_role_name     = "${local.resource_prefix}RackConfigurationsLambdaRole"
   backup_vault_name     = "${local.resource_prefix}-rack-configurations-backup"
   backup_role_name      = "${local.resource_prefix}RackConfigurationsBackupRole"
