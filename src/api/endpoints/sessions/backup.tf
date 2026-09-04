@@ -1,13 +1,13 @@
 resource "aws_backup_vault" "sessions" {
-  name = "${local.resource_prefix}-sessions-backup"
+  name = local.backup_vault_name
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-sessions-backup"
+    Name = local.backup_vault_name
   })
 }
 
 resource "aws_backup_plan" "sessions" {
-  name = "${local.resource_prefix}-sessions-backup"
+  name = local.backup_vault_name
 
   rule {
     rule_name         = "daily-backup"
@@ -20,12 +20,12 @@ resource "aws_backup_plan" "sessions" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-sessions-backup"
+    Name = local.backup_vault_name
   })
 }
 
 resource "aws_iam_role" "backup" {
-  name = "${local.resource_prefix}SessionsBackupRole"
+  name = local.backup_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -39,7 +39,7 @@ resource "aws_iam_role" "backup" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}SessionsBackupRole"
+    Name = local.backup_role_name
   })
 }
 
@@ -54,7 +54,7 @@ resource "aws_iam_role_policy_attachment" "backup_restores" {
 }
 
 resource "aws_backup_selection" "sessions" {
-  name         = "${local.resource_prefix}-sessions-tables"
+  name         = local.backup_selection_name
   plan_id      = aws_backup_plan.sessions.id
   iam_role_arn = aws_iam_role.backup.arn
 

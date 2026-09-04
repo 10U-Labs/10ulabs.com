@@ -13,6 +13,10 @@ locals {
   export_log_group_tag_name  = "${module.common.resource_prefix}-SessionsExport-Logs"
   daily_export_schedule_name = "${module.common.resource_prefix}-SessionsDailyExport"
 
+  backup_vault_name     = "${module.common.resource_prefix}-sessions-backup"
+  backup_role_name      = "${module.common.resource_prefix}SessionsBackupRole"
+  backup_selection_name = "${module.common.resource_prefix}-sessions-tables"
+
   common_tags = {
     ManagedBy = "terraform"
     Purpose   = "sessions"
