@@ -1,8 +1,8 @@
 resource "aws_s3_bucket" "analytics" {
-  bucket = "${lower(local.resource_prefix)}-sessions-analytics"
+  bucket = local.s3_bucket_name
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-sessions-analytics"
+    Name = local.s3_bucket_name
   })
 }
 

@@ -8,6 +8,7 @@ locals {
   scheduler_role_name  = "${module.common.resource_prefix}SessionsSchedulerRole"
   handler_role_name    = "${module.common.resource_prefix}SessionsHandlerRole"
   dynamodb_table_name  = "${module.common.resource_prefix}-session-events"
+  s3_bucket_name       = "${lower(module.common.resource_prefix)}-sessions-analytics"
 
   common_tags = {
     ManagedBy = "terraform"
