@@ -10,6 +10,9 @@ locals {
   dynamodb_table_name  = "${module.common.resource_prefix}-session-events"
   s3_bucket_name       = "${lower(module.common.resource_prefix)}-sessions-analytics"
 
+  export_log_group_tag_name  = "${module.common.resource_prefix}-SessionsExport-Logs"
+  daily_export_schedule_name = "${module.common.resource_prefix}-SessionsDailyExport"
+
   common_tags = {
     ManagedBy = "terraform"
     Purpose   = "sessions"

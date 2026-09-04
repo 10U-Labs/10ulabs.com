@@ -132,12 +132,12 @@ resource "aws_cloudwatch_log_group" "export_lambda" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-SessionsExport-Logs"
+    Name = local.export_log_group_tag_name
   })
 }
 
 resource "aws_scheduler_schedule" "daily_export" {
-  name       = "${local.resource_prefix}-SessionsDailyExport"
+  name       = local.daily_export_schedule_name
   group_name = "default"
 
   flexible_time_window {
