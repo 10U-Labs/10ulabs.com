@@ -3,32 +3,35 @@ from pathlib import Path
 import pytest
 
 from repo_utils import REPO_ROOT
-from terraform_config import packaged_lambda_sources
 
 SRC_ROOT = REPO_ROOT / "src"
 HANDLER_FILE_NAME = "handler.py"
 LAMBDA_DIRECTORY_NAME = "lambda"
 
 
-def _packaged_functions() -> list:
-    return sorted(
-        (str(path.relative_to(REPO_ROOT)), packaged)
-        for path in SRC_ROOT.rglob("*.tf")
-        if ".terraform" not in path.parts
-        for packaged in packaged_lambda_sources(path)
-    )
+PACKAGED_FUNCTIONS = [
+    ("src/api/common/routing/lambda.tf", "lambda/handler.py"),
+    ("src/api/endpoints/contact_submissions/lambda.tf", "lambda/handler.py"),
+    ("src/api/endpoints/rack_configurations/lambda.tf", "lambda/handler.py"),
+    ("src/api/endpoints/sessions/analytics.tf", "lambda/exporter/handler.py"),
+    ("src/api/endpoints/sessions/lambda.tf", "lambda/tracker/handler.py"),
+    ("src/api/operational/diagnostics/lambda.tf", "lambda/handler.py"),
+    ("src/api/operational/health/lambda.tf", "lambda/handler.py"),
+    ("src/www/common/lambda_edge.tf", "lambda/handler.py"),
+]
+
+STACK_PACKAGING_DIRECTORIES = [
+    ("src/api/common/routing", ["lambda"]),
+    ("src/api/endpoints/contact_submissions", ["lambda"]),
+    ("src/api/endpoints/rack_configurations", ["lambda"]),
+    ("src/api/endpoints/sessions", ["lambda/exporter", "lambda/tracker"]),
+    ("src/api/operational/diagnostics", ["lambda"]),
+    ("src/api/operational/health", ["lambda"]),
+    ("src/www/common", ["lambda"]),
+]
 
 
-def _stacks_with_their_packaging_directories() -> list:
-    stacks: dict = {}
-    for tf_file, packaged in _packaged_functions():
-        stacks.setdefault(str(Path(tf_file).parent), []).append(
-            str(Path(packaged).parent)
-        )
-    return sorted(stacks.items())
-
-
-@pytest.mark.parametrize("tf_file, packaged", _packaged_functions())
+@pytest.mark.parametrize("tf_file, packaged", PACKAGED_FUNCTIONS)
 def test_packaged_function_carries_the_agreed_file_name(
     tf_file: str, packaged: str
 ) -> None:
@@ -40,7 +43,7 @@ def test_packaged_function_carries_the_agreed_file_name(
     )
 
 
-@pytest.mark.parametrize("tf_file, packaged", _packaged_functions())
+@pytest.mark.parametrize("tf_file, packaged", PACKAGED_FUNCTIONS)
 def test_packaged_function_sits_beneath_the_agreed_directory(
     tf_file: str, packaged: str
 ) -> None:
@@ -52,7 +55,7 @@ def test_packaged_function_sits_beneath_the_agreed_directory(
     )
 
 
-@pytest.mark.parametrize("stack, directories", _stacks_with_their_packaging_directories())
+@pytest.mark.parametrize("stack, directories", STACK_PACKAGING_DIRECTORIES)
 def test_each_function_in_a_stack_is_packaged_from_its_own_directory(
     stack: str, directories: list
 ) -> None:

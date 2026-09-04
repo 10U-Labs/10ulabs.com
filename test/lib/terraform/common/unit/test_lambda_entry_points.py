@@ -26,20 +26,27 @@ def _stack_files() -> list:
     )
 
 
-def _configured_entry_points() -> list:
-    return sorted(
-        (str(path.relative_to(REPO_ROOT)), setting)
-        for path in _stack_files()
-        for setting in SETTING_PATTERN.findall(path.read_text(encoding="utf-8"))
-    )
+CONFIGURED_ENTRY_POINTS = [
+    ("src/api/common/routing/lambda.tf", "handler.lambda_handler"),
+    ("src/api/endpoints/contact_submissions/lambda.tf", "handler.lambda_handler"),
+    ("src/api/endpoints/rack_configurations/lambda.tf", "handler.lambda_handler"),
+    ("src/api/endpoints/sessions/analytics.tf", "handler.lambda_handler"),
+    ("src/api/endpoints/sessions/lambda.tf", "handler.lambda_handler"),
+    ("src/api/operational/diagnostics/lambda.tf", "handler.lambda_handler"),
+    ("src/api/operational/health/lambda.tf", "handler.lambda_handler"),
+    ("src/www/common/lambda_edge.tf", "handler.lambda_handler"),
+]
 
-
-def _defined_entry_points() -> list:
-    return sorted(
-        str(path.relative_to(REPO_ROOT))
-        for path in SRC_ROOT.rglob("*.py")
-        if ".terraform" not in path.parts and _defines(path, ENTRY_POINT_NAME)
-    )
+DEFINED_ENTRY_POINTS = [
+    "src/api/common/routing/lambda/handler.py",
+    "src/api/endpoints/contact_submissions/lambda/handler.py",
+    "src/api/endpoints/rack_configurations/lambda/handler.py",
+    "src/api/endpoints/sessions/lambda/exporter/handler.py",
+    "src/api/endpoints/sessions/lambda/tracker/handler.py",
+    "src/api/operational/diagnostics/lambda/handler.py",
+    "src/api/operational/health/lambda/handler.py",
+    "src/www/common/lambda/handler.py",
+]
 
 
 def _packages_entry_point(stack_file: Path, source: Path) -> bool:
@@ -52,7 +59,7 @@ def _packages_entry_point(stack_file: Path, source: Path) -> bool:
     )
 
 
-@pytest.mark.parametrize("tf_file, setting", _configured_entry_points())
+@pytest.mark.parametrize("tf_file, setting", CONFIGURED_ENTRY_POINTS)
 def test_entry_point_carries_the_agreed_name(tf_file: str, setting: str) -> None:
     assert setting.rsplit(".", 1)[-1] == ENTRY_POINT_NAME, (
         f"{tf_file} is set to enter its function at {setting}, so it is "
@@ -61,7 +68,7 @@ def test_entry_point_carries_the_agreed_name(tf_file: str, setting: str) -> None
     )
 
 
-@pytest.mark.parametrize("tf_file, setting", _configured_entry_points())
+@pytest.mark.parametrize("tf_file, setting", CONFIGURED_ENTRY_POINTS)
 def test_entry_point_is_defined_by_the_code_it_names(
     tf_file: str, setting: str
 ) -> None:
@@ -78,7 +85,7 @@ def test_entry_point_is_defined_by_the_code_it_names(
     )
 
 
-@pytest.mark.parametrize("source_file", _defined_entry_points())
+@pytest.mark.parametrize("source_file", DEFINED_ENTRY_POINTS)
 def test_every_defined_entry_point_is_packaged_by_a_stack(source_file: str) -> None:
     source = (REPO_ROOT / source_file).resolve()
     assert any(

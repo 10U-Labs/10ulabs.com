@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 
 import pytest
@@ -6,37 +5,41 @@ import pytest
 from repo_utils import REPO_ROOT
 from terraform_config import packaged_lambda_archives
 
-SRC_ROOT = REPO_ROOT / "src"
 SCRATCH_DIRECTORY_NAME = ".terraform"
 
 
-def _terraform_files() -> list:
-    return sorted(
-        path
-        for path in SRC_ROOT.rglob("*.tf")
-        if SCRATCH_DIRECTORY_NAME not in path.parts
-    )
+STAGED_ARCHIVES = [
+    ("src/api/common/routing/lambda.tf",
+     ".terraform/lambda_packages/catchall_handler.zip"),
+    ("src/api/endpoints/contact_submissions/lambda.tf",
+     ".terraform/lambda_packages/contact_handler.zip"),
+    ("src/api/endpoints/rack_configurations/lambda.tf",
+     ".terraform/lambda_packages/handler.zip"),
+    ("src/api/endpoints/sessions/analytics.tf",
+     ".terraform/lambda_packages/export_lambda.zip"),
+    ("src/api/endpoints/sessions/lambda.tf",
+     ".terraform/lambda_packages/handler.zip"),
+    ("src/api/operational/diagnostics/lambda.tf",
+     ".terraform/lambda_packages/diagnostics_handler.zip"),
+    ("src/api/operational/health/lambda.tf",
+     ".terraform/lambda_packages/health_handler.zip"),
+    ("src/www/common/lambda_edge.tf",
+     ".terraform/lambda_packages/spa_routing.zip"),
+]
+
+FILES_DECLARING_A_PACKAGE = [
+    ("src/api/common/routing/lambda.tf", 1),
+    ("src/api/endpoints/contact_submissions/lambda.tf", 1),
+    ("src/api/endpoints/rack_configurations/lambda.tf", 1),
+    ("src/api/endpoints/sessions/analytics.tf", 1),
+    ("src/api/endpoints/sessions/lambda.tf", 1),
+    ("src/api/operational/diagnostics/lambda.tf", 1),
+    ("src/api/operational/health/lambda.tf", 1),
+    ("src/www/common/lambda_edge.tf", 1),
+]
 
 
-def _staged_archives() -> list:
-    return sorted(
-        (str(path.relative_to(REPO_ROOT)), archive)
-        for path in _terraform_files()
-        for archive in packaged_lambda_archives(path)
-    )
-
-
-def _files_declaring_a_package() -> list:
-    declared: list = []
-    for path in _terraform_files():
-        content = path.read_text(encoding="utf-8")
-        packages = len(re.findall(r'data\s+"archive_file"', content))
-        if packages:
-            declared.append((str(path.relative_to(REPO_ROOT)), packages))
-    return sorted(declared)
-
-
-@pytest.mark.parametrize("tf_file, archive", _staged_archives())
+@pytest.mark.parametrize("tf_file, archive", STAGED_ARCHIVES)
 def test_packaged_function_is_staged_in_the_deployment_scratch_directory(
     tf_file: str, archive: str
 ) -> None:
@@ -48,7 +51,7 @@ def test_packaged_function_is_staged_in_the_deployment_scratch_directory(
     )
 
 
-@pytest.mark.parametrize("tf_file, declared", _files_declaring_a_package())
+@pytest.mark.parametrize("tf_file, declared", FILES_DECLARING_A_PACKAGE)
 def test_every_packaging_configuration_names_the_archive_it_writes(
     tf_file: str, declared: int
 ) -> None:

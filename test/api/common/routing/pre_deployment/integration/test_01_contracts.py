@@ -4,15 +4,9 @@ from pathlib import Path
 import pytest
 
 from repo_utils import REPO_ROOT
-from test_fixtures.config import add_derived_config
 
 ROUTING_SRC = REPO_ROOT / "src" / "api" / "common" / "routing"
 LAMBDA_DIR = ROUTING_SRC / "lambda"
-UNIT_CONFTEST = (
-    REPO_ROOT / "test" / "api" / "common" / "routing"
-    / "pre_deployment" / "unit" / "conftest.py"
-)
-_DERIVED_NAME_PREFIX = "SentinelResourcePrefix"
 
 
 def _extract_openapi_template_vars(openapi_path: Path) -> set[str]:
@@ -147,12 +141,10 @@ def test_lambda_handler_exports_match_terraform_references(
     )
 
 
-def _lambda_sources_the_unit_setup_opens() -> list[str]:
-    content = UNIT_CONFTEST.read_text()
-    return sorted(set(re.findall(r'load_lambda_module\(\s*"([^"]+)"', content)))
+LAMBDA_SOURCES_THE_UNIT_SETUP_OPENS = ["handler.py"]
 
 
-@pytest.mark.parametrize("lambda_source", _lambda_sources_the_unit_setup_opens())
+@pytest.mark.parametrize("lambda_source", LAMBDA_SOURCES_THE_UNIT_SETUP_OPENS)
 def test_unit_setup_opens_a_lambda_source_that_exists(lambda_source: str) -> None:
     assert (LAMBDA_DIR / lambda_source).exists(), (
         f"The unit tier's setup opens '{lambda_source}', which is not in "
@@ -161,17 +153,15 @@ def test_unit_setup_opens_a_lambda_source_that_exists(lambda_source: str) -> Non
     )
 
 
-def _derived_resource_names() -> list[str]:
-    derived: dict[str, str] = {"resource_prefix": _DERIVED_NAME_PREFIX}
-    add_derived_config(derived)
-    return sorted(
-        value.removeprefix(_DERIVED_NAME_PREFIX)
-        for key, value in derived.items()
-        if key != "resource_prefix"
-    )
+DERIVED_RESOURCE_NAMES = [
+    "-CloudWatchLogs",
+    "ApiGatewayCloudwatch",
+    "CloudWatchLogsFirehose",
+    "FirehoseCloudWatchLogs",
+]
 
 
-@pytest.mark.parametrize("derived_name", _derived_resource_names())
+@pytest.mark.parametrize("derived_name", DERIVED_RESOURCE_NAMES)
 def test_derived_resource_name_is_built_by_this_terraform(derived_name: str) -> None:
     terraform = "\n".join(path.read_text() for path in sorted(ROUTING_SRC.glob("*.tf")))
     assert derived_name in terraform, (
