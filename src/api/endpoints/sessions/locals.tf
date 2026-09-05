@@ -1,7 +1,6 @@
 locals {
-  aws_region      = module.common.aws_region
-  aws_account_id  = module.common.aws_account_id
-  resource_prefix = module.common.resource_prefix
+  aws_region     = module.common.aws_region
+  aws_account_id = module.common.aws_account_id
 
   export_function_name = "${module.common.resource_prefix}SessionsExport"
   export_role_name     = "${module.common.resource_prefix}SessionsExportRole"
