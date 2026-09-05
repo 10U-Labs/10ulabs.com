@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+from typing import Any, Callable
 from unittest.mock import MagicMock
 from unittest.mock import patch, mock_open
 
@@ -8,7 +9,13 @@ import pytest
 from repo_utils import REPO_ROOT
 from test_fixtures.terraform_tests import (
     API_COMMON_ROUTING_OUTPUTS_FILE,
+    _block_named,
+    _braced_block,
+    _environment_variables_read,
+    _environment_variables_supplied,
     _get_api_common_routing_outputs,
+    _packaged_handler_source_path,
+    create_lambda_source_contract_tests,
     create_remote_state_contract_tests,
     create_remote_state_config_tests,
 )
@@ -429,3 +436,208 @@ class TestRemoteStateContractMessagesNameTheOutputsFile:
         expected = re.escape(str(API_COMMON_ROUTING_OUTPUTS_FILE.relative_to(REPO_ROOT)))
         with pytest.raises(AssertionError, match=expected):
             instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs()
+
+TRACKER_TF = '''
+data "archive_file" "handler" {
+  source_file = "${path.module}/lambda/tracker/handler.py"
+  output_path = "${path.module}/.terraform/handler.zip"
+}
+
+resource "aws_lambda_function" "handler" {
+  filename = data.archive_file.handler.output_path
+  handler  = "handler.lambda_handler"
+
+  environment {
+    variables = {
+      SESSION_EVENTS_TABLE = aws_dynamodb_table.events.name
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "Tracker"
+  })
+}
+'''
+
+EXPORTER_TF = '''
+data "archive_file" "export_lambda" {
+  output_path = "${path.module}/.terraform/export_lambda.zip"
+
+  source {
+    content  = file("${path.module}/lambda/tracker/handler.py")
+    filename = "handler.py"
+  }
+}
+
+resource "aws_lambda_function" "handler" {
+  filename = data.archive_file.export_lambda.output_path
+  handler  = "handler.lambda_handler"
+}
+'''
+
+ARCHIVE_REFERENCE = "filename = data.archive_file.handler.output_path"
+DEFINES_LAMBDA_HANDLER = "def lambda_handler(event, context):\n    return event\n"
+READS_THE_TABLE = (
+    "def lambda_handler(event, context):\n"
+    "    return os.environ['SESSION_EVENTS_TABLE']\n"
+)
+DEFINES_HANDLE = "def handle(event, context):\n    return event\n"
+
+
+def _endpoint_with_handler(tmp_path: Path, tf_content: str, handler_content: str) -> Path:
+    (tmp_path / "lambda.tf").write_text(tf_content)
+    handler_directory = tmp_path / "lambda" / "tracker"
+    handler_directory.mkdir(parents=True, exist_ok=True)
+    (handler_directory / "handler.py").write_text(handler_content)
+    return tmp_path
+
+
+def _contract_for(endpoint: Path) -> Any:
+    return create_lambda_source_contract_tests(endpoint, "lambda.tf", "handler")()
+
+
+def _handler_check(endpoint: Path) -> Callable[[], None]:
+    return _contract_for(endpoint).test_handler_attribute_names_a_function_the_source_defines
+
+
+def _environment_check(endpoint: Path) -> Callable[[], None]:
+    return _contract_for(endpoint).test_environment_variables_supplied_are_the_ones_read
+
+
+class TestBracedBlock:
+    def test_returns_the_inner_text_of_a_block(self) -> None:
+        assert _braced_block("prefix {inner} suffix", 7) == "inner"
+
+    def test_returns_the_inner_text_spanning_a_nested_block(self) -> None:
+        assert _braced_block("{outer {nested} tail}", 0) == "outer {nested} tail"
+
+    def test_returns_the_remainder_when_the_block_is_never_closed(self) -> None:
+        assert _braced_block("{unterminated", 0) == "unterminated"
+
+
+class TestBlockNamed:
+    def test_finds_the_body_of_the_named_block(self) -> None:
+        content = 'resource "aws_lambda_function" "handler" {\n  timeout = 10\n}\n'
+        assert "timeout = 10" in _block_named(content, "resource", "aws_lambda_function", "handler")
+
+    def test_returns_empty_string_when_the_block_is_absent(self) -> None:
+        content = 'resource "aws_lambda_function" "other" {\n}\n'
+        assert _block_named(content, "resource", "aws_lambda_function", "handler") == ""
+
+
+class TestEnvironmentVariablesSupplied:
+    def test_returns_the_names_the_block_supplies(self) -> None:
+        block = "environment {\n  variables = {\n    TABLE = local.table\n  }\n}"
+        assert _environment_variables_supplied(block) == {"TABLE"}
+
+    def test_returns_empty_set_when_the_block_supplies_none(self) -> None:
+        assert _environment_variables_supplied("timeout = 10") == set()
+
+    def test_reads_past_a_value_that_interpolates_a_brace(self) -> None:
+        block = 'variables = {\n  FIRST = "${local.a}"\n  SECOND = "plain"\n}'
+        assert _environment_variables_supplied(block) == {"FIRST", "SECOND"}
+
+
+class TestEnvironmentVariablesRead:
+    def test_reads_the_subscript_form(self) -> None:
+        assert _environment_variables_read("os.environ['TABLE']") == {"TABLE"}
+
+    def test_reads_the_get_form(self) -> None:
+        assert _environment_variables_read('os.environ.get("CONTACT_EMAIL")') == {"CONTACT_EMAIL"}
+
+    def test_returns_empty_set_when_the_source_reads_none(self) -> None:
+        assert _environment_variables_read(DEFINES_LAMBDA_HANDLER) == set()
+
+
+class TestPackagedHandlerSourcePath:
+    def test_returns_none_when_the_resource_names_no_archive_file(self) -> None:
+        assert _packaged_handler_source_path(TRACKER_TF, "filename = local.zip") is None
+
+    def test_reads_the_path_from_source_file(self) -> None:
+        found = _packaged_handler_source_path(TRACKER_TF, ARCHIVE_REFERENCE)
+        assert found == "lambda/tracker/handler.py"
+
+    def test_reads_the_path_from_a_file_call_in_a_source_block(self) -> None:
+        reference = "filename = data.archive_file.export_lambda.output_path"
+        assert _packaged_handler_source_path(EXPORTER_TF, reference) == "lambda/tracker/handler.py"
+
+    def test_returns_none_when_the_archive_file_names_no_source(self) -> None:
+        content = 'data "archive_file" "handler" {\n  type = "zip"\n}\n'
+        assert _packaged_handler_source_path(content, ARCHIVE_REFERENCE) is None
+
+
+class TestCreateLambdaSourceContractTests:
+    def test_returns_a_class(self, tmp_path: Path) -> None:
+        result = create_lambda_source_contract_tests(tmp_path, "lambda.tf", "handler")
+        assert isinstance(result, type)
+
+    def test_returned_class_name(self, tmp_path: Path) -> None:
+        result = create_lambda_source_contract_tests(tmp_path, "lambda.tf", "handler")
+        assert result.__name__ == "TestLambdaSourceContract"
+
+    def test_handler_contract_passes_when_the_source_defines_it(self, tmp_path: Path) -> None:
+        endpoint = _endpoint_with_handler(tmp_path, TRACKER_TF, DEFINES_LAMBDA_HANDLER)
+        assert accepted(_handler_check(endpoint))
+
+    def test_handler_contract_passes_when_the_archive_uses_a_file_call(
+        self,
+        tmp_path: Path
+    ) -> None:
+        endpoint = _endpoint_with_handler(tmp_path, EXPORTER_TF, DEFINES_LAMBDA_HANDLER)
+        assert accepted(_handler_check(endpoint))
+
+    def test_handler_contract_fails_when_the_source_defines_another_name(
+        self,
+        tmp_path: Path
+    ) -> None:
+        endpoint = _endpoint_with_handler(tmp_path, TRACKER_TF, DEFINES_HANDLE)
+        with pytest.raises(AssertionError, match="lambda_handler"):
+            _handler_check(endpoint)()
+
+    def test_handler_contract_fails_when_the_resource_has_no_handler_attribute(
+        self,
+        tmp_path: Path
+    ) -> None:
+        without_handler = TRACKER_TF.replace('handler  = "handler.lambda_handler"', "")
+        endpoint = _endpoint_with_handler(tmp_path, without_handler, DEFINES_LAMBDA_HANDLER)
+        with pytest.raises(AssertionError, match="defines no function"):
+            _handler_check(endpoint)()
+
+    def test_handler_contract_fails_when_the_terraform_file_is_absent(self, tmp_path: Path) -> None:
+        with pytest.raises(AssertionError, match="lambda.tf configures"):
+            _handler_check(tmp_path)()
+
+    def test_handler_contract_names_the_archive_it_could_not_read(self, tmp_path: Path) -> None:
+        without_archive = TRACKER_TF.replace("data.archive_file.handler.output_path", "local.zip")
+        endpoint = _endpoint_with_handler(tmp_path, without_archive, DEFINES_LAMBDA_HANDLER)
+        with pytest.raises(AssertionError, match="no archive_file in lambda.tf names"):
+            _handler_check(endpoint)()
+
+    def test_handler_contract_fails_when_the_packaged_source_is_missing(
+        self,
+        tmp_path: Path
+    ) -> None:
+        (tmp_path / "lambda.tf").write_text(TRACKER_TF)
+        with pytest.raises(AssertionError, match="lambda/tracker/handler.py"):
+            _handler_check(tmp_path)()
+
+    def test_environment_contract_passes_when_the_two_sets_match(self, tmp_path: Path) -> None:
+        endpoint = _endpoint_with_handler(tmp_path, TRACKER_TF, READS_THE_TABLE)
+        assert accepted(_environment_check(endpoint))
+
+    def test_environment_contract_fails_on_a_variable_terraform_does_not_supply(
+        self,
+        tmp_path: Path
+    ) -> None:
+        source = READS_THE_TABLE + "    prefix = os.environ['S3_PREFIX']\n"
+        endpoint = _endpoint_with_handler(tmp_path, TRACKER_TF, source)
+        with pytest.raises(AssertionError, match=r"does not supply.*\['S3_PREFIX'\]"):
+            _environment_check(endpoint)()
+
+    def test_environment_contract_fails_on_a_variable_the_handler_never_reads(
+        self,
+        tmp_path: Path
+    ) -> None:
+        endpoint = _endpoint_with_handler(tmp_path, TRACKER_TF, DEFINES_LAMBDA_HANDLER)
+        with pytest.raises(AssertionError, match=r"never reads: \['SESSION_EVENTS_TABLE'\]"):
+            _environment_check(endpoint)()

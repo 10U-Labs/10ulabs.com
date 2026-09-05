@@ -2,79 +2,26 @@ import re
 from typing import Optional, Set
 
 from repo_utils import REPO_ROOT
+from test_fixtures.terraform_tests import create_lambda_source_contract_tests
 
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
 SESSIONS_TRACKER_PATH = SESSIONS_SRC_PATH / "lambda" / "tracker"
-SESSIONS_EXPORTER_PATH = SESSIONS_SRC_PATH / "lambda" / "exporter"
 SESSIONS_IAM_TF_PATH = SESSIONS_SRC_PATH / "iam.tf"
 TRACKER_HANDLER_PATH = SESSIONS_TRACKER_PATH / "handler.py"
 
 
-class TestLambdaHandlerContracts:
-    def test_handler_exports_lambda_handler_function(self) -> None:
-        handler_py = SESSIONS_TRACKER_PATH / "handler.py"
-        content = handler_py.read_text()
-        assert "def lambda_handler(" in content
+TestTrackerLambdaSourceContract = create_lambda_source_contract_tests(
+    endpoint_src=SESSIONS_SRC_PATH,
+    tf_file="lambda.tf",
+    resource_name="handler",
+)
 
-    def test_export_handler_exports_lambda_handler_function(self) -> None:
-        export_py = SESSIONS_EXPORTER_PATH / "handler.py"
-        content = export_py.read_text()
-        assert "def lambda_handler(" in content
-
-
-class TestTerraformLambdaContracts:
-    def test_lambda_tf_references_correct_handler_path(self) -> None:
-        lambda_tf = SESSIONS_SRC_PATH / "lambda.tf"
-        content = lambda_tf.read_text()
-        assert "handler.lambda_handler" in content
-
-    def test_analytics_tf_references_correct_export_handler_path(self) -> None:
-        analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
-        content = analytics_tf.read_text()
-        assert "handler.lambda_handler" in content
-
-
-class TestEnvironmentVariableContracts:
-    def test_handler_uses_session_events_table_env_var(self) -> None:
-        handler_py = SESSIONS_TRACKER_PATH / "handler.py"
-        content = handler_py.read_text()
-        assert "SESSION_EVENTS_TABLE" in content
-
-    def test_lambda_tf_provides_session_events_table_env_var(self) -> None:
-        lambda_tf = SESSIONS_SRC_PATH / "lambda.tf"
-        content = lambda_tf.read_text()
-        assert "SESSION_EVENTS_TABLE" in content
-
-    def test_export_handler_uses_dynamodb_table_arn_env_var(self) -> None:
-        export_py = SESSIONS_EXPORTER_PATH / "handler.py"
-        content = export_py.read_text()
-        assert "DYNAMODB_TABLE_ARN" in content
-
-    def test_export_handler_uses_s3_bucket_env_var(self) -> None:
-        export_py = SESSIONS_EXPORTER_PATH / "handler.py"
-        content = export_py.read_text()
-        assert "S3_BUCKET" in content
-
-    def test_export_handler_uses_s3_prefix_env_var(self) -> None:
-        export_py = SESSIONS_EXPORTER_PATH / "handler.py"
-        content = export_py.read_text()
-        assert "S3_PREFIX" in content
-
-    def test_analytics_tf_provides_dynamodb_table_arn_env_var(self) -> None:
-        analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
-        content = analytics_tf.read_text()
-        assert "DYNAMODB_TABLE_ARN" in content
-
-    def test_analytics_tf_provides_s3_bucket_env_var(self) -> None:
-        analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
-        content = analytics_tf.read_text()
-        assert "S3_BUCKET" in content
-
-    def test_analytics_tf_provides_s3_prefix_env_var(self) -> None:
-        analytics_tf = SESSIONS_SRC_PATH / "analytics.tf"
-        content = analytics_tf.read_text()
-        assert "S3_PREFIX" in content
+TestExporterLambdaSourceContract = create_lambda_source_contract_tests(
+    endpoint_src=SESSIONS_SRC_PATH,
+    tf_file="analytics.tf",
+    resource_name="export",
+)
 
 
 def _dynamodb_access_policy_block() -> Optional[re.Match[str]]:

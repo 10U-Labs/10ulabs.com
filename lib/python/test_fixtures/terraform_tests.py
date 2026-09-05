@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Set
 
 from repo_utils import REPO_ROOT
 
@@ -114,3 +114,101 @@ def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str) -> 
                 )
 
     return TestRemoteStateConfig
+
+
+def _braced_block(content: str, opening: int) -> str:
+    depth = 0
+    for position in range(opening, len(content)):
+        if content[position] == "{":
+            depth += 1
+        elif content[position] == "}":
+            depth -= 1
+            if depth == 0:
+                return content[opening + 1:position]
+    return content[opening + 1:]
+
+
+def _block_named(content: str, kind: str, block_type: str, name: str) -> str:
+    header = re.search(
+        rf'{kind}\s+"{re.escape(block_type)}"\s+"{re.escape(name)}"\s*\{{',
+        content,
+    )
+    return _braced_block(content, header.end() - 1) if header else ""
+
+
+def _environment_variables_supplied(resource_block: str) -> Set[str]:
+    header = re.search(r"variables\s*=\s*\{", resource_block)
+    if not header:
+        return set()
+    variables = _braced_block(resource_block, header.end() - 1)
+    return set(re.findall(r"^\s*(\w+)\s*=", variables, re.MULTILINE))
+
+
+def _environment_variables_read(handler_source: str) -> Set[str]:
+    pattern = r"os\.environ(?:\.get)?[\[(]\s*['\"](\w+)['\"]"
+    return set(re.findall(pattern, handler_source))
+
+
+def _packaged_handler_source_path(tf_content: str, resource_block: str) -> Optional[str]:
+    archive = re.search(r"data\.archive_file\.(\w+)\.", resource_block)
+    if not archive:
+        return None
+    archive_block = _block_named(tf_content, "data", "archive_file", archive.group(1))
+    named = re.search(r'source_file\s*=\s*"([^"]+)"', archive_block)
+    if not named:
+        named = re.search(r'file\(\s*"([^"]+)"\s*\)', archive_block)
+    if not named:
+        return None
+    return named.group(1).replace("${path.module}/", "")
+
+
+def create_lambda_source_contract_tests(
+    endpoint_src: Path,
+    tf_file: str,
+    resource_name: str,
+) -> type:
+    tf_path = endpoint_src / tf_file
+    resource = f"aws_lambda_function.{resource_name}"
+
+    def resource_block() -> str:
+        content = tf_path.read_text() if tf_path.exists() else ""
+        return _block_named(content, "resource", "aws_lambda_function", resource_name)
+
+    def packaged_source() -> Optional[str]:
+        content = tf_path.read_text() if tf_path.exists() else ""
+        return _packaged_handler_source_path(content, resource_block())
+
+    def packaged_source_name() -> str:
+        relative = packaged_source()
+        if relative is None:
+            return f"the handler source no archive_file in {tf_file} names for {resource}"
+        return f"{tf_file.rsplit('.', 1)[0]}'s packaged source {relative}"
+
+    def packaged_source_text() -> str:
+        relative = packaged_source()
+        if relative is None:
+            return ""
+        handler_path = endpoint_src / relative
+        return handler_path.read_text() if handler_path.exists() else ""
+
+    class TestLambdaSourceContract:
+        def test_handler_attribute_names_a_function_the_source_defines(self) -> None:
+            attribute = re.search(r'handler\s*=\s*"([^"]+)"', resource_block())
+            function_name = attribute.group(1).rsplit(".", 1)[-1] if attribute else ""
+            assert f"def {function_name}(" in packaged_source_text(), (
+                f"{tf_file} configures {resource} to be entered at "
+                f"'{attribute.group(1) if attribute else ''}', and "
+                f"{packaged_source_name()} defines no function '{function_name}'"
+            )
+
+        def test_environment_variables_supplied_are_the_ones_read(self) -> None:
+            supplied = _environment_variables_supplied(resource_block())
+            read = _environment_variables_read(packaged_source_text())
+            assert supplied == read, (
+                f"{packaged_source_name()} reads environment variables {tf_file} "
+                f"does not supply to {resource}: {sorted(read - supplied)}; "
+                f"{tf_file} supplies environment variables to {resource} that "
+                f"{packaged_source_name()} never reads: {sorted(supplied - read)}"
+            )
+
+    return TestLambdaSourceContract
