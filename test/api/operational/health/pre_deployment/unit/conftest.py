@@ -1,4 +1,3 @@
-from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict
 
@@ -24,8 +23,3 @@ def health_handler() -> ModuleType:
 @pytest.fixture
 def health_get_event() -> Dict[str, Any]:
     return {'path': '/health', 'httpMethod': 'GET'}
-
-
-@pytest.fixture
-def health_src_dir() -> Path:
-    return HEALTH_SRC

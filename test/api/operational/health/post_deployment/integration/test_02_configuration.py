@@ -41,3 +41,19 @@ def test_health_handler_arn_names_the_authenticated_account(
     assert account_in_arn == get_aws_account_id_via_cli(), (
         f"Deployed ARN names account {account_in_arn}, not the authenticated one"
     )
+
+
+def test_health_handler_logs_in_text_format(health_handler_configuration: Any) -> None:
+    log_format = health_handler_configuration["LoggingConfig"]["LogFormat"]
+    assert log_format == "Text", (
+        f"Lambda logging config should use the Text log format, got: {log_format}"
+    )
+
+
+def test_health_handler_describes_itself_as_the_health_endpoint(
+    health_handler_configuration: Any
+) -> None:
+    description = health_handler_configuration.get("Description", "")
+    assert description == "Health check endpoint for API", (
+        f"Lambda description should name the health endpoint, got: {description}"
+    )
