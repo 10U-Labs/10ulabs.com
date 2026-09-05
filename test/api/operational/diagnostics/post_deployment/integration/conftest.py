@@ -17,3 +17,15 @@ def diagnostics_handler_log_group(logs_client: Any, config: Dict[str, Any]) -> A
     )
     log_group_name = f"/aws/lambda/{function_name}"
     return get_log_group_info(logs_client, log_group_name)
+
+
+@pytest.fixture(scope="module")
+def diagnostics_handler_configuration(
+    lambda_client: Any,
+    config: Dict[str, Any]
+) -> Any:
+    function_name = config.get(
+        'diagnostics_handler_function_name', 'TenULabsDiagnosticsHandler'
+    )
+    response = lambda_client.get_function(FunctionName=function_name)
+    return response["Configuration"]

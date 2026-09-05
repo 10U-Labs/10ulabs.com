@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable, Dict
 
@@ -9,11 +8,6 @@ from module_utils import create_lambda_loader
 from repo_utils import REPO_ROOT
 
 DIAGNOSTICS_SRC = REPO_ROOT / "src" / "api" / "operational" / "diagnostics"
-
-
-@pytest.fixture
-def diagnostics_src_dir() -> Path:
-    return DIAGNOSTICS_SRC
 
 _load_lambda = create_lambda_loader(DIAGNOSTICS_SRC / "lambda")
 
