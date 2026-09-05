@@ -1,0 +1,1 @@
+- [Don't verify locally](do-not-run-test-suites-locally.md) — push and let CI run the suites; local runs waste tokens.
