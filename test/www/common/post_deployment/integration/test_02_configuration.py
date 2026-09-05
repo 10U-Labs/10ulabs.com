@@ -34,6 +34,37 @@ def test_cloudfront_compression_enabled(default_cache_behavior: Any) -> None:
     assert default_cache_behavior.get("Compress", False) is True
 
 
+def test_cloudfront_minimum_protocol_version_is_tls12_2021(
+    viewer_certificate: Any
+) -> None:
+    assert viewer_certificate["MinimumProtocolVersion"] == "TLSv1.2_2021"
+
+
+def test_cloudfront_serves_home_index_for_403_and_404(
+    custom_error_responses: Any
+) -> None:
+    responses = {
+        (item["ErrorCode"], item["ResponseCode"], item["ResponsePagePath"])
+        for item in custom_error_responses.get("Items", [])
+    }
+    assert responses == {
+        (403, "200", "/home/index.html"),
+        (404, "200", "/home/index.html"),
+    }
+
+
+def test_cloudfront_cache_policy_default_ttl_is_86400(
+    cache_policy_config: Any
+) -> None:
+    assert cache_policy_config["DefaultTTL"] == 86400
+
+
+def test_cloudfront_origin_request_policy_is_managed_cors_s3_origin(
+    origin_request_policy_config: Any
+) -> None:
+    assert origin_request_policy_config["Name"] == "Managed-CORS-S3Origin"
+
+
 def test_s3_bucket_blocks_public_acls(public_access_block: Any) -> None:
     assert public_access_block["BlockPublicAcls"] is True
 

@@ -28,9 +28,38 @@ def logging_config(distribution_config: Any) -> Any:
     return distribution_config["DistributionConfig"].get("Logging", {})
 
 
-@pytest.fixture(scope="module")
-def default_cache_behavior(distribution_config: Any) -> Any:
+@pytest.fixture(name="default_cache_behavior", scope="module")
+def default_cache_behavior_fixture(distribution_config: Any) -> Any:
     return distribution_config["DistributionConfig"]["DefaultCacheBehavior"]
+
+
+@pytest.fixture(scope="module")
+def viewer_certificate(distribution_config: Any) -> Any:
+    return distribution_config["DistributionConfig"]["ViewerCertificate"]
+
+
+@pytest.fixture(scope="module")
+def custom_error_responses(distribution_config: Any) -> Any:
+    return distribution_config["DistributionConfig"]["CustomErrorResponses"]
+
+
+@pytest.fixture(scope="module")
+def cache_policy_config(cloudfront_client: Any, default_cache_behavior: Any) -> Any:
+    policy = cloudfront_client.get_cache_policy(
+        Id=default_cache_behavior["CachePolicyId"]
+    )
+    return policy["CachePolicy"]["CachePolicyConfig"]
+
+
+@pytest.fixture(scope="module")
+def origin_request_policy_config(
+    cloudfront_client: Any,
+    default_cache_behavior: Any
+) -> Any:
+    policy = cloudfront_client.get_origin_request_policy(
+        Id=default_cache_behavior["OriginRequestPolicyId"]
+    )
+    return policy["OriginRequestPolicy"]["OriginRequestPolicyConfig"]
 
 
 @pytest.fixture(scope="module")
