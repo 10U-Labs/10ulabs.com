@@ -1,8 +1,12 @@
 from typing import Any, Dict
-def _export_environment(lambda_client: Any, sessions_config: Dict[str, Any]) -> Dict[str, str]:
-    response = lambda_client.get_function_configuration(
+def _export_configuration(lambda_client: Any, sessions_config: Dict[str, Any]) -> Dict[str, Any]:
+    return lambda_client.get_function_configuration(
         FunctionName=sessions_config["export_function_name"]
     )
+
+
+def _export_environment(lambda_client: Any, sessions_config: Dict[str, Any]) -> Dict[str, str]:
+    response = _export_configuration(lambda_client, sessions_config)
     return response.get("Environment", {}).get("Variables", {})
 
 
@@ -72,10 +76,24 @@ class TestExportLambdaConfiguration:
         lambda_client: Any,
         sessions_config: Dict[str, Any]
     ) -> None:
-        response = lambda_client.get_function_configuration(
-            FunctionName=sessions_config["export_function_name"]
-        )
+        response = _export_configuration(lambda_client, sessions_config)
         assert response["Timeout"] == 30
+
+    def test_export_lambda_uses_arm64_architecture(
+        self,
+        lambda_client: Any,
+        sessions_config: Dict[str, Any]
+    ) -> None:
+        response = _export_configuration(lambda_client, sessions_config)
+        assert "arm64" in response["Architectures"]
+
+    def test_export_lambda_uses_python313_runtime(
+        self,
+        lambda_client: Any,
+        sessions_config: Dict[str, Any]
+    ) -> None:
+        response = _export_configuration(lambda_client, sessions_config)
+        assert response["Runtime"] == "python3.13"
 
     def test_export_lambda_has_dynamodb_table_arn_env_var(
         self,
@@ -220,6 +238,19 @@ class TestS3Configuration:
             None
         )
         assert expiration_rule is not None
+
+    def test_s3_bucket_is_not_versioned(
+        self,
+        s3_client: Any,
+        sessions_config: Dict[str, Any]
+    ) -> None:
+        response = s3_client.get_bucket_versioning(
+            Bucket=sessions_config["s3_bucket_name"]
+        )
+        assert "Status" not in response, (
+            f"analytics bucket versioning is {response.get('Status')}, and a bucket "
+            "that has never been versioned reports no status at all"
+        )
 
 
 class TestCloudWatchLogsConfiguration:
