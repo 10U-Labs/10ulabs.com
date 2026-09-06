@@ -1,5 +1,5 @@
 resource "aws_kinesis_firehose_delivery_stream" "cloudwatch_logs" {
-  name        = "${local.resource_prefix}-CloudWatchLogs"
+  name        = local.firehose_delivery_stream_name
   destination = "extended_s3"
 
   extended_s3_configuration {
@@ -20,12 +20,12 @@ resource "aws_kinesis_firehose_delivery_stream" "cloudwatch_logs" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-CloudWatchLogs"
+    Name = local.firehose_delivery_stream_name
   })
 }
 
 resource "aws_iam_role" "firehose_cloudwatch_logs" {
-  name = "${local.resource_prefix}FirehoseCloudWatchLogs"
+  name = local.firehose_cloudwatch_logs_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -39,7 +39,7 @@ resource "aws_iam_role" "firehose_cloudwatch_logs" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}FirehoseCloudWatchLogs"
+    Name = local.firehose_cloudwatch_logs_role_name
   })
 }
 
@@ -70,7 +70,7 @@ resource "aws_iam_role_policy" "firehose_s3_access" {
 }
 
 resource "aws_iam_role" "cloudwatch_logs_firehose" {
-  name = "${local.resource_prefix}CloudWatchLogsFirehose"
+  name = local.cloudwatch_logs_firehose_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -89,7 +89,7 @@ resource "aws_iam_role" "cloudwatch_logs_firehose" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}CloudWatchLogsFirehose"
+    Name = local.cloudwatch_logs_firehose_role_name
   })
 }
 
