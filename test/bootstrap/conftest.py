@@ -23,6 +23,7 @@ def _get_locals_derived_values(shared: dict) -> dict:
     logs = shared['name_for_central_logs_bucket']
     ct_suffix = _extract_role_suffix('name_for_cloudtrail_iam_role')
     gh_suffix = _extract_role_suffix('name_for_github_actions_role')
+    wan_suffix = _extract_role_suffix('name_for_wan_synthesizer_role')
     github_app_ssm_prefix = '/github/app'
     return {
         'name_for_cloudtrail': f"{prefix}-cloudtrail",
@@ -30,6 +31,7 @@ def _get_locals_derived_values(shared: dict) -> dict:
         'name_for_cloudtrail_iam_role': f"{prefix}{ct_suffix}",
         'name_for_cloudtrail_log_group': f"/aws/cloudtrail/{prefix}",
         'name_for_github_actions_role': f"{prefix}{gh_suffix}",
+        'name_for_wan_synthesizer_role': f"{prefix}{wan_suffix}",
         'ssm_parameter_name_for_github_pat': shared.get('ssm_github_pat_name', ''),
         'github_app_ssm_prefix': github_app_ssm_prefix,
     }

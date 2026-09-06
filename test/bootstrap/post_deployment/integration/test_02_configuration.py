@@ -486,13 +486,11 @@ def _trusted_repository_patterns(trust_policy: Any) -> List[str]:
     return [subjects] if isinstance(subjects, str) else subjects
 
 
-@pytest.mark.parametrize("suffix", ["WanSynthesizerRole"])
 def test_deploy_role_trusts_only_the_synthesizer(
     iam_client: Any,
-    config: Dict[str, Any],
-    suffix: str
+    config: Dict[str, Any]
 ) -> None:
-    role_name = f"{config['resource_prefix']}{suffix}"
+    role_name = config['name_for_wan_synthesizer_role']
     org = config['github_org']
     expected = [
         f"repo:{org}/wan-synthesizer:*",

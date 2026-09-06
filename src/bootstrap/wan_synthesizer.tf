@@ -1,5 +1,5 @@
 resource "aws_iam_role" "wan_synthesizer_github_actions" {
-  name = "${local.resource_prefix}WanSynthesizerRole"
+  name = local.name_for_wan_synthesizer_role
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

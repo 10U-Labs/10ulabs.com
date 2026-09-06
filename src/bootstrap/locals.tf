@@ -12,5 +12,6 @@ locals {
   name_for_github_actions_role    = "${local.resource_prefix}GitHubActionsRole"
   name_for_github_repo            = module.common.name_for_github_repo
   name_for_terraform_state_bucket = module.common.name_for_terraform_state_bucket
+  name_for_wan_synthesizer_role   = "${local.resource_prefix}WanSynthesizerRole"
   resource_prefix                 = module.common.resource_prefix
 }
