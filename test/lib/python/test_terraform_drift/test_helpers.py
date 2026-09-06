@@ -298,7 +298,7 @@ def test_reports_an_orphan_when_state_is_not_empty(
     _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=True)
     run_check = _orphan_check_over_state(mock_run, "aws_s3_bucket.state\n")
 
-    with pytest.raises(pytest.fail.Exception, match="ORPHANED RESOURCES DETECTED"):
+    with pytest.raises(AssertionError, match="ORPHANED RESOURCES DETECTED"):
         run_check()
 
 

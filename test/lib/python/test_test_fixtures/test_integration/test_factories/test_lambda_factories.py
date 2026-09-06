@@ -717,14 +717,9 @@ class TestCreateDeployedResourceExistenceTestsExecution:
 
     def test_iam_role_exists_fails_when_not_found(self, existence_tests: Any) -> None:
         mock_client = MagicMock()
-        mock_client.exceptions.NoSuchEntityException = type(
-            "NoSuchEntityException", (Exception,), {}
-        )
-        mock_client.get_role.side_effect = mock_client.exceptions.NoSuchEntityException(
-            "Role not found"
-        )
+        mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
         config = {"func_key": "MyFunction"}
-        with pytest.raises(pytest.fail.Exception):
+        with pytest.raises(AssertionError):
             existence_tests.test_handler_role_exists(mock_client, config)
 
     def test_lambda_function_exists_success(self, existence_tests: Any) -> None:
@@ -736,11 +731,8 @@ class TestCreateDeployedResourceExistenceTestsExecution:
 
     def test_lambda_function_exists_fails_when_not_found(self, existence_tests: Any) -> None:
         mock_client = MagicMock()
-        mock_client.exceptions.ResourceNotFoundException = type(
-            "ResourceNotFoundException", (Exception,), {}
-        )
-        mock_client.get_function.side_effect = mock_client.exceptions.ResourceNotFoundException(
-            "Function not found"
+        mock_client.get_function.side_effect = create_client_error(
+            "ResourceNotFoundException"
         )
         config = {"func_key": "MyFunction"}
         with pytest.raises(AssertionError):
