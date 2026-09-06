@@ -9,52 +9,56 @@ from terraform_drift.test_helpers import create_orphaned_resource_tests
 from test_fixtures.outcomes import accepted
 
 
-class TestCreateOrphanedResourceTestsReturnValue:
-    def test_returns_a_class(self) -> None:
-        result = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        assert isinstance(result, type)
-
-    def test_returned_class_has_test_terraform_initialized_method(self) -> None:
-        result = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        assert hasattr(result, "test_terraform_initialized")
-
-    def test_returned_class_has_test_no_orphaned_resources_method(self) -> None:
-        result = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        assert hasattr(result, "test_no_orphaned_resources")
-
-    def test_returned_class_methods_are_callable(self) -> None:
-        result = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        instance = result()
-        assert callable(instance.test_terraform_initialized)
-
-    def test_returned_class_has_correct_name(self) -> None:
-        result = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        assert result.__name__ == "TestOrphanedResources"
+def test_returns_a_class() -> None:
+    result = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    assert isinstance(result, type)
 
 
-class TestTerraformInitialized:
-    def test_passes_when_lock_file_exists(self, tmp_path: Path) -> None:
-        lock_file = tmp_path / ".terraform.lock.hcl"
-        lock_file.touch()
+def test_returned_class_has_test_terraform_initialized_method() -> None:
+    result = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    assert hasattr(result, "test_terraform_initialized")
 
-        TestClass = create_orphaned_resource_tests(tmp_path)
-        instance = TestClass()
 
-        assert accepted(instance.test_terraform_initialized)
+def test_returned_class_has_test_no_orphaned_resources_method() -> None:
+    result = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    assert hasattr(result, "test_no_orphaned_resources")
 
-    def test_fails_when_lock_file_missing(self, tmp_path: Path) -> None:
-        TestClass = create_orphaned_resource_tests(tmp_path)
-        instance = TestClass()
 
-        with pytest.raises(AssertionError, match="Terraform not initialized"):
-            instance.test_terraform_initialized()
+def test_returned_class_methods_are_callable() -> None:
+    result = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    instance = result()
+    assert callable(instance.test_terraform_initialized)
 
-    def test_error_message_includes_directory_path(self, tmp_path: Path) -> None:
-        TestClass = create_orphaned_resource_tests(tmp_path)
-        instance = TestClass()
 
-        with pytest.raises(AssertionError, match=str(tmp_path)):
-            instance.test_terraform_initialized()
+def test_returned_class_has_correct_name() -> None:
+    result = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    assert result.__name__ == "TestOrphanedResources"
+
+
+def test_passes_when_lock_file_exists(tmp_path: Path) -> None:
+    lock_file = tmp_path / ".terraform.lock.hcl"
+    lock_file.touch()
+
+    TestClass = create_orphaned_resource_tests(tmp_path)
+    instance = TestClass()
+
+    assert accepted(instance.test_terraform_initialized)
+
+
+def test_fails_when_lock_file_missing(tmp_path: Path) -> None:
+    TestClass = create_orphaned_resource_tests(tmp_path)
+    instance = TestClass()
+
+    with pytest.raises(AssertionError, match="Terraform not initialized"):
+        instance.test_terraform_initialized()
+
+
+def test_error_message_includes_directory_path(tmp_path: Path) -> None:
+    TestClass = create_orphaned_resource_tests(tmp_path)
+    instance = TestClass()
+
+    with pytest.raises(AssertionError, match=str(tmp_path)):
+        instance.test_terraform_initialized()
 
 
 @patch("terraform_drift.test_helpers.get_planned_creates")
@@ -93,139 +97,144 @@ def _resource_checked_in_us_west_2(
     return mock_check_exists.call_args[0]
 
 
-class TestNoOrphanedResourcesNoOrphans:
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_passes_when_resources_do_not_exist_in_aws(
-        self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
-    ) -> None:
-        _setup_single_resource_mock(mock_get_planned, mock_check_exists)
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_passes_when_resources_do_not_exist_in_aws(
+    mock_get_planned: MagicMock, mock_check_exists: MagicMock
+) -> None:
+    _setup_single_resource_mock(mock_get_planned, mock_check_exists)
 
-        TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        instance = TestClass()
+    TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    instance = TestClass()
 
-        assert accepted(instance.test_no_orphaned_resources)
+    assert accepted(instance.test_no_orphaned_resources)
 
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_calls_check_resource_exists_with_correct_type(
-        self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
-    ) -> None:
-        call_args = _resource_checked_in_us_west_2(mock_get_planned, mock_check_exists)
 
-        assert call_args[0] == "aws_lambda_function"
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_calls_check_resource_exists_with_correct_type(
+    mock_get_planned: MagicMock, mock_check_exists: MagicMock
+) -> None:
+    call_args = _resource_checked_in_us_west_2(mock_get_planned, mock_check_exists)
 
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_calls_check_resource_exists_with_correct_name(
-        self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
-    ) -> None:
-        call_args = _resource_checked_in_us_west_2(mock_get_planned, mock_check_exists)
+    assert call_args[0] == "aws_lambda_function"
 
-        assert call_args[1] == "MyFunction"
 
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_calls_check_resource_exists_with_correct_region(
-        self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
-    ) -> None:
-        call_args = _resource_checked_in_us_west_2(mock_get_planned, mock_check_exists)
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_calls_check_resource_exists_with_correct_name(
+    mock_get_planned: MagicMock, mock_check_exists: MagicMock
+) -> None:
+    call_args = _resource_checked_in_us_west_2(mock_get_planned, mock_check_exists)
 
-        assert call_args[2] == "us-west-2"
+    assert call_args[1] == "MyFunction"
 
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_uses_default_region_when_not_specified(
-        self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
-    ) -> None:
-        _setup_single_resource_mock(mock_get_planned, mock_check_exists)
 
-        TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        instance = TestClass()
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_calls_check_resource_exists_with_correct_region(
+    mock_get_planned: MagicMock, mock_check_exists: MagicMock
+) -> None:
+    call_args = _resource_checked_in_us_west_2(mock_get_planned, mock_check_exists)
+
+    assert call_args[2] == "us-west-2"
+
+
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_uses_default_region_when_not_specified(
+    mock_get_planned: MagicMock, mock_check_exists: MagicMock
+) -> None:
+    _setup_single_resource_mock(mock_get_planned, mock_check_exists)
+
+    TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    instance = TestClass()
+    instance.test_no_orphaned_resources()
+
+    assert mock_check_exists.call_args[0][2] == "us-east-2"
+
+
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_fails_when_orphaned_resource_detected(
+    mock_get_planned: MagicMock, mock_check_exists: MagicMock
+) -> None:
+    _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=True)
+
+    TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    instance = TestClass()
+
+    with pytest.raises(pytest.fail.Exception):
         instance.test_no_orphaned_resources()
 
-        assert mock_check_exists.call_args[0][2] == "us-east-2"
+
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_failure_message_includes_orphaned_count(
+    mock_get_planned: MagicMock, mock_check_exists: MagicMock
+) -> None:
+    mock_get_planned.return_value = [
+        {
+            "type": "aws_lambda_function",
+            "name": "MyFunction",
+            "address": "aws_lambda_function.my_func",
+        },
+        {
+            "type": "aws_iam_role",
+            "name": "MyRole",
+            "address": "aws_iam_role.my_role",
+        },
+    ]
+    mock_check_exists.return_value = True
+
+    TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    instance = TestClass()
+
+    with pytest.raises(pytest.fail.Exception, match=r"ORPHANED RESOURCES DETECTED \(2\)"):
+        instance.test_no_orphaned_resources()
 
 
-class TestNoOrphanedResourcesWithOrphans:
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_fails_when_orphaned_resource_detected(
-        self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
-    ) -> None:
-        _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=True)
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_failure_message_includes_import_commands(
+    mock_get_planned: MagicMock, mock_check_exists: MagicMock
+) -> None:
+    _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=True)
 
-        TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        instance = TestClass()
+    TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    instance = TestClass()
 
-        with pytest.raises(pytest.fail.Exception):
-            instance.test_no_orphaned_resources()
+    with pytest.raises(
+        pytest.fail.Exception,
+        match="terraform import aws_lambda_function.my_func MyFunction",
+    ):
+        instance.test_no_orphaned_resources()
 
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_failure_message_includes_orphaned_count(
-        self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
-    ) -> None:
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "MyFunction",
-                "address": "aws_lambda_function.my_func",
-            },
-            {
-                "type": "aws_iam_role",
-                "name": "MyRole",
-                "address": "aws_iam_role.my_role",
-            },
-        ]
-        mock_check_exists.return_value = True
 
-        TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        instance = TestClass()
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+def test_only_fails_for_resources_that_exist(
+    mock_get_planned: MagicMock, mock_check_exists: MagicMock
+) -> None:
+    mock_get_planned.return_value = [
+        {
+            "type": "aws_lambda_function",
+            "name": "ExistingFunction",
+            "address": "aws_lambda_function.existing_func",
+        },
+        {
+            "type": "aws_iam_role",
+            "name": "NonExistingRole",
+            "address": "aws_iam_role.non_existing_role",
+        },
+    ]
+    mock_check_exists.side_effect = [True, False]
 
-        with pytest.raises(pytest.fail.Exception, match=r"ORPHANED RESOURCES DETECTED \(2\)"):
-            instance.test_no_orphaned_resources()
+    TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
+    instance = TestClass()
 
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_failure_message_includes_import_commands(
-        self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
-    ) -> None:
-        _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=True)
-
-        TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        instance = TestClass()
-
-        with pytest.raises(
-            pytest.fail.Exception,
-            match="terraform import aws_lambda_function.my_func MyFunction",
-        ):
-            instance.test_no_orphaned_resources()
-
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    def test_only_fails_for_resources_that_exist(
-        self, mock_get_planned: MagicMock, mock_check_exists: MagicMock
-    ) -> None:
-        mock_get_planned.return_value = [
-            {
-                "type": "aws_lambda_function",
-                "name": "ExistingFunction",
-                "address": "aws_lambda_function.existing_func",
-            },
-            {
-                "type": "aws_iam_role",
-                "name": "NonExistingRole",
-                "address": "aws_iam_role.non_existing_role",
-            },
-        ]
-        mock_check_exists.side_effect = [True, False]
-
-        TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
-        instance = TestClass()
-
-        with pytest.raises(pytest.fail.Exception, match=r"ORPHANED RESOURCES DETECTED \(1\)"):
-            instance.test_no_orphaned_resources()
+    with pytest.raises(pytest.fail.Exception, match=r"ORPHANED RESOURCES DETECTED \(1\)"):
+        instance.test_no_orphaned_resources()
 
 
 @patch("terraform_drift.test_helpers.get_planned_creates")
@@ -278,31 +287,26 @@ def _orphan_check_over_state(mock_run: MagicMock, state: str) -> Callable[[], No
     return TestClass().test_no_orphaned_resources
 
 
-class TestNoOrphanedResourcesRequiringExistingState:
-    @patch("terraform_drift.test_helpers.check_resource_exists")
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    @patch("terraform_drift.test_helpers.subprocess.run")
-    def test_reports_an_orphan_when_state_is_not_empty(
-        self,
-        mock_run: MagicMock,
-        mock_get_planned: MagicMock,
-        mock_check_exists: MagicMock,
-    ) -> None:
-        _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=True)
-        run_check = _orphan_check_over_state(mock_run, "aws_s3_bucket.state\n")
+@patch("terraform_drift.test_helpers.check_resource_exists")
+@patch("terraform_drift.test_helpers.get_planned_creates")
+@patch("terraform_drift.test_helpers.subprocess.run")
+def test_reports_an_orphan_when_state_is_not_empty(
+    mock_run: MagicMock,
+    mock_get_planned: MagicMock,
+    mock_check_exists: MagicMock,
+) -> None:
+    _setup_single_resource_mock(mock_get_planned, mock_check_exists, exists=True)
+    run_check = _orphan_check_over_state(mock_run, "aws_s3_bucket.state\n")
 
-        with pytest.raises(pytest.fail.Exception, match="ORPHANED RESOURCES DETECTED"):
-            run_check()
+    with pytest.raises(pytest.fail.Exception, match="ORPHANED RESOURCES DETECTED"):
+        run_check()
 
-    @patch("terraform_drift.test_helpers.get_planned_creates")
-    @patch("terraform_drift.test_helpers.subprocess.run")
-    def test_skips_when_state_is_empty(
-        self,
-        mock_run: MagicMock,
-        mock_get_planned: MagicMock,
-    ) -> None:
-        mock_get_planned.return_value = []
-        run_check = _orphan_check_over_state(mock_run, "")
 
-        with pytest.raises(pytest.skip.Exception, match="Cold state"):
-            run_check()
+@patch("terraform_drift.test_helpers.get_planned_creates")
+@patch("terraform_drift.test_helpers.subprocess.run")
+def test_skips_when_state_is_empty(mock_run: MagicMock, mock_get_planned: MagicMock) -> None:
+    mock_get_planned.return_value = []
+    run_check = _orphan_check_over_state(mock_run, "")
+
+    with pytest.raises(pytest.skip.Exception, match="Cold state"):
+        run_check()

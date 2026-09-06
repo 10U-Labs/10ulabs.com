@@ -18,57 +18,6 @@ def _find_ssm_parameter(tf_config: Any, param_name: str) -> Any:
     return None
 
 
-class TestGitHubAppIdParameter:
-    def test_resource_exists(self, bootstrap_dir: Path, v7_compatible: Any) -> None:
-        tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
-        param = _find_ssm_parameter(tf_config, 'github_app_id')
-        assert param is not None
-
-    def test_type_is_string(self, bootstrap_dir: Path, v7_compatible: Any) -> None:
-        tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
-        param = _find_ssm_parameter(tf_config, 'github_app_id')
-        assert param['type'] == 'String'
-
-    def test_has_name_tag(self, bootstrap_dir: Path, v7_compatible: Any) -> None:
-        tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
-        param = _find_ssm_parameter(tf_config, 'github_app_id')
-        assert param['tags']['Name'] == 'github-app-id'
-
-
-class TestGitHubAppInstallationIdParameter:
-    def test_resource_exists(self, bootstrap_dir: Path, v7_compatible: Any) -> None:
-        tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
-        param = _find_ssm_parameter(tf_config, 'github_app_installation_id')
-        assert param is not None
-
-    def test_type_is_string(self, bootstrap_dir: Path, v7_compatible: Any) -> None:
-        tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
-        param = _find_ssm_parameter(tf_config, 'github_app_installation_id')
-        assert param['type'] == 'String'
-
-    def test_has_name_tag(self, bootstrap_dir: Path, v7_compatible: Any) -> None:
-        tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
-        param = _find_ssm_parameter(tf_config, 'github_app_installation_id')
-        assert param['tags']['Name'] == 'github-app-installation-id'
-
-
-class TestGitHubAppPrivateKeyParameter:
-    def test_resource_exists(self, bootstrap_dir: Path, v7_compatible: Any) -> None:
-        tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
-        param = _find_ssm_parameter(tf_config, 'github_app_private_key')
-        assert param is not None
-
-    def test_type_is_secure_string(self, bootstrap_dir: Path, v7_compatible: Any) -> None:
-        tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
-        param = _find_ssm_parameter(tf_config, 'github_app_private_key')
-        assert param['type'] == 'SecureString'
-
-    def test_has_name_tag(self, bootstrap_dir: Path, v7_compatible: Any) -> None:
-        tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
-        param = _find_ssm_parameter(tf_config, 'github_app_private_key')
-        assert param['tags']['Name'] == 'github-app-private-key'
-
-
 @pytest.mark.parametrize("param_name", [
     "github_app_id",
     "github_app_installation_id",
@@ -82,3 +31,35 @@ def test_all_github_app_parameters_exist(
     tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
     param = _find_ssm_parameter(tf_config, param_name)
     assert param is not None, f"SSM parameter '{param_name}' not found"
+
+
+@pytest.mark.parametrize("param_name, expected_type", [
+    ("github_app_id", "String"),
+    ("github_app_installation_id", "String"),
+    ("github_app_private_key", "SecureString"),
+])
+def test_every_github_app_parameter_declares_its_type(
+    bootstrap_dir: Path,
+    param_name: str,
+    expected_type: str,
+    v7_compatible: Any
+) -> None:
+    tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
+    param = _find_ssm_parameter(tf_config, param_name)
+    assert param['type'] == expected_type
+
+
+@pytest.mark.parametrize("param_name, expected_tag", [
+    ("github_app_id", "github-app-id"),
+    ("github_app_installation_id", "github-app-installation-id"),
+    ("github_app_private_key", "github-app-private-key"),
+])
+def test_every_github_app_parameter_carries_its_name_tag(
+    bootstrap_dir: Path,
+    param_name: str,
+    expected_tag: str,
+    v7_compatible: Any
+) -> None:
+    tf_config = _load_github_app_tf(bootstrap_dir, v7_compatible)
+    param = _find_ssm_parameter(tf_config, param_name)
+    assert param['tags']['Name'] == expected_tag

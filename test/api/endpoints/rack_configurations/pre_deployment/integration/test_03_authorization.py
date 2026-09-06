@@ -10,23 +10,27 @@ from test_fixtures.integration import (
 
 class TestAPIGatewayAuthorization(Layer3APIGatewayAuthorizationTests):
     pass
+
+
 class TestLambdaAndIAMAuthorization(Layer3LambdaAndIAMAuthorizationTests):
     pass
-class TestDynamoDBAndS3Authorization:
-    def test_can_list_tables(self, dynamodb_client: Any) -> None:
-        try:
-            dynamodb_client.list_tables(Limit=1)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                pytest.fail("No permission to list DynamoDB tables")
-            raise
-        assert True
 
-    def test_can_list_buckets(self, s3_client: Any) -> None:
-        try:
-            s3_client.list_buckets()
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail("No permission to list S3 buckets")
-            raise
-        assert True
+
+def test_can_list_tables(dynamodb_client: Any) -> None:
+    try:
+        dynamodb_client.list_tables(Limit=1)
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDeniedException":
+            pytest.fail("No permission to list DynamoDB tables")
+        raise
+    assert True
+
+
+def test_can_list_buckets(s3_client: Any) -> None:
+    try:
+        s3_client.list_buckets()
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDenied":
+            pytest.fail("No permission to list S3 buckets")
+        raise
+    assert True

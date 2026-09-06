@@ -4,74 +4,66 @@ import pytest
 from botocore.exceptions import ClientError
 
 
-class TestS3Authorization:
-    def test_can_describe_s3_bucket(
-        self,
-        s3_client: Any,
-        www_common_outputs: Dict[str, str]
-    ) -> None:
-        bucket_name = www_common_outputs.get("bucket_name")
-        if not bucket_name:
-            pytest.skip("bucket_name output not available")
-        has_permission = False
-        try:
-            s3_client.head_bucket(Bucket=bucket_name)
+def test_can_describe_s3_bucket(s3_client: Any, www_common_outputs: Dict[str, str]) -> None:
+    bucket_name = www_common_outputs.get("bucket_name")
+    if not bucket_name:
+        pytest.skip("bucket_name output not available")
+    has_permission = False
+    try:
+        s3_client.head_bucket(Bucket=bucket_name)
+        has_permission = True
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code == "403":
+            pytest.fail("No permission to inspect S3 bucket")
+        if error_code == "404":
             has_permission = True
-        except ClientError as e:
-            error_code = e.response["Error"]["Code"]
-            if error_code == "403":
-                pytest.fail("No permission to inspect S3 bucket")
-            if error_code == "404":
-                has_permission = True
-        assert has_permission, "Should have permission to describe S3 bucket"
-
-    def test_can_list_s3_bucket_objects(
-        self,
-        s3_client: Any,
-        www_common_outputs: Dict[str, str]
-    ) -> None:
-        bucket_name = www_common_outputs.get("bucket_name")
-        if not bucket_name:
-            pytest.skip("bucket_name output not available")
-        has_permission = False
-        try:
-            s3_client.list_objects_v2(Bucket=bucket_name, MaxKeys=1)
-            has_permission = True
-        except ClientError as e:
-            error_code = e.response["Error"]["Code"]
-            if error_code == "AccessDenied":
-                pytest.fail("No permission to list S3 bucket objects")
-            if error_code == "NoSuchBucket":
-                has_permission = True
-        assert has_permission, "Should have permission to list S3 bucket objects"
+    assert has_permission, "Should have permission to describe S3 bucket"
 
 
-class TestCloudFrontAuthorization:
-    def test_can_describe_cloudfront_distribution(
-        self, cloudfront_client: Any, www_common_outputs: Dict[str, str]
-    ) -> None:
-        distribution_id = www_common_outputs.get("cloudfront_distribution_id")
-        if not distribution_id:
-            pytest.skip("cloudfront_distribution_id output not available")
-        has_permission = False
-        try:
-            cloudfront_client.get_distribution(Id=distribution_id)
+def test_can_list_s3_bucket_objects(s3_client: Any, www_common_outputs: Dict[str, str]) -> None:
+    bucket_name = www_common_outputs.get("bucket_name")
+    if not bucket_name:
+        pytest.skip("bucket_name output not available")
+    has_permission = False
+    try:
+        s3_client.list_objects_v2(Bucket=bucket_name, MaxKeys=1)
+        has_permission = True
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code == "AccessDenied":
+            pytest.fail("No permission to list S3 bucket objects")
+        if error_code == "NoSuchBucket":
             has_permission = True
-        except ClientError as e:
-            error_code = e.response["Error"]["Code"]
-            if error_code == "AccessDenied":
-                pytest.fail("No permission to inspect CloudFront distribution")
-            if error_code == "NoSuchDistribution":
-                has_permission = True
-        assert has_permission, "Should have permission to describe CloudFront distribution"
+    assert has_permission, "Should have permission to list S3 bucket objects"
 
-    def test_can_list_cloudfront_distributions(self, cloudfront_client: Any) -> None:
-        has_permission = False
-        try:
-            cloudfront_client.list_distributions(MaxItems="1")
+
+def test_can_describe_cloudfront_distribution(
+    cloudfront_client: Any, www_common_outputs: Dict[str, str]
+) -> None:
+    distribution_id = www_common_outputs.get("cloudfront_distribution_id")
+    if not distribution_id:
+        pytest.skip("cloudfront_distribution_id output not available")
+    has_permission = False
+    try:
+        cloudfront_client.get_distribution(Id=distribution_id)
+        has_permission = True
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code == "AccessDenied":
+            pytest.fail("No permission to inspect CloudFront distribution")
+        if error_code == "NoSuchDistribution":
             has_permission = True
-        except ClientError as e:
-            error_code = e.response["Error"]["Code"]
-            if error_code == "AccessDenied":
-                pytest.fail("No permission to list CloudFront distributions")
-        assert has_permission, "Should have permission to list CloudFront distributions"
+    assert has_permission, "Should have permission to describe CloudFront distribution"
+
+
+def test_can_list_cloudfront_distributions(cloudfront_client: Any) -> None:
+    has_permission = False
+    try:
+        cloudfront_client.list_distributions(MaxItems="1")
+        has_permission = True
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code == "AccessDenied":
+            pytest.fail("No permission to list CloudFront distributions")
+    assert has_permission, "Should have permission to list CloudFront distributions"

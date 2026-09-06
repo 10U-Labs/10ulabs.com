@@ -53,23 +53,23 @@ def _get_shared_tf_content() -> str:
         return f.read()
 
 
-class TestTerraformModuleContracts:
-    def test_shared_tf_module_source_path_exists(self) -> None:
-        content = _get_shared_tf_content()
-        source_match = re.search(r'source\s*=\s*"([^"]+)"', content)
-        source_path = source_match.group(1) if source_match else "(no module source declared)"
-        resolved_path = (RACK_CONFIGURATIONS_SRC / source_path).resolve()
-        assert resolved_path.exists(), (
-            f"Module source path does not exist: {source_path}"
-        )
+def test_shared_tf_module_source_path_exists() -> None:
+    content = _get_shared_tf_content()
+    source_match = re.search(r'source\s*=\s*"([^"]+)"', content)
+    source_path = source_match.group(1) if source_match else "(no module source declared)"
+    resolved_path = (RACK_CONFIGURATIONS_SRC / source_path).resolve()
+    assert resolved_path.exists(), (
+        f"Module source path does not exist: {source_path}"
+    )
 
-    def test_only_locals_tf_builds_names_from_the_resource_prefix(self) -> None:
-        offences = _find_resource_prefix_literals_outside_locals_tf()
 
-        assert not offences, (
-            "Terraform files other than locals.tf build a resource name from "
-            "the module's resource prefix. locals.tf exists to hold those "
-            "names once, so that renaming one is a single edit and so that "
-            "get_endpoint_local_values() can read it. Move each of these into "
-            "a local and reference it:\n" + "\n".join(offences)
-        )
+def test_only_locals_tf_builds_names_from_the_resource_prefix() -> None:
+    offences = _find_resource_prefix_literals_outside_locals_tf()
+
+    assert not offences, (
+        "Terraform files other than locals.tf build a resource name from "
+        "the module's resource prefix. locals.tf exists to hold those "
+        "names once, so that renaming one is a single edit and so that "
+        "get_endpoint_local_values() can read it. Move each of these into "
+        "a local and reference it:\n" + "\n".join(offences)
+    )

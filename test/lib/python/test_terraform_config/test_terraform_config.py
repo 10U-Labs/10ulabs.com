@@ -7,12 +7,12 @@ from terraform_config import (
 )
 
 
-class TestTestAwsRegion:
-    def test_is_string(self) -> None:
-        assert isinstance(TEST_AWS_REGION, str)
+def test_is_string() -> None:
+    assert isinstance(TEST_AWS_REGION, str)
 
-    def test_is_valid_region_format(self) -> None:
-        assert TEST_AWS_REGION.startswith("us-") or TEST_AWS_REGION.startswith("eu-")
+
+def test_is_valid_region_format() -> None:
+    assert TEST_AWS_REGION.startswith("us-") or TEST_AWS_REGION.startswith("eu-")
 
 
 def test_packaged_lambda_sources_reads_a_single_packaged_file(tmp_path: Path) -> None:

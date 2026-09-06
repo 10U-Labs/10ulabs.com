@@ -13,42 +13,44 @@ from module_utils import (
 )
 
 
-class TestLoadModuleFromPath:
-    def test_loads_module_from_file(self) -> None:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False
-        ) as f:
-            f.write("VALUE = 42\n")
-            f.flush()
-            module = load_module_from_path("test_module", Path(f.name))
-            assert module.VALUE == 42
+def test_loads_module_from_file() -> None:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".py", delete=False
+    ) as f:
+        f.write("VALUE = 42\n")
+        f.flush()
+        module = load_module_from_path("test_module", Path(f.name))
+        assert module.VALUE == 42
 
-    def test_returns_module_type(self) -> None:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False
-        ) as f:
-            f.write("pass\n")
-            f.flush()
-            module = load_module_from_path("test_module", Path(f.name))
-            assert isinstance(module, ModuleType)
 
-    def test_module_has_correct_name(self) -> None:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False
-        ) as f:
-            f.write("pass\n")
-            f.flush()
-            module = load_module_from_path("custom_name", Path(f.name))
-            assert module.__name__ == "custom_name"
+def test_returns_module_type() -> None:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".py", delete=False
+    ) as f:
+        f.write("pass\n")
+        f.flush()
+        module = load_module_from_path("test_module", Path(f.name))
+        assert isinstance(module, ModuleType)
 
-    def test_loads_module_with_functions(self) -> None:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False
-        ) as f:
-            f.write("def add(a, b):\n    return a + b\n")
-            f.flush()
-            module = load_module_from_path("math_module", Path(f.name))
-            assert module.add(2, 3) == 5
+
+def test_module_has_correct_name() -> None:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".py", delete=False
+    ) as f:
+        f.write("pass\n")
+        f.flush()
+        module = load_module_from_path("custom_name", Path(f.name))
+        assert module.__name__ == "custom_name"
+
+
+def test_loads_module_with_functions() -> None:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".py", delete=False
+    ) as f:
+        f.write("def add(a, b):\n    return a + b\n")
+        f.flush()
+        module = load_module_from_path("math_module", Path(f.name))
+        assert module.add(2, 3) == 5
 
 
 class TestResetModuleState:
@@ -109,42 +111,44 @@ class TestResetModuleState:
             assert module.cache == {}
 
 
-class TestCreateLambdaLoader:
-    def test_returns_callable(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            loader = create_lambda_loader(Path(tmpdir))
-            assert callable(loader)
+def test_returns_callable() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        loader = create_lambda_loader(Path(tmpdir))
+        assert callable(loader)
 
-    def test_loader_loads_module(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            handler_path = Path(tmpdir) / "handler.py"
-            handler_path.write_text("HANDLER_VALUE = 'loaded'\n")
 
-            loader = create_lambda_loader(Path(tmpdir))
-            module = loader("handler.py", "handler_module")
-            assert module.HANDLER_VALUE == "loaded"
+def test_loader_loads_module() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        handler_path = Path(tmpdir) / "handler.py"
+        handler_path.write_text("HANDLER_VALUE = 'loaded'\n")
 
-    def test_loader_adds_dir_to_path(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            handler_path = Path(tmpdir) / "handler.py"
-            handler_path.write_text("pass\n")
+        loader = create_lambda_loader(Path(tmpdir))
+        module = loader("handler.py", "handler_module")
+        assert module.HANDLER_VALUE == "loaded"
 
-            if tmpdir in sys.path:
-                sys.path.remove(tmpdir)
 
-            loader = create_lambda_loader(Path(tmpdir))
-            loader("handler.py", "handler_module")
-            assert tmpdir in sys.path
+def test_loader_adds_dir_to_path() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        handler_path = Path(tmpdir) / "handler.py"
+        handler_path.write_text("pass\n")
 
-    def test_loader_does_not_duplicate_path(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            handler_path = Path(tmpdir) / "handler.py"
-            handler_path.write_text("pass\n")
+        if tmpdir in sys.path:
+            sys.path.remove(tmpdir)
 
-            sys.path.insert(0, tmpdir)
-            initial_count = sys.path.count(tmpdir)
+        loader = create_lambda_loader(Path(tmpdir))
+        loader("handler.py", "handler_module")
+        assert tmpdir in sys.path
 
-            loader = create_lambda_loader(Path(tmpdir))
-            loader("handler.py", "handler_module")
 
-            assert sys.path.count(tmpdir) == initial_count
+def test_loader_does_not_duplicate_path() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        handler_path = Path(tmpdir) / "handler.py"
+        handler_path.write_text("pass\n")
+
+        sys.path.insert(0, tmpdir)
+        initial_count = sys.path.count(tmpdir)
+
+        loader = create_lambda_loader(Path(tmpdir))
+        loader("handler.py", "handler_module")
+
+        assert sys.path.count(tmpdir) == initial_count

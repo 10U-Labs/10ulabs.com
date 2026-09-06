@@ -27,36 +27,25 @@ def _handler_inline_policies(iam_client: Any, config: Dict[str, Any]) -> Tuple[s
     return role_name, response.get("PolicyNames", [])
 
 
-class TestContactHandlerInlinePolicies:
-    def test_contact_handler_role_has_ssm_policy(
-        self,
-        iam_client: Any,
-        config: Dict[str, Any]
-    ) -> None:
-        role_name, inline_policies = _handler_inline_policies(iam_client, config)
-        assert "SSMParameterAccess" in inline_policies, (
-            f"IAM role '{role_name}' missing SSMParameterAccess inline policy. "
-            f"Available policies: {inline_policies}"
-        )
+def test_contact_handler_role_has_ssm_policy(iam_client: Any, config: Dict[str, Any]) -> None:
+    role_name, inline_policies = _handler_inline_policies(iam_client, config)
+    assert "SSMParameterAccess" in inline_policies, (
+        f"IAM role '{role_name}' missing SSMParameterAccess inline policy. "
+        f"Available policies: {inline_policies}"
+    )
 
-    def test_contact_handler_role_has_kms_policy(
-        self,
-        iam_client: Any,
-        config: Dict[str, Any]
-    ) -> None:
-        role_name, inline_policies = _handler_inline_policies(iam_client, config)
-        assert "KMSDecrypt" in inline_policies, (
-            f"IAM role '{role_name}' missing KMSDecrypt inline policy. "
-            f"Available policies: {inline_policies}"
-        )
 
-    def test_contact_handler_role_has_ses_policy(
-        self,
-        iam_client: Any,
-        config: Dict[str, Any]
-    ) -> None:
-        role_name, inline_policies = _handler_inline_policies(iam_client, config)
-        assert "SESAccess" in inline_policies, (
-            f"IAM role '{role_name}' missing SESAccess inline policy. "
-            f"Available policies: {inline_policies}"
-        )
+def test_contact_handler_role_has_kms_policy(iam_client: Any, config: Dict[str, Any]) -> None:
+    role_name, inline_policies = _handler_inline_policies(iam_client, config)
+    assert "KMSDecrypt" in inline_policies, (
+        f"IAM role '{role_name}' missing KMSDecrypt inline policy. "
+        f"Available policies: {inline_policies}"
+    )
+
+
+def test_contact_handler_role_has_ses_policy(iam_client: Any, config: Dict[str, Any]) -> None:
+    role_name, inline_policies = _handler_inline_policies(iam_client, config)
+    assert "SESAccess" in inline_policies, (
+        f"IAM role '{role_name}' missing SESAccess inline policy. "
+        f"Available policies: {inline_policies}"
+    )

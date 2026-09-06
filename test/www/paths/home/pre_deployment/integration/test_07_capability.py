@@ -12,95 +12,85 @@ def _deployment_bucket_and_key(www_common_outputs: Dict[str, str]) -> Tuple[str,
     return bucket_name, f"home/.pre-deployment-test/{uuid.uuid4()}.txt"
 
 
-class TestS3WriteCapability:
-    def test_can_write_to_s3_bucket(
-        self,
-        s3_client: Any,
-        www_common_outputs: Dict[str, str]
-    ) -> None:
-        bucket_name, test_key = _deployment_bucket_and_key(www_common_outputs)
+def test_can_write_to_s3_bucket(s3_client: Any, www_common_outputs: Dict[str, str]) -> None:
+    bucket_name, test_key = _deployment_bucket_and_key(www_common_outputs)
+    try:
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=test_key,
+            Body=b"pre-deployment test",
+            ContentType="text/plain"
+        )
+        write_succeeded = True
+        assert write_succeeded, "Write should succeed"
+    except ClientError as e:
+        pytest.fail(
+            f"Cannot write to S3 bucket '{bucket_name}': {e.response['Error']}"
+        )
+    finally:
         try:
-            s3_client.put_object(
-                Bucket=bucket_name,
-                Key=test_key,
-                Body=b"pre-deployment test",
-                ContentType="text/plain"
-            )
-            write_succeeded = True
-            assert write_succeeded, "Write should succeed"
-        except ClientError as e:
-            pytest.fail(
-                f"Cannot write to S3 bucket '{bucket_name}': {e.response['Error']}"
-            )
-        finally:
-            try:
-                s3_client.delete_object(Bucket=bucket_name, Key=test_key)
-            except ClientError:
-                pass
-
-    def test_can_delete_from_s3_bucket(
-        self,
-        s3_client: Any,
-        www_common_outputs: Dict[str, str]
-    ) -> None:
-        bucket_name, test_key = _deployment_bucket_and_key(www_common_outputs)
-        try:
-            s3_client.put_object(
-                Bucket=bucket_name,
-                Key=test_key,
-                Body=b"pre-deployment test"
-            )
             s3_client.delete_object(Bucket=bucket_name, Key=test_key)
-            delete_succeeded = True
-            assert delete_succeeded, "Delete should succeed"
-        except ClientError as e:
+        except ClientError:
+            pass
+
+
+def test_can_delete_from_s3_bucket(s3_client: Any, www_common_outputs: Dict[str, str]) -> None:
+    bucket_name, test_key = _deployment_bucket_and_key(www_common_outputs)
+    try:
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=test_key,
+            Body=b"pre-deployment test"
+        )
+        s3_client.delete_object(Bucket=bucket_name, Key=test_key)
+        delete_succeeded = True
+        assert delete_succeeded, "Delete should succeed"
+    except ClientError as e:
+        pytest.fail(
+            f"Cannot delete from S3 bucket '{bucket_name}': {e.response['Error']}"
+        )
+
+
+def test_can_list_invalidations(
+    cloudfront_client: Any,
+    www_common_outputs: Dict[str, str]
+) -> None:
+    distribution_id = www_common_outputs.get("cloudfront_distribution_id")
+    if not distribution_id:
+        pytest.skip("cloudfront_distribution_id output not available")
+    try:
+        response = cloudfront_client.list_invalidations(
+            DistributionId=distribution_id,
+            MaxItems="1"
+        )
+        can_list = "InvalidationList" in response
+        assert can_list, "Should be able to list invalidations"
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDenied":
             pytest.fail(
-                f"Cannot delete from S3 bucket '{bucket_name}': {e.response['Error']}"
+                f"Cannot list CloudFront invalidations for '{distribution_id}'"
             )
+        if e.response["Error"]["Code"] == "NoSuchDistribution":
+            pytest.skip("Distribution does not exist")
+        raise
 
 
-class TestCloudFrontInvalidationCapability:
-    def test_can_list_invalidations(
-        self,
-        cloudfront_client: Any,
-        www_common_outputs: Dict[str, str]
-    ) -> None:
-        distribution_id = www_common_outputs.get("cloudfront_distribution_id")
-        if not distribution_id:
-            pytest.skip("cloudfront_distribution_id output not available")
-        try:
-            response = cloudfront_client.list_invalidations(
-                DistributionId=distribution_id,
-                MaxItems="1"
+def test_can_get_distribution_config(
+    cloudfront_client: Any,
+    www_common_outputs: Dict[str, str]
+) -> None:
+    distribution_id = www_common_outputs.get("cloudfront_distribution_id")
+    if not distribution_id:
+        pytest.skip("cloudfront_distribution_id output not available")
+    try:
+        response = cloudfront_client.get_distribution_config(Id=distribution_id)
+        can_get_config = "DistributionConfig" in response
+        assert can_get_config, "Should be able to get distribution config"
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDenied":
+            pytest.fail(
+                f"Cannot get CloudFront config for '{distribution_id}'"
             )
-            can_list = "InvalidationList" in response
-            assert can_list, "Should be able to list invalidations"
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail(
-                    f"Cannot list CloudFront invalidations for '{distribution_id}'"
-                )
-            if e.response["Error"]["Code"] == "NoSuchDistribution":
-                pytest.skip("Distribution does not exist")
-            raise
-
-    def test_can_get_distribution_config(
-        self,
-        cloudfront_client: Any,
-        www_common_outputs: Dict[str, str]
-    ) -> None:
-        distribution_id = www_common_outputs.get("cloudfront_distribution_id")
-        if not distribution_id:
-            pytest.skip("cloudfront_distribution_id output not available")
-        try:
-            response = cloudfront_client.get_distribution_config(Id=distribution_id)
-            can_get_config = "DistributionConfig" in response
-            assert can_get_config, "Should be able to get distribution config"
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail(
-                    f"Cannot get CloudFront config for '{distribution_id}'"
-                )
-            if e.response["Error"]["Code"] == "NoSuchDistribution":
-                pytest.skip("Distribution does not exist")
-            raise
+        if e.response["Error"]["Code"] == "NoSuchDistribution":
+            pytest.skip("Distribution does not exist")
+        raise

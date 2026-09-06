@@ -10,130 +10,142 @@ from test_fixtures.aws import (
 )
 
 
-class TestIamRoleExists:
-    def test_returns_true_when_role_exists(self) -> None:
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {
-            "Role": {"RoleName": "test-role", "Arn": "arn:aws:iam::123456:role/test-role"}
-        }
-        result = iam_role_exists(mock_client, "test-role")
-        assert result is True
-
-    def test_returns_false_when_role_not_found(self) -> None:
-        mock_client = MagicMock()
-        mock_client.exceptions.NoSuchEntityException = type(
-            "NoSuchEntityException", (Exception,), {}
-        )
-        mock_client.get_role.side_effect = mock_client.exceptions.NoSuchEntityException()
-        result = iam_role_exists(mock_client, "nonexistent-role")
-        assert result is False
-
-    def test_calls_get_role_with_role_name(self) -> None:
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {"Role": {"RoleName": "my-role"}}
-        iam_role_exists(mock_client, "my-role")
-        assert mock_client.get_role.call_args[1]["RoleName"] == "my-role"
-
-    def test_passes_role_name_argument(self) -> None:
-        mock_client = MagicMock()
-        mock_client.get_role.return_value = {"Role": {}}
-        iam_role_exists(mock_client, "custom-role-name")
-        call_args = mock_client.get_role.call_args
-        assert call_args[1]["RoleName"] == "custom-role-name"
+def test_returns_true_when_role_exists() -> None:
+    mock_client = MagicMock()
+    mock_client.get_role.return_value = {
+        "Role": {"RoleName": "test-role", "Arn": "arn:aws:iam::123456:role/test-role"}
+    }
+    result = iam_role_exists(mock_client, "test-role")
+    assert result is True
 
 
-class TestGetLogGroupInfo:
-    def test_returns_dict_type(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {"logGroups": []}
-        result = get_log_group_info(mock_client, "/aws/lambda/test")
-        assert isinstance(result, dict)
+def test_returns_false_when_role_not_found() -> None:
+    mock_client = MagicMock()
+    mock_client.exceptions.NoSuchEntityException = type(
+        "NoSuchEntityException", (Exception,), {}
+    )
+    mock_client.get_role.side_effect = mock_client.exceptions.NoSuchEntityException()
+    result = iam_role_exists(mock_client, "nonexistent-role")
+    assert result is False
 
-    def test_returns_name_in_result(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {"logGroups": []}
-        result = get_log_group_info(mock_client, "/aws/lambda/my-function")
-        assert result["name"] == "/aws/lambda/my-function"
 
-    def test_returns_exists_true_when_log_group_found(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {
-            "logGroups": [
-                {"logGroupName": "/aws/lambda/my-function", "retentionInDays": 14}
-            ]
-        }
-        result = get_log_group_info(mock_client, "/aws/lambda/my-function")
-        assert result["exists"] is True
+def test_calls_get_role_with_role_name() -> None:
+    mock_client = MagicMock()
+    mock_client.get_role.return_value = {"Role": {"RoleName": "my-role"}}
+    iam_role_exists(mock_client, "my-role")
+    assert mock_client.get_role.call_args[1]["RoleName"] == "my-role"
 
-    def test_returns_exists_false_when_log_group_not_found(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {"logGroups": []}
-        result = get_log_group_info(mock_client, "/aws/lambda/nonexistent")
-        assert result["exists"] is False
 
-    def test_returns_retention_days_when_set(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {
-            "logGroups": [
-                {"logGroupName": "/aws/lambda/test", "retentionInDays": 30}
-            ]
-        }
-        result = get_log_group_info(mock_client, "/aws/lambda/test")
-        assert result["retention"] == 30
+def test_passes_role_name_argument() -> None:
+    mock_client = MagicMock()
+    mock_client.get_role.return_value = {"Role": {}}
+    iam_role_exists(mock_client, "custom-role-name")
+    call_args = mock_client.get_role.call_args
+    assert call_args[1]["RoleName"] == "custom-role-name"
 
-    def test_returns_retention_none_when_not_found(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {"logGroups": []}
-        result = get_log_group_info(mock_client, "/aws/lambda/missing")
-        assert result["retention"] is None
 
-    def test_returns_retention_none_when_not_set(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {
-            "logGroups": [{"logGroupName": "/aws/lambda/test"}]
-        }
-        result = get_log_group_info(mock_client, "/aws/lambda/test")
-        assert result["retention"] is None
+def test_returns_dict_type() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {"logGroups": []}
+    result = get_log_group_info(mock_client, "/aws/lambda/test")
+    assert isinstance(result, dict)
 
-    def test_calls_describe_log_groups_with_prefix(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {"logGroups": []}
-        get_log_group_info(mock_client, "/aws/lambda/test-fn")
-        assert mock_client.describe_log_groups.call_count == 1
 
-    def test_calls_describe_log_groups_with_correct_prefix(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {"logGroups": []}
-        get_log_group_info(mock_client, "/aws/lambda/test-fn")
-        call_args = mock_client.describe_log_groups.call_args
-        assert call_args[1]["logGroupNamePrefix"] == "/aws/lambda/test-fn"
+def test_returns_name_in_result() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {"logGroups": []}
+    result = get_log_group_info(mock_client, "/aws/lambda/my-function")
+    assert result["name"] == "/aws/lambda/my-function"
 
-    def test_calls_describe_log_groups_with_limit_one(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {"logGroups": []}
-        get_log_group_info(mock_client, "/aws/lambda/test")
-        call_args = mock_client.describe_log_groups.call_args
-        assert call_args[1]["limit"] == 1
 
-    def test_filters_by_exact_log_group_name(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {
-            "logGroups": [
-                {"logGroupName": "/aws/lambda/test-function-extra", "retentionInDays": 7}
-            ]
-        }
-        result = get_log_group_info(mock_client, "/aws/lambda/test-function")
-        assert result["exists"] is False
+def test_returns_exists_true_when_log_group_found() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {
+        "logGroups": [
+            {"logGroupName": "/aws/lambda/my-function", "retentionInDays": 14}
+        ]
+    }
+    result = get_log_group_info(mock_client, "/aws/lambda/my-function")
+    assert result["exists"] is True
 
-    def test_handles_multiple_log_groups_in_response(self) -> None:
-        mock_client = MagicMock()
-        mock_client.describe_log_groups.return_value = {
-            "logGroups": [
-                {"logGroupName": "/aws/lambda/target", "retentionInDays": 14}
-            ]
-        }
-        result = get_log_group_info(mock_client, "/aws/lambda/target")
-        assert result["exists"] is True
+
+def test_returns_exists_false_when_log_group_not_found() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {"logGroups": []}
+    result = get_log_group_info(mock_client, "/aws/lambda/nonexistent")
+    assert result["exists"] is False
+
+
+def test_returns_retention_days_when_set() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {
+        "logGroups": [
+            {"logGroupName": "/aws/lambda/test", "retentionInDays": 30}
+        ]
+    }
+    result = get_log_group_info(mock_client, "/aws/lambda/test")
+    assert result["retention"] == 30
+
+
+def test_returns_retention_none_when_not_found() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {"logGroups": []}
+    result = get_log_group_info(mock_client, "/aws/lambda/missing")
+    assert result["retention"] is None
+
+
+def test_returns_retention_none_when_not_set() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {
+        "logGroups": [{"logGroupName": "/aws/lambda/test"}]
+    }
+    result = get_log_group_info(mock_client, "/aws/lambda/test")
+    assert result["retention"] is None
+
+
+def test_calls_describe_log_groups_with_prefix() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {"logGroups": []}
+    get_log_group_info(mock_client, "/aws/lambda/test-fn")
+    assert mock_client.describe_log_groups.call_count == 1
+
+
+def test_calls_describe_log_groups_with_correct_prefix() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {"logGroups": []}
+    get_log_group_info(mock_client, "/aws/lambda/test-fn")
+    call_args = mock_client.describe_log_groups.call_args
+    assert call_args[1]["logGroupNamePrefix"] == "/aws/lambda/test-fn"
+
+
+def test_calls_describe_log_groups_with_limit_one() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {"logGroups": []}
+    get_log_group_info(mock_client, "/aws/lambda/test")
+    call_args = mock_client.describe_log_groups.call_args
+    assert call_args[1]["limit"] == 1
+
+
+def test_filters_by_exact_log_group_name() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {
+        "logGroups": [
+            {"logGroupName": "/aws/lambda/test-function-extra", "retentionInDays": 7}
+        ]
+    }
+    result = get_log_group_info(mock_client, "/aws/lambda/test-function")
+    assert result["exists"] is False
+
+
+def test_handles_multiple_log_groups_in_response() -> None:
+    mock_client = MagicMock()
+    mock_client.describe_log_groups.return_value = {
+        "logGroups": [
+            {"logGroupName": "/aws/lambda/target", "retentionInDays": 14}
+        ]
+    }
+    result = get_log_group_info(mock_client, "/aws/lambda/target")
+    assert result["exists"] is True
 
 
 class TestFindLifecycleRule:

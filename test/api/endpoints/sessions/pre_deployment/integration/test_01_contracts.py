@@ -45,17 +45,17 @@ def _dynamodb_client_methods_called_by_tracker_handler() -> Set[str]:
     return set(re.findall(rf"(?:{receivers})\.(\w+)\(", handler))
 
 
-class TestIamPolicyContracts:
-    def test_iam_tf_declares_the_dynamodb_access_policy(self) -> None:
-        assert _dynamodb_access_policy_block(), (
-            "aws_iam_role_policy.dynamodb_access not found in iam.tf"
-        )
+def test_iam_tf_declares_the_dynamodb_access_policy() -> None:
+    assert _dynamodb_access_policy_block(), (
+        "aws_iam_role_policy.dynamodb_access not found in iam.tf"
+    )
 
-    def test_dynamodb_actions_granted_are_the_ones_the_tracker_calls(self) -> None:
-        granted = _dynamodb_client_methods_granted_by_iam_tf()
-        called = _dynamodb_client_methods_called_by_tracker_handler()
-        assert granted == called, (
-            f"iam.tf grants DynamoDB actions no tracker call needs: "
-            f"{sorted(granted - called)}; the tracker calls DynamoDB methods "
-            f"iam.tf does not grant: {sorted(called - granted)}"
-        )
+
+def test_dynamodb_actions_granted_are_the_ones_the_tracker_calls() -> None:
+    granted = _dynamodb_client_methods_granted_by_iam_tf()
+    called = _dynamodb_client_methods_called_by_tracker_handler()
+    assert granted == called, (
+        f"iam.tf grants DynamoDB actions no tracker call needs: "
+        f"{sorted(granted - called)}; the tracker calls DynamoDB methods "
+        f"iam.tf does not grant: {sorted(called - granted)}"
+    )
