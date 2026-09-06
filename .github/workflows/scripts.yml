@@ -267,13 +267,8 @@ jobs:
       - name: Run pylint on source
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            scripts/ \
-            lib/python/boto_mocks \
-            lib/python/lambda_response \
-            lib/python/module_utils \
-            lib/python/repo_utils \
-            lib/python/terraform_config \
-            lib/python/test_fixtures \
+            scripts/ lib/ \
+            --recursive=y \
             --disable=missing-module-docstring \
             --disable=missing-class-docstring \
             --disable=missing-function-docstring \
@@ -292,24 +287,19 @@ jobs:
           python3 -m pip install \
             boto3 \
             botocore \
+            dnspython \
             pylint \
             pytest \
             requests
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
-            test/conftest.py \
-            test/scripts \
-            test/lib/python/test_boto_mocks \
-            test/lib/python/test_lambda_response \
-            test/lib/python/test_module_utils \
-            test/lib/python/test_repo_utils \
-            test/lib/python/test_terraform_config \
-            test/lib/python/test_test_fixtures \
+            test/ lib/ \
+            --recursive=y \
             --disable=missing-module-docstring \
             --disable=missing-class-docstring \
             --disable=missing-function-docstring \
-            --recursive=y --fail-on=C,R,W --fail-under=10.0
+            --fail-on=C,R,W --fail-under=10.0
   test-boto-mocks:
     runs-on: ubuntu-latest
     steps:

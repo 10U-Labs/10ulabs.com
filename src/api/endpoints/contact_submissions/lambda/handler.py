@@ -9,6 +9,8 @@ from typing import Any, Dict, Optional
 import boto3
 from botocore.exceptions import ClientError
 
+from lambda_http import dispatch, error_response, json_response, parse_body
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -43,32 +45,6 @@ def get_ses_client() -> Any:
     if 'ses' not in _clients:
         _clients['ses'] = boto3.client('ses')
     return _clients['ses']
-
-
-CORS_HEADERS = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
-}
-
-
-def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
-    return {'statusCode': status_code, 'headers': CORS_HEADERS, 'body': json.dumps(body)}
-
-
-def error_response(
-    status_code: int, error: str, details: str | None = None
-) -> Dict[str, Any]:
-    response_body: Dict[str, Any] = {'success': False, 'error': error}
-    if details is not None:
-        response_body['details'] = details
-    return json_response(status_code, response_body)
-
-
-def parse_request_body(event: Dict[str, Any]) -> Dict[str, Any]:
-    raw_body = event.get('body') or '{}'
-    return json.loads(raw_body) if isinstance(raw_body, str) else raw_body
 
 
 def get_recaptcha_secret() -> str:
@@ -210,7 +186,7 @@ TEST_MODE_MOCK_RESPONSE = {
 
 def handle_contact_post(event: Dict[str, Any]) -> Dict[str, Any]:
     try:
-        body = parse_request_body(event)
+        body = parse_body(event)
         fields = {
             'recaptcha_token': body.get('recaptcha_token', '').strip(),
             'name': body.get('name', '').strip(),
@@ -230,9 +206,8 @@ def handle_contact_post(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
-ROUTE_MAP = {
-    ('/v1/contact-submissions', 'POST'): handle_contact_post,
-}
+def _is_contact_post(path: str, method: str) -> bool:
+    return path == '/v1/contact-submissions' and method == 'POST'
 
 
 def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
@@ -245,24 +220,6 @@ def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     if is_test_mode():
         logger.info("Test mode enabled - will return mock responses for POST requests")
 
-    method = event.get('httpMethod', '')
-    if method == 'OPTIONS':
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST,OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            },
-            'body': ''
-        }
-
-    path = event.get('path', '')
-    route_handler = ROUTE_MAP.get((path, method))
-
-    if route_handler:
-        response = route_handler(event)
-    else:
-        response = error_response(404, 'Not found')
-
-    return response
+    return dispatch(event, (
+        (_is_contact_post, handle_contact_post),
+    ))

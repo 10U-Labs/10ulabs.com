@@ -165,6 +165,7 @@ jobs:
             test/lib/terraform/unit
             test/api/operational/health
             test/lib/python/test_boto_mocks
+            test/lib/python/test_lambda_http
             test/lib/python/test_lambda_response
             test/lib/python/test_module_utils
             test/lib/python/test_repo_utils
@@ -282,6 +283,7 @@ jobs:
             --disallow-untyped-defs \
             src/api/operational/health/lambda/handler.py \
             lib/python/boto_mocks \
+            lib/python/lambda_http \
             lib/python/lambda_response \
             lib/python/module_utils \
             lib/python/repo_utils \
@@ -320,6 +322,7 @@ jobs:
             test/lib/terraform/unit \
             test/api/operational/health \
             test/lib/python/test_boto_mocks \
+            test/lib/python/test_lambda_http \
             test/lib/python/test_lambda_response \
             test/lib/python/test_module_utils \
             test/lib/python/test_repo_utils \
@@ -445,20 +448,12 @@ jobs:
       - name: Run pylint on source
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            src/api/operational/health/lambda/handler.py \
-            lib/python/boto_mocks \
-            lib/python/lambda_response \
-            lib/python/module_utils \
-            lib/python/repo_utils \
-            lib/python/terraform_config \
-            lib/python/terraform_drift \
-            lib/python/test_fixtures \
+            src/ lib/ \
             --recursive=y \
             --disable=missing-module-docstring \
             --disable=missing-class-docstring \
             --disable=missing-function-docstring \
-            --fail-on=C,R,W \
-            --fail-under=10.0
+            --fail-on=C,R,W --fail-under=10.0
   pylint-tests:
     runs-on: ubuntu-latest
     steps:
@@ -473,26 +468,14 @@ jobs:
           python3 -m pip install \
             boto3 \
             botocore \
+            dnspython \
             pylint \
             pytest \
             requests
       - name: Run pylint on tests
         run: |
           PYTHONPATH=lib/python:scripts python3 -m pylint \
-            test/conftest.py \
-            test/lib/terraform/conftest.py \
-            test/api/conftest.py \
-            test/api/operational/conftest.py \
-            test/lib/terraform/common \
-            test/lib/terraform/unit \
-            test/api/operational/health \
-            test/lib/python/test_boto_mocks \
-            test/lib/python/test_lambda_response \
-            test/lib/python/test_module_utils \
-            test/lib/python/test_repo_utils \
-            test/lib/python/test_terraform_config \
-            test/lib/python/test_terraform_drift \
-            test/lib/python/test_test_fixtures \
+            test/ lib/ \
             --recursive=y \
             --disable=missing-module-docstring \
             --disable=missing-class-docstring \
@@ -645,6 +628,32 @@ jobs:
             test/lib/python/test_boto_mocks/ \
             --confcutdir=test --verbose --pythonwarnings=error \
             --cov=boto_mocks \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-fail-under=100
+  test-lambda-http:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            pytest-cov \
+            requests
+      - name: Run lambda_http tests with a full coverage gate
+        run: |
+          PYTHONPATH=lib/python python3 -m pytest \
+            test/lib/python/test_lambda_http/ \
+            --confcutdir=test --verbose --pythonwarnings=error \
+            --cov=lambda_http \
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
@@ -924,6 +933,7 @@ on:
       - .github/actions/verify-oidc-vars/action.yml
       - .github/workflows/api_operational_health.yml
       - lib/python/boto_mocks/**
+      - lib/python/lambda_http/**
       - lib/python/lambda_response/**
       - lib/python/module_utils/**
       - lib/python/repo_utils/**
@@ -937,6 +947,7 @@ on:
       - test/api/operational/health/**
       - test/conftest.py
       - test/lib/python/test_boto_mocks/**
+      - test/lib/python/test_lambda_http/**
       - test/lib/python/test_lambda_response/**
       - test/lib/python/test_module_utils/**
       - test/lib/python/test_repo_utils/**

@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from lambda_http import json_response, options_response, parse_body
+from lambda_http import dispatch, json_response, parse_body
 
 
 def handle_echo_post(event: Dict[str, Any]) -> Dict[str, Any]:
@@ -13,20 +13,11 @@ def handle_echo_post(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
-ROUTE_MAP = {
-    ('/diagnostics/echo', 'POST'): handle_echo_post,
-}
+def _is_echo(path: str, method: str) -> bool:
+    return path == '/diagnostics/echo' and method == 'POST'
 
 
 def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
-    method = event.get('httpMethod', '')
-    if method == 'OPTIONS':
-        return options_response()
-
-    path = event.get('path', '')
-    route_handler = ROUTE_MAP.get((path, method))
-    if route_handler:
-        response = route_handler(event)
-    else:
-        response = json_response(404, {'error': 'Not found'})
-    return response
+    return dispatch(event, (
+        (_is_echo, handle_echo_post),
+    ))

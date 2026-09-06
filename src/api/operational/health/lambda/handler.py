@@ -1,16 +1,6 @@
-import json
 from typing import Any, Dict
 
-
-def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
-    return {
-        'statusCode': status_code,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
-        'body': json.dumps(body)
-    }
+from lambda_http import dispatch, json_response
 
 
 def handle_health(_event: Dict[str, Any]) -> Dict[str, Any]:
@@ -22,18 +12,11 @@ def handle_health(_event: Dict[str, Any]) -> Dict[str, Any]:
     return json_response(200, status_data)
 
 
-ROUTE_MAP = {
-    ('/health', 'GET'): handle_health,
-}
+def _is_health(path: str, method: str) -> bool:
+    return path == '/health' and method == 'GET'
 
 
 def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
-    path = event.get('path', '')
-    method = event.get('httpMethod', '')
-    route_key = (path, method)
-    route_handler = ROUTE_MAP.get(route_key)
-    if route_handler:
-        response = route_handler(event)
-    else:
-        response = json_response(404, {'error': 'Not found'})
-    return response
+    return dispatch(event, (
+        (_is_health, handle_health),
+    ))
