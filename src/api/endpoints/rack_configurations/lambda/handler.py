@@ -1,4 +1,3 @@
-import base64
 import hashlib
 import json
 import logging
@@ -6,49 +5,12 @@ import os
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-import boto3
 from botocore.exceptions import ClientError
+from lambda_clients import get_dynamodb_client
+from lambda_http import dispatch, error_response, json_response, parse_body
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-_clients: Dict[str, Any] = {}
-
-
-def get_dynamodb_client() -> Any:
-    if 'dynamodb' not in _clients:
-        _clients['dynamodb'] = boto3.client('dynamodb')
-    return _clients['dynamodb']
-
-
-def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
-    response = {
-        'statusCode': status_code,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type'
-        },
-        'body': json.dumps(body)
-    }
-    return response
-
-
-def error_response(status_code: int, message: str, details: str = '') -> Dict[str, Any]:
-    body: Dict[str, Any] = {'success': False, 'error': message}
-    if details:
-        body['details'] = details
-    response = json_response(status_code, body)
-    return response
-
-
-def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
-    body = event.get('body', '{}')
-    if event.get('isBase64Encoded'):
-        body = base64.b64decode(body).decode('utf-8')
-    result = json.loads(body) if body else {}
-    return result
 
 
 def generate_config_hash(config: Dict[str, Any]) -> str:
@@ -208,28 +170,17 @@ def handle_get(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def _is_create(path: str, method: str) -> bool:
+    return path == '/v1/rack-configurations' and method == 'POST'
+
+
+def _is_read(path: str, method: str) -> bool:
+    return path.startswith('/v1/rack-configurations/') and method == 'GET'
+
+
 def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     logger.info("Received API request: %s", json.dumps(event))
-
-    method = event.get('httpMethod', '')
-    if method == 'OPTIONS':
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            },
-            'body': ''
-        }
-
-    path = event.get('path', '')
-
-    if path == '/v1/rack-configurations' and method == 'POST':
-        response = handle_post(event)
-    elif path.startswith('/v1/rack-configurations/') and method == 'GET':
-        response = handle_get(event)
-    else:
-        response = error_response(404, 'Not found')
-
-    return response
+    return dispatch(event, (
+        (_is_create, handle_post),
+        (_is_read, handle_get),
+    ))

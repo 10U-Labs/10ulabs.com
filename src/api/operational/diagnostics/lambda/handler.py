@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from lambda_http import json_response, parse_body
+from lambda_http import json_response, options_response, parse_body
 
 
 def handle_echo_post(event: Dict[str, Any]) -> Dict[str, Any]:
@@ -21,15 +21,7 @@ ROUTE_MAP = {
 def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     method = event.get('httpMethod', '')
     if method == 'OPTIONS':
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type,x-api-key,x-test-mode'
-            },
-            'body': ''
-        }
+        return options_response()
 
     path = event.get('path', '')
     route_handler = ROUTE_MAP.get((path, method))

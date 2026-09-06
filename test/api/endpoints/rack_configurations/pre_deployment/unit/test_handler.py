@@ -4,11 +4,8 @@ from types import ModuleType
 from typing import Any, Dict, Optional
 from unittest.mock import MagicMock, patch
 
-from test_fixtures.unit import (
-    create_client_error,
-    create_mock_dynamodb_client,
-    reset_module_state,
-)
+from lambda_clients import reset_clients
+from test_fixtures.unit import create_client_error, create_mock_dynamodb_client
 
 
 def test_generate_config_hash_returns_9_char_string(handler: ModuleType) -> None:
@@ -139,7 +136,7 @@ def test_handle_post_invalid_configuration(handler: ModuleType) -> None:
 @patch('boto3.client')
 def test_handle_post_success(mock_boto_client: MagicMock, handler: ModuleType) -> None:
     mock_boto_client.return_value = create_mock_dynamodb_client('put_item')
-    reset_module_state(handler, _clients={})
+    reset_clients()
     event = {
         'body': json.dumps({
             'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []},
@@ -170,7 +167,7 @@ def _run_handle_get(
     return_item: Any = None
 ) -> Any:
     mock_boto_client.return_value = create_mock_dynamodb_client('get_item', return_item)
-    reset_module_state(handler, _clients={})
+    reset_clients()
     event = {'pathParameters': {'config_hash': 'ABCD12345'}, 'headers': {}}
     with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
         return handler.handle_get(event)
@@ -227,7 +224,7 @@ def test_lambda_handler_unknown_path_returns_404(handler: ModuleType) -> None:
 @patch('boto3.client')
 def test_handle_post_with_device_id(mock_boto_client: MagicMock, handler: ModuleType) -> None:
     mock_boto_client.return_value = create_mock_dynamodb_client('put_item')
-    reset_module_state(handler, _clients={})
+    reset_clients()
     payload: Dict[str, Any] = {
         'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     }
@@ -245,7 +242,7 @@ def _run_save_rack_configuration(
 ) -> Any:
     mock_dynamodb = create_mock_dynamodb_client('put_item')
     mock_boto_client.return_value = mock_dynamodb
-    reset_module_state(handler, _clients={})
+    reset_clients()
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
         if device_id:
@@ -317,7 +314,7 @@ def _create_save_error_mock(error_code: str) -> MagicMock:
 
 def _run_save_with_error(mock_boto_client: MagicMock, handler: ModuleType, error_code: str) -> Any:
     mock_boto_client.return_value = _create_save_error_mock(error_code)
-    reset_module_state(handler, _clients={})
+    reset_clients()
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
         return handler.save_rack_configuration('ABCD12345', config)
@@ -362,7 +359,7 @@ def _run_load_configuration(
     mock_dynamodb: MagicMock
 ) -> Any:
     mock_boto_client.return_value = mock_dynamodb
-    reset_module_state(handler, _clients={})
+    reset_clients()
     with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
         return handler.load_rack_configuration(config_hash)
 
@@ -410,7 +407,7 @@ def _run_migrate(
         mock_dynamodb.put_item.return_value = {}
         mock_dynamodb.delete_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
-    reset_module_state(handler, _clients={})
+    reset_clients()
     with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
         return handler.migrate_rack_configuration(old_hash, config)
 
@@ -495,7 +492,7 @@ def test_handle_post_returns_500_on_save_failure(
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.side_effect = create_client_error('InternalServerError', 'PutItem')
     mock_boto_client.return_value = mock_dynamodb
-    reset_module_state(handler, _clients={})
+    reset_clients()
     with patch.dict('os.environ', {'RACK_CONFIGURATIONS_TABLE': 'test-table'}):
         response = handler.handle_post(_create_valid_post_event())
     assert response['statusCode'] == 500

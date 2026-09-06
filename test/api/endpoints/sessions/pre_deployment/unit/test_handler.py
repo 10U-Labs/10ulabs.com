@@ -8,7 +8,8 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from boto_mocks import create_client_error
-from test_fixtures.unit import create_mock_dynamodb_client, reset_module_state
+from lambda_clients import reset_clients
+from test_fixtures.unit import create_mock_dynamodb_client
 
 
 def _one_event_post_request() -> Dict[str, Any]:
@@ -345,7 +346,7 @@ class TestHandleEventsErrorHandling:
 
 
 def test_creates_client_when_not_cached(handler: ModuleType) -> None:
-    reset_module_state(handler, _clients={})
+    reset_clients()
     with patch('boto3.client') as mock_boto:
         mock_client = MagicMock()
         mock_boto.return_value = mock_client
@@ -355,7 +356,7 @@ def test_creates_client_when_not_cached(handler: ModuleType) -> None:
 
 
 def test_returns_cached_client(handler: ModuleType) -> None:
-    reset_module_state(handler, _clients={})
+    reset_clients()
     with patch('boto3.client') as mock_boto:
         mock_client = MagicMock()
         mock_boto.return_value = mock_client
