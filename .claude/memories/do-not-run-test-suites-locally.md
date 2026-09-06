@@ -5,6 +5,8 @@ metadata:
   type: feedback
 ---
 
+# Don't verify locally
+
 Do not run pytest, pylint, mypy or the other verification steps locally to check work in this repo. Push the commit and let the GitHub Actions workflows verify it. Do not stand up a virtualenv to replicate the workflow jobs, and do not recite local job results in commit bodies.
 
 **Why:** Running the suites locally burns Claude tokens (setting up interpreters/deps, reading output) while CI runs the same checks for free. The repo says the same thing in its own history: `Verification is CI's` closes commit bodies going back many commits.

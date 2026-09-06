@@ -58,7 +58,9 @@ def test_ignores_empty_lines(tfvars_file: Callable[[str], Path]) -> None:
     assert result['key'] == 'value'
 
 
-def test_parse_tfvars_file_returns_empty_dict_for_empty_file(tfvars_file: Callable[[str], Path]) -> None:
+def test_parse_tfvars_file_returns_empty_dict_for_empty_file(
+    tfvars_file: Callable[[str], Path]
+) -> None:
     result = parse_tfvars_file(tfvars_file(''))
     assert not result
 
@@ -116,7 +118,9 @@ def test_ignores_module_reference_without_shared_config(tf_file: Callable[[str],
     assert 'region' not in result
 
 
-def test_parse_locals_file_returns_empty_dict_for_empty_file(tf_file: Callable[[str], Path]) -> None:
+def test_parse_locals_file_returns_empty_dict_for_empty_file(
+    tf_file: Callable[[str], Path]
+) -> None:
     result = parse_locals_file(tf_file(''))
     assert not result
 
