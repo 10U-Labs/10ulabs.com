@@ -2,7 +2,7 @@ import json
 from typing import Any, Dict, List, Optional
 import pytest
 
-from test_fixtures.aws import find_lifecycle_rule, stale_delete_markers
+from test_fixtures.aws import stale_delete_markers
 
 
 def find_tfstate_resource(state: Any, resource_type: str, resource_name: str) -> Any:
@@ -230,12 +230,21 @@ def test_terraform_state_bucket_force_destroy_in_tfstate(terraform_state_bucket_
 
 
 def test_terraform_state_bucket_expires_delete_markers(
-    s3_client: Any,
-    config: Dict[str, Any]
+    delete_marker_rule: Dict[str, Any]
 ) -> None:
-    bucket_name = config['name_for_terraform_state_bucket']
-    rule = find_lifecycle_rule(s3_client, bucket_name, 'expire-delete-markers') or {}
-    assert rule.get('Expiration', {}).get('ExpiredObjectDeleteMarker') is True
+    assert delete_marker_rule.get('Expiration', {}).get('ExpiredObjectDeleteMarker') is True
+
+
+def test_terraform_state_bucket_delete_marker_rule_sets_no_age(
+    delete_marker_rule: Dict[str, Any]
+) -> None:
+    assert set(delete_marker_rule.get('Expiration', {})) == {'ExpiredObjectDeleteMarker'}
+
+
+def test_terraform_state_bucket_delete_marker_rule_covers_every_key(
+    delete_marker_rule: Dict[str, Any]
+) -> None:
+    assert not any(delete_marker_rule.get('Filter', {}).values())
 
 
 def test_terraform_state_bucket_keeps_no_stale_delete_markers(
@@ -582,6 +591,22 @@ def test_github_app_private_key_parameter_has_value(
     param_name = f"{config['github_app_ssm_prefix']}/private_key"
     response = ssm_client.get_parameter(Name=param_name, WithDecryption=True)
     assert response['Parameter']['Value'] != ''
+
+
+def test_github_app_id_parameter_has_name_tag(github_app_id_tags: Dict[str, str]) -> None:
+    assert github_app_id_tags.get('Name') == 'github-app-id'
+
+
+def test_github_app_installation_id_parameter_has_name_tag(
+    github_app_installation_id_tags: Dict[str, str]
+) -> None:
+    assert github_app_installation_id_tags.get('Name') == 'github-app-installation-id'
+
+
+def test_github_app_private_key_parameter_has_name_tag(
+    github_app_private_key_tags: Dict[str, str]
+) -> None:
+    assert github_app_private_key_tags.get('Name') == 'github-app-private-key'
 
 
 def test_terraform_state_bucket_versioning_is_suspended(

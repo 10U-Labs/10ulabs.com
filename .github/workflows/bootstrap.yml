@@ -398,7 +398,6 @@ jobs:
             botocore \
             mypy \
             pytest \
-            python-hcl2 \
             requests \
             types-requests
       - name: Run mypy on source
@@ -430,7 +429,6 @@ jobs:
             dnspython \
             mypy \
             pytest \
-            python-hcl2 \
             requests \
             types-requests
       - name: Run mypy on tests
@@ -601,7 +599,6 @@ jobs:
             botocore \
             pylint \
             pytest \
-            python-hcl2 \
             requests
       - name: Run pylint on source
         run: |
@@ -635,7 +632,6 @@ jobs:
             dnspython \
             pylint \
             pytest \
-            python-hcl2 \
             requests
       - name: Run pylint on tests
         run: |
@@ -984,7 +980,6 @@ jobs:
             botocore \
             pytest \
             pytest-cov \
-            python-hcl2 \
             requests
       - name: Run test_fixtures tests with a full coverage gate
         run: |
@@ -1071,8 +1066,7 @@ jobs:
           python3 -m pip install \
             boto3 \
             botocore \
-            pytest \
-            python-hcl2
+            pytest
       - name: Run unit tests
         run: |
           TEST=test/bootstrap
