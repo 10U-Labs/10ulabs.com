@@ -67,6 +67,12 @@ def create_remote_state_contract_tests(
 def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str) -> type:
     data_tf_path = endpoint_src / "data.tf"
 
+    def api_remote_state_content() -> str:
+        content = data_tf_path.read_text()
+        if 'terraform_remote_state' in content and '"api"' in content:
+            return content
+        return ""
+
     class TestRemoteStateConfig:
         def test_data_tf_exists(self) -> None:
             assert data_tf_path.exists(), f"data.tf not found in {endpoint_name}"
@@ -95,23 +101,25 @@ def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str) -> 
                 "Use local.aws_region or module.common.aws_region instead."
             )
 
-        def test_uses_correct_state_key_pattern(self) -> None:
-            content = data_tf_path.read_text()
-            if 'terraform_remote_state' in content and '"api"' in content:
-                correct_key = re.search(
-                    r'key\s*=\s*"api/terraform\.tfstate"', content
-                )
-                wrong_key = re.search(
-                    r'key\s*=\s*"api_common_routing/terraform\.tfstate"', content
-                )
-                assert wrong_key is None, (
-                    f"{endpoint_name}/data.tf uses wrong state key path. "
-                    'Use "api/terraform.tfstate" not "api_common_routing/..."'
-                )
-                assert correct_key is not None, (
-                    f"{endpoint_name}/data.tf should use key = "
-                    '"api/terraform.tfstate" for API remote state.'
-                )
+        def test_does_not_use_the_old_api_state_key(self) -> None:
+            wrong_key = re.search(
+                r'key\s*=\s*"api_common_routing/terraform\.tfstate"',
+                api_remote_state_content(),
+            )
+            assert wrong_key is None, (
+                f"{endpoint_name}/data.tf uses wrong state key path. "
+                'Use "api/terraform.tfstate" not "api_common_routing/..."'
+            )
+
+        def test_uses_the_api_state_key(self) -> None:
+            content = api_remote_state_content()
+            if not content:
+                return
+            correct_key = re.search(r'key\s*=\s*"api/terraform\.tfstate"', content)
+            assert correct_key is not None, (
+                f"{endpoint_name}/data.tf should use key = "
+                '"api/terraform.tfstate" for API remote state.'
+            )
 
     return TestRemoteStateConfig
 

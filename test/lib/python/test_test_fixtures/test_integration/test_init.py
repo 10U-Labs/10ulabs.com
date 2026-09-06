@@ -38,10 +38,11 @@ from test_fixtures.integration import (
     create_www_common_s3_existence_tests,
     handle_ecr_error,
     assert_api_gateway_exists,
-    check_iam_role_exists,
-    check_lambda_function_exists,
-    check_lambda_role_has_policy,
-    check_s3_head_bucket_permission,
+    aws_call_error,
+    iam_role_problem,
+    lambda_function_problem,
+    role_policy_problem,
+    s3_head_bucket_problem,
     check_service_can_assume_role,
     check_state_file_readable,
     get_aws_account_id_via_cli,
@@ -206,20 +207,24 @@ def test_assert_api_gateway_exists_import() -> None:
     assert callable(assert_api_gateway_exists)
 
 
-def test_check_iam_role_exists_import() -> None:
-    assert callable(check_iam_role_exists)
+def test_aws_call_error_import() -> None:
+    assert callable(aws_call_error)
 
 
-def test_check_lambda_function_exists_import() -> None:
-    assert callable(check_lambda_function_exists)
+def test_iam_role_problem_import() -> None:
+    assert callable(iam_role_problem)
 
 
-def test_check_lambda_role_has_policy_import() -> None:
-    assert callable(check_lambda_role_has_policy)
+def test_lambda_function_problem_import() -> None:
+    assert callable(lambda_function_problem)
 
 
-def test_check_s3_head_bucket_permission_import() -> None:
-    assert callable(check_s3_head_bucket_permission)
+def test_role_policy_problem_import() -> None:
+    assert callable(role_policy_problem)
+
+
+def test_s3_head_bucket_problem_import() -> None:
+    assert callable(s3_head_bucket_problem)
 
 
 def test_check_service_can_assume_role_import() -> None:

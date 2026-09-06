@@ -3,8 +3,8 @@ from typing import Any
 from botocore.exceptions import ClientError
 import pytest
 from test_fixtures.integration.helpers import (
-    check_s3_head_bucket_permission,
     NO_CREDENTIALS_MESSAGE,
+    s3_head_bucket_problem,
 )
 
 
@@ -45,7 +45,8 @@ def create_simple_layer1_authentication_tests() -> type:
 def create_layer2_s3_authorization_tests() -> type:
     class TestS3Authorization:
         def test_can_call_s3_head_bucket(self, s3_client: Any, state_bucket_name: str) -> None:
-            check_s3_head_bucket_permission(s3_client, state_bucket_name)
+            problem = s3_head_bucket_problem(s3_client, state_bucket_name)
+            assert not problem, problem
 
         def test_bucket_name_is_configured(self, state_bucket_name: str) -> None:
             assert state_bucket_name, "State bucket name is not configured"

@@ -69,16 +69,16 @@ def create_orphaned_resource_tests(
 
             print("=" * 60)
 
-            if orphaned:
-                msg = f"\n\n{'!'*60}\n"
-                msg += f"ORPHANED RESOURCES DETECTED ({len(orphaned)})\n"
-                msg += f"{'!'*60}\n\n"
-                msg += "The following resources exist in AWS but NOT in Terraform state.\n"
-                msg += "This will cause 'terraform apply' to fail or hang.\n\n"
-                msg += "FIX: Run these commands before applying:\n\n"
-                for resource_type, name, tf_address in orphaned:
-                    msg += f"    terraform import {tf_address} {name}\n"
-                msg += f"\n{'!'*60}"
-                pytest.fail(msg)
+            msg = f"\n\n{'!'*60}\n"
+            msg += f"ORPHANED RESOURCES DETECTED ({len(orphaned)})\n"
+            msg += f"{'!'*60}\n\n"
+            msg += "The following resources exist in AWS but NOT in Terraform state.\n"
+            msg += "This will cause 'terraform apply' to fail or hang.\n\n"
+            msg += "FIX: Run these commands before applying:\n\n"
+            for resource_type, name, tf_address in orphaned:
+                msg += f"    terraform import {tf_address} {name}\n"
+            msg += f"\n{'!'*60}"
+
+            assert not orphaned, msg
 
     return TestOrphanedResources

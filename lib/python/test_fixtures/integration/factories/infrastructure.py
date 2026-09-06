@@ -3,7 +3,11 @@ from typing import Any, Callable, Dict, Tuple
 from botocore.exceptions import ClientError
 import pytest
 from repo_utils import REPO_ROOT
-from test_fixtures.integration.helpers import check_iam_role_exists, check_lambda_role_has_policy
+from test_fixtures.integration.helpers import (
+    aws_call_error,
+    iam_role_problem,
+    role_policy_problem,
+)
 from test_fixtures.terraform import terraform_init, terraform_output
 
 
@@ -50,15 +54,11 @@ def create_www_common_s3_existence_tests() -> type:
             bucket_name = www_common_outputs.get("bucket_name")
             if not bucket_name:
                 pytest.skip("bucket_name output not available")
-            try:
-                s3_client.head_bucket(Bucket=bucket_name)
-            except ClientError as e:
-                if e.response["Error"]["Code"] == "404":
-                    pytest.fail(
-                        f"S3 bucket '{bucket_name}' does not exist. "
-                        "Run terraform apply in src/www/common/"
-                    )
-                raise
+            error = aws_call_error(lambda: s3_client.head_bucket(Bucket=bucket_name))
+            assert not error, (
+                f"S3 bucket '{bucket_name}' is not reachable: {error}. "
+                "Run terraform apply in src/www/common/"
+            )
 
     return TestWWWCommonS3Existence
 
@@ -211,7 +211,8 @@ def create_lambda_role_existence_test(
         request: pytest.FixtureRequest
     ) -> None:
         role_name = request.getfixturevalue(role_name_fixture)
-        check_iam_role_exists(iam_client, role_name, terraform_path)
+        problem = iam_role_problem(iam_client, role_name, terraform_path)
+        assert not problem, problem
     return test_lambda_execution_role_exists
 
 
@@ -222,5 +223,6 @@ def create_kms_policy_test(role_name_fixture: str) -> Callable[..., None]:
         request: pytest.FixtureRequest
     ) -> None:
         role_name = request.getfixturevalue(role_name_fixture)
-        check_lambda_role_has_policy(iam_client, role_name, "KMSDecrypt")
+        problem = role_policy_problem(iam_client, role_name, "KMSDecrypt")
+        assert not problem, problem
     return test_lambda_role_has_kms_policy

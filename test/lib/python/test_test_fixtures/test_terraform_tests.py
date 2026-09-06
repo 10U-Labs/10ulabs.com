@@ -242,9 +242,14 @@ def test_class_has_no_hardcoded_region_method(tmp_path: Path) -> None:
     assert hasattr(result, "test_no_hardcoded_region")
 
 
-def test_class_has_correct_state_key_method(tmp_path: Path) -> None:
+def test_class_has_old_state_key_method(tmp_path: Path) -> None:
     result = create_remote_state_config_tests(tmp_path, "test_endpoint")
-    assert hasattr(result, "test_uses_correct_state_key_pattern")
+    assert hasattr(result, "test_does_not_use_the_old_api_state_key")
+
+
+def test_class_has_api_state_key_method(tmp_path: Path) -> None:
+    result = create_remote_state_config_tests(tmp_path, "test_endpoint")
+    assert hasattr(result, "test_uses_the_api_state_key")
 
 
 def test_data_tf_exists_test_passes_when_file_exists(tmp_path: Path) -> None:
@@ -323,24 +328,43 @@ def test_no_hardcoded_region_fails_with_eu_region(tmp_path: Path) -> None:
         instance.test_no_hardcoded_region()
 
 
-def test_state_key_passes_without_remote_state(tmp_path: Path) -> None:
+def test_old_state_key_passes_without_remote_state(tmp_path: Path) -> None:
     data_file = tmp_path / "data.tf"
     data_file.write_text('# No remote state config')
     TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
     instance = TestClass()
-    assert accepted(instance.test_uses_correct_state_key_pattern)
+    assert accepted(instance.test_does_not_use_the_old_api_state_key)
 
 
-def test_state_key_passes_with_correct_api_key(tmp_path: Path) -> None:
+def test_api_state_key_passes_without_remote_state(tmp_path: Path) -> None:
     data_file = tmp_path / "data.tf"
-    data_file.write_text('''
+    data_file.write_text('# No remote state config')
+    TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
+    instance = TestClass()
+    assert accepted(instance.test_uses_the_api_state_key)
+
+
+CORRECT_API_KEY_TF = '''
 terraform_remote_state "api" {
   key = "api/terraform.tfstate"
 }
-''')
+'''
+
+
+def test_old_state_key_passes_with_correct_api_key(tmp_path: Path) -> None:
+    data_file = tmp_path / "data.tf"
+    data_file.write_text(CORRECT_API_KEY_TF)
     TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
     instance = TestClass()
-    assert accepted(instance.test_uses_correct_state_key_pattern)
+    assert accepted(instance.test_does_not_use_the_old_api_state_key)
+
+
+def test_api_state_key_passes_with_correct_api_key(tmp_path: Path) -> None:
+    data_file = tmp_path / "data.tf"
+    data_file.write_text(CORRECT_API_KEY_TF)
+    TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
+    instance = TestClass()
+    assert accepted(instance.test_uses_the_api_state_key)
 
 
 def test_state_key_fails_with_wrong_api_key(tmp_path: Path) -> None:
@@ -353,7 +377,7 @@ terraform_remote_state "api" {
     TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
     instance = TestClass()
     with pytest.raises(AssertionError):
-        instance.test_uses_correct_state_key_pattern()
+        instance.test_does_not_use_the_old_api_state_key()
 
 
 def test_state_key_fails_when_api_key_missing_but_api_remote_state_present(tmp_path: Path) -> None:
@@ -366,7 +390,7 @@ terraform_remote_state "api" {
     TestClass = create_remote_state_config_tests(tmp_path, "test_endpoint")
     instance = TestClass()
     with pytest.raises(AssertionError):
-        instance.test_uses_correct_state_key_pattern()
+        instance.test_uses_the_api_state_key()
 
 
 def test_extracts_remote_state_references_from_lambda_file(tmp_path: Path) -> None:

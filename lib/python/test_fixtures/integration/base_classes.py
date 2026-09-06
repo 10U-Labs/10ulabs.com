@@ -4,55 +4,42 @@ from typing import Any, Dict
 from botocore.exceptions import ClientError
 import pytest
 
+from test_fixtures.integration.helpers import aws_call_error
+
 
 class Layer2IAMAuthorizationTests:
     def test_can_call_iam_get_role_api(self, iam_client: Any, current_role_name: str) -> None:
         if not current_role_name:
             pytest.skip("Could not determine current role name")
-        try:
-            iam_client.get_role(RoleName=current_role_name)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail(
-                    f"No permission to call iam:GetRole on '{current_role_name}'. "
-                    "The role may lack iam:GetRole permission for itself."
-                )
-            if e.response["Error"]["Code"] == "NoSuchEntity":
-                pass
-            else:
-                raise
+        error = aws_call_error(
+            lambda: iam_client.get_role(RoleName=current_role_name), "NoSuchEntity"
+        )
+        assert not error, (
+            f"Cannot call iam:GetRole on '{current_role_name}': {error}. "
+            "The role may lack iam:GetRole permission for itself."
+        )
 
     def test_can_list_attached_policies(self, iam_client: Any, current_role_name: str) -> None:
         if not current_role_name:
             pytest.skip("Could not determine current role name")
-        try:
-            iam_client.list_attached_role_policies(RoleName=current_role_name)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail(
-                    f"No permission to call iam:ListAttachedRolePolicies "
-                    f"on '{current_role_name}'."
-                )
-            if e.response["Error"]["Code"] == "NoSuchEntity":
-                pass
-            else:
-                raise
+        error = aws_call_error(
+            lambda: iam_client.list_attached_role_policies(RoleName=current_role_name),
+            "NoSuchEntity",
+        )
+        assert not error, (
+            f"Cannot call iam:ListAttachedRolePolicies on '{current_role_name}': {error}."
+        )
 
 
 class Layer2S3AuthorizationTests:
     def test_can_call_s3_head_bucket_api(self, s3_client: Any, state_bucket_name: str) -> None:
-        try:
-            s3_client.head_bucket(Bucket=state_bucket_name)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "403":
-                pytest.fail(
-                    f"No permission to call HeadBucket on '{state_bucket_name}'. "
-                    "Check IAM permissions for s3:HeadBucket."
-                )
-            if e.response["Error"]["Code"] == "404":
-                pass
-            else:
-                raise
+        error = aws_call_error(
+            lambda: s3_client.head_bucket(Bucket=state_bucket_name), "404"
+        )
+        assert not error, (
+            f"Cannot call HeadBucket on '{state_bucket_name}': {error}. "
+            "Check IAM permissions for s3:HeadBucket."
+        )
 
     def test_state_bucket_name_configured(self, state_bucket_name: str) -> None:
         assert state_bucket_name, (
@@ -63,15 +50,11 @@ class Layer2S3AuthorizationTests:
 
 class Layer4TerraformStateExistenceTests:
     def test_state_bucket_exists(self, s3_client: Any, state_bucket_name: str) -> None:
-        try:
-            s3_client.head_bucket(Bucket=state_bucket_name)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "404":
-                pytest.fail(
-                    f"Terraform state bucket '{state_bucket_name}' does not exist. "
-                    "Run bootstrap to create the state bucket."
-                )
-            raise
+        error = aws_call_error(lambda: s3_client.head_bucket(Bucket=state_bucket_name))
+        assert not error, (
+            f"Terraform state bucket '{state_bucket_name}' is not reachable: {error}. "
+            "Run bootstrap to create the state bucket."
+        )
 
     def test_state_bucket_has_name(self, state_bucket_name: str) -> None:
         assert state_bucket_name, (
@@ -82,24 +65,22 @@ class Layer4TerraformStateExistenceTests:
 
 class Layer6S3CapabilityTests:
     def test_can_list_bucket_objects(self, s3_client: Any, state_bucket_name: str) -> None:
-        try:
-            s3_client.list_objects_v2(Bucket=state_bucket_name, MaxKeys=1)
-        except ClientError as e:
-            pytest.fail(
-                f"Cannot list objects in '{state_bucket_name}': "
-                f"{e.response['Error']['Message']}. "
-                "Check IAM permissions for s3:ListBucket."
-            )
+        error = aws_call_error(
+            lambda: s3_client.list_objects_v2(Bucket=state_bucket_name, MaxKeys=1)
+        )
+        assert not error, (
+            f"Cannot list objects in '{state_bucket_name}': {error}. "
+            "Check IAM permissions for s3:ListBucket."
+        )
 
     def test_can_get_bucket_location(self, s3_client: Any, state_bucket_name: str) -> None:
-        try:
-            s3_client.get_bucket_location(Bucket=state_bucket_name)
-        except ClientError as e:
-            pytest.fail(
-                f"Cannot get location of '{state_bucket_name}': "
-                f"{e.response['Error']['Message']}. "
-                "Check IAM permissions for s3:GetBucketLocation."
-            )
+        error = aws_call_error(
+            lambda: s3_client.get_bucket_location(Bucket=state_bucket_name)
+        )
+        assert not error, (
+            f"Cannot get location of '{state_bucket_name}': {error}. "
+            "Check IAM permissions for s3:GetBucketLocation."
+        )
 
 
 class Layer4IAMRoleExistenceTests:
@@ -163,71 +144,52 @@ class Layer5IAMConfigurationTests:
 
 class Layer6IAMCapabilityTests:
     def test_can_list_buckets(self, s3_client: Any) -> None:
-        try:
-            s3_client.list_buckets()
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail(
-                    "No permission to call s3:ListBuckets. "
-                    "The role may lack S3 permissions required for terraform state."
-                )
-            raise
+        error = aws_call_error(s3_client.list_buckets)
+        assert not error, (
+            f"Cannot call s3:ListBuckets: {error}. "
+            "The role may lack S3 permissions required for terraform state."
+        )
 
     def test_can_list_roles(self, iam_client: Any) -> None:
-        try:
-            iam_client.list_roles(MaxItems=1)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail(
-                    "No permission to call iam:ListRoles. "
-                    "The role may lack IAM permissions required for deployment."
-                )
-            raise
+        error = aws_call_error(lambda: iam_client.list_roles(MaxItems=1))
+        assert not error, (
+            f"Cannot call iam:ListRoles: {error}. "
+            "The role may lack IAM permissions required for deployment."
+        )
 
 
 class Layer6S3WriteCapabilityTests:
     def test_can_write_to_bucket(self, s3_client: Any, state_bucket_name: str) -> None:
         test_key = f".pre-deployment-test/{uuid.uuid4()}"
-        try:
-            s3_client.put_object(
+        error = aws_call_error(
+            lambda: s3_client.put_object(
                 Bucket=state_bucket_name,
                 Key=test_key,
                 Body=b"pre-deployment-test"
             )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail(
-                    f"No permission to write to '{state_bucket_name}'. "
-                    "Check IAM permissions for s3:PutObject."
-                )
-            raise
-        finally:
-            try:
-                s3_client.delete_object(Bucket=state_bucket_name, Key=test_key)
-            except ClientError:
-                pass
+        )
+        aws_call_error(
+            lambda: s3_client.delete_object(Bucket=state_bucket_name, Key=test_key)
+        )
+        assert not error, (
+            f"Cannot write to '{state_bucket_name}': {error}. "
+            "Check IAM permissions for s3:PutObject."
+        )
 
     def test_can_delete_from_bucket(self, s3_client: Any, state_bucket_name: str) -> None:
         test_key = f".pre-deployment-test/{uuid.uuid4()}"
-        try:
-            s3_client.put_object(
-                Bucket=state_bucket_name,
-                Key=test_key,
-                Body=b"pre-deployment-test"
-            )
-            s3_client.delete_object(Bucket=state_bucket_name, Key=test_key)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail(
-                    f"No permission to delete from '{state_bucket_name}'. "
-                    "Check IAM permissions for s3:DeleteObject."
-                )
-            raise
-        finally:
-            try:
-                s3_client.delete_object(Bucket=state_bucket_name, Key=test_key)
-            except ClientError:
-                pass
+        s3_client.put_object(
+            Bucket=state_bucket_name,
+            Key=test_key,
+            Body=b"pre-deployment-test"
+        )
+        error = aws_call_error(
+            lambda: s3_client.delete_object(Bucket=state_bucket_name, Key=test_key)
+        )
+        assert not error, (
+            f"Cannot delete from '{state_bucket_name}': {error}. "
+            "Check IAM permissions for s3:DeleteObject."
+        )
 
 
 class Layer1EndpointAuthenticationTests:
@@ -256,12 +218,8 @@ class Layer1EndpointAuthenticationTests:
 
 class Layer2APIGatewayAuthorizationTests:
     def test_can_describe_rest_apis(self, apigateway_client: Any) -> None:
-        try:
-            apigateway_client.get_rest_apis(limit=1)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                pytest.fail("No permission to describe API Gateway REST APIs")
-            raise
+        error = aws_call_error(lambda: apigateway_client.get_rest_apis(limit=1))
+        assert not error, f"Cannot describe API Gateway REST APIs: {error}"
 
     def test_can_access_specific_rest_api(self, api_gateway_info: Dict[str, Any]) -> None:
         if api_gateway_info["id"] is None:
@@ -273,20 +231,12 @@ class Layer2APIGatewayAuthorizationTests:
 
 class Layer2LambdaAndIAMAuthorizationTests:
     def test_can_list_functions(self, lambda_client: Any) -> None:
-        try:
-            lambda_client.list_functions(MaxItems=1)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                pytest.fail("No permission to list Lambda functions")
-            raise
+        error = aws_call_error(lambda: lambda_client.list_functions(MaxItems=1))
+        assert not error, f"Cannot list Lambda functions: {error}"
 
     def test_can_list_roles(self, iam_client: Any) -> None:
-        try:
-            iam_client.list_roles(MaxItems=1)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail("No permission to list IAM roles")
-            raise
+        error = aws_call_error(lambda: iam_client.list_roles(MaxItems=1))
+        assert not error, f"Cannot list IAM roles: {error}"
 
 
 class Layer4APIBackendPrerequisiteTests:
@@ -335,42 +285,33 @@ class Layer5APIGatewayRegionalTests:
 
 class Layer6DeploymentCapabilityTests:
     def test_can_get_lambda_function_configuration(self, lambda_client: Any) -> None:
-        try:
-            response = lambda_client.list_functions(MaxItems=1)
-            functions = response.get("Functions", [])
-            if functions:
-                lambda_client.get_function_configuration(
-                    FunctionName=functions[0]["FunctionName"]
-                )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                pytest.fail(
-                    "Cannot get Lambda function configuration - required for deployment"
-                )
-            raise
+        functions = lambda_client.list_functions(MaxItems=1).get("Functions", [])
+        if not functions:
+            pytest.skip("No Lambda function to describe")
+        error = aws_call_error(
+            lambda: lambda_client.get_function_configuration(
+                FunctionName=functions[0]["FunctionName"]
+            )
+        )
+        assert not error, (
+            f"Cannot get Lambda function configuration: {error} "
+            "- required for deployment"
+        )
 
     def test_can_create_log_group_dry_run(self, logs_client: Any) -> None:
-        try:
-            logs_client.describe_log_groups(limit=1)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDeniedException":
-                pytest.fail(
-                    "Cannot access CloudWatch Logs - required for deployment"
-                )
-            raise
+        error = aws_call_error(lambda: logs_client.describe_log_groups(limit=1))
+        assert not error, (
+            f"Cannot access CloudWatch Logs: {error} - required for deployment"
+        )
 
     def test_can_get_iam_role_details(self, iam_client: Any) -> None:
-        try:
-            response = iam_client.list_roles(MaxItems=1)
-            roles = response.get("Roles", [])
-            if roles:
-                iam_client.get_role(RoleName=roles[0]["RoleName"])
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.fail(
-                    "Cannot get IAM role details - required for deployment"
-                )
-            raise
+        roles = iam_client.list_roles(MaxItems=1).get("Roles", [])
+        if not roles:
+            pytest.skip("No IAM role to describe")
+        error = aws_call_error(lambda: iam_client.get_role(RoleName=roles[0]["RoleName"]))
+        assert not error, (
+            f"Cannot get IAM role details: {error} - required for deployment"
+        )
 
 
 Layer2EndpointAuthenticationTests = Layer1EndpointAuthenticationTests

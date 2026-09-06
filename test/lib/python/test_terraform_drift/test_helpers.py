@@ -164,7 +164,7 @@ def test_fails_when_orphaned_resource_detected(
     TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
     instance = TestClass()
 
-    with pytest.raises(pytest.fail.Exception):
+    with pytest.raises(AssertionError):
         instance.test_no_orphaned_resources()
 
 
@@ -190,7 +190,7 @@ def test_failure_message_includes_orphaned_count(
     TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
     instance = TestClass()
 
-    with pytest.raises(pytest.fail.Exception, match=r"ORPHANED RESOURCES DETECTED \(2\)"):
+    with pytest.raises(AssertionError, match=r"ORPHANED RESOURCES DETECTED \(2\)"):
         instance.test_no_orphaned_resources()
 
 
@@ -205,7 +205,7 @@ def test_failure_message_includes_import_commands(
     instance = TestClass()
 
     with pytest.raises(
-        pytest.fail.Exception,
+        AssertionError,
         match="terraform import aws_lambda_function.my_func MyFunction",
     ):
         instance.test_no_orphaned_resources()
@@ -233,7 +233,7 @@ def test_only_fails_for_resources_that_exist(
     TestClass = create_orphaned_resource_tests(Path("/tmp/terraform"))
     instance = TestClass()
 
-    with pytest.raises(pytest.fail.Exception, match=r"ORPHANED RESOURCES DETECTED \(1\)"):
+    with pytest.raises(AssertionError, match=r"ORPHANED RESOURCES DETECTED \(1\)"):
         instance.test_no_orphaned_resources()
 
 

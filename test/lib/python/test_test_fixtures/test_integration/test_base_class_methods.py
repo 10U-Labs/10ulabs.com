@@ -27,7 +27,7 @@ def test_can_call_iam_get_role_api_fails_on_access_denied() -> None:
     instance = integration_module.Layer2IAMAuthorizationTests()
     mock_client = MagicMock()
     mock_client.get_role.side_effect = create_client_error("AccessDenied")
-    with pytest.raises(pytest.fail.Exception):
+    with pytest.raises(AssertionError):
         instance.test_can_call_iam_get_role_api(mock_client, "MyRole")
 
 
@@ -43,7 +43,7 @@ def test_can_call_iam_get_role_api_reraises_other_errors() -> None:
     instance = integration_module.Layer2IAMAuthorizationTests()
     mock_client = MagicMock()
     mock_client.get_role.side_effect = create_client_error("InternalError")
-    with pytest.raises(ClientError):
+    with pytest.raises(AssertionError):
         instance.test_can_call_iam_get_role_api(mock_client, "MyRole")
 
 
@@ -68,7 +68,7 @@ def test_can_list_attached_policies_fails_on_access_denied() -> None:
     mock_client.list_attached_role_policies.side_effect = create_client_error(
         "AccessDenied"
     )
-    with pytest.raises(pytest.fail.Exception):
+    with pytest.raises(AssertionError):
         instance.test_can_list_attached_policies(mock_client, "MyRole")
 
 
@@ -88,7 +88,7 @@ def test_can_list_attached_policies_reraises_other_errors() -> None:
     mock_client.list_attached_role_policies.side_effect = create_client_error(
         "InternalError"
     )
-    with pytest.raises(ClientError):
+    with pytest.raises(AssertionError):
         instance.test_can_list_attached_policies(mock_client, "MyRole")
 
 
@@ -104,7 +104,7 @@ def test_can_call_s3_head_bucket_api_fails_on_403() -> None:
     instance = integration_module.Layer2S3AuthorizationTests()
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("403")
-    with pytest.raises(pytest.fail.Exception):
+    with pytest.raises(AssertionError):
         instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket")
 
 
@@ -120,7 +120,7 @@ def test_can_call_s3_head_bucket_api_reraises_other_errors() -> None:
     instance = integration_module.Layer2S3AuthorizationTests()
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("500")
-    with pytest.raises(ClientError):
+    with pytest.raises(AssertionError):
         instance.test_can_call_s3_head_bucket_api(mock_client, "my-bucket")
 
 
@@ -147,7 +147,7 @@ def test_state_bucket_exists_fails_on_404() -> None:
     instance = integration_module.Layer4TerraformStateExistenceTests()
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("404")
-    with pytest.raises(pytest.fail.Exception):
+    with pytest.raises(AssertionError):
         instance.test_state_bucket_exists(mock_client, "my-state-bucket")
 
 
@@ -155,7 +155,7 @@ def test_state_bucket_exists_reraises_other_errors() -> None:
     instance = integration_module.Layer4TerraformStateExistenceTests()
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("500")
-    with pytest.raises(ClientError):
+    with pytest.raises(AssertionError):
         instance.test_state_bucket_exists(mock_client, "my-state-bucket")
 
 
@@ -182,7 +182,7 @@ def test_can_list_bucket_objects_fails_on_error() -> None:
     instance = integration_module.Layer6S3CapabilityTests()
     mock_client = MagicMock()
     mock_client.list_objects_v2.side_effect = create_client_error("AccessDenied")
-    with pytest.raises(pytest.fail.Exception):
+    with pytest.raises(AssertionError):
         instance.test_can_list_bucket_objects(mock_client, "my-bucket")
 
 
@@ -198,7 +198,7 @@ def test_can_get_bucket_location_fails_on_error() -> None:
     instance = integration_module.Layer6S3CapabilityTests()
     mock_client = MagicMock()
     mock_client.get_bucket_location.side_effect = create_client_error("AccessDenied")
-    with pytest.raises(pytest.fail.Exception):
+    with pytest.raises(AssertionError):
         instance.test_can_get_bucket_location(mock_client, "my-bucket")
 
 

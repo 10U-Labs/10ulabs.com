@@ -743,5 +743,5 @@ class TestCreateDeployedResourceExistenceTestsExecution:
             "Function not found"
         )
         config = {"func_key": "MyFunction"}
-        with pytest.raises(pytest.fail.Exception):
+        with pytest.raises(AssertionError):
             existence_tests.test_handler_function_exists(mock_client, config)

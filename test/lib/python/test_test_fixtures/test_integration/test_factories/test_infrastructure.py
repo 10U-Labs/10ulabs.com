@@ -358,7 +358,7 @@ def test_s3_bucket_exists_fails_on_404() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("404")
     outputs = {"bucket_name": "my-bucket"}
-    with pytest.raises(pytest.fail.Exception):
+    with pytest.raises(AssertionError):
         instance.test_s3_bucket_exists(mock_client, outputs)
 
 
@@ -368,7 +368,7 @@ def test_s3_bucket_exists_reraises_other_errors() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("500")
     outputs = {"bucket_name": "my-bucket"}
-    with pytest.raises(ClientError):
+    with pytest.raises(AssertionError):
         instance.test_s3_bucket_exists(mock_client, outputs)
 
 
@@ -608,7 +608,7 @@ def test_lambda_execution_role_exists_fails_when_role_missing() -> None:
     mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
     mock_request = MagicMock()
     mock_request.getfixturevalue.return_value = "my-role"
-    with pytest.raises(pytest.fail.Exception):
+    with pytest.raises(AssertionError):
         test_func(None, mock_client, mock_request)
 
 

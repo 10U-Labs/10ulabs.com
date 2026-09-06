@@ -15,7 +15,7 @@ def _extract_block_content(content: str, start_pos: int) -> str:
     return content[start_pos:]
 
 
-def _check_lambda_lifecycle_rules(lambda_tf_path: Path) -> None:
+def _lambda_lifecycle_problem(lambda_tf_path: Path) -> str:
     with open(lambda_tf_path, encoding="utf-8") as f:
         content = f.read()
 
@@ -26,11 +26,11 @@ def _check_lambda_lifecycle_rules(lambda_tf_path: Path) -> None:
         block_content = _extract_block_content(content, block_start)
 
         has_env_vars = re.search(r"environment\s*\{", block_content)
-        if has_env_vars:
-            has_lifecycle = "lifecycle" in block_content
-            has_replace_triggered_by = "replace_triggered_by" in block_content
+        has_lifecycle = "lifecycle" in block_content
+        has_replace_triggered_by = "replace_triggered_by" in block_content
 
-            assert has_lifecycle and has_replace_triggered_by, (
+        if has_env_vars and not (has_lifecycle and has_replace_triggered_by):
+            return (
                 f"Lambda function '{resource_name}' has environment variables but "
                 "is missing a lifecycle rule with replace_triggered_by. "
                 "When IAM roles are recreated, KMS grants become stale because "
@@ -39,6 +39,8 @@ def _check_lambda_lifecycle_rules(lambda_tf_path: Path) -> None:
                 "    replace_triggered_by = [aws_iam_role.<role_name>.id]\n"
                 "  }"
             )
+
+    return ""
 
 
 def create_lambda_lifecycle_tests(
@@ -51,9 +53,13 @@ def create_lambda_lifecycle_tests(
 
     class TestLambdaLifecycle:
         def test_lambda_with_env_vars_has_lifecycle_rule(self) -> None:
-            for tf_path in tf_paths:
-                if tf_path.exists():
-                    _check_lambda_lifecycle_rules(tf_path)
+            problems = [
+                _lambda_lifecycle_problem(tf_path)
+                for tf_path in tf_paths
+                if tf_path.exists()
+            ]
+            problem = next((p for p in problems if p), "")
+            assert not problem, problem
 
         def test_terraform_files_configured(self) -> None:
             assert len(tf_paths) > 0, "No terraform files configured for testing"

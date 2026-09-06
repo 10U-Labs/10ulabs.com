@@ -3,8 +3,9 @@ from typing import Any, Dict
 from botocore.exceptions import ClientError
 import pytest
 from test_fixtures.integration.helpers import (
-    check_iam_role_exists,
-    check_lambda_function_exists,
+    aws_call_error,
+    iam_role_problem,
+    lambda_function_problem,
     check_service_can_assume_role,
 )
 
@@ -170,7 +171,8 @@ def create_lambda_execution_role_wiring_tests(fixture_name: str = "lambda_functi
             if not role_name:
                 pytest.fail("Could not extract role name from Lambda configuration")
 
-            check_iam_role_exists(iam_client, role_name, "the Lambda's deployment")
+            problem = iam_role_problem(iam_client, role_name, "the Lambda's deployment")
+            assert not problem, problem
 
         def test_lambda_role_can_be_assumed_by_lambda(
             self,
@@ -208,7 +210,10 @@ def create_lambda_existence_tests(
     class TestDeployedResourcesExist:
         def test_handler_lambda_exists(self, lambda_client: Any, config: Dict[str, str]) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
-            check_lambda_function_exists(lambda_client, function_name, terraform_path)
+            problem = lambda_function_problem(
+                lambda_client, function_name, terraform_path
+            )
+            assert not problem, problem
 
         def test_handler_iam_role_exists(self, iam_client: Any, config: Dict[str, str]) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
@@ -295,17 +300,17 @@ def create_deployed_resource_existence_tests(
         def test_handler_role_exists(self, iam_client: Any, config: Dict[str, str]) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
             role_name = f"{function_name}ServiceRole"
-            try:
-                iam_client.get_role(RoleName=role_name)
-            except iam_client.exceptions.NoSuchEntityException:
-                pytest.fail(f"IAM role '{role_name}' does not exist")
+            error = aws_call_error(lambda: iam_client.get_role(RoleName=role_name))
+            assert not error, f"IAM role '{role_name}' is not reachable: {error}"
 
         def test_handler_function_exists(self, lambda_client: Any, config: Dict[str, str]) -> None:
             function_name = config.get(function_name_config_key, default_function_name)
-            try:
-                lambda_client.get_function(FunctionName=function_name)
-            except lambda_client.exceptions.ResourceNotFoundException:
-                pytest.fail(f"Lambda function '{function_name}' does not exist")
+            error = aws_call_error(
+                lambda: lambda_client.get_function(FunctionName=function_name)
+            )
+            assert not error, (
+                f"Lambda function '{function_name}' is not reachable: {error}"
+            )
 
     TestDeployedHandlerResourcesExist.test_handler_role_exists.__doc__ = (
         f"Verify {handler_display_name} IAM role exists."

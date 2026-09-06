@@ -1,5 +1,5 @@
 import subprocess
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 import pytest
 from botocore.exceptions import ClientError
@@ -12,48 +12,61 @@ NO_CREDENTIALS_MESSAGE = (
 )
 
 
-def check_lambda_function_exists(
+def aws_call_error(call: Callable[[], Any], *tolerated_codes: str) -> str:
+    try:
+        call()
+    except ClientError as e:
+        code = e.response["Error"]["Code"]
+        if code in tolerated_codes:
+            return ""
+        return f"{code}: {e.response['Error']['Message']}"
+    return ""
+
+
+def lambda_function_problem(
     lambda_client: Any,
     function_name: str,
     terraform_path: str
-) -> None:
+) -> str:
     try:
-        response = lambda_client.get_function(FunctionName=function_name)
-        assert response["Configuration"]["FunctionName"] == function_name
+        lambda_client.get_function(FunctionName=function_name)
     except ClientError as e:
         if e.response["Error"]["Code"] == "ResourceNotFoundException":
-            pytest.fail(
+            return (
                 f"Lambda function '{function_name}' does not exist. "
                 f"Run terraform apply in {terraform_path}"
             )
         raise
+    return ""
 
 
-def check_iam_role_exists(iam_client: Any, role_name: str, terraform_path: str) -> None:
+def iam_role_problem(iam_client: Any, role_name: str, terraform_path: str) -> str:
     try:
-        response = iam_client.get_role(RoleName=role_name)
-        assert response.get("Role") is not None
+        iam_client.get_role(RoleName=role_name)
     except ClientError as e:
         if e.response["Error"]["Code"] == "NoSuchEntity":
-            pytest.fail(
+            return (
                 f"Lambda execution role '{role_name}' does not exist. "
                 f"Run terraform apply in {terraform_path}"
             )
         raise
+    return ""
 
 
-def check_lambda_role_has_policy(iam_client: Any, role_name: str, policy_name: str) -> None:
+def role_policy_problem(iam_client: Any, role_name: str, policy_name: str) -> str:
     try:
         response = iam_client.list_role_policies(RoleName=role_name)
-        policy_names = response.get("PolicyNames", [])
-        assert policy_name in policy_names, (
-            f"Lambda role '{role_name}' missing {policy_name} inline policy. "
-            f"Found policies: {policy_names}"
-        )
     except ClientError as e:
         if e.response["Error"]["Code"] == "NoSuchEntity":
             pytest.skip(f"Lambda role '{role_name}' does not exist")
         raise
+    policy_names = response.get("PolicyNames", [])
+    if policy_name in policy_names:
+        return ""
+    return (
+        f"Lambda role '{role_name}' missing {policy_name} inline policy. "
+        f"Found policies: {policy_names}"
+    )
 
 
 def check_service_can_assume_role(trust_policy: Dict[str, Any], service_name: str) -> bool:
@@ -97,15 +110,16 @@ def handle_ecr_authorization_error(
         raise error
 
 
-def check_s3_head_bucket_permission(s3_client: Any, bucket_name: str) -> None:
+def s3_head_bucket_problem(s3_client: Any, bucket_name: str) -> str:
     try:
         s3_client.head_bucket(Bucket=bucket_name)
     except ClientError as e:
         error_code = e.response["Error"]["Code"]
         if error_code in ("403", "AccessDenied"):
-            pytest.fail(f"No permission to call s3:HeadBucket on '{bucket_name}'")
+            return f"No permission to call s3:HeadBucket on '{bucket_name}'"
         if error_code != "404":
             raise
+    return ""
 
 
 def skip_if_api_gateway_unavailable(api_gateway_info: Dict[str, Any]) -> None:

@@ -1,7 +1,6 @@
 from typing import Any
 
-from botocore.exceptions import ClientError
-import pytest
+from test_fixtures.integration.helpers import aws_call_error
 
 
 def create_layer6_capability_tests(capabilities: frozenset | None = None) -> type:
@@ -19,12 +18,10 @@ def create_layer6_capability_tests(capabilities: frozenset | None = None) -> typ
     if 'lambda' in enabled:
 
         def test_can_list_lambda_functions(_self: Any, lambda_client: Any) -> None:
-            try:
-                lambda_client.list_functions(MaxItems=1)
-            except ClientError as e:
-                pytest.fail(
-                    f"Cannot list Lambda functions, deployment will fail: {e}"
-                )
+            error = aws_call_error(lambda: lambda_client.list_functions(MaxItems=1))
+            assert not error, (
+                f"Cannot list Lambda functions, deployment will fail: {error}"
+            )
 
         setattr(
             TestDeploymentCapabilities,
@@ -35,12 +32,10 @@ def create_layer6_capability_tests(capabilities: frozenset | None = None) -> typ
     if 'iam' in enabled:
 
         def test_can_list_iam_roles(_self: Any, iam_client: Any) -> None:
-            try:
-                iam_client.list_roles(MaxItems=1)
-            except ClientError as e:
-                pytest.fail(
-                    f"Cannot list IAM roles, deployment will fail: {e}"
-                )
+            error = aws_call_error(lambda: iam_client.list_roles(MaxItems=1))
+            assert not error, (
+                f"Cannot list IAM roles, deployment will fail: {error}"
+            )
 
         setattr(
             TestDeploymentCapabilities,
@@ -51,12 +46,10 @@ def create_layer6_capability_tests(capabilities: frozenset | None = None) -> typ
     if 'ssm' in enabled:
 
         def test_can_describe_ssm_parameters(_self: Any, ssm_client: Any) -> None:
-            try:
-                ssm_client.describe_parameters(MaxResults=1)
-            except ClientError as e:
-                pytest.fail(
-                    f"Cannot describe SSM parameters, deployment will fail: {e}"
-                )
+            error = aws_call_error(lambda: ssm_client.describe_parameters(MaxResults=1))
+            assert not error, (
+                f"Cannot describe SSM parameters, deployment will fail: {error}"
+            )
 
         setattr(
             TestDeploymentCapabilities,
@@ -67,12 +60,10 @@ def create_layer6_capability_tests(capabilities: frozenset | None = None) -> typ
     if 'dynamodb' in enabled:
 
         def test_can_list_dynamodb_tables(_self: Any, dynamodb_client: Any) -> None:
-            try:
-                dynamodb_client.list_tables(Limit=1)
-            except ClientError as e:
-                pytest.fail(
-                    f"Cannot list DynamoDB tables, deployment will fail: {e}"
-                )
+            error = aws_call_error(lambda: dynamodb_client.list_tables(Limit=1))
+            assert not error, (
+                f"Cannot list DynamoDB tables, deployment will fail: {error}"
+            )
 
         setattr(
             TestDeploymentCapabilities,
@@ -83,12 +74,10 @@ def create_layer6_capability_tests(capabilities: frozenset | None = None) -> typ
     if 'logs' in enabled:
 
         def test_can_list_log_groups(_self: Any, logs_client: Any) -> None:
-            try:
-                logs_client.describe_log_groups(limit=1)
-            except ClientError as e:
-                pytest.fail(
-                    f"Cannot list CloudWatch log groups, deployment will fail: {e}"
-                )
+            error = aws_call_error(lambda: logs_client.describe_log_groups(limit=1))
+            assert not error, (
+                f"Cannot list CloudWatch log groups, deployment will fail: {error}"
+            )
 
         setattr(
             TestDeploymentCapabilities,
@@ -99,12 +88,10 @@ def create_layer6_capability_tests(capabilities: frozenset | None = None) -> typ
     if 's3' in enabled:
 
         def test_can_list_s3_buckets(_self: Any, s3_client: Any) -> None:
-            try:
-                s3_client.list_buckets()
-            except ClientError as e:
-                pytest.fail(
-                    f"Cannot list S3 buckets, deployment will fail: {e}"
-                )
+            error = aws_call_error(s3_client.list_buckets)
+            assert not error, (
+                f"Cannot list S3 buckets, deployment will fail: {error}"
+            )
 
         setattr(
             TestDeploymentCapabilities,

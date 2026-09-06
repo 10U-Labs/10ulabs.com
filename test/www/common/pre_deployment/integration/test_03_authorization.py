@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 from botocore.exceptions import ClientError
-from test_fixtures.integration.helpers import check_s3_head_bucket_permission
+from test_fixtures.integration.helpers import s3_head_bucket_problem
 
 
 def test_can_call_iam_get_role(iam_client: Any, github_actions_role_name: str) -> None:
@@ -31,8 +31,8 @@ def test_can_call_iam_list_attached_role_policies(
 
 
 def test_can_call_s3_head_bucket(s3_client: Any, state_bucket_name: str) -> None:
-    check_s3_head_bucket_permission(s3_client, state_bucket_name)
-    assert True
+    problem = s3_head_bucket_problem(s3_client, state_bucket_name)
+    assert not problem, problem
 
 
 def test_can_call_route53_get_hosted_zone(route53_client: Any, hosted_zone_id: str) -> None:

@@ -8,26 +8,26 @@ from boto_mocks import create_client_error
 from test_fixtures.integration.helpers import (
     NO_CREDENTIALS_MESSAGE,
     assert_api_gateway_exists,
-    check_iam_role_exists,
-    check_lambda_function_exists,
-    check_lambda_role_has_policy,
-    check_s3_head_bucket_permission,
+    aws_call_error,
     check_service_can_assume_role,
     check_state_file_readable,
     get_aws_account_id_via_cli,
     handle_ecr_authorization_error,
+    iam_role_problem,
+    lambda_function_problem,
+    role_policy_problem,
+    s3_head_bucket_problem,
     skip_if_api_gateway_unavailable,
 )
 from test_fixtures.outcomes import accepted
 
 
-def test_does_not_raise_when_function_exists() -> None:
+def test_no_problem_when_function_exists() -> None:
     mock_client = MagicMock()
     mock_client.get_function.return_value = {
         "Configuration": {"FunctionName": "MyFunction"}
     }
-    check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
-    assert mock_client.get_function.called
+    assert lambda_function_problem(mock_client, "MyFunction", "terraform/path") == ""
 
 
 def test_calls_get_function_with_function_name() -> None:
@@ -35,121 +35,118 @@ def test_calls_get_function_with_function_name() -> None:
     mock_client.get_function.return_value = {
         "Configuration": {"FunctionName": "MyFunction"}
     }
-    check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
+    lambda_function_problem(mock_client, "MyFunction", "terraform/path")
     assert mock_client.get_function.call_args[1]["FunctionName"] == "MyFunction"
 
 
-def test_fails_with_resource_not_found_error() -> None:
+def test_reports_resource_not_found_error() -> None:
     mock_client = MagicMock()
     mock_client.get_function.side_effect = create_client_error(
         "ResourceNotFoundException"
     )
-    with pytest.raises(pytest.fail.Exception):
-        check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
+    assert lambda_function_problem(mock_client, "MyFunction", "terraform/path")
 
 
-def test_error_message_contains_function_name() -> None:
+def test_problem_contains_function_name() -> None:
     mock_client = MagicMock()
     mock_client.get_function.side_effect = create_client_error(
         "ResourceNotFoundException"
     )
-    with pytest.raises(pytest.fail.Exception, match="MyFunction"):
-        check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
+    assert "MyFunction" in lambda_function_problem(
+        mock_client, "MyFunction", "terraform/path"
+    )
 
 
-def test_check_lambda_function_exists_error_message_contains_terraform_path() -> None:
+def test_lambda_function_problem_contains_terraform_path() -> None:
     mock_client = MagicMock()
     mock_client.get_function.side_effect = create_client_error(
         "ResourceNotFoundException"
     )
-    with pytest.raises(pytest.fail.Exception, match="custom/path"):
-        check_lambda_function_exists(mock_client, "MyFunction", "custom/path")
+    assert "custom/path" in lambda_function_problem(
+        mock_client, "MyFunction", "custom/path"
+    )
 
 
-def test_check_lambda_function_exists_other_errors() -> None:
+def test_lambda_function_problem_other_errors() -> None:
     mock_client = MagicMock()
     mock_client.get_function.side_effect = create_client_error("AccessDenied")
     with pytest.raises(ClientError, match="AccessDenied"):
-        check_lambda_function_exists(mock_client, "MyFunction", "terraform/path")
+        lambda_function_problem(mock_client, "MyFunction", "terraform/path")
 
 
-def test_does_not_raise_when_role_exists() -> None:
+def test_no_problem_when_role_exists() -> None:
     mock_client = MagicMock()
     mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
-    check_iam_role_exists(mock_client, "MyRole", "terraform/path")
-    assert mock_client.get_role.called
+    assert iam_role_problem(mock_client, "MyRole", "terraform/path") == ""
 
 
 def test_calls_get_role_with_role_name() -> None:
     mock_client = MagicMock()
     mock_client.get_role.return_value = {"Role": {"RoleName": "MyRole"}}
-    check_iam_role_exists(mock_client, "MyRole", "terraform/path")
+    iam_role_problem(mock_client, "MyRole", "terraform/path")
     assert mock_client.get_role.call_args[1]["RoleName"] == "MyRole"
 
 
-def test_fails_with_no_such_entity_error() -> None:
+def test_reports_no_such_entity_error() -> None:
     mock_client = MagicMock()
     mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
-    with pytest.raises(pytest.fail.Exception):
-        check_iam_role_exists(mock_client, "MyRole", "terraform/path")
+    assert iam_role_problem(mock_client, "MyRole", "terraform/path")
 
 
-def test_error_message_contains_role_name() -> None:
+def test_problem_contains_role_name() -> None:
     mock_client = MagicMock()
     mock_client.get_role.side_effect = create_client_error("NoSuchEntity")
-    with pytest.raises(pytest.fail.Exception, match="MyRole"):
-        check_iam_role_exists(mock_client, "MyRole", "terraform/path")
+    assert "MyRole" in iam_role_problem(mock_client, "MyRole", "terraform/path")
 
 
-def test_check_iam_role_exists_other_errors() -> None:
+def test_iam_role_problem_other_errors() -> None:
     mock_client = MagicMock()
     mock_client.get_role.side_effect = create_client_error("AccessDenied")
     with pytest.raises(ClientError, match="AccessDenied"):
-        check_iam_role_exists(mock_client, "MyRole", "terraform/path")
+        iam_role_problem(mock_client, "MyRole", "terraform/path")
 
 
-def test_does_not_raise_when_policy_exists() -> None:
+def test_no_problem_when_policy_exists() -> None:
     mock_client = MagicMock()
     mock_client.list_role_policies.return_value = {
         "PolicyNames": ["MyPolicy", "OtherPolicy"]
     }
-    check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
-    assert mock_client.list_role_policies.called
+    assert role_policy_problem(mock_client, "MyRole", "MyPolicy") == ""
 
 
 def test_calls_list_role_policies_with_role_name() -> None:
     mock_client = MagicMock()
     mock_client.list_role_policies.return_value = {"PolicyNames": ["MyPolicy"]}
-    check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
+    role_policy_problem(mock_client, "MyRole", "MyPolicy")
     assert mock_client.list_role_policies.call_args[1]["RoleName"] == "MyRole"
 
 
-def test_raises_assertion_error_when_policy_missing() -> None:
+def test_reports_when_policy_missing() -> None:
     mock_client = MagicMock()
     mock_client.list_role_policies.return_value = {"PolicyNames": ["OtherPolicy"]}
-    with pytest.raises(AssertionError):
-        check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
+    assert role_policy_problem(mock_client, "MyRole", "MyPolicy")
 
 
-def test_error_message_contains_policy_name() -> None:
+def test_problem_contains_policy_name() -> None:
     mock_client = MagicMock()
     mock_client.list_role_policies.return_value = {"PolicyNames": []}
-    with pytest.raises(AssertionError, match="MissingPolicy"):
-        check_lambda_role_has_policy(mock_client, "MyRole", "MissingPolicy")
+    assert "MissingPolicy" in role_policy_problem(
+        mock_client, "MyRole", "MissingPolicy"
+    )
 
 
-def test_check_lambda_role_has_policy_role_not_found() -> None:
+def test_role_policy_problem_role_not_found() -> None:
     mock_client = MagicMock()
     mock_client.list_role_policies.side_effect = create_client_error("NoSuchEntity")
     with pytest.raises(pytest.skip.Exception):
-        check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
+        role_policy_problem(mock_client, "MyRole", "MyPolicy")
 
 
-def test_check_lambda_role_has_policy_other_errors() -> None:
+def test_role_policy_problem_other_errors() -> None:
     mock_client = MagicMock()
     mock_client.list_role_policies.side_effect = create_client_error("AccessDenied")
     with pytest.raises(ClientError, match="AccessDenied"):
-        check_lambda_role_has_policy(mock_client, "MyRole", "MyPolicy")
+        role_policy_problem(mock_client, "MyRole", "MyPolicy")
 
 
 def test_returns_true_when_service_allowed() -> None:
@@ -289,53 +286,80 @@ def test_handle_ecr_authorization_error_other_errors() -> None:
         handle_ecr_authorization_error(error, "ecr:DescribeRepositories", "my-repo")
 
 
-def test_does_not_raise_when_bucket_accessible() -> None:
+def test_no_problem_when_bucket_accessible() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.return_value = {}
-    check_s3_head_bucket_permission(mock_client, "my-bucket")
-    assert mock_client.head_bucket.called
+    assert s3_head_bucket_problem(mock_client, "my-bucket") == ""
 
 
 def test_calls_head_bucket_with_bucket_name() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.return_value = {}
-    check_s3_head_bucket_permission(mock_client, "my-bucket")
+    s3_head_bucket_problem(mock_client, "my-bucket")
     assert mock_client.head_bucket.call_args[1]["Bucket"] == "my-bucket"
 
 
-def test_check_s3_head_bucket_permission_fails_on_403_error() -> None:
+def test_s3_head_bucket_problem_reports_403_error() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("403")
-    with pytest.raises(pytest.fail.Exception):
-        check_s3_head_bucket_permission(mock_client, "my-bucket")
+    assert s3_head_bucket_problem(mock_client, "my-bucket")
 
 
-def test_fails_on_access_denied_error() -> None:
+def test_reports_access_denied_error() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("AccessDenied")
-    with pytest.raises(pytest.fail.Exception):
-        check_s3_head_bucket_permission(mock_client, "my-bucket")
+    assert s3_head_bucket_problem(mock_client, "my-bucket")
 
 
-def test_error_message_contains_bucket_name() -> None:
+def test_problem_contains_bucket_name() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("403")
-    with pytest.raises(pytest.fail.Exception, match="my-bucket"):
-        check_s3_head_bucket_permission(mock_client, "my-bucket")
+    assert "my-bucket" in s3_head_bucket_problem(mock_client, "my-bucket")
 
 
-def test_check_s3_head_bucket_permission_bucket_not_found() -> None:
+def test_s3_head_bucket_problem_bucket_not_found() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("404")
-    check_s3_head_bucket_permission(mock_client, "my-bucket")
-    assert mock_client.head_bucket.called
+    assert s3_head_bucket_problem(mock_client, "my-bucket") == ""
 
 
-def test_check_s3_head_bucket_permission_other_errors() -> None:
+def test_s3_head_bucket_problem_other_errors() -> None:
     mock_client = MagicMock()
     mock_client.head_bucket.side_effect = create_client_error("ServiceException")
     with pytest.raises(ClientError, match="ServiceException"):
-        check_s3_head_bucket_permission(mock_client, "my-bucket")
+        s3_head_bucket_problem(mock_client, "my-bucket")
+
+
+def test_aws_call_error_empty_when_call_succeeds() -> None:
+    mock_client = MagicMock()
+    mock_client.list_buckets.return_value = {}
+    assert aws_call_error(mock_client.list_buckets) == ""
+
+
+def test_aws_call_error_names_the_error_code() -> None:
+    mock_client = MagicMock()
+    mock_client.list_buckets.side_effect = create_client_error("AccessDenied")
+    assert "AccessDenied" in aws_call_error(mock_client.list_buckets)
+
+
+def test_aws_call_error_carries_the_error_message() -> None:
+    mock_client = MagicMock()
+    mock_client.list_buckets.side_effect = create_client_error(
+        "AccessDenied", message="no soup for you"
+    )
+    assert "no soup for you" in aws_call_error(mock_client.list_buckets)
+
+
+def test_aws_call_error_empty_for_a_tolerated_code() -> None:
+    mock_client = MagicMock()
+    mock_client.head_bucket.side_effect = create_client_error("404")
+    assert aws_call_error(mock_client.head_bucket, "404") == ""
+
+
+def test_aws_call_error_reports_an_untolerated_code() -> None:
+    mock_client = MagicMock()
+    mock_client.head_bucket.side_effect = create_client_error("403")
+    assert aws_call_error(mock_client.head_bucket, "404")
 
 
 def test_skip_if_api_gateway_unavailable_available() -> None:

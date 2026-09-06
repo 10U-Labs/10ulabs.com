@@ -4,7 +4,7 @@ import pytest
 
 from test_fixtures.lambda_lifecycle import (
     _extract_block_content,
-    _check_lambda_lifecycle_rules,
+    _lambda_lifecycle_problem,
     create_lambda_lifecycle_tests,
 )
 from test_fixtures.outcomes import accepted
@@ -93,7 +93,7 @@ def test_extracts_inner_block_when_starting_at_inner_position() -> None:
 def test_passes_for_lambda_with_lifecycle_and_replace_triggered_by(tmp_path: Path) -> None:
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text(LAMBDA_WITH_LIFECYCLE_TF)
-    assert accepted(_check_lambda_lifecycle_rules, tf_file)
+    assert not _lambda_lifecycle_problem(tf_file)
 
 
 def test_passes_for_lambda_without_environment_variables(tmp_path: Path) -> None:
@@ -105,7 +105,7 @@ resource "aws_lambda_function" "simple_lambda" {
 '''
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text(tf_content)
-    assert accepted(_check_lambda_lifecycle_rules, tf_file)
+    assert not _lambda_lifecycle_problem(tf_file)
 
 
 def test_passes_for_multiple_lambdas_all_with_lifecycle(tmp_path: Path) -> None:
@@ -132,13 +132,13 @@ resource "aws_lambda_function" "lambda_two" {
 '''
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text(tf_content)
-    assert accepted(_check_lambda_lifecycle_rules, tf_file)
+    assert not _lambda_lifecycle_problem(tf_file)
 
 
 def test_passes_for_empty_file(tmp_path: Path) -> None:
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text("")
-    assert accepted(_check_lambda_lifecycle_rules, tf_file)
+    assert not _lambda_lifecycle_problem(tf_file)
 
 
 def test_passes_for_file_with_no_lambda_resources(tmp_path: Path) -> None:
@@ -149,7 +149,7 @@ resource "aws_s3_bucket" "my_bucket" {
 '''
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text(tf_content)
-    assert accepted(_check_lambda_lifecycle_rules, tf_file)
+    assert not _lambda_lifecycle_problem(tf_file)
 
 
 def test_fails_for_lambda_with_env_vars_but_no_lifecycle(tmp_path: Path) -> None:
@@ -163,8 +163,7 @@ resource "aws_lambda_function" "missing_lifecycle" {
 '''
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text(tf_content)
-    with pytest.raises(AssertionError):
-        _check_lambda_lifecycle_rules(tf_file)
+    assert _lambda_lifecycle_problem(tf_file)
 
 
 def test_fails_for_lambda_with_lifecycle_but_no_replace_triggered_by(tmp_path: Path) -> None:
@@ -181,8 +180,7 @@ resource "aws_lambda_function" "incomplete_lifecycle" {
 '''
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text(tf_content)
-    with pytest.raises(AssertionError):
-        _check_lambda_lifecycle_rules(tf_file)
+    assert _lambda_lifecycle_problem(tf_file)
 
 
 def test_error_message_contains_resource_name(tmp_path: Path) -> None:
@@ -196,8 +194,7 @@ resource "aws_lambda_function" "my_failing_lambda" {
 '''
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text(tf_content)
-    with pytest.raises(AssertionError, match="my_failing_lambda"):
-        _check_lambda_lifecycle_rules(tf_file)
+    assert "my_failing_lambda" in _lambda_lifecycle_problem(tf_file)
 
 
 def test_error_message_mentions_kms_grants(tmp_path: Path) -> None:
@@ -211,8 +208,7 @@ resource "aws_lambda_function" "bad_lambda" {
 '''
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text(tf_content)
-    with pytest.raises(AssertionError, match="KMS grants"):
-        _check_lambda_lifecycle_rules(tf_file)
+    assert "KMS grants" in _lambda_lifecycle_problem(tf_file)
 
 
 def test_fails_for_second_lambda_missing_lifecycle(tmp_path: Path) -> None:
@@ -236,14 +232,13 @@ resource "aws_lambda_function" "bad_lambda" {
 '''
     tf_file = tmp_path / "lambda.tf"
     tf_file.write_text(tf_content)
-    with pytest.raises(AssertionError):
-        _check_lambda_lifecycle_rules(tf_file)
+    assert _lambda_lifecycle_problem(tf_file)
 
 
-def test_check_lambda_lifecycle_rules_file_not_found(tmp_path: Path) -> None:
+def test_lambda_lifecycle_problem_file_not_found(tmp_path: Path) -> None:
     missing_file = tmp_path / "nonexistent.tf"
     with pytest.raises(FileNotFoundError):
-        _check_lambda_lifecycle_rules(missing_file)
+        _lambda_lifecycle_problem(missing_file)
 
 
 def test_returns_class_object(tmp_path: Path) -> None:
