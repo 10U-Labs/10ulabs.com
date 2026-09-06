@@ -9,6 +9,10 @@ _ASSET_PATTERNS = {
     "css": r'href="(/assets/[^"]+\.css)"',
 }
 
+GOOGLE_ANALYTICS_ID = "G-8YJFQC2EGV"
+GTAG_SCRIPT_URL = f"https://www.googletagmanager.com/gtag/js?id={GOOGLE_ANALYTICS_ID}"
+RACK_DESIGNER_CONFIG_HASH_URL = "/rack-designer/ABCD12345"
+
 
 def _linked_asset_response(
     website_response: requests.Response,
@@ -84,7 +88,43 @@ def test_rack_designer_css_returns_200(website_url: str) -> None:
 def test_rack_designer_css_returns_css_content_type(website_url: str) -> None:
     response = requests.get(f"{website_url}/rack-designer/css/styles.css", timeout=30)
     content_type = response.headers.get('Content-Type', '')
-    assert 'css' in content_type.lower()
+    assert 'text/css' in content_type
+
+
+def test_rack_designer_trailing_slash_returns_200(website_url: str) -> None:
+    response = requests.get(f"{website_url}/rack-designer/", timeout=30)
+    assert response.status_code == 200
+
+
+def test_rack_designer_config_hash_url_returns_200(website_url: str) -> None:
+    url = f"{website_url}{RACK_DESIGNER_CONFIG_HASH_URL}"
+    assert requests.get(url, timeout=30).status_code == 200
+
+
+def test_rack_designer_config_hash_url_returns_html(website_url: str) -> None:
+    url = f"{website_url}{RACK_DESIGNER_CONFIG_HASH_URL}"
+    content_type = requests.get(url, timeout=30).headers.get('Content-Type', '')
+    assert 'text/html' in content_type
+
+
+def test_rack_designer_js_returns_200(website_url: str) -> None:
+    response = requests.get(f"{website_url}/rack-designer/js/app.js", timeout=30)
+    assert response.status_code == 200
+
+
+def test_rack_designer_js_returns_javascript_content_type(website_url: str) -> None:
+    response = requests.get(f"{website_url}/rack-designer/js/app.js", timeout=30)
+    assert 'javascript' in response.headers.get('Content-Type', '')
+
+
+def test_rack_designer_page_has_gtag_script(website_url: str) -> None:
+    response = requests.get(f"{website_url}/rack-designer/", timeout=30)
+    assert GTAG_SCRIPT_URL in response.text
+
+
+def test_rack_designer_page_has_gtag_config(website_url: str) -> None:
+    response = requests.get(f"{website_url}/rack-designer/", timeout=30)
+    assert f"gtag('config', '{GOOGLE_ANALYTICS_ID}')" in response.text
 
 
 def test_homepage_returns_200(website_response: requests.Response) -> None:

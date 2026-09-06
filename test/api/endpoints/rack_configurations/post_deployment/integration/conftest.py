@@ -7,11 +7,6 @@ from test_fixtures.aws import get_log_group_info
 
 
 @pytest.fixture(scope="module")
-def website_url(config: Dict[str, Any]) -> str:
-    return f"https://www.{config['domain_name']}"
-
-
-@pytest.fixture(scope="module")
 def handler_log_group(logs_client: Any, shared_config: Dict[str, Any]) -> Any:
     function_name = shared_config.get("lambda_handler_names", {}).get(
         "rack_configurations", "TenULabsRackConfigurationsHandler"
