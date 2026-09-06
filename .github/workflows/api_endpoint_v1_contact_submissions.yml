@@ -297,16 +297,8 @@ jobs:
         run: npm install -g jscpd
       - name: Check for duplicate code in source Python files
         run: |
-          SRC=src/api/endpoints/contact_submissions
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            $SRC/lambda/ \
-            lib/python/boto_mocks \
-            lib/python/lambda_response \
-            lib/python/module_utils \
-            lib/python/repo_utils \
-            lib/python/terraform_config \
-            lib/python/terraform_drift \
-            lib/python/test_fixtures
+            src/ lib/ scripts/
   copy-paste-tests:
     runs-on: ubuntu-latest
     steps:

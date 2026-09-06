@@ -302,14 +302,7 @@ jobs:
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            src/www/common/lambda/ \
-            lib/python/boto_mocks \
-            lib/python/lambda_response \
-            lib/python/module_utils \
-            lib/python/repo_utils \
-            lib/python/terraform_config \
-            lib/python/terraform_drift \
-            lib/python/test_fixtures
+            src/ lib/ scripts/
   copy-paste-tests:
     runs-on: ubuntu-latest
     steps:
