@@ -1,13 +1,14 @@
 import ast
-import re
 
 import pytest
 from repo_utils import REPO_ROOT
+from test_fixtures.terraform_tests import create_state_lock_contract_tests
 
 
 HEALTH_SRC = REPO_ROOT / "src" / "api" / "operational" / "health"
-HEALTH_WORKFLOW = (
-    REPO_ROOT / ".github" / "workflows" / "api_operational_health.yml"
+
+test_group_names_the_state_file = create_state_lock_contract_tests(
+    HEALTH_SRC, "api_operational_health.yml"
 )
 
 
@@ -42,26 +43,3 @@ def test_handler_function_accepts_event_and_context() -> None:
             return
 
     pytest.fail("lambda_handler function not found in handler.py")
-
-
-def test_backend_state_key_matches_workflow_concurrency_group() -> None:
-    backend_content = (HEALTH_SRC / "backend.tf").read_text()
-    workflow_content = HEALTH_WORKFLOW.read_text()
-
-    key_match = re.search(
-        r'^\s*key\s*=\s*"([^"]+)"', backend_content, re.MULTILINE
-    )
-    group_match = re.search(
-        r'^\s*group:\s*(\S+)', workflow_content, re.MULTILINE
-    )
-    state_key = key_match.group(1) if key_match else "<backend.tf declares no key>"
-    group = (
-        group_match.group(1) if group_match
-        else "<api_operational_health.yml declares no concurrency group>"
-    )
-
-    assert state_key == group, (
-        f"backend.tf key '{state_key}' and api_operational_health.yml concurrency "
-        f"group '{group}' have drifted, so the lock protects a state file the "
-        f"workflow is not writing"
-    )

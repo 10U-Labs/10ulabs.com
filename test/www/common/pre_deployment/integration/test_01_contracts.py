@@ -1,9 +1,12 @@
 import re
 
 from repo_utils import REPO_ROOT
+from test_fixtures.terraform_tests import create_state_lock_contract_tests
 
 
 SRC_DIR = REPO_ROOT / "src" / "www" / "common"
+
+test_group_names_the_state_file = create_state_lock_contract_tests(SRC_DIR, "www_common.yml")
 
 
 def _read_file(filename: str) -> str:
@@ -151,28 +154,4 @@ def test_lambda_edge_handler_matches_module() -> None:
     handler_config = match.group(1) if match else ""
     assert handler_config == "handler.lambda_handler", (
         f"Expected handler 'handler.lambda_handler', got '{handler_config}'"
-    )
-
-
-def test_backend_state_key_matches_workflow_concurrency_group() -> None:
-    backend_content = _read_file("backend.tf")
-    workflow_path = REPO_ROOT / ".github" / "workflows" / "www_common.yml"
-    workflow_content = workflow_path.read_text()
-
-    key_match = re.search(
-        r'^\s*key\s*=\s*"([^"]+)"', backend_content, re.MULTILINE
-    )
-    group_match = re.search(
-        r'^\s*group:\s*(\S+)', workflow_content, re.MULTILINE
-    )
-    state_key = key_match.group(1) if key_match else "<backend.tf declares no key>"
-    group = (
-        group_match.group(1) if group_match
-        else "<www_common.yml declares no concurrency group>"
-    )
-
-    assert state_key == group, (
-        f"backend.tf key '{state_key}' and www_common.yml concurrency group "
-        f"'{group}' have drifted, so the lock protects a state file the "
-        f"workflow is not writing"
     )
