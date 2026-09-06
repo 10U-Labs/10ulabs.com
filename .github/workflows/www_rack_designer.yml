@@ -201,6 +201,30 @@ jobs:
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             test/ lib/
+  e2e-tests:
+    if: github.ref == 'refs/heads/main'
+    needs: reconciliation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            boto3 \
+            botocore \
+            pytest \
+            requests
+      - name: Run E2E tests
+        run: |
+          TEST=test/www/paths/rack_designer
+          PYTHONPATH=lib/python python3 -m pytest \
+            $TEST/post_deployment/e2e/ \
+            --confcutdir=test --verbose --pythonwarnings=error
   eslint:
     runs-on: ubuntu-latest
     steps:
