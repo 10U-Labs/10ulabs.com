@@ -6,7 +6,7 @@ data "archive_file" "spa_routing" {
 
 resource "aws_iam_role" "spa_routing" {
   provider = aws.us-east-1
-  name     = "${local.resource_prefix}SpaRoutingRole"
+  name     = local.spa_routing_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -23,7 +23,7 @@ resource "aws_iam_role" "spa_routing" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}SpaRoutingRole"
+    Name = local.spa_routing_role_name
   })
 }
 
@@ -35,18 +35,18 @@ resource "aws_iam_role_policy_attachment" "spa_routing_basic" {
 
 resource "aws_cloudwatch_log_group" "spa_routing" {
   provider          = aws.us-east-1
-  name              = "/aws/lambda/us-east-1.${local.resource_prefix}SpaRouting"
+  name              = local.spa_routing_log_group_name
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}SpaRoutingLogs"
+    Name = local.spa_routing_logs_tag_name
   })
 }
 
 resource "aws_lambda_function" "spa_routing" {
   provider         = aws.us-east-1
   filename         = data.archive_file.spa_routing.output_path
-  function_name    = "${local.resource_prefix}SpaRouting"
+  function_name    = local.spa_routing_function_name
   role             = aws_iam_role.spa_routing.arn
   handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.spa_routing.output_base64sha256
@@ -62,7 +62,7 @@ resource "aws_lambda_function" "spa_routing" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}SpaRouting"
+    Name = local.spa_routing_function_name
   })
 
   lifecycle {

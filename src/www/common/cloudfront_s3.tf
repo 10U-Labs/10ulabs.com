@@ -50,7 +50,7 @@ resource "aws_s3_bucket_policy" "website" {
 }
 
 resource "aws_cloudfront_response_headers_policy" "website" {
-  name = "${local.resource_prefix}ResponseHeadersPolicy"
+  name = local.response_headers_policy_name
 
   security_headers_config {
     strict_transport_security {
@@ -63,7 +63,7 @@ resource "aws_cloudfront_response_headers_policy" "website" {
 }
 
 resource "aws_cloudfront_cache_policy" "website" {
-  name        = "${local.resource_prefix}CachePolicy"
+  name        = local.cache_policy_name
   default_ttl = 86400
   max_ttl     = 31536000
   min_ttl     = 60
