@@ -19,8 +19,10 @@ from test_fixtures.integration import (
     Layer6IAMCapabilityTests,
     Layer6S3CapabilityTests,
     Layer6S3WriteCapabilityTests,
+    create_api_gateway_authorization_tests,
     create_deployed_resource_existence_tests,
     create_kms_policy_test,
+    create_lambda_and_iam_authorization_tests,
     create_lambda_api_gateway_wiring_tests,
     create_lambda_configuration_tests,
     create_lambda_execution_role_wiring_tests,
@@ -161,6 +163,14 @@ def test_create_lambda_iam_wiring_tests_import() -> None:
 
 def test_create_lambda_role_existence_test_import() -> None:
     assert callable(create_lambda_role_existence_test)
+
+
+def test_create_api_gateway_authorization_tests_import() -> None:
+    assert callable(create_api_gateway_authorization_tests)
+
+
+def test_create_lambda_and_iam_authorization_tests_import() -> None:
+    assert callable(create_lambda_and_iam_authorization_tests)
 
 
 def test_create_layer1_authentication_tests_import() -> None:

@@ -21,8 +21,10 @@ from test_fixtures.integration.base_classes import (
     Layer7DeploymentCapabilityTests,
 )
 from test_fixtures.integration.factories import (
+    create_api_gateway_authorization_tests,
     create_deployed_resource_existence_tests,
     create_kms_policy_test,
+    create_lambda_and_iam_authorization_tests,
     create_lambda_api_gateway_wiring_tests,
     create_lambda_configuration_tests,
     create_lambda_execution_role_wiring_tests,
@@ -75,8 +77,10 @@ __all__ = [
     "Layer6IAMCapabilityTests",
     "Layer6S3CapabilityTests",
     "Layer6S3WriteCapabilityTests",
+    "create_api_gateway_authorization_tests",
     "create_deployed_resource_existence_tests",
     "create_kms_policy_test",
+    "create_lambda_and_iam_authorization_tests",
     "create_lambda_api_gateway_wiring_tests",
     "create_lambda_configuration_tests",
     "create_lambda_execution_role_wiring_tests",

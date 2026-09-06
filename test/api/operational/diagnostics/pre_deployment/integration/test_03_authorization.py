@@ -1,10 +1,8 @@
 from test_fixtures.integration import (
-    Layer2APIGatewayAuthorizationTests,
-    Layer2LambdaAndIAMAuthorizationTests,
+    create_api_gateway_authorization_tests,
+    create_lambda_and_iam_authorization_tests,
 )
 
 
-class TestAPIGatewayAuthorization(Layer2APIGatewayAuthorizationTests):
-    pass
-class TestLambdaAndIAMAuthorization(Layer2LambdaAndIAMAuthorizationTests):
-    pass
+TestAPIGatewayAuthorization = create_api_gateway_authorization_tests()
+TestLambdaAndIAMAuthorization = create_lambda_and_iam_authorization_tests()

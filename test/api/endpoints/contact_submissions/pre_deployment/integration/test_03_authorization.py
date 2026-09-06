@@ -3,17 +3,13 @@ from typing import Any
 import pytest
 from botocore.exceptions import ClientError
 from test_fixtures.integration import (
-    Layer3APIGatewayAuthorizationTests,
-    Layer3LambdaAndIAMAuthorizationTests,
+    create_api_gateway_authorization_tests,
+    create_lambda_and_iam_authorization_tests,
 )
 
 
-class TestAPIGatewayAuthorization(Layer3APIGatewayAuthorizationTests):
-    pass
-
-
-class TestLambdaAndIAMAuthorization(Layer3LambdaAndIAMAuthorizationTests):
-    pass
+TestAPIGatewayAuthorization = create_api_gateway_authorization_tests()
+TestLambdaAndIAMAuthorization = create_lambda_and_iam_authorization_tests()
 
 
 def test_can_get_account_sending_enabled(ses_client: Any) -> None:

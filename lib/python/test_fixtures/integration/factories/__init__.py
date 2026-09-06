@@ -1,4 +1,6 @@
 from test_fixtures.integration.factories.authentication import (
+    create_api_gateway_authorization_tests,
+    create_lambda_and_iam_authorization_tests,
     create_layer1_authentication_tests,
     create_layer2_s3_authorization_tests,
     create_simple_layer1_authentication_tests,

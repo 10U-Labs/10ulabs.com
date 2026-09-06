@@ -3,7 +3,13 @@ from unittest.mock import MagicMock
 import pytest
 
 from boto_mocks import create_client_error
+from test_fixtures.integration.base_classes import (
+    Layer2APIGatewayAuthorizationTests,
+    Layer2LambdaAndIAMAuthorizationTests,
+)
 from test_fixtures.integration.factories.authentication import (
+    create_api_gateway_authorization_tests,
+    create_lambda_and_iam_authorization_tests,
     create_layer1_authentication_tests,
     create_layer2_s3_authorization_tests,
     create_simple_layer1_authentication_tests,
@@ -193,3 +199,43 @@ def test_fails_when_bucket_name_none() -> None:
     instance = test_class()
     with pytest.raises(AssertionError):
         instance.test_bucket_name_is_configured(None)
+
+
+def test_create_api_gateway_authorization_tests_returns_class() -> None:
+    test_class = create_api_gateway_authorization_tests()
+    assert isinstance(test_class, type)
+
+
+def test_create_api_gateway_authorization_tests_returns_layer2_base_class() -> None:
+    test_class = create_api_gateway_authorization_tests()
+    assert test_class is Layer2APIGatewayAuthorizationTests
+
+
+def test_has_test_can_describe_rest_apis_method() -> None:
+    test_class = create_api_gateway_authorization_tests()
+    assert hasattr(test_class, "test_can_describe_rest_apis")
+
+
+def test_has_test_can_access_specific_rest_api_method() -> None:
+    test_class = create_api_gateway_authorization_tests()
+    assert hasattr(test_class, "test_can_access_specific_rest_api")
+
+
+def test_create_lambda_and_iam_authorization_tests_returns_class() -> None:
+    test_class = create_lambda_and_iam_authorization_tests()
+    assert isinstance(test_class, type)
+
+
+def test_create_lambda_and_iam_authorization_tests_returns_layer2_base_class() -> None:
+    test_class = create_lambda_and_iam_authorization_tests()
+    assert test_class is Layer2LambdaAndIAMAuthorizationTests
+
+
+def test_has_test_can_list_functions_method() -> None:
+    test_class = create_lambda_and_iam_authorization_tests()
+    assert hasattr(test_class, "test_can_list_functions")
+
+
+def test_has_test_can_list_roles_method() -> None:
+    test_class = create_lambda_and_iam_authorization_tests()
+    assert hasattr(test_class, "test_can_list_roles")
