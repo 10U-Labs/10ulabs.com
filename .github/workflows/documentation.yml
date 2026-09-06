@@ -21,7 +21,7 @@ jobs:
           assert-no-comments
           --annotate
           --verbose
-          .github/workflows/documentation.yml
+          .
   markdownlint:
     runs-on: ubuntu-latest
     steps:

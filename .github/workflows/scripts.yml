@@ -21,22 +21,7 @@ jobs:
           assert-no-comments
           --annotate
           --verbose
-          .github/workflows/scripts.yml
-          scripts
-          lib/python/boto_mocks
-          lib/python/lambda_response
-          lib/python/module_utils
-          lib/python/repo_utils
-          lib/python/terraform_config
-          lib/python/test_fixtures
-          test/conftest.py
-          test/scripts
-          test/lib/python/test_boto_mocks
-          test/lib/python/test_lambda_response
-          test/lib/python/test_module_utils
-          test/lib/python/test_repo_utils
-          test/lib/python/test_terraform_config
-          test/lib/python/test_test_fixtures
+          .
   assert-no-inline-directives:
     runs-on: ubuntu-latest
     steps:
@@ -55,22 +40,7 @@ jobs:
           assert-no-inline-directives
           --tools pylint,mypy,yamllint
           --verbose
-          .github/workflows/scripts.yml
-          scripts
-          lib/python/boto_mocks
-          lib/python/lambda_response
-          lib/python/module_utils
-          lib/python/repo_utils
-          lib/python/terraform_config
-          lib/python/test_fixtures
-          test/conftest.py
-          test/scripts
-          test/lib/python/test_boto_mocks
-          test/lib/python/test_lambda_response
-          test/lib/python/test_module_utils
-          test/lib/python/test_repo_utils
-          test/lib/python/test_terraform_config
-          test/lib/python/test_test_fixtures
+          .
   assert-no-linter-config-files:
     runs-on: ubuntu-latest
     steps:
@@ -89,20 +59,7 @@ jobs:
           assert-no-linter-config-files
           --linters pylint,mypy,yamllint
           --verbose
-          scripts
-          lib/python/boto_mocks
-          lib/python/lambda_response
-          lib/python/module_utils
-          lib/python/repo_utils
-          lib/python/terraform_config
-          lib/python/test_fixtures
-          test/scripts
-          test/lib/python/test_boto_mocks
-          test/lib/python/test_lambda_response
-          test/lib/python/test_module_utils
-          test/lib/python/test_repo_utils
-          test/lib/python/test_terraform_config
-          test/lib/python/test_test_fixtures
+          .
   assert-no-pytest-plugin-declarations:
     runs-on: ubuntu-latest
     steps:
@@ -120,15 +77,8 @@ jobs:
         run: >-
           assert-no-pytest-plugin-declarations
           --verbose
-          test/conftest.py
-          test/scripts
-          test/lib/python/test_boto_mocks
-          test/lib/python/test_lambda_response
-          test/lib/python/test_module_utils
-          test/lib/python/test_repo_utils
-          test/lib/python/test_terraform_config
-          test/lib/python/test_test_fixtures
-          lib/python/test_fixtures
+          test/
+          lib/
   assert-one-assert-per-pytest:
     runs-on: ubuntu-latest
     steps:
@@ -146,14 +96,8 @@ jobs:
         run: >-
           assert-one-assert-per-pytest
           --verbose
-          test/conftest.py
-          test/scripts
-          test/lib/python/test_boto_mocks
-          test/lib/python/test_lambda_response
-          test/lib/python/test_module_utils
-          test/lib/python/test_repo_utils
-          test/lib/python/test_terraform_config
-          test/lib/python/test_test_fixtures
+          test/
+          lib/
   assert-pytest-fixture-name-is-needed:
     runs-on: ubuntu-latest
     steps:
@@ -171,15 +115,8 @@ jobs:
         run: >-
           assert-pytest-fixture-name-is-needed
           --verbose
-          test/conftest.py
-          test/scripts
-          test/lib/python/test_boto_mocks
-          test/lib/python/test_lambda_response
-          test/lib/python/test_module_utils
-          test/lib/python/test_repo_utils
-          test/lib/python/test_terraform_config
-          test/lib/python/test_test_fixtures
-          lib/python/test_fixtures
+          test/
+          lib/
   assert-python-definition-is-used:
     runs-on: ubuntu-latest
     steps:
