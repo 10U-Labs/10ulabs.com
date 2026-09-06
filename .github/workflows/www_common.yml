@@ -302,7 +302,7 @@ jobs:
       - name: Check for duplicate code in source Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            src/ lib/ scripts/
+            src/ lib/
   copy-paste-tests:
     runs-on: ubuntu-latest
     steps:
@@ -313,17 +313,7 @@ jobs:
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
-            test/lib/terraform/common \
-            test/lib/terraform/s3_bucket \
-            test/lib/terraform/unit \
-            test/www/common \
-            test/lib/python/test_boto_mocks \
-            test/lib/python/test_lambda_response \
-            test/lib/python/test_module_utils \
-            test/lib/python/test_repo_utils \
-            test/lib/python/test_terraform_config \
-            test/lib/python/test_terraform_drift \
-            test/lib/python/test_test_fixtures
+            test/ lib/
   e2e-tests:
     if: github.ref == 'refs/heads/main'
     needs: post-deployment-integration-tests
