@@ -5,3 +5,5 @@
 - [Memories live in .claude/memories](memories-live-in-dot-claude-memories.md) — autoMemoryDirectory overrides the user-scoped default path.
 - [Lint jobs take whole roots](lint-jobs-take-whole-roots.md) — src/ lib/, scripts/ lib/, test/ lib/ across all six jobs; never path lists.
 - [Tests are written before source](tests-are-written-before-source.md) — TDD; a test may name a file that does not exist yet, but read it via a fixture, never at module level.
+- [Fixture liveness needs a collection](fixture-liveness-is-a-collection-question.md) — a name match cannot see shadowing, uncalled factories, or getfixturevalue.
+- [Whole-tree pytest needs importlib](whole-tree-collection-needs-importlib.md) — nine repeated basenames and no __init__.py; also needs PYTHONPATH=lib/python:scripts.
