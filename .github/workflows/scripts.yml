@@ -98,6 +98,25 @@ jobs:
           --verbose
           test/
           lib/
+  assert-pytest-class-holds-state:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install assert-pytest-class-holds-state
+        run: |
+          python3 -m pip install \
+            assert-pytest-class-holds-state
+      - name: Assert pytest class holds state
+        run: >-
+          assert-pytest-class-holds-state
+          --verbose
+          test/
+          lib/
   assert-pytest-fixture-name-is-needed:
     runs-on: ubuntu-latest
     steps:
