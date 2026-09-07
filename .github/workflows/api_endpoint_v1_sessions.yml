@@ -184,15 +184,7 @@ jobs:
             test/lib/terraform/common
             test/lib/terraform/unit
             test/api/endpoints/sessions
-            test/lib/python/test_boto_mocks
-            test/lib/python/test_lambda_clients
-            test/lib/python/test_lambda_http
-            test/lib/python/test_lambda_response
-            test/lib/python/test_module_utils
-            test/lib/python/test_repo_utils
-            test/lib/python/test_terraform_config
-            test/lib/python/test_terraform_drift
-            test/lib/python/test_test_fixtures
+            test/lib/python
           verbose: "true"
   assert-python-definition-is-used-packages:
     runs-on: ubuntu-latest
@@ -229,6 +221,26 @@ jobs:
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \
             test/ lib/
+  discover-repo-libraries:
+    outputs:
+      packages: ${{ steps.list.outputs.packages }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: list
+        name: List the packages under lib/python
+        run: |
+          python3 - <<'PY' >> $GITHUB_OUTPUT
+          import json
+          import pathlib
+          root = pathlib.Path("lib/python")
+          names = [
+              p.name for p in root.iterdir()
+              if (p / "__init__.py").is_file()
+          ]
+          print("packages=" + json.dumps(sorted(names)))
+          PY
   e2e-tests:
     if: github.ref == 'refs/heads/main'
     needs: post-deployment-integration-tests
@@ -507,15 +519,7 @@ jobs:
       - pylint-tests
       - terraform-format
       - terraform-format-module
-      - test-boto-mocks
-      - test-lambda-clients
-      - test-lambda-http
-      - test-lambda-response
-      - test-module-utils
-      - test-repo-utils
-      - test-terraform-config
-      - test-terraform-drift
-      - test-test-fixtures
+      - test-repo-libraries
       - tflint
       - unit-tests
       - unit-tests-module
@@ -609,7 +613,8 @@ jobs:
       - name: Terraform Format Check on common module
         run: |
           cd lib/terraform/common && terraform fmt -diff -check
-  test-boto-mocks:
+  test-repo-libraries:
+    needs: discover-repo-libraries
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -626,223 +631,19 @@ jobs:
             pytest \
             pytest-cov \
             requests
-      - name: Run boto_mocks tests with a full coverage gate
+      - name: Run the ${{ matrix.package }} tests with a full coverage gate
         run: |
           PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_boto_mocks/ \
+            test/lib/python/test_${{ matrix.package }}/ \
             --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=boto_mocks \
+            --cov=${{ matrix.package }} \
             --cov-branch \
             --cov-report=term-missing \
             --cov-fail-under=100
-  test-lambda-clients:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run lambda_clients tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_lambda_clients/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=lambda_clients \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
-  test-lambda-http:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run lambda_http tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_lambda_http/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=lambda_http \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
-  test-lambda-response:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run lambda_response tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_lambda_response/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=lambda_response \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
-  test-module-utils:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run module_utils tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_module_utils/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=module_utils \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
-  test-repo-utils:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run repo_utils tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_repo_utils/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=repo_utils \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
-  test-terraform-config:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run terraform_config tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_terraform_config/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=terraform_config \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
-  test-terraform-drift:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run terraform_drift tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_terraform_drift/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=terraform_drift \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
-  test-test-fixtures:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            boto3 \
-            botocore \
-            pytest \
-            pytest-cov \
-            requests
-      - name: Run test_fixtures tests with a full coverage gate
-        run: |
-          PYTHONPATH=lib/python python3 -m pytest \
-            test/lib/python/test_test_fixtures/ \
-            --confcutdir=test --verbose --pythonwarnings=error \
-            --cov=test_fixtures \
-            --cov-branch \
-            --cov-report=term-missing \
-            --cov-fail-under=100
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.discover-repo-libraries.outputs.packages) }}
   tflint:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
