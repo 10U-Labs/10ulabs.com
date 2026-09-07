@@ -254,10 +254,11 @@ def create_state_lock_contract_tests(
 
 
 DEPENDENT_WAIT_JOB = "wait-for-api-common-routing"
+ROUTING_WORKFLOW = "api_common_routing.yml"
 
 
-def _job_block(workflow_content: str, job_name: str) -> str:
-    header = re.search(rf'^  {re.escape(job_name)}:\n', workflow_content, re.MULTILINE)
+def _two_space_block(workflow_content: str, key: str) -> str:
+    header = re.search(rf'^  {re.escape(key)}:\n', workflow_content, re.MULTILINE)
     if not header:
         return ""
     rest = workflow_content[header.end():]
@@ -273,11 +274,11 @@ def create_routing_wait_contract_tests(workflow_name: str) -> type:
     apply_condition = f"needs.{DEPENDENT_WAIT_JOB}.outputs.apply == 'true'"
 
     def reconciliation() -> str:
-        return _job_block(workflow_path.read_text(), "reconciliation")
+        return _two_space_block(workflow_path.read_text(), "reconciliation")
 
     class TestRoutingWaitContract:
         def test_the_workflow_declares_the_wait_job(self) -> None:
-            declared = _job_block(workflow_path.read_text(), DEPENDENT_WAIT_JOB)
+            declared = _two_space_block(workflow_path.read_text(), DEPENDENT_WAIT_JOB)
             assert declared, (
                 f"{workflow_name} declares no {DEPENDENT_WAIT_JOB} job, so a push "
                 f"touching both this stack and src/api/common/routing/ starts this "
@@ -301,3 +302,41 @@ def create_routing_wait_contract_tests(workflow_name: str) -> type:
             )
 
     return TestRoutingWaitContract
+
+
+def _push_paths(workflow_content: str) -> Set[str]:
+    push = _two_space_block(workflow_content, "push")
+    paths = re.search(r'^    paths:\n((?:      - .*\n)+)', push, re.MULTILINE)
+    if not paths:
+        return set()
+    return {line.strip()[2:] for line in paths.group(1).splitlines()}
+
+
+def create_single_start_contract_tests(workflow_name: str) -> type:
+    workflows = REPO_ROOT / ".github" / "workflows"
+    workflow_path = workflows / workflow_name
+    routing_path = workflows / ROUTING_WORKFLOW
+
+    class TestSingleStartContract:
+        def test_the_push_filter_covers_every_path_that_starts_routing(self) -> None:
+            uncovered = _push_paths(routing_path.read_text()) - _push_paths(
+                workflow_path.read_text()
+            )
+
+            assert not uncovered, (
+                f"{workflow_name}'s push filter does not name {sorted(uncovered)}, "
+                f"which start {ROUTING_WORKFLOW}. A commit touching only those "
+                f"would deploy routing's addresses without starting the suites "
+                f"that call them over the wire."
+            )
+
+        def test_the_workflow_declares_no_workflow_run_trigger(self) -> None:
+            declared = _two_space_block(workflow_path.read_text(), "workflow_run")
+
+            assert not declared, (
+                f"{workflow_name} still triggers on workflow_run, so a commit "
+                f"matching both its push filter and {ROUTING_WORKFLOW}'s starts "
+                f"it twice and deploys this stack twice."
+            )
+
+    return TestSingleStartContract

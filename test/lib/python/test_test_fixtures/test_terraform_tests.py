@@ -10,17 +10,20 @@ from repo_utils import REPO_ROOT
 from test_fixtures.terraform_tests import (
     API_COMMON_ROUTING_OUTPUTS_FILE,
     DEPENDENT_WAIT_JOB,
+    ROUTING_WORKFLOW,
     _block_named,
     _braced_block,
     _environment_variables_read,
     _environment_variables_supplied,
     _get_api_common_routing_outputs,
-    _job_block,
     _packaged_handler_source_path,
+    _push_paths,
+    _two_space_block,
     create_lambda_source_contract_tests,
     create_remote_state_contract_tests,
     create_remote_state_config_tests,
     create_routing_wait_contract_tests,
+    create_single_start_contract_tests,
     create_state_lock_contract_tests,
 )
 from test_fixtures.outcomes import accepted
@@ -807,13 +810,13 @@ def _unordered_contract(tmp_path: Path) -> Any:
     return _routing_wait_contract(tmp_path, RECONCILIATION_UNORDERED)
 
 
-def test_job_block_reads_the_last_job_to_the_end_of_the_file() -> None:
+def test_two_space_block_reads_the_last_key_to_the_end_of_the_file() -> None:
     workflow = "jobs:\n  only-job:\n    runs-on: ubuntu-latest\n"
-    assert _job_block(workflow, "only-job") == "    runs-on: ubuntu-latest\n"
+    assert _two_space_block(workflow, "only-job") == "    runs-on: ubuntu-latest\n"
 
 
-def test_job_block_is_empty_when_the_workflow_declares_no_such_job() -> None:
-    assert _job_block("jobs:\n  only-job:\n", "another-job") == ""
+def test_two_space_block_is_empty_when_the_workflow_declares_no_such_key() -> None:
+    assert _two_space_block("jobs:\n  only-job:\n", "another-job") == ""
 
 
 def test_routing_wait_passes_when_the_workflow_declares_the_wait_job(tmp_path: Path) -> None:
@@ -849,3 +852,113 @@ def test_routing_wait_fails_when_reconciliation_ignores_the_apply_output(tmp_pat
     contract = _unordered_contract(tmp_path)
     with pytest.raises(AssertionError, match="does not require"):
         contract.test_reconciliation_applies_only_on_the_conclusion_the_wait_job_reports()
+
+
+ROUTING_TRIGGERS = (
+    "on:\n"
+    "  push:\n"
+    "    branches:\n"
+    "      - main\n"
+    "    paths:\n"
+    "      - src/api/common/routing/**\n"
+    "      - src/www/api/**\n"
+    "permissions:\n"
+)
+
+DEPENDENT_COVERING_ROUTING = (
+    "on:\n"
+    "  push:\n"
+    "    branches:\n"
+    "      - main\n"
+    "    paths:\n"
+    "      - src/api/common/routing/**\n"
+    "      - src/api/operational/health/**\n"
+    "      - src/www/api/**\n"
+    "  workflow_dispatch:\n"
+    "permissions:\n"
+)
+
+DEPENDENT_MISSING_ROUTING = (
+    "on:\n"
+    "  push:\n"
+    "    branches:\n"
+    "      - main\n"
+    "    paths:\n"
+    "      - src/api/operational/health/**\n"
+    "  workflow_dispatch:\n"
+    "permissions:\n"
+)
+
+DEPENDENT_STILL_ON_WORKFLOW_RUN = (
+    "on:\n"
+    "  push:\n"
+    "    branches:\n"
+    "      - main\n"
+    "    paths:\n"
+    "      - src/api/common/routing/**\n"
+    "      - src/api/operational/health/**\n"
+    "      - src/www/api/**\n"
+    "  workflow_dispatch:\n"
+    "  workflow_run:\n"
+    "    types:\n"
+    "      - completed\n"
+    "    workflows:\n"
+    "      - api_common_routing\n"
+    "permissions:\n"
+)
+
+
+def _single_start_contract(tmp_path: Path, dependent: str) -> Any:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / ROUTING_WORKFLOW).write_text(ROUTING_TRIGGERS)
+    (workflows / "a_stack.yml").write_text(dependent)
+    with patch("test_fixtures.terraform_tests.REPO_ROOT", tmp_path):
+        return create_single_start_contract_tests("a_stack.yml")()
+
+
+def test_push_paths_reads_every_path_the_filter_names() -> None:
+    assert _push_paths(ROUTING_TRIGGERS) == {
+        "src/api/common/routing/**",
+        "src/www/api/**",
+    }
+
+
+def test_push_paths_is_empty_when_the_push_trigger_names_no_paths() -> None:
+    assert _push_paths("on:\n  push:\n    branches:\n      - main\npermissions:\n") == set()
+
+
+def test_push_paths_is_empty_when_the_workflow_has_no_push_trigger() -> None:
+    assert _push_paths("on:\n  workflow_dispatch:\npermissions:\n") == set()
+
+
+def test_single_start_passes_when_the_push_filter_covers_routing(tmp_path: Path) -> None:
+    contract = _single_start_contract(tmp_path, DEPENDENT_COVERING_ROUTING)
+    assert accepted(contract.test_the_push_filter_covers_every_path_that_starts_routing)
+
+
+def test_single_start_fails_when_the_push_filter_misses_a_routing_path(tmp_path: Path) -> None:
+    contract = _single_start_contract(tmp_path, DEPENDENT_MISSING_ROUTING)
+    with pytest.raises(AssertionError, match="does not name"):
+        contract.test_the_push_filter_covers_every_path_that_starts_routing()
+
+
+def test_single_start_names_the_uncovered_path_it_found(tmp_path: Path) -> None:
+    contract = _single_start_contract(tmp_path, DEPENDENT_MISSING_ROUTING)
+    with pytest.raises(AssertionError, match=re.escape("src/www/api/**")):
+        contract.test_the_push_filter_covers_every_path_that_starts_routing()
+
+
+def test_single_start_passes_when_the_workflow_dropped_the_workflow_run_trigger(
+    tmp_path: Path,
+) -> None:
+    contract = _single_start_contract(tmp_path, DEPENDENT_COVERING_ROUTING)
+    assert accepted(contract.test_the_workflow_declares_no_workflow_run_trigger)
+
+
+def test_single_start_fails_when_the_workflow_still_triggers_on_workflow_run(
+    tmp_path: Path,
+) -> None:
+    contract = _single_start_contract(tmp_path, DEPENDENT_STILL_ON_WORKFLOW_RUN)
+    with pytest.raises(AssertionError, match="still triggers on workflow_run"):
+        contract.test_the_workflow_declares_no_workflow_run_trigger()

@@ -465,8 +465,6 @@ jobs:
   reconciliation:
     if: >-
       github.ref == 'refs/heads/main'
-      && (github.event_name != 'workflow_run'
-      || github.event.workflow_run.conclusion == 'success')
       && needs.wait-for-api-common-routing.outputs.apply == 'true'
     needs:
       - assert-no-comments
@@ -959,6 +957,7 @@ on:
     paths:
       - .github/actions/verify-oidc-vars/action.yml
       - .github/actions/wait-for-api-common-routing/action.yml
+      - .github/workflows/api_common_routing.yml
       - .github/workflows/api_endpoint_v1_rack_configurations.yml
       - lib/python/boto_mocks/**
       - lib/python/lambda_clients/**
@@ -970,7 +969,12 @@ on:
       - lib/python/terraform_drift/**
       - lib/python/test_fixtures/**
       - lib/terraform/common/**
+      - lib/terraform/s3_bucket/**
+      - src/api/common/routing/**
       - src/api/endpoints/rack_configurations/**
+      - src/www/api/**
+      - test/api/common/conftest.py
+      - test/api/common/routing/**
       - test/api/conftest.py
       - test/api/endpoints/conftest.py
       - test/api/endpoints/rack_configurations/**
@@ -986,13 +990,9 @@ on:
       - test/lib/python/test_test_fixtures/**
       - test/lib/terraform/common/**
       - test/lib/terraform/conftest.py
+      - test/lib/terraform/s3_bucket/**
       - test/lib/terraform/unit/**
   workflow_dispatch:
-  workflow_run:
-    types:
-      - completed
-    workflows:
-      - api_common_routing
 permissions:
   contents: read
   id-token: write

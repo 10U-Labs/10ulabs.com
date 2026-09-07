@@ -6,6 +6,7 @@ import pytest
 
 from test_fixtures.terraform_tests import (
     create_routing_wait_contract_tests,
+    create_single_start_contract_tests,
     create_state_lock_contract_tests,
 )
 
@@ -19,6 +20,10 @@ test_group_names_the_state_file = create_state_lock_contract_tests(
 )
 
 TestRoutingWaitContract = create_routing_wait_contract_tests(
+    "api_endpoint_v1_contact_submissions.yml"
+)
+
+TestSingleStartContract = create_single_start_contract_tests(
     "api_endpoint_v1_contact_submissions.yml"
 )
 
