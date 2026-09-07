@@ -131,6 +131,34 @@ jobs:
           --verbose
           test/
           lib/
+  assert-pytest-fixture-is-requested:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-pytest-fixture-is-requested \
+            boto3 \
+            botocore \
+            dnspython \
+            pytest \
+            requests
+      - name: Assert pytest fixture is requested
+        run: |
+          PYTHONPATH=lib/python:scripts \
+            assert-pytest-fixture-is-requested \
+            --defined-in lib/python \
+            --dont-search-in 'test/lib/python/test_{package}' \
+            --pytest-argument=--confcutdir=test \
+            --verbose \
+            test/ \
+            lib/
   assert-pytest-fixture-name-is-needed:
     runs-on: ubuntu-latest
     steps:
@@ -520,6 +548,7 @@ jobs:
       - assert-one-assert-per-pytest
       - assert-opentofu-resource-is-used
       - assert-pytest-class-holds-state
+      - assert-pytest-fixture-is-requested
       - assert-pytest-fixture-name-is-needed
       - assert-python-definition-is-used
       - assert-python-definition-is-used-in-tests
