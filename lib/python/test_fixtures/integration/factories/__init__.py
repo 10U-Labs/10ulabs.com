@@ -12,8 +12,6 @@ from test_fixtures.integration.factories.infrastructure import (
     create_kms_policy_test,
     create_lambda_role_existence_test,
     create_log_group_configuration_tests,
-    create_security_group_existence_test,
-    create_sqs_fifo_queue_tests,
     create_www_common_fixtures,
     create_www_common_s3_existence_tests,
     handle_ecr_error,

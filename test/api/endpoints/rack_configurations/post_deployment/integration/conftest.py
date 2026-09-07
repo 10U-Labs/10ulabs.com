@@ -15,11 +15,6 @@ def handler_log_group(logs_client: Any, shared_config: Dict[str, Any]) -> Any:
     return get_log_group_info(logs_client, log_group_name)
 
 
-@pytest.fixture(scope="module")
-def test_device_id() -> str:
-    return "integration-test-device"
-
-
 @pytest.fixture(scope="session")
 def dynamodb_client(aws_region: str) -> Any:
     return boto3.client("dynamodb", region_name=aws_region)

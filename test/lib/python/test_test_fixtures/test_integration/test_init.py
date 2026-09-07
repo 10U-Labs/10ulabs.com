@@ -33,9 +33,7 @@ from test_fixtures.integration import (
     create_layer2_s3_authorization_tests,
     create_layer6_capability_tests,
     create_log_group_configuration_tests,
-    create_security_group_existence_test,
     create_simple_layer1_authentication_tests,
-    create_sqs_fifo_queue_tests,
     create_www_common_fixtures,
     create_www_common_s3_existence_tests,
     handle_ecr_error,
@@ -189,16 +187,8 @@ def test_create_log_group_configuration_tests_import() -> None:
     assert callable(create_log_group_configuration_tests)
 
 
-def test_create_security_group_existence_test_import() -> None:
-    assert callable(create_security_group_existence_test)
-
-
 def test_create_simple_layer1_authentication_tests_import() -> None:
     assert callable(create_simple_layer1_authentication_tests)
-
-
-def test_create_sqs_fifo_queue_tests_import() -> None:
-    assert callable(create_sqs_fifo_queue_tests)
 
 
 def test_create_www_common_fixtures_import() -> None:

@@ -53,8 +53,3 @@ def zone_nameservers(route53_client: Any, config: Dict[str, Any]) -> List[str]:
     zone_id = config['hosted_zone_id']
     response = route53_client.get_hosted_zone(Id=zone_id)
     return response['DelegationSet']['NameServers']
-
-
-@pytest.fixture(scope="module")
-def ec2_client(config: Dict[str, Any]) -> Any:
-    return boto3.client('ec2', region_name=config['aws_region'])

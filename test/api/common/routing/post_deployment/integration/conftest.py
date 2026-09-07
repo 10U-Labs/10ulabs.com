@@ -4,11 +4,6 @@ import boto3
 import pytest
 
 
-@pytest.fixture(scope="module")
-def sqs_client(aws_region: str) -> Any:
-    return boto3.client("sqs", region_name=aws_region)
-
-
 @pytest.fixture(name="api_gateway_id", scope="module")
 def api_gateway_id_fixture(apigateway_client: Any, config: Dict[str, Any]) -> Optional[str]:
     return get_api_gateway_id_by_name(apigateway_client, config['api_gateway_name'])

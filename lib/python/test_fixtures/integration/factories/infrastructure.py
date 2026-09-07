@@ -63,79 +63,6 @@ def create_www_common_s3_existence_tests() -> type:
     return TestWWWCommonS3Existence
 
 
-def _queue_attribute(
-    sqs_client: Any,
-    queue_name: str,
-    attribute: str,
-    description: str
-) -> Any:
-    try:
-        queue_url = sqs_client.get_queue_url(QueueName=queue_name)["QueueUrl"]
-        attrs = sqs_client.get_queue_attributes(
-            QueueUrl=queue_url,
-            AttributeNames=[attribute]
-        )
-    except ClientError as err:
-        if err.response["Error"]["Code"] == "AWS.SimpleQueueService.NonExistentQueue":
-            pytest.skip(f"{description} {queue_name} not deployed yet")
-        raise
-    return attrs.get("Attributes", {}).get(attribute)
-
-
-def create_sqs_fifo_queue_tests(
-    queue_name_fixture: str,
-    queue_description: str = "queue",
-    fail_on_missing: bool = False,
-) -> type:
-    class TestSQSFIFOQueue:
-        def test_queue_exists(self, sqs_client: Any, request: pytest.FixtureRequest) -> None:
-            queue_name = request.getfixturevalue(queue_name_fixture)
-            try:
-                response = sqs_client.get_queue_url(QueueName=queue_name)
-                assert response.get("QueueUrl"), (
-                    f"{queue_description} {queue_name} URL not returned"
-                )
-            except ClientError as err:
-                if err.response["Error"]["Code"] == "AWS.SimpleQueueService.NonExistentQueue":
-                    if fail_on_missing:
-                        pytest.fail(
-                            f"{queue_description} {queue_name} does not exist. "
-                            "Deploy the endpoint first."
-                        )
-                    else:
-                        pytest.skip(
-                            f"{queue_description} {queue_name} not deployed yet. "
-                            "Run terraform apply first."
-                        )
-                raise
-
-        def test_queue_is_fifo(self, sqs_client: Any, request: pytest.FixtureRequest) -> None:
-            queue_name = request.getfixturevalue(queue_name_fixture)
-            fifo_attr = _queue_attribute(
-                sqs_client, queue_name, "FifoQueue", queue_description
-            )
-            assert fifo_attr == "true", (
-                f"{queue_description} {queue_name} FifoQueue attribute is "
-                f"'{fifo_attr}', expected 'true'"
-            )
-
-        def test_queue_has_deduplication(
-            self,
-            sqs_client: Any,
-            request: pytest.FixtureRequest
-        ) -> None:
-            queue_name = request.getfixturevalue(queue_name_fixture)
-            dedup_attr = _queue_attribute(
-                sqs_client, queue_name, "ContentBasedDeduplication", queue_description
-            )
-            assert dedup_attr == "true", (
-                f"{queue_description} {queue_name} ContentBasedDeduplication is "
-                f"'{dedup_attr}', expected 'true'"
-            )
-
-    return TestSQSFIFOQueue
-
-
 def handle_ecr_error(error: ClientError, operation: str, repository_name: str) -> None:
     error_code = error.response["Error"]["Code"]
     if error_code == "RepositoryNotFoundException":
@@ -146,35 +73,6 @@ def handle_ecr_error(error: ClientError, operation: str, repository_name: str) -
             "This is required to manage Docker images."
         )
     raise error
-
-
-def create_security_group_existence_test(
-    outputs_fixture: str,
-    sg_id_key: str,
-    terraform_path: str,
-) -> Callable[..., None]:
-    def test_security_group_exists(
-        _self: Any,
-        ec2_client: Any,
-        request: pytest.FixtureRequest
-    ) -> None:
-        outputs = request.getfixturevalue(outputs_fixture)
-        sg_id = outputs.get(sg_id_key)
-        if not sg_id:
-            pytest.skip(f"{sg_id_key} output not available")
-        try:
-            response = ec2_client.describe_security_groups(GroupIds=[sg_id])
-            assert len(response["SecurityGroups"]) == 1, (
-                f"Security group {sg_id} not found."
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "InvalidGroup.NotFound":
-                pytest.fail(
-                    f"Security group {sg_id} does not exist. "
-                    f"Run: cd {terraform_path} && terraform apply"
-                )
-            raise
-    return test_security_group_exists
 
 
 def create_log_group_configuration_tests(

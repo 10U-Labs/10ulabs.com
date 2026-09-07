@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 from unittest.mock import MagicMock
 
 import pytest
@@ -9,32 +9,11 @@ from test_fixtures.integration.factories.infrastructure import (
     create_kms_policy_test,
     create_lambda_role_existence_test,
     create_log_group_configuration_tests,
-    create_security_group_existence_test,
-    create_sqs_fifo_queue_tests,
     create_www_common_fixtures,
     create_www_common_s3_existence_tests,
     handle_ecr_error,
 )
 from test_fixtures.outcomes import accepted
-
-
-def _create_nonexistent_queue_mocks() -> Tuple[MagicMock, MagicMock]:
-    mock_client = MagicMock()
-    mock_client.get_queue_url.side_effect = create_client_error(
-        "AWS.SimpleQueueService.NonExistentQueue"
-    )
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "my-queue.fifo"
-    return mock_client, mock_request
-
-
-def _create_sqs_service_error_mocks() -> Tuple[MagicMock, MagicMock]:
-    mock_client = MagicMock()
-    mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
-    mock_client.get_queue_attributes.side_effect = create_client_error("ServiceException")
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "my-queue.fifo"
-    return mock_client, mock_request
 
 
 def _www_common_outputs(
@@ -224,31 +203,6 @@ def test_fails_when_output_missing() -> None:
         instance.test_bucket_name_output_exists(outputs)
 
 
-def test_create_sqs_fifo_queue_tests_returns_class() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name_fixture")
-    assert isinstance(test_class, type)
-
-
-def test_create_sqs_fifo_queue_tests_returns_class_with_name() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name_fixture")
-    assert test_class.__name__ == "TestSQSFIFOQueue"
-
-
-def test_has_test_queue_exists() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name_fixture")
-    assert hasattr(test_class, "test_queue_exists")
-
-
-def test_has_test_queue_is_fifo() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name_fixture")
-    assert hasattr(test_class, "test_queue_is_fifo")
-
-
-def test_has_test_queue_has_deduplication() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name_fixture")
-    assert hasattr(test_class, "test_queue_has_deduplication")
-
-
 def test_handle_ecr_error_repository_not_found() -> None:
     error = create_client_error("RepositoryNotFoundException")
     with pytest.raises(pytest.skip.Exception):
@@ -277,20 +231,6 @@ def test_handle_ecr_error_other_errors() -> None:
     error = create_client_error("ServiceException")
     with pytest.raises(ClientError, match="ServiceException"):
         handle_ecr_error(error, "ecr:ListImages", "my-repo")
-
-
-def test_create_security_group_existence_test_returns_callable() -> None:
-    test_func = create_security_group_existence_test(
-        "outputs_fixture", "security_group_id", "src/api/common/routing"
-    )
-    assert callable(test_func)
-
-
-def test_create_security_group_existence_test_returns_function_with_name() -> None:
-    test_func = create_security_group_existence_test(
-        "outputs_fixture", "security_group_id", "src/api/common/routing"
-    )
-    assert test_func.__name__ == "test_security_group_exists"
 
 
 def test_create_log_group_configuration_tests_returns_class() -> None:
@@ -372,172 +312,6 @@ def test_s3_bucket_exists_reraises_other_errors() -> None:
         instance.test_s3_bucket_exists(mock_client, outputs)
 
 
-def test_queue_exists_success() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name")
-    instance = test_class()
-    mock_client = MagicMock()
-    mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "my-queue.fifo"
-    instance.test_queue_exists(mock_client, mock_request)
-    assert mock_client.get_queue_url.called
-
-
-def test_queue_exists_skips_on_non_existent() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name", fail_on_missing=False)
-    instance = test_class()
-    mock_client = MagicMock()
-    mock_client.get_queue_url.side_effect = create_client_error(
-        "AWS.SimpleQueueService.NonExistentQueue"
-    )
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "my-queue.fifo"
-    with pytest.raises(pytest.skip.Exception):
-        instance.test_queue_exists(mock_client, mock_request)
-
-
-def test_queue_exists_fails_on_non_existent_when_fail_on_missing() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name", fail_on_missing=True)
-    instance = test_class()
-    mock_client = MagicMock()
-    mock_client.get_queue_url.side_effect = create_client_error(
-        "AWS.SimpleQueueService.NonExistentQueue"
-    )
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "my-queue.fifo"
-    with pytest.raises(pytest.fail.Exception):
-        instance.test_queue_exists(mock_client, mock_request)
-
-
-def test_queue_exists_reraises_other_errors() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name")
-    instance = test_class()
-    mock_client = MagicMock()
-    mock_client.get_queue_url.side_effect = create_client_error("ServiceException")
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "my-queue.fifo"
-    with pytest.raises(ClientError):
-        instance.test_queue_exists(mock_client, mock_request)
-
-
-def test_queue_is_fifo_success() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name")
-    instance = test_class()
-    mock_client = MagicMock()
-    mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
-    mock_client.get_queue_attributes.return_value = {
-        "Attributes": {"FifoQueue": "true"}
-    }
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "my-queue.fifo"
-    instance.test_queue_is_fifo(mock_client, mock_request)
-    assert mock_client.get_queue_attributes.called
-
-
-def test_queue_is_fifo_fails_when_not_fifo() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name")
-    instance = test_class()
-    mock_client = MagicMock()
-    mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
-    mock_client.get_queue_attributes.return_value = {
-        "Attributes": {"FifoQueue": "false"}
-    }
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "my-queue.fifo"
-    with pytest.raises(AssertionError):
-        instance.test_queue_is_fifo(mock_client, mock_request)
-
-
-def test_queue_is_fifo_skips_on_non_existent() -> None:
-    instance = create_sqs_fifo_queue_tests("queue_name")()
-    mock_client, mock_request = _create_nonexistent_queue_mocks()
-    with pytest.raises(pytest.skip.Exception):
-        instance.test_queue_is_fifo(mock_client, mock_request)
-
-
-def test_queue_has_deduplication_success() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name")
-    instance = test_class()
-    mock_client = MagicMock()
-    mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
-    mock_client.get_queue_attributes.return_value = {
-        "Attributes": {"ContentBasedDeduplication": "true"}
-    }
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "my-queue.fifo"
-    instance.test_queue_has_deduplication(mock_client, mock_request)
-    assert mock_client.get_queue_attributes.called
-
-
-def test_queue_has_deduplication_fails_when_disabled() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name")
-    instance = test_class()
-    mock_client = MagicMock()
-    mock_client.get_queue_url.return_value = {"QueueUrl": "https://..."}
-    mock_client.get_queue_attributes.return_value = {
-        "Attributes": {"ContentBasedDeduplication": "false"}
-    }
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = "my-queue.fifo"
-    with pytest.raises(AssertionError):
-        instance.test_queue_has_deduplication(mock_client, mock_request)
-
-
-def test_queue_has_deduplication_skips_on_non_existent() -> None:
-    instance = create_sqs_fifo_queue_tests("queue_name")()
-    mock_client, mock_request = _create_nonexistent_queue_mocks()
-    with pytest.raises(pytest.skip.Exception):
-        instance.test_queue_has_deduplication(mock_client, mock_request)
-
-
-def test_security_group_exists_success() -> None:
-    test_func = create_security_group_existence_test(
-        "outputs_fixture", "security_group_id", "src/api/common/routing"
-    )
-    mock_client = MagicMock()
-    mock_client.describe_security_groups.return_value = {"SecurityGroups": [{}]}
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = {"security_group_id": "sg-123"}
-    assert test_func(None, mock_client, mock_request) is None
-
-
-def test_security_group_exists_skips_when_no_output() -> None:
-    test_func = create_security_group_existence_test(
-        "outputs_fixture", "security_group_id", "src/api/common/routing"
-    )
-    mock_client = MagicMock()
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = {}
-    with pytest.raises(pytest.skip.Exception):
-        test_func(None, mock_client, mock_request)
-
-
-def test_security_group_exists_fails_on_not_found() -> None:
-    test_func = create_security_group_existence_test(
-        "outputs_fixture", "security_group_id", "src/api/common/routing"
-    )
-    mock_client = MagicMock()
-    mock_client.describe_security_groups.side_effect = create_client_error(
-        "InvalidGroup.NotFound"
-    )
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = {"security_group_id": "sg-123"}
-    with pytest.raises(pytest.fail.Exception):
-        test_func(None, mock_client, mock_request)
-
-
-def test_security_group_exists_reraises_other_errors() -> None:
-    test_func = create_security_group_existence_test(
-        "outputs_fixture", "security_group_id", "src/api/common/routing"
-    )
-    mock_client = MagicMock()
-    mock_client.describe_security_groups.side_effect = create_client_error("ServiceException")
-    mock_request = MagicMock()
-    mock_request.getfixturevalue.return_value = {"security_group_id": "sg-123"}
-    with pytest.raises(ClientError):
-        test_func(None, mock_client, mock_request)
-
-
 def test_log_group_has_retention_set_success() -> None:
     test_class = create_log_group_configuration_tests("log_group_fixture")
     instance = test_class()
@@ -574,22 +348,6 @@ def test_log_group_retention_is_expected_fails_when_different() -> None:
     mock_request.getfixturevalue.return_value = {"name": "/aws/lambda/my-func", "retention": 30}
     with pytest.raises(AssertionError):
         instance.test_handler_log_group_retention_is_expected(mock_request)
-
-
-def test_queue_is_fifo_reraises_other_errors() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name")
-    instance = test_class()
-    mock_client, mock_request = _create_sqs_service_error_mocks()
-    with pytest.raises(ClientError):
-        instance.test_queue_is_fifo(mock_client, mock_request)
-
-
-def test_queue_has_deduplication_reraises_other_errors() -> None:
-    test_class = create_sqs_fifo_queue_tests("queue_name")
-    instance = test_class()
-    mock_client, mock_request = _create_sqs_service_error_mocks()
-    with pytest.raises(ClientError):
-        instance.test_queue_has_deduplication(mock_client, mock_request)
 
 
 def test_lambda_execution_role_exists_calls_helper() -> None:
