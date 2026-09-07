@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 
@@ -25,3 +26,16 @@ def extract_brace_block(content: str, start_pos: int) -> str:
             if brace_count == 0:
                 return content[start_pos:start_pos + i + 1]
     return content[start_pos:]
+
+
+_STATE_KEY_PATTERN = re.compile(r'^\s*key\s*=\s*"([^"]+)"', re.MULTILINE)
+
+
+def state_key_for(stack_dir: Path) -> str:
+    backend_path = stack_dir / "backend.tf"
+    if not backend_path.exists():
+        raise RuntimeError(f"No backend.tf at {backend_path}")
+    match = _STATE_KEY_PATTERN.search(backend_path.read_text(encoding='utf-8'))
+    if match is None:
+        raise RuntimeError(f"No state key declared in {backend_path}")
+    return match.group(1)

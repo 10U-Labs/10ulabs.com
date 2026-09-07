@@ -16,8 +16,13 @@ class TestIAMCapabilities(Layer6IAMCapabilityTests):
 
 
 class TestS3StateCapabilities(Layer6S3CapabilityTests, Layer6S3WriteCapabilityTests):
-    def test_can_read_state_file(self, s3_client: Any, state_bucket_name: str) -> None:
-        check_state_file_readable(s3_client, state_bucket_name, "api/terraform.tfstate")
+    def test_can_read_state_file(
+        self,
+        s3_client: Any,
+        state_bucket_name: str,
+        state_key: str
+    ) -> None:
+        check_state_file_readable(s3_client, state_bucket_name, state_key)
         assert True
 
 

@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 import pytest
-from repo_utils import REPO_ROOT
+from repo_utils import REPO_ROOT, state_key_for
 
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
@@ -40,6 +40,11 @@ def _get_locals_derived_values(shared: dict) -> dict:
 @pytest.fixture(scope="module", name='bootstrap_dir')
 def bootstrap_dir_fixture() -> Path:
     return BOOTSTRAP_DIR
+
+
+@pytest.fixture(scope="module")
+def state_key() -> str:
+    return state_key_for(BOOTSTRAP_DIR)
 
 
 @pytest.fixture(scope="module")

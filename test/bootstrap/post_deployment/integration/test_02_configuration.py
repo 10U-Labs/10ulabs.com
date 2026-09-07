@@ -13,10 +13,10 @@ def find_tfstate_resource(state: Any, resource_type: str, resource_name: str) ->
 
 
 @pytest.fixture(name='tfstate')
-def tfstate_fixture(s3_client: Any, config: Dict[str, Any]) -> Any:
+def tfstate_fixture(s3_client: Any, config: Dict[str, Any], state_key: str) -> Any:
     response = s3_client.get_object(
         Bucket=config['name_for_terraform_state_bucket'],
-        Key='bootstrap/terraform.tfstate'
+        Key=state_key
     )
     return json.loads(response['Body'].read().decode('utf-8'))
 

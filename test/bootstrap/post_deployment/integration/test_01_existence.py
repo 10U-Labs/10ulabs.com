@@ -15,11 +15,15 @@ def test_terraform_state_bucket_exists(s3_client: Any, config: Dict[str, Any]) -
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
 
-def test_terraform_state_file_exists(s3_client: Any, config: Dict[str, Any]) -> None:
+def test_terraform_state_file_exists(
+    s3_client: Any,
+    config: Dict[str, Any],
+    state_key: str
+) -> None:
     bucket_name = config['name_for_terraform_state_bucket']
     s3_client.head_object(
         Bucket=bucket_name,
-        Key='bootstrap/terraform.tfstate'
+        Key=state_key
     )
     assert True
 

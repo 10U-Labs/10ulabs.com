@@ -6,6 +6,7 @@ from repo_utils import (
     _find_repo_root,
     _find_repo_root_from_path,
     REPO_ROOT,
+    state_key_for,
 )
 
 
@@ -65,3 +66,27 @@ def test_start_at_beginning() -> None:
     content = '{ content } after'
     result = extract_brace_block(content, 0)
     assert result == "{ content }"
+
+
+def _write_backend_tf(tmp_path: Path, *body_lines: str) -> None:
+    body = "".join(f"    {line}\n" for line in body_lines)
+    (tmp_path / "backend.tf").write_text(
+        'terraform {\n  backend "s3" {\n' + body + '  }\n}\n',
+        encoding='utf-8'
+    )
+
+
+def test_reads_the_declared_state_key(tmp_path: Path) -> None:
+    _write_backend_tf(tmp_path, 'bucket = "a-bucket"', 'key = "a_stack/terraform.tfstate"')
+    assert state_key_for(tmp_path) == "a_stack/terraform.tfstate"
+
+
+def test_raises_when_backend_declares_no_key(tmp_path: Path) -> None:
+    _write_backend_tf(tmp_path, 'bucket = "a-bucket"')
+    with pytest.raises(RuntimeError, match="No state key declared in"):
+        state_key_for(tmp_path)
+
+
+def test_raises_when_backend_is_absent(tmp_path: Path) -> None:
+    with pytest.raises(RuntimeError, match="No backend.tf at"):
+        state_key_for(tmp_path)

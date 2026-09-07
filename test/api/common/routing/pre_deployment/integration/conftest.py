@@ -3,11 +3,17 @@ from typing import Any, Dict
 
 import pytest
 
-from repo_utils import REPO_ROOT
+from repo_utils import REPO_ROOT, state_key_for
 from test_fixtures.terraform import terraform_init, terraform_output
 
 
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
+ROUTING_DIR = REPO_ROOT / "src" / "api" / "common" / "routing"
+
+
+@pytest.fixture(scope="session")
+def state_key() -> str:
+    return state_key_for(ROUTING_DIR)
 
 
 @pytest.fixture(scope="session", name="bootstrap_initialized")
