@@ -410,20 +410,10 @@ on:
       - main
     paths:
       - .github/workflows/scripts.yml
-      - lib/python/boto_mocks/**
-      - lib/python/lambda_response/**
-      - lib/python/module_utils/**
-      - lib/python/repo_utils/**
-      - lib/python/terraform_config/**
-      - lib/python/test_fixtures/**
+      - lib/python/**
       - scripts/**
       - test/conftest.py
-      - test/lib/python/test_boto_mocks/**
-      - test/lib/python/test_lambda_response/**
-      - test/lib/python/test_module_utils/**
-      - test/lib/python/test_repo_utils/**
-      - test/lib/python/test_terraform_config/**
-      - test/lib/python/test_test_fixtures/**
+      - test/lib/python/**
       - test/scripts/**
   workflow_dispatch:
 permissions:

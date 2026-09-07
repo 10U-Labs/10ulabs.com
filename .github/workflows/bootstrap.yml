@@ -864,24 +864,12 @@ on:
       - main
     paths:
       - .github/workflows/bootstrap.yml
-      - lib/python/boto_mocks/**
-      - lib/python/lambda_response/**
-      - lib/python/module_utils/**
-      - lib/python/repo_utils/**
-      - lib/python/terraform_config/**
-      - lib/python/terraform_drift/**
-      - lib/python/test_fixtures/**
+      - lib/python/**
       - lib/terraform/common/**
       - src/bootstrap/**
       - test/bootstrap/**
       - test/conftest.py
-      - test/lib/python/test_boto_mocks/**
-      - test/lib/python/test_lambda_response/**
-      - test/lib/python/test_module_utils/**
-      - test/lib/python/test_repo_utils/**
-      - test/lib/python/test_terraform_config/**
-      - test/lib/python/test_terraform_drift/**
-      - test/lib/python/test_test_fixtures/**
+      - test/lib/python/**
       - test/lib/terraform/common/**
       - test/lib/terraform/conftest.py
       - test/lib/terraform/unit/**
