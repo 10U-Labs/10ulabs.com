@@ -1,6 +1,16 @@
 import re
 from pathlib import Path
 
+from repo_utils import REPO_ROOT
+from test_fixtures.terraform_tests import create_state_lock_contract_tests
+
+
+BOOTSTRAP_SRC = REPO_ROOT / "src" / "bootstrap"
+
+test_group_names_the_state_file = create_state_lock_contract_tests(
+    BOOTSTRAP_SRC, "bootstrap.yml"
+)
+
 
 def _extract_module_common_refs(content: str) -> set[str]:
     pattern = r"module\.common\.([a-zA-Z_][a-zA-Z0-9_]*)"

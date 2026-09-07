@@ -4,7 +4,10 @@ from pathlib import Path
 from typing import List
 
 from repo_utils import REPO_ROOT
-from test_fixtures.terraform_tests import create_lambda_source_contract_tests
+from test_fixtures.terraform_tests import (
+    create_lambda_source_contract_tests,
+    create_state_lock_contract_tests,
+)
 
 
 RACK_CONFIGURATIONS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "rack_configurations"
@@ -14,6 +17,10 @@ TestLambdaSourceContract = create_lambda_source_contract_tests(
     endpoint_src=RACK_CONFIGURATIONS_SRC,
     tf_file="lambda.tf",
     resource_name="handler",
+)
+
+test_group_names_the_state_file = create_state_lock_contract_tests(
+    RACK_CONFIGURATIONS_SRC, "api_endpoint_v1_rack_configurations.yml"
 )
 
 

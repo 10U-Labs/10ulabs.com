@@ -4,9 +4,14 @@ from pathlib import Path
 import pytest
 
 from repo_utils import REPO_ROOT
+from test_fixtures.terraform_tests import create_state_lock_contract_tests
 
 ROUTING_SRC = REPO_ROOT / "src" / "api" / "common" / "routing"
 LAMBDA_DIR = ROUTING_SRC / "lambda"
+
+test_group_names_the_state_file = create_state_lock_contract_tests(
+    ROUTING_SRC, "api_common_routing.yml"
+)
 
 
 def _extract_openapi_template_vars(openapi_path: Path) -> set[str]:

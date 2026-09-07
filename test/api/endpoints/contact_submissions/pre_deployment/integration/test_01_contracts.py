@@ -4,10 +4,16 @@ from typing import Optional
 
 import pytest
 
+from test_fixtures.terraform_tests import create_state_lock_contract_tests
+
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact_submissions"
 LAMBDA_DIR = ENDPOINT_SRC / "lambda"
+
+test_group_names_the_state_file = create_state_lock_contract_tests(
+    ENDPOINT_SRC, "api_endpoint_v1_contact_submissions.yml"
+)
 
 
 def _get_terraform_handler() -> Optional[str]:

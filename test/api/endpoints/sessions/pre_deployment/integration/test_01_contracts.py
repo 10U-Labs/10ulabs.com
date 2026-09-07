@@ -2,7 +2,10 @@ import re
 from typing import Optional, Set
 
 from repo_utils import REPO_ROOT
-from test_fixtures.terraform_tests import create_lambda_source_contract_tests
+from test_fixtures.terraform_tests import (
+    create_lambda_source_contract_tests,
+    create_state_lock_contract_tests,
+)
 
 
 SESSIONS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "sessions"
@@ -21,6 +24,10 @@ TestExporterLambdaSourceContract = create_lambda_source_contract_tests(
     endpoint_src=SESSIONS_SRC_PATH,
     tf_file="analytics.tf",
     resource_name="export",
+)
+
+test_group_names_the_state_file = create_state_lock_contract_tests(
+    SESSIONS_SRC_PATH, "api_endpoint_v1_sessions.yml"
 )
 
 
