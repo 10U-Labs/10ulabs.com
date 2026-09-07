@@ -4,7 +4,10 @@ from typing import Optional
 
 import pytest
 
-from test_fixtures.terraform_tests import create_state_lock_contract_tests
+from test_fixtures.terraform_tests import (
+    create_routing_wait_contract_tests,
+    create_state_lock_contract_tests,
+)
 
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
@@ -13,6 +16,10 @@ LAMBDA_DIR = ENDPOINT_SRC / "lambda"
 
 test_group_names_the_state_file = create_state_lock_contract_tests(
     ENDPOINT_SRC, "api_endpoint_v1_contact_submissions.yml"
+)
+
+TestRoutingWaitContract = create_routing_wait_contract_tests(
+    "api_endpoint_v1_contact_submissions.yml"
 )
 
 

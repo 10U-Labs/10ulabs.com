@@ -2,13 +2,20 @@ import ast
 
 import pytest
 from repo_utils import REPO_ROOT
-from test_fixtures.terraform_tests import create_state_lock_contract_tests
+from test_fixtures.terraform_tests import (
+    create_routing_wait_contract_tests,
+    create_state_lock_contract_tests,
+)
 
 
 HEALTH_SRC = REPO_ROOT / "src" / "api" / "operational" / "health"
 
 test_group_names_the_state_file = create_state_lock_contract_tests(
     HEALTH_SRC, "api_operational_health.yml"
+)
+
+TestRoutingWaitContract = create_routing_wait_contract_tests(
+    "api_operational_health.yml"
 )
 
 

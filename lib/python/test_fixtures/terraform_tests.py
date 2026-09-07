@@ -251,3 +251,53 @@ def create_state_lock_contract_tests(
         )
 
     return test_group_names_the_state_file
+
+
+DEPENDENT_WAIT_JOB = "wait-for-api-common-routing"
+
+
+def _job_block(workflow_content: str, job_name: str) -> str:
+    header = re.search(rf'^  {re.escape(job_name)}:\n', workflow_content, re.MULTILINE)
+    if not header:
+        return ""
+    rest = workflow_content[header.end():]
+    following = re.search(r'^ {0,2}\S', rest, re.MULTILINE)
+    if not following:
+        return rest
+    return rest[:following.start()]
+
+
+def create_routing_wait_contract_tests(workflow_name: str) -> type:
+    workflow_path = REPO_ROOT / ".github" / "workflows" / workflow_name
+    needs_entry = f"\n      - {DEPENDENT_WAIT_JOB}\n"
+    apply_condition = f"needs.{DEPENDENT_WAIT_JOB}.outputs.apply == 'true'"
+
+    def reconciliation() -> str:
+        return _job_block(workflow_path.read_text(), "reconciliation")
+
+    class TestRoutingWaitContract:
+        def test_the_workflow_declares_the_wait_job(self) -> None:
+            declared = _job_block(workflow_path.read_text(), DEPENDENT_WAIT_JOB)
+            assert declared, (
+                f"{workflow_name} declares no {DEPENDENT_WAIT_JOB} job, so a push "
+                f"touching both this stack and src/api/common/routing/ starts this "
+                f"workflow beside api_common_routing rather than after it."
+            )
+
+        def test_reconciliation_needs_the_wait_job(self) -> None:
+            assert needs_entry in reconciliation(), (
+                f"{workflow_name}'s reconciliation does not name {DEPENDENT_WAIT_JOB} "
+                f"in needs, so terraform apply reads api/terraform.tfstate while "
+                f"api_common_routing is still writing it."
+            )
+
+        def test_reconciliation_applies_only_on_the_conclusion_the_wait_job_reports(
+            self,
+        ) -> None:
+            assert apply_condition in reconciliation(), (
+                f"{workflow_name}'s reconciliation does not require "
+                f"{apply_condition}, so it applies even when the api_common_routing "
+                f"run on this commit ended some way other than success."
+            )
+
+    return TestRoutingWaitContract

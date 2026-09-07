@@ -6,6 +6,7 @@ from typing import List
 from repo_utils import REPO_ROOT
 from test_fixtures.terraform_tests import (
     create_lambda_source_contract_tests,
+    create_routing_wait_contract_tests,
     create_state_lock_contract_tests,
 )
 
@@ -21,6 +22,10 @@ TestLambdaSourceContract = create_lambda_source_contract_tests(
 
 test_group_names_the_state_file = create_state_lock_contract_tests(
     RACK_CONFIGURATIONS_SRC, "api_endpoint_v1_rack_configurations.yml"
+)
+
+TestRoutingWaitContract = create_routing_wait_contract_tests(
+    "api_endpoint_v1_rack_configurations.yml"
 )
 
 

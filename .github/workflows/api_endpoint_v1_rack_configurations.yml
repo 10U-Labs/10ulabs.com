@@ -467,6 +467,7 @@ jobs:
       github.ref == 'refs/heads/main'
       && (github.event_name != 'workflow_run'
       || github.event.workflow_run.conclusion == 'success')
+      && needs.wait-for-api-common-routing.outputs.apply == 'true'
     needs:
       - assert-no-comments
       - assert-no-inline-directives
@@ -499,6 +500,7 @@ jobs:
       - tflint
       - unit-tests
       - unit-tests-module
+      - wait-for-api-common-routing
       - yamllint
     runs-on: ubuntu-latest
     steps:
@@ -909,6 +911,22 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $TEST_DIRS \
             --confcutdir=test --verbose --pythonwarnings=error
+  wait-for-api-common-routing:
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      apply: ${{ steps.routing.outputs.apply }}
+    permissions:
+      actions: read
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: routing
+        name: Wait for api_common_routing on this commit
+        uses: ./.github/actions/wait-for-api-common-routing
+        with:
+          github_token: ${{ github.token }}
   yamllint:
     runs-on: ubuntu-latest
     steps:
@@ -940,6 +958,7 @@ on:
       - main
     paths:
       - .github/actions/verify-oidc-vars/action.yml
+      - .github/actions/wait-for-api-common-routing/action.yml
       - .github/workflows/api_endpoint_v1_rack_configurations.yml
       - lib/python/boto_mocks/**
       - lib/python/lambda_clients/**

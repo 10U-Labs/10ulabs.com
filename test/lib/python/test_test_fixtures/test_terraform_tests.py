@@ -9,15 +9,18 @@ import pytest
 from repo_utils import REPO_ROOT
 from test_fixtures.terraform_tests import (
     API_COMMON_ROUTING_OUTPUTS_FILE,
+    DEPENDENT_WAIT_JOB,
     _block_named,
     _braced_block,
     _environment_variables_read,
     _environment_variables_supplied,
     _get_api_common_routing_outputs,
+    _job_block,
     _packaged_handler_source_path,
     create_lambda_source_contract_tests,
     create_remote_state_contract_tests,
     create_remote_state_config_tests,
+    create_routing_wait_contract_tests,
     create_state_lock_contract_tests,
 )
 from test_fixtures.outcomes import accepted
@@ -757,3 +760,92 @@ def test_state_lock_message_calls_the_equality_a_naming_convention(tmp_path: Pat
     )
     with pytest.raises(AssertionError, match="naming convention"):
         returned()
+
+
+WAIT_JOB_DECLARED = (
+    f"  {DEPENDENT_WAIT_JOB}:\n"
+    "    runs-on: ubuntu-latest\n"
+)
+
+RECONCILIATION_ORDERED = (
+    "  reconciliation:\n"
+    "    if: >-\n"
+    f"      needs.{DEPENDENT_WAIT_JOB}.outputs.apply == 'true'\n"
+    "    needs:\n"
+    "      - unit-tests-module\n"
+    f"      - {DEPENDENT_WAIT_JOB}\n"
+    "      - yamllint\n"
+    "    runs-on: ubuntu-latest\n"
+)
+
+RECONCILIATION_UNORDERED = (
+    "  reconciliation:\n"
+    "    needs:\n"
+    "      - unit-tests-module\n"
+    "      - yamllint\n"
+    "    runs-on: ubuntu-latest\n"
+)
+
+WORKFLOW_TRAILER = "name: a_stack\n"
+
+
+def _routing_wait_contract(tmp_path: Path, jobs: str) -> Any:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "a_stack.yml").write_text("jobs:\n" + jobs + WORKFLOW_TRAILER)
+    with patch("test_fixtures.terraform_tests.REPO_ROOT", tmp_path):
+        return create_routing_wait_contract_tests("a_stack.yml")()
+
+
+def _ordered_contract(tmp_path: Path) -> Any:
+    return _routing_wait_contract(
+        tmp_path, RECONCILIATION_ORDERED + WAIT_JOB_DECLARED
+    )
+
+
+def _unordered_contract(tmp_path: Path) -> Any:
+    return _routing_wait_contract(tmp_path, RECONCILIATION_UNORDERED)
+
+
+def test_job_block_reads_the_last_job_to_the_end_of_the_file() -> None:
+    workflow = "jobs:\n  only-job:\n    runs-on: ubuntu-latest\n"
+    assert _job_block(workflow, "only-job") == "    runs-on: ubuntu-latest\n"
+
+
+def test_job_block_is_empty_when_the_workflow_declares_no_such_job() -> None:
+    assert _job_block("jobs:\n  only-job:\n", "another-job") == ""
+
+
+def test_routing_wait_passes_when_the_workflow_declares_the_wait_job(tmp_path: Path) -> None:
+    contract = _ordered_contract(tmp_path)
+    assert accepted(contract.test_the_workflow_declares_the_wait_job)
+
+
+def test_routing_wait_fails_when_the_workflow_declares_no_wait_job(tmp_path: Path) -> None:
+    contract = _unordered_contract(tmp_path)
+    with pytest.raises(AssertionError, match="declares no wait-for-api-common-routing job"):
+        contract.test_the_workflow_declares_the_wait_job()
+
+
+def test_routing_wait_passes_when_reconciliation_needs_the_wait_job(tmp_path: Path) -> None:
+    contract = _ordered_contract(tmp_path)
+    assert accepted(contract.test_reconciliation_needs_the_wait_job)
+
+
+def test_routing_wait_fails_when_reconciliation_does_not_need_the_wait_job(tmp_path: Path) -> None:
+    contract = _unordered_contract(tmp_path)
+    with pytest.raises(AssertionError, match="does not name wait-for-api-common-routing in needs"):
+        contract.test_reconciliation_needs_the_wait_job()
+
+
+def test_routing_wait_passes_when_reconciliation_reads_the_apply_output(tmp_path: Path) -> None:
+    contract = _ordered_contract(tmp_path)
+    assert accepted(
+        contract.test_reconciliation_applies_only_on_the_conclusion_the_wait_job_reports
+    )
+
+
+def test_routing_wait_fails_when_reconciliation_ignores_the_apply_output(tmp_path: Path) -> None:
+    contract = _unordered_contract(tmp_path)
+    with pytest.raises(AssertionError, match="does not require"):
+        contract.test_reconciliation_applies_only_on_the_conclusion_the_wait_job_reports()
