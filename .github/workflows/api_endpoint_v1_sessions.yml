@@ -281,22 +281,10 @@ jobs:
             types-requests
       - name: Run mypy on source
         run: |
-          SRC=src/api/endpoints/sessions
           MYPYPATH=lib/python python3 -m mypy \
+            --explicit-package-bases \
             --disallow-untyped-defs \
-            $SRC/lambda/exporter/ \
-            lib/python/boto_mocks \
-            lib/python/lambda_clients \
-            lib/python/lambda_http \
-            lib/python/lambda_response \
-            lib/python/module_utils \
-            lib/python/repo_utils \
-            lib/python/terraform_config \
-            lib/python/terraform_drift \
-            lib/python/test_fixtures
-          MYPYPATH=lib/python python3 -m mypy \
-            --disallow-untyped-defs \
-            $SRC/lambda/tracker/
+            src/ lib/
   mypy-tests:
     runs-on: ubuntu-latest
     steps:
@@ -312,6 +300,7 @@ jobs:
             boto3 \
             boto3-stubs \
             botocore \
+            dnspython \
             mypy \
             pytest \
             requests \
@@ -321,22 +310,7 @@ jobs:
           MYPYPATH=lib/python:scripts python3 -m mypy \
             --explicit-package-bases \
             --disallow-untyped-defs \
-            test/conftest.py \
-            test/lib/terraform/conftest.py \
-            test/api/conftest.py \
-            test/api/endpoints/conftest.py \
-            test/lib/terraform/common \
-            test/lib/terraform/unit \
-            test/api/endpoints/sessions \
-            test/lib/python/test_boto_mocks \
-            test/lib/python/test_lambda_clients \
-            test/lib/python/test_lambda_http \
-            test/lib/python/test_lambda_response \
-            test/lib/python/test_module_utils \
-            test/lib/python/test_repo_utils \
-            test/lib/python/test_terraform_config \
-            test/lib/python/test_terraform_drift \
-            test/lib/python/test_test_fixtures
+            test/ lib/
   post-deployment-integration-tests:
     if: github.ref == 'refs/heads/main'
     needs: reconciliation
