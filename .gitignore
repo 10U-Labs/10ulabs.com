@@ -26,3 +26,6 @@ __pycache__/
 .terraform.lock.hcl
 coverage.json
 .coverage
+
+# Machine-specific Claude Code settings (absolute autoMemoryDirectory)
+.claude/settings.local.json
