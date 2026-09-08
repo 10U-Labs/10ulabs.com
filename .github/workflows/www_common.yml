@@ -178,6 +178,25 @@ jobs:
           --verbose
           test/
           lib/
+  assert-pytest-test-can-fail:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            assert-pytest-test-can-fail
+      - name: Assert pytest test can fail
+        run: >-
+          assert-pytest-test-can-fail
+          --verbose
+          test/
+          lib/
   assert-python-definition-is-used:
     runs-on: ubuntu-latest
     steps:
@@ -532,6 +551,7 @@ jobs:
       - assert-pytest-class-holds-state
       - assert-pytest-fixture-is-requested
       - assert-pytest-fixture-name-is-needed
+      - assert-pytest-test-can-fail
       - assert-python-definition-is-used
       - assert-python-definition-is-used-in-tests
       - assert-python-definition-is-used-packages
