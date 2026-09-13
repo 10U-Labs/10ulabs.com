@@ -14,7 +14,6 @@ DECLARED_OUTPUTS = [
     ("common", "domain_name"),
     ("common", "github_app"),
     ("common", "github_org"),
-    ("common", "kms_lambda_key_arn"),
     ("common", "lambda_handler_names"),
     ("common", "name_for_central_logs_bucket"),
     ("common", "name_for_github_repo"),

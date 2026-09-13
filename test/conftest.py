@@ -19,7 +19,6 @@ SHARED_CONFIG: Dict[str, Any] = {
     "github_org": "10U-Labs",
     "id": "2436221",
     "installation_id": "98653544",
-    "kms_lambda_key_arn": "arn:aws:kms:${local.aws_region}:${local.aws_account_id}:key/*",
     "name_for_central_logs_bucket": "10ulabs-central-logs-us-east-2",
     "name_for_github_repo": "10ulabs.com",
     "name_for_terraform_state_bucket": "10ulabs-terraform-state-us-east-2",

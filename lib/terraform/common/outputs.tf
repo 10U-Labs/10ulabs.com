@@ -45,7 +45,3 @@ output "ssm_github_pat_name" {
 output "github_app" {
   value = local.github_app
 }
-
-output "kms_lambda_key_arn" {
-  value = "arn:aws:kms:${local.aws_region}:${local.aws_account_id}:key/*"
-}

@@ -84,7 +84,3 @@ def test_ssm_github_pat_name_output_exists(outputs_tf_content: str) -> None:
 
 def test_github_app_output_exists(outputs_tf_content: str) -> None:
     assert 'output "github_app"' in outputs_tf_content
-
-
-def test_kms_lambda_key_arn_output_exists(outputs_tf_content: str) -> None:
-    assert 'output "kms_lambda_key_arn"' in outputs_tf_content
