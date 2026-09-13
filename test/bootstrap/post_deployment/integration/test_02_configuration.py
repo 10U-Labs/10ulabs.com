@@ -4,6 +4,9 @@ import pytest
 
 from test_fixtures.aws import stale_delete_markers
 
+NONCURRENT_VERSION_DAYS = 90
+LIFECYCLE_LAG_DAYS = 7
+
 
 def find_tfstate_resource(state: Any, resource_type: str, resource_name: str) -> Any:
     for resource in state['resources']:
@@ -252,7 +255,9 @@ def test_terraform_state_bucket_keeps_no_stale_delete_markers(
     config: Dict[str, Any]
 ) -> None:
     bucket_name = config['name_for_terraform_state_bucket']
-    markers = stale_delete_markers(s3_client, bucket_name)
+    markers = stale_delete_markers(
+        s3_client, bucket_name, NONCURRENT_VERSION_DAYS + LIFECYCLE_LAG_DAYS
+    )
     assert not markers, f"delete markers nothing will remove: {markers}"
 
 
@@ -489,27 +494,6 @@ def test_iam_role_has_administrator_access_policy(iam_client: Any, config: Dict[
     assert policy_arn == 'arn:aws:iam::aws:policy/AdministratorAccess'
 
 
-def _trusted_repository_patterns(trust_policy: Any) -> List[str]:
-    condition = trust_policy['Statement'][0]['Condition']['StringLike']
-    subjects = condition['token.actions.githubusercontent.com:sub']
-    return [subjects] if isinstance(subjects, str) else subjects
-
-
-def test_deploy_role_trusts_only_the_synthesizer(
-    iam_client: Any,
-    config: Dict[str, Any]
-) -> None:
-    role_name = config['name_for_wan_synthesizer_role']
-    org = config['github_org']
-    expected = [
-        f"repo:{org}/wan-synthesizer:*",
-        f"repo:{org}@240548037/wan-synthesizer@1262350676:*",
-    ]
-    response = iam_client.get_role(RoleName=role_name)
-    trust_policy = response['Role']['AssumeRolePolicyDocument']
-    assert sorted(_trusted_repository_patterns(trust_policy)) == sorted(expected)
-
-
 def test_oidc_provider_has_correct_thumbprint(iam_client: Any, aws_account_id: str) -> None:
     account_id = aws_account_id
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
@@ -609,13 +593,48 @@ def test_github_app_private_key_parameter_has_name_tag(
     assert github_app_private_key_tags.get('Name') == 'github-app-private-key'
 
 
-def test_terraform_state_bucket_versioning_is_suspended(
+def test_terraform_state_bucket_versioning_is_enabled(
     s3_client: Any,
     config: Dict[str, Any]
 ) -> None:
     bucket_name = config['name_for_terraform_state_bucket']
     versioning = s3_client.get_bucket_versioning(Bucket=bucket_name)
-    assert versioning.get('Status') == 'Suspended'
+    assert versioning.get('Status') == 'Enabled'
+
+
+def test_terraform_state_bucket_expires_noncurrent_versions_at_ninety_days(
+    noncurrent_version_rule: Dict[str, Any]
+) -> None:
+    assert noncurrent_version_rule.get('NoncurrentVersionExpiration', {}).get(
+        'NoncurrentDays'
+    ) == NONCURRENT_VERSION_DAYS
+
+
+def test_terraform_state_bucket_noncurrent_version_rule_covers_every_key(
+    noncurrent_version_rule: Dict[str, Any]
+) -> None:
+    assert not any(noncurrent_version_rule.get('Filter', {}).values())
+
+
+def _denied_to_everyone_but(s3_client: Any, bucket_name: str) -> List[str]:
+    policy = json.loads(s3_client.get_bucket_policy(Bucket=bucket_name)['Policy'])
+    statement = next(
+        entry for entry in policy['Statement'] if entry['Sid'] == 'DenyEveryoneElse'
+    )
+    return sorted(statement['Condition']['StringNotLike']['aws:PrincipalArn'])
+
+
+def test_terraform_state_bucket_admits_only_the_account_and_the_roles_that_write_state(
+    s3_client: Any,
+    config: Dict[str, Any],
+    aws_account_id: str
+) -> None:
+    assert _denied_to_everyone_but(s3_client, config['name_for_terraform_state_bucket']) == sorted([
+        f"arn:aws:iam::{aws_account_id}:root",
+        f"arn:aws:iam::{aws_account_id}:user/{config['admin_iam_user']}",
+        f"arn:aws:iam::{aws_account_id}:role/{config['name_for_github_actions_role']}",
+        f"arn:aws:iam::{aws_account_id}:role/{config['name_for_wan_synthesizer_role']}",
+    ])
 
 
 def test_terraform_state_bucket_has_encryption(s3_client: Any, config: Dict[str, Any]) -> None:

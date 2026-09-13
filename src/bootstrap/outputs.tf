@@ -37,7 +37,3 @@ output "name_for_cloudtrail" {
 output "ssm_parameter_name_for_github_pat" {
   value = aws_ssm_parameter.github_pat.name
 }
-
-output "arn_for_wan_synthesizer_role" {
-  value = aws_iam_role.wan_synthesizer_github_actions.arn
-}

@@ -1,3 +1,10 @@
+locals {
+  principals_of_this_repository = [
+    "arn:aws:iam::${local.aws_account_id}:user/${local.admin_iam_user}",
+    "arn:aws:iam::${local.aws_account_id}:role/${local.name_for_github_actions_role}",
+  ]
+}
+
 resource "aws_s3_bucket" "terraform_state" {
   bucket        = local.name_for_terraform_state_bucket
   force_destroy = true
@@ -7,7 +14,7 @@ resource "aws_s3_bucket_versioning" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
   versioning_configuration {
-    status = "Suspended"
+    status = "Enabled"
   }
 }
 
@@ -22,6 +29,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "terraform_state" {
 
     expiration {
       expired_object_delete_marker = true
+    }
+  }
+
+  rule {
+    id     = "expire-noncurrent-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90
     }
   }
 }
@@ -62,10 +80,7 @@ resource "aws_s3_bucket_policy" "terraform_state" {
         Sid    = "AllowTerraformAccess"
         Effect = "Allow"
         Principal = {
-          AWS = [
-            "arn:aws:iam::${local.aws_account_id}:user/${local.admin_iam_user}",
-            "arn:aws:iam::${local.aws_account_id}:role/${local.name_for_github_actions_role}"
-          ]
+          AWS = local.principals_of_this_repository
         }
         Action = [
           "s3:GetObject",
@@ -77,6 +92,27 @@ resource "aws_s3_bucket_policy" "terraform_state" {
           aws_s3_bucket.terraform_state.arn,
           "${aws_s3_bucket.terraform_state.arn}/*"
         ]
+      },
+      {
+        Sid       = "DenyEveryoneElse"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.terraform_state.arn,
+          "${aws_s3_bucket.terraform_state.arn}/*"
+        ]
+        Condition = {
+          StringNotLike = {
+            "aws:PrincipalArn" = concat(
+              local.principals_of_this_repository,
+              [
+                "arn:aws:iam::${local.aws_account_id}:root",
+                "arn:aws:iam::${local.aws_account_id}:role/${local.name_for_wan_synthesizer_role}",
+              ],
+            )
+          }
+        }
       },
       {
         Sid       = "DenyInsecureTransport"

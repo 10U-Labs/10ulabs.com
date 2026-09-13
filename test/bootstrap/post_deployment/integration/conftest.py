@@ -60,6 +60,12 @@ def delete_marker_rule(s3_client: Any, config: Dict[str, Any]) -> Dict[str, Any]
     return find_lifecycle_rule(s3_client, bucket_name, 'expire-delete-markers') or {}
 
 
+@pytest.fixture(scope="module")
+def noncurrent_version_rule(s3_client: Any, config: Dict[str, Any]) -> Dict[str, Any]:
+    bucket_name = config['name_for_terraform_state_bucket']
+    return find_lifecycle_rule(s3_client, bucket_name, 'expire-noncurrent-versions') or {}
+
+
 def _parameter_tags(ssm_client: Any, parameter_name: str) -> Dict[str, str]:
     response = ssm_client.list_tags_for_resource(
         ResourceType='Parameter',
