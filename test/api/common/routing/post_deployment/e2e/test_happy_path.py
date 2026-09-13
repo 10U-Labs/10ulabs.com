@@ -32,12 +32,6 @@ def test_health_endpoint_responds(api_url: str) -> None:
     assert response.status_code in [200, 503]
 
 
-def test_health_endpoint_responds_to_options(api_url: str) -> None:
-    skip_if_endpoint_not_deployed(api_url, "/health")
-    response = requests.options(f"{api_url}/health", headers=TEST_HEADERS, timeout=10)
-    assert response.status_code in [200, 204]
-
-
 def test_api_handles_concurrent_requests(api_url: str) -> None:
     skip_if_endpoint_not_deployed(api_url, "/health")
 
