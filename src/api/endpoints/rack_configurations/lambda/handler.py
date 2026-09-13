@@ -3,11 +3,10 @@ import json
 import logging
 import os
 import re
-from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from botocore.exceptions import ClientError
 from lambda_clients import get_dynamodb_client
-from lambda_http import dispatch, error_response, json_response, parse_body
+from lambda_http import dispatch, error_response, json_response
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -25,38 +24,6 @@ def generate_config_hash(config: Dict[str, Any]) -> str:
         remaining = remaining // 36
     config_hash = ''.join(result_chars)
     return config_hash
-
-
-def save_rack_configuration(
-    config_hash: str,
-    config: Dict[str, Any],
-    device_id: Optional[str] = None
-) -> Dict[str, Any]:
-    table_name = os.environ['RACK_CONFIGURATIONS_TABLE']
-    created_at = datetime.now(timezone.utc).isoformat()
-    item: Dict[str, Any] = {
-        'config_hash': {'S': config_hash},
-        'configuration': {'S': json.dumps(config)},
-        'created_at': {'S': created_at}
-    }
-    if device_id:
-        item['device_id'] = {'S': device_id}
-    try:
-        get_dynamodb_client().put_item(
-            TableName=table_name,
-            Item=item,
-            ConditionExpression='attribute_not_exists(config_hash)'
-        )
-        logger.info("Saved rack configuration: %s", config_hash)
-        result = {'success': True, 'config_hash': config_hash}
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
-            logger.info("Configuration already exists: %s", config_hash)
-            result = {'success': True, 'config_hash': config_hash}
-        else:
-            logger.error("Error saving rack configuration: %s", e)
-            result = {'success': False, 'error': str(e)}
-    return result
 
 
 def migrate_rack_configuration(old_hash: str, config: Dict[str, Any]) -> Optional[str]:
@@ -107,53 +74,6 @@ def load_rack_configuration(config_hash: str) -> Dict[str, Any]:
     return result
 
 
-def validate_rack_configuration(config: Dict[str, Any]) -> Optional[str]:
-    error_msg = None
-    if 'rackHeight' not in config:
-        error_msg = 'Missing required field: rackHeight'
-    elif 'rackCount' not in config:
-        error_msg = 'Missing required field: rackCount'
-    elif 'placedParts' not in config:
-        error_msg = 'Missing required field: placedParts'
-    elif not isinstance(config['rackHeight'], int):
-        error_msg = 'rackHeight must be an integer'
-    elif not isinstance(config['rackCount'], int):
-        error_msg = 'rackCount must be an integer'
-    elif not isinstance(config['placedParts'], list):
-        error_msg = 'placedParts must be an array'
-    elif config['rackHeight'] < 1 or config['rackHeight'] > 42:
-        error_msg = 'rackHeight must be between 1 and 42'
-    elif config['rackCount'] < 1:
-        error_msg = 'rackCount must be at least 1'
-    return error_msg
-
-
-def handle_post(event: Dict[str, Any]) -> Dict[str, Any]:
-    try:
-        body = parse_body(event)
-        config = body.get('configuration')
-        device_id = body.get('device_id')
-        if not device_id:
-            response = error_response(400, 'Missing required field: device_id')
-        elif not config:
-            response = error_response(400, 'Missing required field: configuration')
-        else:
-            validation_error = validate_rack_configuration(config)
-            if validation_error:
-                response = error_response(400, validation_error)
-            else:
-                config_hash = generate_config_hash(config)
-                result = save_rack_configuration(config_hash, config, device_id)
-                if result['success']:
-                    response = json_response(200, {'success': True, 'config_hash': config_hash})
-                else:
-                    response = error_response(500, result['error'])
-    except (ValueError, KeyError) as e:
-        logger.error("Error handling rack designer POST: %s", e, exc_info=True)
-        response = error_response(500, 'Internal server error', str(e))
-    return response
-
-
 def handle_get(event: Dict[str, Any]) -> Dict[str, Any]:
     path_params = event.get('pathParameters') or {}
     config_hash = path_params.get('config_hash')
@@ -170,10 +90,6 @@ def handle_get(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
-def _is_create(path: str, method: str) -> bool:
-    return path == '/v1/rack-configurations' and method == 'POST'
-
-
 def _is_read(path: str, method: str) -> bool:
     return path.startswith('/v1/rack-configurations/') and method == 'GET'
 
@@ -181,6 +97,5 @@ def _is_read(path: str, method: str) -> bool:
 def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     logger.info("Received API request: %s", json.dumps(event))
     return dispatch(event, (
-        (_is_create, handle_post),
         (_is_read, handle_get),
     ))
