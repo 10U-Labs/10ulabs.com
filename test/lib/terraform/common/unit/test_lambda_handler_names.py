@@ -7,7 +7,6 @@ SRC_ROOT = REPO_ROOT / "src"
 HANDLER_KEYS = [
     "catchall",
     "contact",
-    "echo",
     "rack_configurations",
     "sessions",
 ]

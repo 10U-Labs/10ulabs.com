@@ -43,14 +43,6 @@ def test_openapi_spec_paths_not_empty(openapi_spec: Dict[str, Any]) -> None:
     assert len(openapi_spec['paths']) > 0
 
 
-def test_openapi_spec_has_diagnostics_echo_endpoint(openapi_spec: Dict[str, Any]) -> None:
-    assert '/diagnostics/echo' in openapi_spec['paths']
-
-
-def test_openapi_spec_diagnostics_echo_has_post_method(openapi_spec: Dict[str, Any]) -> None:
-    assert 'post' in openapi_spec['paths']['/diagnostics/echo']
-
-
 def test_openapi_spec_has_catchall_endpoint(openapi_spec: Dict[str, Any]) -> None:
     assert '/{proxy+}' in openapi_spec['paths']
 
@@ -105,10 +97,6 @@ def test_openapi_spec_session_events_has_post_method(openapi_spec: Dict[str, Any
 
 def test_openapi_spec_session_events_has_options_method(openapi_spec: Dict[str, Any]) -> None:
     assert 'options' in openapi_spec['paths']['/v1/sessions/{session_id}/events']
-
-
-def test_openapi_spec_diagnostics_echo_has_options_method(openapi_spec: Dict[str, Any]) -> None:
-    assert 'options' in openapi_spec['paths']['/diagnostics/echo']
 
 
 def test_openapi_spec_has_request_validators(openapi_spec: Dict[str, Any]) -> None:

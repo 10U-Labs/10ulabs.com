@@ -16,148 +16,6 @@
     }
   ],
   "paths": {
-    "/diagnostics/echo": {
-      "post": {
-        "summary": "Echo Endpoint",
-        "description": "Echoes back the request body",
-        "operationId": "diagnosticsEcho",
-        "tags": [
-          "/diagnostics"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "description": "Any JSON object to echo back"
-              },
-              "examples": {
-                "simple": {
-                  "summary": "Simple echo example",
-                  "value": {
-                    "message": "Hello World"
-                  }
-                },
-                "complex": {
-                  "summary": "Complex object",
-                  "value": {
-                    "user": "john_doe",
-                    "data": {
-                      "items": [
-                        1,
-                        2,
-                        3
-                      ],
-                      "nested": {
-                        "field": "value"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successfully echoed the request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "echo",
-                    "received_at"
-                  ],
-                  "properties": {
-                    "echo": {
-                      "type": "object",
-                      "description": "The echoed request body"
-                    },
-                    "received_at": {
-                      "type": "string",
-                      "description": "AWS request ID",
-                      "example": "1234-5678-90ab-cdef"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid JSON in request body",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "example": "Invalid JSON"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${EchoHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for diagnostics echo endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "diagnosticsEchoOptions",
-        "tags": [
-          "/diagnostics"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type'"
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/contact-submissions": {
       "post": {
         "summary": "Submit Contact Form",
@@ -863,10 +721,6 @@
   },
   "tags": [
     {
-      "name": "/diagnostics",
-      "description": "Diagnostics utility endpoints"
-    },
-    {
       "name": "/v1/contact-submissions",
       "description": "Contact form submission endpoints"
     },
@@ -880,12 +734,6 @@
     }
   ],
   "x-tagGroups": [
-    {
-      "name": "/",
-      "tags": [
-        "/diagnostics"
-      ]
-    },
     {
       "name": "/v1/",
       "tags": [

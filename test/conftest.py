@@ -27,13 +27,11 @@ SHARED_CONFIG: Dict[str, Any] = {
     "ssm_prefix": "/github/app",
     "catchall": "TenULabsCatchAllHandler",
     "contact": "TenULabsContactHandler",
-    "echo": "TenULabsDiagnosticsHandler",
     "rack_configurations": "TenULabsRackConfigurationsHandler",
     "sessions": "TenULabsSessionsHandler",
     "lambda_handler_names": {
         "catchall": "TenULabsCatchAllHandler",
         "contact": "TenULabsContactHandler",
-        "echo": "TenULabsDiagnosticsHandler",
         "rack_configurations": "TenULabsRackConfigurationsHandler",
         "sessions": "TenULabsSessionsHandler",
     },

@@ -2,7 +2,6 @@ locals {
   lambda_function_names = {
     catchall            = module.common.lambda_handler_names.catchall
     contact             = module.common.lambda_handler_names.contact
-    echo                = module.common.lambda_handler_names.echo
     rack_configurations = module.common.lambda_handler_names.rack_configurations
     sessions            = module.common.lambda_handler_names.sessions
   }
@@ -13,14 +12,12 @@ locals {
 
   catchall_integration_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.catchall}/invocations"
   contact_arn              = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.contact}/invocations"
-  echo_arn                 = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.echo}/invocations"
   rack_configurations_arn  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.rack_configurations}/invocations"
   sessions_arn             = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.sessions}/invocations"
 
   openapi_spec = templatefile("${path.module}/../../../www/api/openapi.json", {
     CatchAllHandlerArn           = local.catchall_integration_arn
     ContactHandlerArn            = local.contact_arn
-    EchoHandlerArn               = local.echo_arn
     RackConfigurationsHandlerArn = local.rack_configurations_arn
     SessionsHandlerArn           = local.sessions_arn
   })
