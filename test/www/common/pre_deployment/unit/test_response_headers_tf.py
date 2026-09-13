@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from repo_utils import REPO_ROOT
 
@@ -31,4 +33,4 @@ def test_response_headers_policy_overrides_what_the_origin_sends(
     headers_policy: str, block: str
 ) -> None:
     start = headers_policy.index(f'{block} {{')
-    assert 'override = true' in headers_policy[start:headers_policy.index('}', start)]
+    assert re.search(r'override\s+= true', headers_policy[start:headers_policy.index('}', start)])
