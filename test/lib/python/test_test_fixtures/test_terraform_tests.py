@@ -5,7 +5,6 @@ from unittest.mock import patch, mock_open
 
 import pytest
 
-from repo_utils import REPO_ROOT
 from test_fixtures.terraform_tests import (
     DEPENDENT_WAIT_JOB,
     ROUTING_WORKFLOW,
