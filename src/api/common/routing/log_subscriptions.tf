@@ -13,12 +13,3 @@ resource "aws_cloudwatch_log_subscription_filter" "api_gateway" {
   destination_arn = aws_kinesis_firehose_delivery_stream.cloudwatch_logs.arn
   role_arn        = aws_iam_role.cloudwatch_logs_firehose.arn
 }
-
-resource "aws_cloudwatch_log_subscription_filter" "health_handler" {
-  count           = data.terraform_remote_state.health.outputs.log_group_name != "" ? 1 : 0
-  name            = "health-handler-to-firehose"
-  log_group_name  = data.terraform_remote_state.health.outputs.log_group_name
-  filter_pattern  = ""
-  destination_arn = aws_kinesis_firehose_delivery_stream.cloudwatch_logs.arn
-  role_arn        = aws_iam_role.cloudwatch_logs_firehose.arn
-}

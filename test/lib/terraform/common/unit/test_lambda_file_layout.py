@@ -16,7 +16,6 @@ PACKAGED_FUNCTIONS = [
     ("src/api/endpoints/sessions/analytics.tf", "lambda/exporter/handler.py"),
     ("src/api/endpoints/sessions/lambda.tf", "lambda/tracker/handler.py"),
     ("src/api/operational/diagnostics/lambda.tf", "lambda/handler.py"),
-    ("src/api/operational/health/lambda.tf", "lambda/handler.py"),
     ("src/www/common/lambda_edge.tf", "lambda/handler.py"),
 ]
 
@@ -26,7 +25,6 @@ STACK_PACKAGING_DIRECTORIES = [
     ("src/api/endpoints/rack_configurations", ["lambda"]),
     ("src/api/endpoints/sessions", ["lambda/exporter", "lambda/tracker"]),
     ("src/api/operational/diagnostics", ["lambda"]),
-    ("src/api/operational/health", ["lambda"]),
     ("src/www/common", ["lambda"]),
 ]
 

@@ -21,8 +21,6 @@ STAGED_ARCHIVES = [
      ".terraform/lambda_packages/handler.zip"),
     ("src/api/operational/diagnostics/lambda.tf",
      ".terraform/lambda_packages/diagnostics_handler.zip"),
-    ("src/api/operational/health/lambda.tf",
-     ".terraform/lambda_packages/health_handler.zip"),
     ("src/www/common/lambda_edge.tf",
      ".terraform/lambda_packages/spa_routing.zip"),
 ]
@@ -34,7 +32,6 @@ FILES_DECLARING_A_PACKAGE = [
     ("src/api/endpoints/sessions/analytics.tf", 1),
     ("src/api/endpoints/sessions/lambda.tf", 1),
     ("src/api/operational/diagnostics/lambda.tf", 1),
-    ("src/api/operational/health/lambda.tf", 1),
     ("src/www/common/lambda_edge.tf", 1),
 ]
 

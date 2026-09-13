@@ -33,7 +33,6 @@ CONFIGURED_ENTRY_POINTS = [
     ("src/api/endpoints/sessions/analytics.tf", "handler.lambda_handler"),
     ("src/api/endpoints/sessions/lambda.tf", "handler.lambda_handler"),
     ("src/api/operational/diagnostics/lambda.tf", "handler.lambda_handler"),
-    ("src/api/operational/health/lambda.tf", "handler.lambda_handler"),
     ("src/www/common/lambda_edge.tf", "handler.lambda_handler"),
 ]
 
@@ -44,7 +43,6 @@ DEFINED_ENTRY_POINTS = [
     "src/api/endpoints/sessions/lambda/exporter/handler.py",
     "src/api/endpoints/sessions/lambda/tracker/handler.py",
     "src/api/operational/diagnostics/lambda/handler.py",
-    "src/api/operational/health/lambda/handler.py",
     "src/www/common/lambda/handler.py",
 ]
 

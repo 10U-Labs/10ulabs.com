@@ -34,20 +34,6 @@ def _extract_policy_resources(policy: Any) -> List[str]:
     return resources
 
 
-def test_api_gateway_has_permission_to_invoke_health_lambda(
-    lambda_client: Any,
-    config: Dict[str, Any]
-) -> None:
-    function_name = config["health_handler_function_name"]
-    try:
-        response = lambda_client.get_policy(FunctionName=function_name)
-        assert "Policy" in response
-    except ClientError as err:
-        if err.response["Error"]["Code"] == "ResourceNotFoundException":
-            pytest.skip("Health Lambda not deployed (managed by api_operational_health.yml)")
-        raise
-
-
 def test_api_gateway_usage_plan_associated_with_prod_stage(
     apigateway_client: Any, api_gateway_id: Optional[str], usage_plan_id: Optional[str]
 ) -> None:
@@ -217,21 +203,6 @@ def test_catchall_handler_subscription_destinations_firehose(
     response = logs_client.describe_subscription_filters(logGroupName=log_group)
     destination_arn = response['subscriptionFilters'][0]['destinationArn']
     assert 'firehose' in destination_arn
-
-
-def test_health_handler_subscription_filter_exists(
-    logs_client: Any,
-    config: Dict[str, Any]
-) -> None:
-    log_group = config['health_handler_log_group_name']
-    try:
-        response = logs_client.describe_subscription_filters(logGroupName=log_group)
-    except ClientError as err:
-        if err.response["Error"]["Code"] == "ResourceNotFoundException":
-            pytest.skip("Health handler log group not deployed")
-        raise
-    filter_names = [f['filterName'] for f in response['subscriptionFilters']]
-    assert 'health-handler-to-firehose' in filter_names
 
 
 def test_api_gateway_subscription_filter_exists(logs_client: Any, config: Dict[str, Any]) -> None:

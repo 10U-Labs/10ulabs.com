@@ -43,14 +43,6 @@ def test_openapi_spec_paths_not_empty(openapi_spec: Dict[str, Any]) -> None:
     assert len(openapi_spec['paths']) > 0
 
 
-def test_openapi_spec_has_health_endpoint(openapi_spec: Dict[str, Any]) -> None:
-    assert '/health' in openapi_spec['paths']
-
-
-def test_openapi_spec_health_has_get_method(openapi_spec: Dict[str, Any]) -> None:
-    assert 'get' in openapi_spec['paths']['/health']
-
-
 def test_openapi_spec_has_diagnostics_echo_endpoint(openapi_spec: Dict[str, Any]) -> None:
     assert '/diagnostics/echo' in openapi_spec['paths']
 
@@ -61,72 +53,6 @@ def test_openapi_spec_diagnostics_echo_has_post_method(openapi_spec: Dict[str, A
 
 def test_openapi_spec_has_catchall_endpoint(openapi_spec: Dict[str, Any]) -> None:
     assert '/{proxy+}' in openapi_spec['paths']
-
-
-def test_openapi_spec_health_has_options_method(openapi_spec: Dict[str, Any]) -> None:
-    assert 'options' in openapi_spec['paths']['/health']
-
-
-def test_openapi_spec_health_options_has_integration_key(openapi_spec: Dict[str, Any]) -> None:
-    options = openapi_spec['paths']['/health']['options']
-    assert 'x-amazon-apigateway-integration' in options
-
-
-def test_openapi_spec_health_options_integration_type_is_mock(openapi_spec: Dict[str, Any]) -> None:
-    options = openapi_spec['paths']['/health']['options']
-    assert options['x-amazon-apigateway-integration']['type'] == 'mock'
-
-
-def test_openapi_spec_health_options_integration_has_responses(
-    openapi_spec: Dict[str, Any]
-) -> None:
-    options = openapi_spec['paths']['/health']['options']
-    integration = options['x-amazon-apigateway-integration']
-    assert 'responses' in integration
-
-
-def test_openapi_spec_health_options_integration_has_default_response(
-    openapi_spec: Dict[str, Any]
-) -> None:
-    options = openapi_spec['paths']['/health']['options']
-    integration = options['x-amazon-apigateway-integration']
-    assert 'default' in integration['responses']
-
-
-def test_openapi_spec_health_options_returns_allow_origin_header(
-    openapi_spec: Dict[str, Any]
-) -> None:
-    options = openapi_spec['paths']['/health']['options']
-    integration = options['x-amazon-apigateway-integration']
-    response_params = integration['responses']['default']['responseParameters']
-    assert 'method.response.header.Access-Control-Allow-Origin' in response_params
-
-
-def test_openapi_spec_health_options_returns_allow_methods_header(
-    openapi_spec: Dict[str, Any]
-) -> None:
-    options = openapi_spec['paths']['/health']['options']
-    integration = options['x-amazon-apigateway-integration']
-    response_params = integration['responses']['default']['responseParameters']
-    assert 'method.response.header.Access-Control-Allow-Methods' in response_params
-
-
-def test_openapi_spec_health_options_returns_allow_headers_header(
-    openapi_spec: Dict[str, Any]
-) -> None:
-    options = openapi_spec['paths']['/health']['options']
-    integration = options['x-amazon-apigateway-integration']
-    response_params = integration['responses']['default']['responseParameters']
-    assert 'method.response.header.Access-Control-Allow-Headers' in response_params
-
-
-def test_openapi_spec_health_options_allows_wildcard_origin(openapi_spec: Dict[str, Any]) -> None:
-    options = openapi_spec['paths']['/health']['options']
-    integration = options['x-amazon-apigateway-integration']
-    response_params = integration['responses']['default']['responseParameters']
-    origin_key = 'method.response.header.Access-Control-Allow-Origin'
-    origin_value = response_params[origin_key]
-    assert "'*'" in origin_value
 
 
 def test_openapi_spec_has_contact_submissions_endpoint(openapi_spec: Dict[str, Any]) -> None:

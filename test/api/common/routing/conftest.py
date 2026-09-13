@@ -13,12 +13,6 @@ def parse_bootstrap_tfvar(var_name: str) -> str:
     return config.get(var_name, "")
 
 
-def parse_health_tfvars() -> Dict[str, str]:
-    base = Path(__file__).parent.parent.parent.parent.parent
-    tfvars_path = base / "src" / "api" / "operational" / "health" / "terraform.tfvars"
-    return parse_tfvars_file(tfvars_path)
-
-
 def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     base = Path(__file__).parent.parent.parent.parent.parent
     locals_path = base / "src" / "api" / "common" / "routing" / "locals.tf"
@@ -50,9 +44,6 @@ def config_fixture(shared_config: Dict[str, Any]) -> Dict[str, Any]:
     ssm_param = parse_bootstrap_tfvar('ssm_parameter_name_for_github_pat')
     result['ssm_parameter_name_for_github_pat'] = ssm_param
     add_derived_config(result)
-    health_config = parse_health_tfvars()
-    result['health_handler_function_name'] = health_config.get('health_handler_function_name', '')
-    result['health_handler_log_group_name'] = health_config.get('health_handler_log_group_name', '')
     result['catchall_handler_function_name'] = shared_config.get(
         'lambda_handler_names', {}
     ).get('catchall', 'TenULabsCatchAllHandler')

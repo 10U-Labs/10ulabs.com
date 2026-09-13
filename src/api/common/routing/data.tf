@@ -28,19 +28,3 @@ data "terraform_remote_state" "api_10ulabs_com" {
   }
 }
 
-data "terraform_remote_state" "health" {
-  backend = "s3"
-
-  config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "health/terraform.tfstate"
-    region = "us-east-2"
-  }
-
-  defaults = {
-    lambda_function_arn  = ""
-    lambda_function_name = ""
-    log_group_name       = ""
-  }
-}
-

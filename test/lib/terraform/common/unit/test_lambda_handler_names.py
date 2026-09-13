@@ -8,7 +8,6 @@ HANDLER_KEYS = [
     "catchall",
     "contact",
     "echo",
-    "health",
     "rack_configurations",
     "sessions",
 ]

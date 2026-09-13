@@ -14,7 +14,6 @@ locals {
     catchall            = "${local.resource_prefix}CatchAllHandler"
     contact             = "${local.resource_prefix}ContactHandler"
     echo                = "${local.resource_prefix}DiagnosticsHandler"
-    health              = "${local.resource_prefix}HealthHandler"
     rack_configurations = "${local.resource_prefix}RackConfigurationsHandler"
     sessions            = "${local.resource_prefix}SessionsHandler"
   }

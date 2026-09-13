@@ -522,19 +522,6 @@ def test_api_gateway_subscription_filter_pattern_is_empty(
         assert response['subscriptionFilters'][0]['filterPattern'] == ''
 
 
-def test_health_subscription_filter_pattern_is_empty(
-    logs_client: Any,
-    config: Dict[str, Any]
-) -> None:
-    log_group = config['health_handler_log_group_name']
-    try:
-        response = logs_client.describe_subscription_filters(logGroupName=log_group)
-        if response['subscriptionFilters']:
-            assert response['subscriptionFilters'][0]['filterPattern'] == ''
-    except logs_client.exceptions.ResourceNotFoundException:
-        pytest.skip("Health handler log group not deployed")
-
-
 def test_index_html_content_type_is_text_html(s3_client: Any, config: Dict[str, Any]) -> None:
     bucket_name = config["api_fqdn"]
     response = s3_client.head_object(Bucket=bucket_name, Key="index.html")

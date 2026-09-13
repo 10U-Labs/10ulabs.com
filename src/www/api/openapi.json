@@ -158,98 +158,6 @@
         }
       }
     },
-    "/health": {
-      "get": {
-        "summary": "Health Check",
-        "description": "Returns the health status of the API",
-        "operationId": "healthCheck",
-        "tags": [
-          "/health"
-        ],
-        "responses": {
-          "200": {
-            "description": "Service is healthy",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "status",
-                    "service",
-                    "version"
-                  ],
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "healthy"
-                    },
-                    "service": {
-                      "type": "string",
-                      "example": "10U Labs API"
-                    },
-                    "version": {
-                      "type": "string",
-                      "example": "1.0.0"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "uri": "${HealthHandlerArn}",
-          "httpMethod": "POST",
-          "type": "aws_proxy"
-        }
-      },
-      "options": {
-        "summary": "CORS preflight for health endpoint",
-        "description": "Handles CORS preflight requests",
-        "operationId": "healthOptions",
-        "tags": [
-          "/health"
-        ],
-        "responses": {
-          "200": {
-            "description": "CORS headers",
-            "headers": {
-              "Access-Control-Allow-Origin": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "x-amazon-apigateway-integration": {
-          "type": "mock",
-          "requestTemplates": {
-            "application/json": "{\"statusCode\": 200}"
-          },
-          "responses": {
-            "default": {
-              "statusCode": "200",
-              "responseParameters": {
-                "method.response.header.Access-Control-Allow-Origin": "'*'",
-                "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
-                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/contact-submissions": {
       "post": {
         "summary": "Submit Contact Form",
@@ -959,10 +867,6 @@
       "description": "Diagnostics utility endpoints"
     },
     {
-      "name": "/health",
-      "description": "Health check endpoints"
-    },
-    {
       "name": "/v1/contact-submissions",
       "description": "Contact form submission endpoints"
     },
@@ -979,7 +883,6 @@
     {
       "name": "/",
       "tags": [
-        "/health",
         "/diagnostics"
       ]
     },
