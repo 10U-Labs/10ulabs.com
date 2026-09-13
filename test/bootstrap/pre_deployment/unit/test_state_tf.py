@@ -39,6 +39,10 @@ def test_state_bucket_policy_names_the_wan_synthesizer_deploy_role(state_tf: str
     assert 'local.name_for_wan_synthesizer_role' in _block(state_tf, POLICY)
 
 
+def test_state_bucket_policy_names_the_api_deploy_role(state_tf: str) -> None:
+    assert 'local.name_for_api_role' in _block(state_tf, POLICY)
+
+
 def test_bootstrap_declares_no_resource_for_the_wan_synthesizer_role(
     wan_synthesizer_tf: str
 ) -> None:

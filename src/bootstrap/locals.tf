@@ -4,6 +4,7 @@ locals {
   aws_region                      = module.common.aws_region
   domain_name                     = module.common.domain_name
   github_org                      = module.common.github_org
+  name_for_api_role               = "${local.resource_prefix}ApiRole"
   name_for_central_logs_bucket    = module.common.name_for_central_logs_bucket
   name_for_cloudtrail             = "${local.resource_prefix}-cloudtrail"
   name_for_cloudtrail_bucket      = module.common.name_for_central_logs_bucket

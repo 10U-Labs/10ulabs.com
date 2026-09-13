@@ -634,7 +634,36 @@ def test_terraform_state_bucket_admits_only_the_account_and_the_roles_that_write
         f"arn:aws:iam::{aws_account_id}:user/{config['admin_iam_user']}",
         f"arn:aws:iam::{aws_account_id}:role/{config['name_for_github_actions_role']}",
         f"arn:aws:iam::{aws_account_id}:role/{config['name_for_wan_synthesizer_role']}",
+        f"arn:aws:iam::{aws_account_id}:role/{config['name_for_api_role']}",
     ])
+
+
+def test_api_deploy_role_trusts_only_the_api_repository_on_main(
+    api_role_trust: Dict[str, Any]
+) -> None:
+    assert api_role_trust['Statement'][0]['Condition']['StringEquals'][
+        'token.actions.githubusercontent.com:sub'
+    ] == 'repo:10U-Labs@240548037/api.10ulabs.com@1368777392:ref:refs/heads/main'
+
+
+def test_api_deploy_role_trust_holds_one_statement(api_role_trust: Dict[str, Any]) -> None:
+    assert len(api_role_trust['Statement']) == 1
+
+
+def test_api_deploy_role_carries_no_managed_policy(
+    iam_client: Any,
+    config: Dict[str, Any]
+) -> None:
+    attached = iam_client.list_attached_role_policies(RoleName=config['name_for_api_role'])
+    assert attached['AttachedPolicies'] == []
+
+
+def test_api_deploy_role_holds_the_state_and_self_policies_alone(
+    iam_client: Any,
+    config: Dict[str, Any]
+) -> None:
+    inline = iam_client.list_role_policies(RoleName=config['name_for_api_role'])
+    assert sorted(inline['PolicyNames']) == ['Self', 'State']
 
 
 def test_terraform_state_bucket_has_encryption(s3_client: Any, config: Dict[str, Any]) -> None:
