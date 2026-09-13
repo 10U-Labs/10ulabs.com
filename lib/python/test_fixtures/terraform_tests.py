@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Any, Callable, Optional, Set
+from typing import Callable, Optional, Set
 
 from repo_utils import REPO_ROOT
 
@@ -12,56 +12,6 @@ def _get_api_common_routing_outputs() -> set:
         content = f.read()
     pattern = r'output\s+"(\w+)"'
     return set(re.findall(pattern, content))
-
-
-def create_remote_state_contract_tests(
-    endpoint_src: Path,
-    endpoint_name: str,
-    lambda_file: str = "lambda.tf",
-    required_outputs: Optional[list] = None,
-) -> type:
-    lambda_path = endpoint_src / lambda_file
-    outputs_file = API_COMMON_ROUTING_OUTPUTS_FILE.relative_to(REPO_ROOT)
-
-    def get_api_remote_state_references() -> set:
-        with open(lambda_path, encoding="utf-8") as f:
-            content = f.read()
-        pattern = r'data\.terraform_remote_state\.api\.outputs\.(\w+)'
-        return set(re.findall(pattern, content))
-
-    class TestRemoteStateContract:
-        def test_all_api_remote_state_references_exist_in_api_common_routing_outputs(self) -> None:
-            references = get_api_remote_state_references()
-            outputs = _get_api_common_routing_outputs()
-            missing = references - outputs
-
-            assert not missing, (
-                f"{endpoint_name}/{lambda_file} references api_common_routing outputs "
-                f"that don't exist: {missing}. Add these outputs to {outputs_file}"
-            )
-
-        def test_lambda_file_exists(self) -> None:
-            assert lambda_path.exists(), f"{lambda_file} does not exist in endpoint"
-
-    if required_outputs:
-        for output_name in required_outputs:
-
-            def make_test(name: str) -> Callable[[Any], None]:
-                def test_output_exists(_self: Any) -> None:
-                    outputs = _get_api_common_routing_outputs()
-                    assert name in outputs, (
-                        f"{name} output missing from {outputs_file}. "
-                        f"This is required by the {endpoint_name} endpoint."
-                    )
-
-                return test_output_exists
-
-            test_method = make_test(output_name)
-            test_method.__name__ = f"test_{output_name}_output_exists_in_api_common_routing"
-            test_method.__doc__ = f"Verify {output_name} output exists in api_common_routing."
-            setattr(TestRemoteStateContract, test_method.__name__, test_method)
-
-    return TestRemoteStateContract
 
 
 def create_remote_state_config_tests(endpoint_src: Path, endpoint_name: str) -> type:

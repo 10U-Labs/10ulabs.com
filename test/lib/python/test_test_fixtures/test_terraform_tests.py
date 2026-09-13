@@ -1,14 +1,12 @@
 import re
 from pathlib import Path
 from typing import Any, Callable
-from unittest.mock import MagicMock
 from unittest.mock import patch, mock_open
 
 import pytest
 
 from repo_utils import REPO_ROOT
 from test_fixtures.terraform_tests import (
-    API_COMMON_ROUTING_OUTPUTS_FILE,
     DEPENDENT_WAIT_JOB,
     ROUTING_WORKFLOW,
     _block_named,
@@ -20,7 +18,6 @@ from test_fixtures.terraform_tests import (
     _push_paths,
     _two_space_block,
     create_lambda_source_contract_tests,
-    create_remote_state_contract_tests,
     create_remote_state_config_tests,
     create_routing_wait_contract_tests,
     create_single_start_contract_tests,
@@ -86,142 +83,6 @@ def test_extracts_commented_output() -> None:
 def test_extracts_snake_case_output_names() -> None:
     result = _get_api_common_routing_outputs()
     assert "snake_case_name" in result
-
-
-def test_create_remote_state_contract_tests_returns_class(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    result = create_remote_state_contract_tests(tmp_path, "test_endpoint")
-    assert isinstance(result, type)
-
-
-def test_create_remote_state_contract_tests_returned_class_name(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    result = create_remote_state_contract_tests(tmp_path, "test_endpoint")
-    assert result.__name__ == "TestRemoteStateContract"
-
-
-def test_class_has_lambda_file_exists_method(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    result = create_remote_state_contract_tests(tmp_path, "test_endpoint")
-    assert hasattr(result, "test_lambda_file_exists")
-
-
-def test_class_has_api_remote_state_references_method(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    result = create_remote_state_contract_tests(tmp_path, "test_endpoint")
-    assert hasattr(
-        result, "test_all_api_remote_state_references_exist_in_api_common_routing_outputs"
-    )
-
-
-def test_custom_lambda_file_name(tmp_path: Path) -> None:
-    custom_file = tmp_path / "custom_lambda.tf"
-    custom_file.write_text("")
-    result = create_remote_state_contract_tests(
-        tmp_path, "test_endpoint", lambda_file="custom_lambda.tf"
-    )
-    assert result is not None
-
-
-def test_adds_dynamic_test_for_required_output(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    result = create_remote_state_contract_tests(
-        tmp_path, "test_endpoint", required_outputs=["api_gateway_id"]
-    )
-    assert hasattr(result, "test_api_gateway_id_output_exists_in_api_common_routing")
-
-
-def test_adds_multiple_dynamic_tests_for_required_outputs(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    result = create_remote_state_contract_tests(
-        tmp_path, "test_endpoint", required_outputs=["output_one", "output_two"]
-    )
-    assert hasattr(result, "test_output_one_output_exists_in_api_common_routing")
-
-
-def test_adds_second_dynamic_test_for_required_outputs(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    result = create_remote_state_contract_tests(
-        tmp_path, "test_endpoint", required_outputs=["output_one", "output_two"]
-    )
-    assert hasattr(result, "test_output_two_output_exists_in_api_common_routing")
-
-
-def test_lambda_file_exists_test_passes_when_file_exists(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("# Lambda configuration")
-    TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
-    instance = TestClass()
-    assert accepted(instance.test_lambda_file_exists)
-
-
-def test_lambda_file_exists_test_fails_when_file_missing(tmp_path: Path) -> None:
-    TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
-    instance = TestClass()
-    with pytest.raises(AssertionError):
-        instance.test_lambda_file_exists()
-
-
-@patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
-def test_remote_state_references_test_passes_when_all_exist(
-    mock_outputs: MagicMock,
-    tmp_path: Path
-) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text('data.terraform_remote_state.api.outputs.api_gateway_id')
-    mock_outputs.return_value = {"api_gateway_id"}
-    TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
-    instance = TestClass()
-    assert accepted(
-        instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs
-    )
-
-
-@patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
-def test_remote_state_references_test_fails_when_missing(
-    mock_outputs: MagicMock,
-    tmp_path: Path
-) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text('data.terraform_remote_state.api.outputs.missing_output')
-    mock_outputs.return_value = {"other_output"}
-    TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
-    instance = TestClass()
-    with pytest.raises(AssertionError):
-        instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs()
-
-
-@patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
-def test_required_output_test_passes_when_exists(mock_outputs: MagicMock, tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    mock_outputs.return_value = {"required_output"}
-    TestClass = create_remote_state_contract_tests(
-        tmp_path, "test_endpoint", required_outputs=["required_output"]
-    )
-    instance = TestClass()
-    method = getattr(instance, "test_required_output_output_exists_in_api_common_routing")
-    assert method() is None
-
-
-@patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
-def test_required_output_test_fails_when_missing(mock_outputs: MagicMock, tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    mock_outputs.return_value = {"other_output"}
-    TestClass = create_remote_state_contract_tests(
-        tmp_path, "test_endpoint", required_outputs=["required_output"]
-    )
-    instance = TestClass()
-    with pytest.raises(AssertionError):
-        getattr(instance, "test_required_output_output_exists_in_api_common_routing")()
 
 
 def test_create_remote_state_config_tests_returns_class(tmp_path: Path) -> None:
@@ -399,93 +260,6 @@ terraform_remote_state "api" {
     with pytest.raises(AssertionError):
         instance.test_uses_the_api_state_key()
 
-
-def test_extracts_remote_state_references_from_lambda_file(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text('''
-resource "aws_lambda_function" "my_func" {
-  function_name = "MyFunc"
-  environment {
-    variables = {
-      API_URL = data.terraform_remote_state.api.outputs.api_endpoint
-      API_ID  = data.terraform_remote_state.api.outputs.api_gateway_id
-    }
-  }
-}
-''')
-    with patch('test_fixtures.terraform_tests._get_api_common_routing_outputs') as mock_outputs:
-        mock_outputs.return_value = {"api_endpoint", "api_gateway_id"}
-        TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
-        instance = TestClass()
-        assert accepted(
-            instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs
-        )
-
-
-def test_fails_when_referenced_output_missing_from_api_common_routing_outputs(
-    tmp_path: Path
-) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text('''
-API_URL = data.terraform_remote_state.api.outputs.nonexistent_output
-''')
-    with patch('test_fixtures.terraform_tests._get_api_common_routing_outputs') as mock_outputs:
-        mock_outputs.return_value = {"other_output"}
-        TestClass = create_remote_state_contract_tests(tmp_path, "test_endpoint")
-        instance = TestClass()
-        with pytest.raises(AssertionError):
-            instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs()
-
-
-def test_required_output_test_has_docstring(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    TestClass = create_remote_state_contract_tests(
-        tmp_path, "test_endpoint", required_outputs=["my_output"]
-    )
-    test_method = getattr(TestClass, "test_my_output_output_exists_in_api_common_routing")
-    assert test_method.__doc__ is not None
-
-
-def test_required_output_test_docstring_mentions_output_name(tmp_path: Path) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    TestClass = create_remote_state_contract_tests(
-        tmp_path, "test_endpoint", required_outputs=["my_output"]
-    )
-    test_method = getattr(TestClass, "test_my_output_output_exists_in_api_common_routing")
-    assert "my_output" in test_method.__doc__
-
-
-@patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
-def test_missing_required_output_message_names_outputs_file(
-    mock_outputs: MagicMock,
-    tmp_path: Path
-) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text("")
-    mock_outputs.return_value = {"unrelated_output"}
-    TestClass = create_remote_state_contract_tests(
-        tmp_path, "message_endpoint", required_outputs=["needed_output"]
-    )
-    method = getattr(TestClass(), "test_needed_output_output_exists_in_api_common_routing")
-    expected = re.escape(str(API_COMMON_ROUTING_OUTPUTS_FILE.relative_to(REPO_ROOT)))
-    with pytest.raises(AssertionError, match=expected):
-        method()
-
-
-@patch('test_fixtures.terraform_tests._get_api_common_routing_outputs')
-def test_dangling_reference_message_names_outputs_file(
-    mock_outputs: MagicMock,
-    tmp_path: Path
-) -> None:
-    lambda_file = tmp_path / "lambda.tf"
-    lambda_file.write_text('data.terraform_remote_state.api.outputs.dangling_output')
-    mock_outputs.return_value = {"present_output"}
-    instance = create_remote_state_contract_tests(tmp_path, "message_endpoint")()
-    expected = re.escape(str(API_COMMON_ROUTING_OUTPUTS_FILE.relative_to(REPO_ROOT)))
-    with pytest.raises(AssertionError, match=expected):
-        instance.test_all_api_remote_state_references_exist_in_api_common_routing_outputs()
 
 TRACKER_TF = '''
 data "archive_file" "handler" {

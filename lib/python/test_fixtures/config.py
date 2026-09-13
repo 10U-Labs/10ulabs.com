@@ -37,13 +37,6 @@ def parse_locals_file(
     return config
 
 
-def create_simple_config(tfvars_path: Path, shared_config: Dict[str, str]) -> Dict[str, str]:
-    result = parse_tfvars_file(tfvars_path)
-    result['aws_region'] = shared_config['aws_region']
-    result['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
-    return result
-
-
 def create_website_config(
     locals_path: Path,
     shared_config: Dict[str, str],

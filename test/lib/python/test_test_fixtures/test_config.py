@@ -8,7 +8,6 @@ import pytest
 from test_fixtures.config import (
     parse_tfvars_file,
     parse_locals_file,
-    create_simple_config,
     create_website_config,
     add_derived_config,
 )
@@ -128,37 +127,6 @@ def test_parse_locals_file_returns_empty_dict_for_empty_file(
 def test_ignores_malformed_lines_with_equals(tf_file: Callable[[str], Path]) -> None:
     result = parse_locals_file(tf_file('  } = {\n  key = "value"\n'))
     assert len(result) == 1
-
-
-def test_includes_aws_region_from_shared_config(tfvars_file: Callable[[str], Path]) -> None:
-    shared_config = {'aws_region': 'us-west-2', 'domain_name': 'example.com'}
-    result = create_simple_config(tfvars_file('endpoint_name = "test"\n'), shared_config)
-    assert result['aws_region'] == 'us-west-2'
-
-
-def test_constructs_api_fqdn_from_domain_name(
-    tfvars_file: Callable[[str], Path],
-    base_shared_config: Dict[str, str]
-) -> None:
-    result = create_simple_config(tfvars_file('endpoint_name = "test"\n'), base_shared_config)
-    assert result['api_fqdn'] == 'api.example.com'
-
-
-def test_includes_tfvars_values(
-    tfvars_file: Callable[[str], Path],
-    base_shared_config: Dict[str, str]
-) -> None:
-    result = create_simple_config(
-        tfvars_file('endpoint_name = "my-endpoint"\n'),
-        base_shared_config
-    )
-    assert result['endpoint_name'] == 'my-endpoint'
-
-
-def test_handles_missing_domain_name(tfvars_file: Callable[[str], Path]) -> None:
-    shared_config = {'aws_region': 'us-east-1'}
-    result = create_simple_config(tfvars_file('key = "value"\n'), shared_config)
-    assert result['api_fqdn'] == 'api.'
 
 
 def test_includes_aws_region(tf_file: Callable[[str], Path]) -> None:
