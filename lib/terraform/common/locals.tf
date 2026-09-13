@@ -12,7 +12,6 @@ locals {
 
   lambda_handler_names = {
     catchall            = "${local.resource_prefix}CatchAllHandler"
-    rack_configurations = "${local.resource_prefix}RackConfigurationsHandler"
     sessions            = "${local.resource_prefix}SessionsHandler"
   }
 }

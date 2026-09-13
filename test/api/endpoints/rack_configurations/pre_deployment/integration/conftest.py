@@ -1,4 +1,0 @@
-from test_fixtures.integration import create_www_common_fixtures
-
-
-www_common_terraform_initialized, www_common_outputs = create_www_common_fixtures()
