@@ -36,3 +36,7 @@ def test_api_deploy_role_writes_only_its_own_repository_state(api_tf: str) -> No
 
 def test_api_deploy_role_may_reconcile_itself(api_tf: str) -> None:
     assert '"iam:PutRolePolicy"' in api_tf
+
+
+def test_api_deploy_role_may_describe_itself(api_tf: str) -> None:
+    assert '"iam:UpdateRoleDescription"' in api_tf
