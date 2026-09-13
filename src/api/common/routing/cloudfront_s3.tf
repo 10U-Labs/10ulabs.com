@@ -146,6 +146,21 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   origin {
+    domain_name         = data.terraform_remote_state.api_10ulabs_com.outputs.api_gateway_execute_domain
+    origin_id           = "api-10ulabs-com"
+    origin_path         = "/prod"
+    connection_attempts = 3
+    connection_timeout  = 10
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  origin {
     domain_name         = data.terraform_remote_state.wan_synthesizer.outputs.api_gateway_execute_domain
     origin_id           = "wan-synthesizer"
     origin_path         = "/prod"
@@ -214,7 +229,7 @@ resource "aws_cloudfront_distribution" "main" {
 
   ordered_cache_behavior {
     path_pattern           = "/health"
-    target_origin_id       = "api-gateway"
+    target_origin_id       = "api-10ulabs-com"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]

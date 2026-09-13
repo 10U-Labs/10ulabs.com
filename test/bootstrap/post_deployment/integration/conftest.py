@@ -55,12 +55,6 @@ def mx_record(route53_client: Any, hosted_zone: Any, config: Dict[str, Any]) -> 
 
 
 @pytest.fixture(scope="module")
-def api_role_trust(iam_client: Any, config: Dict[str, Any]) -> Dict[str, Any]:
-    response = iam_client.get_role(RoleName=config['name_for_api_role'])
-    return dict(response['Role']['AssumeRolePolicyDocument'])
-
-
-@pytest.fixture(scope="module")
 def delete_marker_rule(s3_client: Any, config: Dict[str, Any]) -> Dict[str, Any]:
     bucket_name = config['name_for_terraform_state_bucket']
     return find_lifecycle_rule(s3_client, bucket_name, 'expire-delete-markers') or {}

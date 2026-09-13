@@ -18,6 +18,16 @@ data "terraform_remote_state" "wan_synthesizer" {
   }
 }
 
+data "terraform_remote_state" "api_10ulabs_com" {
+  backend = "s3"
+
+  config = {
+    bucket = "10ulabs-terraform-state-us-east-2"
+    key    = "api.10ulabs.com/src/api/common/routing/terraform.tfstate"
+    region = "us-east-2"
+  }
+}
+
 data "terraform_remote_state" "health" {
   backend = "s3"
 

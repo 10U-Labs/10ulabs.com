@@ -189,6 +189,23 @@ def test_cloudfront_health_cache_behavior_uses_api_origin(
         assert 'api' in origin_id or 'execute' in origin_id
 
 
+def test_cloudfront_health_cache_behavior_targets_api_10ulabs_com(
+    cloudfront_client: Any,
+    api_distribution_id: Optional[str]
+) -> None:
+    behavior = _cache_behavior_matching(cloudfront_client, api_distribution_id, '/health')
+    assert behavior['TargetOriginId'] == 'api-10ulabs-com'
+
+
+def test_cloudfront_api_10ulabs_com_origin_serves_the_prod_stage(
+    cloudfront_client: Any,
+    api_distribution_id: Optional[str]
+) -> None:
+    origins = _api_distribution_config(cloudfront_client, api_distribution_id)['Origins']['Items']
+    origin = next(o for o in origins if o['Id'] == 'api-10ulabs-com')
+    assert origin['OriginPath'] == '/prod'
+
+
 def test_cloudfront_v1_api_cache_behavior_uses_api_origin(
     cloudfront_client: Any,
     api_distribution_id: Optional[str]
