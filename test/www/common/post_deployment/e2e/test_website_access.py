@@ -83,6 +83,20 @@ def test_hsts_includes_preload(website_response: requests.Response) -> None:
     assert 'preload' in hsts
 
 
+def test_website_forbids_sniffing_the_content_type(website_response: requests.Response) -> None:
+    assert website_response.headers.get('X-Content-Type-Options') == 'nosniff'
+
+
+def test_website_sends_the_referrer_to_the_origin_alone_across_sites(
+    website_response: requests.Response
+) -> None:
+    assert website_response.headers.get('Referrer-Policy') == 'strict-origin-when-cross-origin'
+
+
+def test_website_denies_framing(website_response: requests.Response) -> None:
+    assert website_response.headers.get('X-Frame-Options') == 'DENY'
+
+
 def test_website_served_by_cloudfront(website_response: requests.Response) -> None:
     server = website_response.headers.get('Server', '')
     x_cache = website_response.headers.get('X-Cache', '')
