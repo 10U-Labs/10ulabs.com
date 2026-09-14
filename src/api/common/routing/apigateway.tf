@@ -1,7 +1,6 @@
 locals {
   lambda_function_names = {
-    catchall            = module.common.lambda_handler_names.catchall
-    sessions            = module.common.lambda_handler_names.sessions
+    catchall = module.common.lambda_handler_names.catchall
   }
 
   lambda_arn_prefix = "arn:aws:lambda:${local.aws_region}:${local.aws_account_id}:function"
@@ -9,11 +8,9 @@ locals {
   apigw_integration_prefix = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions"
 
   catchall_integration_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.catchall}/invocations"
-  sessions_arn             = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.sessions}/invocations"
 
   openapi_spec = templatefile("${path.module}/../../../www/api/openapi.json", {
-    CatchAllHandlerArn           = local.catchall_integration_arn
-    SessionsHandlerArn           = local.sessions_arn
+    CatchAllHandlerArn = local.catchall_integration_arn
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)
 }
@@ -178,7 +175,7 @@ resource "null_resource" "api_gateway_propagation_wait" {
       SUCCESS=false
       while [ $N -le $MAX_N ]; do
         HTTP_STATUS=$(curl -s -o /dev/null -w "%%{http_code}" -X GET \
-          "https://${local.api_fqdn}/v1/nothing" || echo "000")
+          "https://${local.api_fqdn}/nothing" || echo "000")
         if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "404" ]; then
           echo "API Gateway is ready (status: $HTTP_STATUS)"
           SUCCESS=true

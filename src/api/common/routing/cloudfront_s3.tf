@@ -300,18 +300,6 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/v1/*"
-    target_origin_id       = "api-gateway"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
-  }
-
-  ordered_cache_behavior {
     path_pattern           = "/wan-synthesizer/*"
     target_origin_id       = "wan-synthesizer"
     viewer_protocol_policy = "redirect-to-https"
