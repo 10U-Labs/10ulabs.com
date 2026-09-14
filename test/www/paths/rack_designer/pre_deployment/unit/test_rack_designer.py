@@ -308,7 +308,7 @@ def test_app_js_api_url_is_correct() -> None:
 
 def test_app_js_has_rack_configurations_endpoint() -> None:
     content = (RACK_DESIGNER_DIR / "js" / "app.js").read_text()
-    assert "/v1/rack-configurations" in content
+    assert "/rack-configurations" in content
 
 
 def test_app_js_tracks_drag_started() -> None:

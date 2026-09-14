@@ -264,7 +264,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/v1/rack-configurations"
+    path_pattern           = "/rack-configurations"
     target_origin_id       = "api-10ulabs-com"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -276,7 +276,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/v1/rack-configurations/*"
+    path_pattern           = "/rack-configurations/*"
     target_origin_id       = "api-10ulabs-com"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
