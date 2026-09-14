@@ -252,7 +252,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/v1/contact-submissions"
+    path_pattern           = "/contact-submissions"
     target_origin_id       = "api-10ulabs-com"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
