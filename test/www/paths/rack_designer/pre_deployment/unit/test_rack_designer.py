@@ -468,7 +468,7 @@ def test_analytics_js_exports_get_device_id() -> None:
 
 def test_analytics_js_uses_sessions_endpoint() -> None:
     content = (RACK_DESIGNER_DIR / "js" / "analytics.js").read_text()
-    assert "/v1/sessions/" in content
+    assert "/sessions/" in content
 
 
 def test_analytics_js_uses_events_endpoint() -> None:

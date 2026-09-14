@@ -244,7 +244,7 @@ window.Analytics = (function() {
             contextSent = true;
         }
         var body = JSON.stringify(payload);
-        var url = API_BASE_URL + '/v1/sessions/' + encodeURIComponent(sessionId) + '/events';
+        var url = API_BASE_URL + '/sessions/' + encodeURIComponent(sessionId) + '/events';
         if (useBeacon && navigator.sendBeacon) {
             navigator.sendBeacon(url, body);
         } else {
