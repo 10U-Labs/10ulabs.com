@@ -108,7 +108,6 @@ resource "aws_s3_bucket_policy" "terraform_state" {
               local.principals_of_this_repository,
               [
                 "arn:aws:iam::${local.aws_account_id}:root",
-                "arn:aws:iam::${local.aws_account_id}:role/${local.name_for_wan_synthesizer_role}",
                 "arn:aws:iam::${local.aws_account_id}:role/${local.name_for_api_role}",
               ],
             )
