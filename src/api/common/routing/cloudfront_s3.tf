@@ -116,7 +116,6 @@ resource "aws_cloudfront_distribution" "main" {
   enabled             = true
   is_ipv6_enabled     = false
   default_root_object = ""
-  aliases             = [local.api_fqdn]
 
   logging_config {
     include_cookies = false
@@ -143,21 +142,6 @@ resource "aws_cloudfront_distribution" "main" {
     domain_name              = module.docs_bucket.bucket_regional_domain_name
     origin_id                = "s3-docs"
     origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
-  }
-
-  origin {
-    domain_name         = data.terraform_remote_state.api_10ulabs_com.outputs.api_gateway_execute_domain
-    origin_id           = "api-10ulabs-com"
-    origin_path         = "/prod"
-    connection_attempts = 3
-    connection_timeout  = 10
-
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
   }
 
   default_cache_behavior {
@@ -210,102 +194,6 @@ resource "aws_cloudfront_distribution" "main" {
 
     cache_policy_id          = aws_cloudfront_cache_policy.docs.id
     origin_request_policy_id = data.aws_cloudfront_origin_request_policy.cors_s3_origin.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/health"
-    target_origin_id       = "api-10ulabs-com"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/diagnostics/*"
-    target_origin_id       = "api-10ulabs-com"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/contact-submissions"
-    target_origin_id       = "api-10ulabs-com"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/rack-configurations"
-    target_origin_id       = "api-10ulabs-com"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/rack-configurations/*"
-    target_origin_id       = "api-10ulabs-com"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/sessions/*"
-    target_origin_id       = "api-10ulabs-com"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/hyperscale-cloud-service-provider-regions*"
-    target_origin_id       = "api-10ulabs-com"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/wan-syntheses*"
-    target_origin_id       = "api-10ulabs-com"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
   }
 
   viewer_certificate {
