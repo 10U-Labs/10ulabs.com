@@ -27,14 +27,6 @@ resource "aws_s3_object" "not_found_html" {
   etag         = filemd5("${path.module}/../../../www/api/404.html")
 }
 
-resource "aws_s3_object" "openapi_json" {
-  bucket       = module.docs_bucket.bucket_id
-  key          = "openapi.json"
-  source       = "${path.module}/../../../www/api/openapi.json"
-  content_type = "application/json"
-  etag         = filemd5("${path.module}/../../../www/api/openapi.json")
-}
-
 resource "aws_cloudfront_origin_access_control" "s3" {
   name                              = "${local.api_fqdn}-oac"
   origin_access_control_origin_type = "s3"
