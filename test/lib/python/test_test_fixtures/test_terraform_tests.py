@@ -1,73 +1,11 @@
 from pathlib import Path
 from typing import Callable
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 
 import pytest
 
-from test_fixtures.terraform_tests import (
-    _get_api_common_routing_outputs,
-    create_state_lock_contract_tests,
-)
+from test_fixtures.terraform_tests import create_state_lock_contract_tests
 from test_fixtures.outcomes import accepted
-
-
-@patch('test_fixtures.terraform_tests.open', mock_open(read_data=''))
-def test_returns_set() -> None:
-    result = _get_api_common_routing_outputs()
-    assert isinstance(result, set)
-
-
-@patch(
-    'test_fixtures.terraform_tests.open',
-    mock_open(read_data='output "foo" {\n  value = "bar"\n}\n')
-)
-def test_extracts_single_output() -> None:
-    result = _get_api_common_routing_outputs()
-    assert "foo" in result
-
-
-@patch('test_fixtures.terraform_tests.open', mock_open(
-    read_data='output "api_gateway_id" {\n}\noutput "lambda_arn" {\n}\n'
-))
-def test_extracts_multiple_outputs() -> None:
-    result = _get_api_common_routing_outputs()
-    assert len(result) == 2
-
-
-@patch('test_fixtures.terraform_tests.open', mock_open(
-    read_data='output "api_gateway_id" {\n}\noutput "lambda_arn" {\n}\n'
-))
-def test_extracts_first_output_from_multiple() -> None:
-    result = _get_api_common_routing_outputs()
-    assert "api_gateway_id" in result
-
-
-@patch('test_fixtures.terraform_tests.open', mock_open(
-    read_data='output "api_gateway_id" {\n}\noutput "lambda_arn" {\n}\n'
-))
-def test_extracts_second_output_from_multiple() -> None:
-    result = _get_api_common_routing_outputs()
-    assert "lambda_arn" in result
-
-
-@patch('test_fixtures.terraform_tests.open', mock_open(read_data=''))
-def test_returns_empty_set_for_no_outputs() -> None:
-    result = _get_api_common_routing_outputs()
-    assert result == set()
-
-
-@patch('test_fixtures.terraform_tests.open', mock_open(read_data='# output "commented" {\n}\n'))
-def test_extracts_commented_output() -> None:
-    result = _get_api_common_routing_outputs()
-    assert "commented" in result
-
-
-@patch('test_fixtures.terraform_tests.open', mock_open(
-    read_data='output "snake_case_name" {\n  value = "test"\n}\n'
-))
-def test_extracts_snake_case_output_names() -> None:
-    result = _get_api_common_routing_outputs()
-    assert "snake_case_name" in result
 
 
 def _state_lock_stack(tmp_path: Path, key: str, group: str) -> Path:

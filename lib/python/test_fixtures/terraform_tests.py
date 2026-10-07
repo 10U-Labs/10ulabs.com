@@ -4,15 +4,6 @@ from typing import Callable
 
 from repo_utils import REPO_ROOT
 
-API_COMMON_ROUTING_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "common" / "routing" / "outputs.tf"
-
-
-def _get_api_common_routing_outputs() -> set:
-    with open(API_COMMON_ROUTING_OUTPUTS_FILE, encoding="utf-8") as f:
-        content = f.read()
-    pattern = r'output\s+"(\w+)"'
-    return set(re.findall(pattern, content))
-
 
 def _declared_state_key(backend_content: str) -> str:
     match = re.search(r'^\s*key\s*=\s*"([^"]+)"', backend_content, re.MULTILINE)
