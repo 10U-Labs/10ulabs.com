@@ -12,6 +12,12 @@
 - [Confirming a push closed its issues](confirming-a-push-closed-its-issues.md) — once the runs are clean, check each issue closed and close by hand where it did not take.
 - [A rejected push is fixed forward](a-rejected-push-is-fixed-forward.md) — a red run gets a follow-up commit, never an amend and force-push; read the whole failed log first.
 - [Fixing a red run](fixing-a-red-run.md) — the session whose push's run goes red fixes it, caused or inherited, in a push of its own before the next batch.
+- [A fix touches only what must be fixed](a-fix-touches-only-what-must-be-fixed.md) — never edit another path just to make a workflow run.
+- [A wait runs in the background](a-wait-runs-in-the-background.md) — wait for CI with run_in_background or Monitor, never a foreground sleep or `gh run watch`, so reminders keep firing.
+- [Find a run by the full hash](find-a-run-by-the-full-hash.md) — `gh run list --commit` lists nothing for a short hash; pass `$(git rev-parse HEAD)`.
 - [One question at a time](one-question-at-a-time.md) — one plain question per message; queue the rest as tasks and ask them one by one.
+- [Issues divide, batches merge](an-issue-is-split-by-problem-not-by-fix.md) — one indivisible problem per issue; never merge issues to cut their count or because they share a batch.
+- [A decision rewrites the issue](a-decision-rewrites-the-issue.md) — write the decision into the title and body and remove `needs decision`; never post it as a comment.
+- [No wrapping outside .md files](no-wrapping-outside-md-files.md) — issue bodies and comments are one line per paragraph; GitHub wraps them.
 - [Issues have no house style](issues-have-no-house-style.md) — write an issue however it reads best; the one rule is a header per part, never a bolded first sentence.
 - [New checks are their own repo](new-assert-checks-are-their-own-repo.md) — a standalone 10U-Labs package on PyPI, cloned from the newest sibling; never a script under scripts/.
