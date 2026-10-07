@@ -67,7 +67,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "central_logs" {
 
     transition {
       days          = 90
-      storage_class = "GLACIER"
+      storage_class = "GLACIER_IR"
     }
 
     expiration {

@@ -146,7 +146,7 @@ def test_central_logs_bucket_has_standard_ia_transition(
 
 def test_central_logs_bucket_has_glacier_transition(s3_client: Any, config: Dict[str, Any]) -> None:
     storage_classes = _central_logs_transitions(s3_client, config)
-    assert 'GLACIER' in storage_classes
+    assert 'GLACIER_IR' in storage_classes
 
 
 def test_central_logs_bucket_has_expiration(s3_client: Any, config: Dict[str, Any]) -> None:
@@ -382,7 +382,7 @@ def test_access_log_bucket_has_glacier_transition_at_90_days(
 ) -> None:
     lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=access_log_bucket)
     rule = lifecycle['Rules'][0]
-    glacier_transition = next(t for t in rule['Transitions'] if t['StorageClass'] == 'GLACIER')
+    glacier_transition = next(t for t in rule['Transitions'] if t['StorageClass'] == 'GLACIER_IR')
     assert glacier_transition['Days'] == 90
 
 
