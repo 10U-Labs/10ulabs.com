@@ -34,10 +34,6 @@ output "resource_prefix" {
   value = local.resource_prefix
 }
 
-output "lambda_handler_names" {
-  value = local.lambda_handler_names
-}
-
 output "ssm_github_pat_name" {
   value = local.ssm_github_pat_name
 }

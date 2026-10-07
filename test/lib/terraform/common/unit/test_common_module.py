@@ -34,10 +34,6 @@ def test_github_app_local_exists(locals_tf_content: str) -> None:
     assert "github_app" in locals_tf_content
 
 
-def test_lambda_handler_names_local_exists(locals_tf_content: str) -> None:
-    assert "lambda_handler_names" in locals_tf_content
-
-
 def test_admin_iam_user_output_exists(outputs_tf_content: str) -> None:
     assert 'output "admin_iam_user"' in outputs_tf_content
 
@@ -72,10 +68,6 @@ def test_name_for_terraform_state_bucket_output_exists(outputs_tf_content: str) 
 
 def test_resource_prefix_output_exists(outputs_tf_content: str) -> None:
     assert 'output "resource_prefix"' in outputs_tf_content
-
-
-def test_lambda_handler_names_output_exists(outputs_tf_content: str) -> None:
-    assert 'output "lambda_handler_names"' in outputs_tf_content
 
 
 def test_ssm_github_pat_name_output_exists(outputs_tf_content: str) -> None:

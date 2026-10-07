@@ -27,20 +27,10 @@ def _stack_files() -> list:
 
 
 CONFIGURED_ENTRY_POINTS = [
-    ("src/api/common/routing/lambda.tf", "handler.lambda_handler"),
-    ("src/api/endpoints/contact_submissions/lambda.tf", "handler.lambda_handler"),
-    ("src/api/endpoints/rack_configurations/lambda.tf", "handler.lambda_handler"),
-    ("src/api/endpoints/sessions/analytics.tf", "handler.lambda_handler"),
-    ("src/api/endpoints/sessions/lambda.tf", "handler.lambda_handler"),
     ("src/www/common/lambda_edge.tf", "handler.lambda_handler"),
 ]
 
 DEFINED_ENTRY_POINTS = [
-    "src/api/common/routing/lambda/handler.py",
-    "src/api/endpoints/contact_submissions/lambda/handler.py",
-    "src/api/endpoints/rack_configurations/lambda/handler.py",
-    "src/api/endpoints/sessions/lambda/exporter/handler.py",
-    "src/api/endpoints/sessions/lambda/tracker/handler.py",
     "src/www/common/lambda/handler.py",
 ]
 

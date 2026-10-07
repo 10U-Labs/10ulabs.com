@@ -14,7 +14,6 @@ DECLARED_OUTPUTS = [
     ("common", "domain_name"),
     ("common", "github_app"),
     ("common", "github_org"),
-    ("common", "lambda_handler_names"),
     ("common", "name_for_central_logs_bucket"),
     ("common", "name_for_github_repo"),
     ("common", "name_for_terraform_state_bucket"),

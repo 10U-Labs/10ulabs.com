@@ -9,26 +9,11 @@ SCRATCH_DIRECTORY_NAME = ".terraform"
 
 
 STAGED_ARCHIVES = [
-    ("src/api/common/routing/lambda.tf",
-     ".terraform/lambda_packages/catchall_handler.zip"),
-    ("src/api/endpoints/contact_submissions/lambda.tf",
-     ".terraform/lambda_packages/contact_handler.zip"),
-    ("src/api/endpoints/rack_configurations/lambda.tf",
-     ".terraform/lambda_packages/handler.zip"),
-    ("src/api/endpoints/sessions/analytics.tf",
-     ".terraform/lambda_packages/export_lambda.zip"),
-    ("src/api/endpoints/sessions/lambda.tf",
-     ".terraform/lambda_packages/handler.zip"),
     ("src/www/common/lambda_edge.tf",
      ".terraform/lambda_packages/spa_routing.zip"),
 ]
 
 FILES_DECLARING_A_PACKAGE = [
-    ("src/api/common/routing/lambda.tf", 1),
-    ("src/api/endpoints/contact_submissions/lambda.tf", 1),
-    ("src/api/endpoints/rack_configurations/lambda.tf", 1),
-    ("src/api/endpoints/sessions/analytics.tf", 1),
-    ("src/api/endpoints/sessions/lambda.tf", 1),
     ("src/www/common/lambda_edge.tf", 1),
 ]
 

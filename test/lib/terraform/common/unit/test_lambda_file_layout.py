@@ -10,19 +10,10 @@ LAMBDA_DIRECTORY_NAME = "lambda"
 
 
 PACKAGED_FUNCTIONS = [
-    ("src/api/common/routing/lambda.tf", "lambda/handler.py"),
-    ("src/api/endpoints/contact_submissions/lambda.tf", "lambda/handler.py"),
-    ("src/api/endpoints/rack_configurations/lambda.tf", "lambda/handler.py"),
-    ("src/api/endpoints/sessions/analytics.tf", "lambda/exporter/handler.py"),
-    ("src/api/endpoints/sessions/lambda.tf", "lambda/tracker/handler.py"),
     ("src/www/common/lambda_edge.tf", "lambda/handler.py"),
 ]
 
 STACK_PACKAGING_DIRECTORIES = [
-    ("src/api/common/routing", ["lambda"]),
-    ("src/api/endpoints/contact_submissions", ["lambda"]),
-    ("src/api/endpoints/rack_configurations", ["lambda"]),
-    ("src/api/endpoints/sessions", ["lambda/exporter", "lambda/tracker"]),
     ("src/www/common", ["lambda"]),
 ]
 

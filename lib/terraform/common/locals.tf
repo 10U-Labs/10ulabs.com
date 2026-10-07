@@ -9,8 +9,4 @@ locals {
     installation_id = "98653544"
     ssm_prefix      = "/github/app"
   }
-
-  lambda_handler_names = {
-    catchall = "${local.resource_prefix}CatchAllHandler"
-  }
 }
