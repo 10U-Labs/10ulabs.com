@@ -5,8 +5,10 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 1a537a16-2797-49ae-a98b-30b527ea4b64
-  modified: 2026-10-07T03:46:09.940Z
+  modified: 2026-10-07T03:47:10.860Z
 ---
+
+# Never quote the user verbatim
 
 Never record a user's words verbatim, anywhere: not in a memory, an issue, a commit message, a task, a summary or a compaction. Write what the user meant in your own words instead.
 
