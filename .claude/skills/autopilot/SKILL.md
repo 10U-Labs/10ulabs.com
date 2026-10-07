@@ -1,57 +1,66 @@
 ---
 name: autopilot
-description: Start or stop the standing reminders that keep an autonomous issue-solving session on the rails. Use when the user says "start autopilot", "go autonomous on the open issues", "stop autopilot", or asks to clear the reminders. Takes "start" or "stop".
+description: Start, restart or stop the autopilot reminders. Use when the user says "start autopilot", "go autonomous on the open issues", "restart autopilot", "stop autopilot" or "reminders only", or asks to clear the reminders. Takes "start", "start bylabel <label>", "start reminders-only", the same three after "restart", or "stop"; every form but "reminders-only" and "stop" also takes `--skip-label <label>`, repeatable.
 ---
 
 # Autopilot
 
-## Table of Contents
+Fetch `CronCreate`, `CronList`, `CronDelete`, `TaskCreate` and `TaskUpdate` with `ToolSearch` first.
 
-- [Overview](#overview)
-- [Sub-Commands](#sub-commands)
-  - [Start](#start)
-    - [Create the reminders](#create-the-reminders)
-    - [Start working](#start-working)
-    - [Place a filed issue](#place-a-filed-issue)
-  - [Stop](#stop)
+## Standing reminders
 
-## Overview
+Every form.
 
-Seven recurring reminders, one per standing rule, that fire back into this session while it works through the open issues on `10U-Labs/10ulabs.com` on its own. One reminder per rule, so no rule can be quietly dropped from a merged block of text; staggered across a ten-minute period so they arrive spread out rather than as a wall.
+| Cron | Prompt |
+| --- | --- |
+| `0,15,30,45 * * * *` | `REMINDER: Work through a set of indivisible tasks, written down with TaskCreate before the work starts and marked with TaskUpdate as each one starts and finishes.` |
+| `3,18,33,48 * * * *` | `REMINDER: Let every push carry exactly one commit, and let that commit hold a whole body of work: a matter solved end to end or carried out in full, or a batch of every open issue of one matter (one workflow's stack, such as src/bootstrap/ with test/bootstrap/), bounded by the matter and never by a count.` |
+| `5,20,35,50 * * * *` | `REMINDER: Before working on an issue, ensure the issue is up to date. If it is outdated, rewrite its title and body as necessary and ensure its labels are correct. Ensure too that it documents a single indivisible problem; if it documents more than one, split it into one issue per problem, reusing the issue itself as one of those splits.` |
+| `6,21,36,51 * * * *` | `REMINDER: Keep the task list itself current, not only the marks on it: a task that arises is added the moment it does, a task that turns out unneeded is removed, and a task whose shape changed is rewritten, so that the list always says what is left to do.` |
+| `7,22,37,52 * * * *` | `REMINDER: While any CI run for a pushed commit is in progress, only wait: no diagnosis, edits or commits.` |
+| `8,23,38,53 * * * *` | `REMINDER: File what you find as issues, each documenting one indivisible problem. Solve one now only if the work in hand cannot move forward without it; otherwise move on.` |
+| `9,24,39,54 * * * *` | `REMINDER: Ensure every task on the list is indivisible, whether it was written with TaskCreate or rewritten with TaskUpdate: read each subject as written and count the actions it names; a subject naming more than one action is divisible, whatever single purpose those actions serve, and is split into one task per action.` |
+| `10,25,40,55 * * * *` | `REMINDER: Prune completed tasks off the Claude Code structured task list: set every task marked completed to the status deleted with TaskUpdate, so that the list holds only the tasks still open.` |
+| `12,27,42,57 * * * *` | `REMINDER: An issue you file is placed before you go back to work, and a blocked_by edge is written only where the block is real. Add one when the issue in hand cannot be finished until the new one is, or when some other open issue cannot. Where nothing waits on it, file it with no edge and move on: an ordering is not a dependency, and an edge written to give an issue a place in the queue is a false statement about the work.` |
+| `13,28,43,58 * * * *` | `REMINDER: When you come up against a new problem, file a GitHub issue. A problem in the program — src/, lib/python/, lib/terraform/, scripts/ — gets the sub-headers "Problem", "Why Unit Tests Did Not Catch It?", "Why Integration Tests Did Not Catch It?", "Why E2E Tests Did Not Catch It?", "Why Static Analysis Jobs Did Not Catch It?", "Which Unit, Integration, or E2E Regression Tests or Static Analysis Jobs Would Prevent This from Happening Again?", and "Proposed Solution". A problem in a workflow file or the docs — .github/, docs/ — gets "Problem" and "Proposed Solution" only, and owes no tests.` |
 
-The argument is the sub-command, `start` or `stop`. Neither takes anything else — `start` reads its scope out of the repository. If the user names an issue number anyway, they are asking to start rather than to narrow; say the whole open set is in scope and start.
+## Loop reminders
 
-`CronCreate`, `CronList` and `CronDelete` are deferred tools: the session is told their names but not their schemas, so a call made before the schema is fetched fails with `InputValidationError` and creates nothing. Fetch them first with `ToolSearch`, query `select:CronCreate,CronList,CronDelete`.
+Every form but `reminders-only`.
 
-## Sub-Commands
+On `1,16,31,46 * * * *`, for `start`:
 
-### Start
+```text
+REMINDER: Run gh issue list --state open --search '-label:"needs decision"' --limit 1000 --json number,title,labels --jq 'sort_by(.number) | map({number, title, labels: [.labels[].name]})' for the open issues no decision holds back, lowest number first; take the first that no open issue blocks, together with every other issue in the list of its matter (fixed in the same workflow's stack), as one batch, and run the same command again when they close. An issue labelled 'needs decision' is left to a person.
+```
 
-#### Create the reminders
+For `start bylabel <label>`:
 
-Create seven jobs with `CronCreate`, exactly as listed. Use `recurring: true` (the default), and take the prompts verbatim; none of them has anything to substitute. Each `cron` field is a distinct offset within the same ten-minute period. Two reminders can still arrive in the same minute, because a recurring job fires up to a tenth of its period late; that is documented drift, not a job created wrong, and the table is not to be re-spaced over it.
+```text
+REMINDER: Run gh issue list --state open --label '{L}' --search '-label:"needs decision"' --limit 1000 --json number,title,labels --jq 'sort_by(.number) | map({number, title, labels: [.labels[].name]})' for the open issues labelled '{L}', lowest number first; take the first that no open issue blocks, together with every other issue in the list of its matter (fixed in the same workflow's stack), as one batch, and run the same command again when they close. The open issues without the label '{L}' are not this loop's work, and an issue labelled 'needs decision' is left to a person.
+```
 
-| Offset | Cron | Prompt |
-| --- | --- | --- |
-| :01 | `1,11,21,31,41,51 * * * *` | `REMINDER: Continue to solve the open issues autonomously, unless you need human feedback about ANYTHING — not just about the next open issue.` |
-| :03 | `3,13,23,33,43,53 * * * *` | `REMINDER: Issues must be solved through a single commit & push.` |
-| :04 | `4,14,24,34,44,54 * * * *` | `REMINDER: Issues must be solved through a set of indivisible tasks held in Claude Code's native structured task list — TaskCreate one entry per step before starting, TaskUpdate each to in_progress and then completed as it lands. A breakdown kept only in your head is not a breakdown.` |
-| :06 | `6,16,26,36,46,56 * * * *` | `REMINDER: Ensure the entries in Claude Code's native structured task list are indivisible. Read the list back with TaskList; split any entry that cannot be finished in one step.` |
-| :07 | `7,17,27,37,47,57 * * * *` | `REMINDER: Do not do anything but wait while a workflow is running.` |
-| :08 | `8,18,28,38,48,58 * * * *` | `REMINDER: An issue you file is placed before you go back to work, and a blocked_by edge is written only where the block is real. Add one when the issue in hand cannot be finished until the new one is, or when some other open issue cannot. Where nothing waits on it, file it with no edge and move on: an ordering is not a dependency, and an edge written to give an issue a place in the queue is a false statement about the work.` |
-| :09 | `9,19,29,39,49,59 * * * *` | `REMINDER: When you come up against a new problem, file a GitHub issue. A problem in the program — src/, lib/python/, lib/terraform/, scripts/ — gets the sub-headers "Problem", "Why Unit Tests Did Not Catch It?", "Why Integration Tests Did Not Catch It?", "Why E2E Tests Did Not Catch It?", "Why Static Analysis Jobs Did Not Catch It?", "Which Unit, Integration, or E2E Regression Tests or Static Analysis Jobs Would Prevent This from Happening Again?", and "Proposed Solution". A problem in a workflow file or the docs — .github/, docs/ — gets "Problem" and "Proposed Solution" only, and owes no tests.` |
+| Cron | Prompt |
+| --- | --- |
+| `4,19,34,49 * * * *` | `REMINDER: Continue autonomously, unless you need human feedback about ANYTHING — not just about what to take next. When you do, rewrite the issue's title if necessary, rewrite the issue's body, label the issue 'needs decision', and move on to the next issue.` |
+| `11,26,41,56 * * * *` | `REMINDER: Before labeling an issue with 'needs decision', assess the issue against the rulebook in .claude/memories/ and the code to determine whether it truly needs a decision.` |
 
-Then tell the user that seven reminders are running, how many open issues are in scope, and the two limits that come with them: the jobs live in this session only and are gone when it ends, and recurring jobs auto-expire after seven days.
+## Start and restart
 
-#### Start working
+Each `--skip-label <label>` adds `-label:"<label>"` to the loop command's `--search` and appends `An issue labelled '<label>' is left to a person, whatever else it carries.` to its reminder.
 
-Start in the same turn that created the jobs. Running this skill is starting the work; the seven jobs only keep it on the rails once it is going.
+1. Unless `reminders-only`, run the loop command once; if it names no issue, schedule the standing reminders only.
+2. Call `CronList`. On `start`, `CronDelete` each job on one of the form's slots whose prompt differs from that slot's. On `restart`, `CronDelete` every job that is not one of the form's reminders, keeping one per slot.
+3. `CronCreate` with `recurring: true` each of the form's reminders not already scheduled, the label substituted for `{L}`.
+4. Unless `reminders-only`, widen the set per [Blocked issues](#blocked-issues), then solve the batch the first unblocked issue seeds, per `.claude/memories/a-push-solves-every-open-issue-of-one-stack.md`. When nothing is left, say which label or issue holds back each open issue and stop.
 
-Read the open issues with `gh issue list`, then read `gh api repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by` for each of them; every entry names the repository its blocker lives in. Follow those entries, and the entries of the issues they reach, until nothing new comes back, and add every open issue found this way to the set. Then take the lowest-numbered issue in the set that no open issue blocks, preferring this repository when two are equally unblocked, and solve it under the standing rules the reminders carry — committing in whichever repository its `Proposed Solution` names, and reading that repository's CI to confirm it.
+## Blocked issues
+
+Read `gh api repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by` for each issue the loop command names; every entry names the repository its blocker lives in. Follow those entries, and the entries of the issues they reach, until nothing new comes back, and add every open issue found this way to the set. Take the lowest-numbered issue in the set that no open issue blocks, preferring this repository when two are equally unblocked, and solve it — committing in whichever repository its `Proposed Solution` names, and reading that repository's CI to confirm it.
 
 Most of the set is unblocked, so most of the time that pick is the lowest open number, and that is the intended shape rather than a sign the edges are missing. Work that belongs in another repository is filed in that repository, under its own numbering and its own CI — `10U-Labs/assert-python-definition-is-used#6` is a defect in that tool, filed and closed there. What is filed here is this repository's own share of the work, which is a separate issue: `#586` is the job of adopting the mode `#6` added. An issue elsewhere enters the set only by an edge, and edges are written only where a block is real, so an issue nothing here waits on is worked in the repository it was filed in.
 
-#### Place a filed issue
+## Place a filed issue
 
 An issue filed during a run is placed before the session goes back to work. A `blocked_by` edge says that one piece of work cannot be finished until another is, so it is written where that is true and left unwritten where it is not. Two cases put an edge on:
 
@@ -68,8 +77,6 @@ Add the edge with `gh api repos/{owner}/{repo}/issues/{number}/dependencies/bloc
 
 Remove an edge that should not have been written with `gh api -X DELETE repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by/<id>`, taking the blocker's numeric id in the path. It answers with the whole issue rather than an empty body, so confirm the removal by reading the `blocked_by` list again rather than by the exit status.
 
-### Stop
+## Stop
 
-Call `CronList`, then call `CronDelete` once per job it returns — all of them, not only the seven this skill created. "Delete all your reminders" means the session ends with an empty schedule. Call `CronList` again afterwards to confirm it is empty, and report how many jobs were deleted.
-
-`CronList` returning nothing is not a failure; say the schedule was already empty and stop.
+`CronDelete` every job `CronList` returns.

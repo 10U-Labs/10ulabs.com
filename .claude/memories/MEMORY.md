@@ -7,4 +7,5 @@
 - [Tests are written before source](tests-are-written-before-source.md) — TDD; a test may name a file that does not exist yet, but read it via a fixture, never at module level.
 - [Fixture liveness needs a collection](fixture-liveness-is-a-collection-question.md) — a name match cannot see shadowing, uncalled factories, or getfixturevalue.
 - [Whole-tree pytest needs importlib](whole-tree-collection-needs-importlib.md) — nine repeated basenames and no __init__.py; also needs PYTHONPATH=lib/python:scripts.
+- [A push solves one stack's issues](a-push-solves-every-open-issue-of-one-stack.md) — batch by workflow stack, never by count; tests and fix in one commit; shared paths go alone.
 - [New checks are their own repo](new-assert-checks-are-their-own-repo.md) — a standalone 10U-Labs package on PyPI, cloned from the newest sibling; never a script under scripts/.
