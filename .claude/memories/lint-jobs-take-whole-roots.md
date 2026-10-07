@@ -1,8 +1,11 @@
 ---
 name: lint-jobs-take-whole-roots
-description: All six per-workflow Python lint jobs are scoped to whole roots — src/ lib/, scripts/ lib/, test/ lib/ — never path lists.
+description: "All six per-workflow Python lint jobs are scoped to whole roots — src/ lib/, scripts/ lib/, test/ lib/ — never path lists."
 metadata:
+  node_type: memory
   type: project
+  originSessionId: 1a537a16-2797-49ae-a98b-30b527ea4b64
+  modified: 2026-10-07T11:55:20.503Z
 ---
 
 # Lint jobs take whole roots, not path lists
@@ -21,6 +24,7 @@ The six Python lint jobs in each of the eleven workflows (`copy-paste-source`, `
 **How to apply:** never reintroduce a path list. A new stack needs no lint-job edit. Two gotchas when touching the `mypy` jobs:
 
 - `--explicit-package-bases` is **required** on both `mypy` jobs. Every lambda entry point is `handler.py` and no `lambda/` dir has an `__init__.py`, so mypy's default naming maps all eight to the bare module `handler` and aborts with `Duplicate module named "handler"` before checking anything. The flag names modules from the roots instead (`src.api...lambda.handler`); `lib/python` is on `MYPYPATH`, so `lambda_response` and friends keep their bare names.
+- `mypy-source` takes `git ls-files -z 'src/*.py' 'lib/*.py' | xargs -0`, not the directories (71c01abe). mypy exits 2 with `There are no .py[i] files in directory 'src'` on a directory target holding no Python, and since #802 replaced the last Lambda with a CloudFront Function, `src/` has none. The tracked-file list is still both whole roots, so a new `.py` anywhere under them is checked without an edit.
 - `mypy-tests` needs `dnspython` installed, because `test/` includes `test/bootstrap/post_deployment/e2e/`, which imports `dns.resolver`. `mypy-source` does not.
 
 The `paths:` triggers were deliberately left per-stack in all three commits, so a change to one stack can redden another workflow's lint job without triggering it. Widening the triggers is a separate decision across all six jobs.
