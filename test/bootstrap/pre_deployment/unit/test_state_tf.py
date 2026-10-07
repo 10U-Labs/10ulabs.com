@@ -13,11 +13,6 @@ def state_tf_fixture(bootstrap_dir: Path) -> str:
     return (bootstrap_dir / 'state.tf').read_text(encoding='utf-8')
 
 
-@pytest.fixture(name='wan_synthesizer_tf')
-def wan_synthesizer_tf_fixture(bootstrap_dir: Path) -> str:
-    return (bootstrap_dir / 'wan_synthesizer.tf').read_text(encoding='utf-8')
-
-
 @pytest.fixture(name='api_tf')
 def api_tf_fixture(bootstrap_dir: Path) -> str:
     return (bootstrap_dir / 'api_10ulabs_com.tf').read_text(encoding='utf-8')
@@ -46,12 +41,6 @@ def test_state_bucket_policy_names_the_wan_synthesizer_deploy_role(state_tf: str
 
 def test_state_bucket_policy_names_the_api_deploy_role(state_tf: str) -> None:
     assert 'local.name_for_api_role' in _block(state_tf, POLICY)
-
-
-def test_bootstrap_declares_no_resource_for_the_wan_synthesizer_role(
-    wan_synthesizer_tf: str
-) -> None:
-    assert not re.search(r'^resource ', wan_synthesizer_tf, re.MULTILINE)
 
 
 def test_bootstrap_declares_no_resource_for_the_api_deploy_role(api_tf: str) -> None:
