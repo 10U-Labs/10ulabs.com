@@ -128,10 +128,9 @@ resource "aws_cloudfront_distribution" "website" {
     origin_request_policy_id   = data.aws_cloudfront_origin_request_policy.cors_s3_origin.id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.website.id
 
-    lambda_function_association {
+    function_association {
       event_type   = "viewer-request"
-      lambda_arn   = aws_lambda_function.spa_routing.qualified_arn
-      include_body = false
+      function_arn = aws_cloudfront_function.spa_routing.arn
     }
   }
 

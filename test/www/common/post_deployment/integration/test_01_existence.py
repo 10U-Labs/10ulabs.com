@@ -15,10 +15,5 @@ def test_s3_bucket_exists(s3_client: Any, config: Dict[str, Any]) -> None:
     assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
 
 
-def test_lambda_edge_function_exists(spa_routing_lambda: Any) -> None:
-    assert spa_routing_lambda is not None
-
-
-def test_lambda_edge_iam_role_exists(spa_routing_lambda_config: Any) -> None:
-    role_arn = spa_routing_lambda_config.get("Role", "")
-    assert role_arn.startswith("arn:aws:iam::")
+def test_spa_routing_function_exists(spa_routing_function: Any) -> None:
+    assert spa_routing_function["Name"].endswith("SpaRouting")

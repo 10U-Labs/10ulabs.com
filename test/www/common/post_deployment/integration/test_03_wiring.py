@@ -61,18 +61,27 @@ def test_route53_alias_target_is_cloudfront(website_dns_record: Any) -> None:
     )
 
 
-def test_cloudfront_has_lambda_edge_association(default_cache_behavior: Any) -> None:
-    associations = default_cache_behavior.get("LambdaFunctionAssociations", {})
-    items = associations.get("Items", [])
-    viewer_request = [a for a in items if a["EventType"] == "viewer-request"]
-    assert len(viewer_request) == 1, (
-        f"Expected 1 viewer-request Lambda, found {len(viewer_request)}"
+@pytest.fixture(name="viewer_request_functions", scope="module")
+def viewer_request_functions_fixture(default_cache_behavior: Any) -> Any:
+    items = default_cache_behavior.get("FunctionAssociations", {}).get("Items", [])
+    return [a["FunctionARN"] for a in items if a["EventType"] == "viewer-request"]
+
+
+def test_cloudfront_has_one_viewer_request_function(viewer_request_functions: Any) -> None:
+    assert len(viewer_request_functions) == 1, (
+        f"Expected 1 viewer-request function, found {viewer_request_functions}"
     )
 
 
-def test_cloudfront_lambda_edge_is_spa_routing(default_cache_behavior: Any) -> None:
+def test_cloudfront_viewer_request_function_is_spa_routing(
+    viewer_request_functions: Any, spa_routing_function: Any
+) -> None:
+    function_arn = spa_routing_function["FunctionMetadata"]["FunctionARN"]
+    assert viewer_request_functions == [function_arn]
+
+
+def test_cloudfront_has_no_lambda_edge_association(default_cache_behavior: Any) -> None:
     associations = default_cache_behavior.get("LambdaFunctionAssociations", {})
-    items = associations.get("Items", [])
-    viewer_request = [a for a in items if a["EventType"] == "viewer-request"]
-    lambda_arn = viewer_request[0]["LambdaFunctionARN"]
-    assert "SpaRouting" in lambda_arn, f"Lambda ARN does not contain SpaRouting: {lambda_arn}"
+    assert not associations.get("Items", []), (
+        f"Lambda@Edge still associated: {associations.get('Items')}"
+    )

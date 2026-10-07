@@ -1,6 +1,5 @@
 from typing import Any, Dict
 
-import boto3
 import pytest
 
 
@@ -68,17 +67,8 @@ def public_access_block(s3_client: Any, config: Dict[str, Any]) -> Any:
     return response["PublicAccessBlockConfiguration"]
 
 
-@pytest.fixture(name="lambda_client_us_east_1", scope="module")
-def lambda_client_us_east_1_fixture() -> Any:
-    return boto3.client("lambda", region_name="us-east-1")
-
-
-@pytest.fixture(name="spa_routing_lambda", scope="module")
-def spa_routing_lambda_fixture(lambda_client_us_east_1: Any, config: Dict[str, Any]) -> Any:
-    function_name = f"{config['resource_prefix']}SpaRouting"
-    return lambda_client_us_east_1.get_function(FunctionName=function_name)
-
-
 @pytest.fixture(scope="module")
-def spa_routing_lambda_config(spa_routing_lambda: Any) -> Any:
-    return spa_routing_lambda["Configuration"]
+def spa_routing_function(cloudfront_client: Any, config: Dict[str, Any]) -> Any:
+    function_name = f"{config['resource_prefix']}SpaRouting"
+    response = cloudfront_client.describe_function(Name=function_name, Stage="LIVE")
+    return response["FunctionSummary"]

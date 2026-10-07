@@ -111,26 +111,16 @@ def test_s3_bucket_logging_target_is_central_logs(s3_client: Any, config: Dict[s
     assert config["central_logs_bucket"] in target_bucket
 
 
-def test_lambda_edge_runtime_is_python312(spa_routing_lambda_config: Any) -> None:
-    runtime = spa_routing_lambda_config.get("Runtime", "")
-    assert runtime == "python3.12"
+def test_spa_routing_function_runtime_is_cloudfront_js_2_0(spa_routing_function: Any) -> None:
+    runtime = spa_routing_function["FunctionConfig"]["Runtime"]
+    assert runtime == "cloudfront-js-2.0"
 
 
-def test_lambda_edge_timeout_is_5_seconds(spa_routing_lambda_config: Any) -> None:
-    timeout = spa_routing_lambda_config.get("Timeout", 0)
-    assert timeout == 5
+def test_spa_routing_function_is_live(spa_routing_function: Any) -> None:
+    stage = spa_routing_function["FunctionMetadata"]["Stage"]
+    assert stage == "LIVE"
 
 
-def test_lambda_edge_memory_is_128mb(spa_routing_lambda_config: Any) -> None:
-    memory = spa_routing_lambda_config.get("MemorySize", 0)
-    assert memory == 128
-
-
-def test_lambda_edge_handler_is_correct(spa_routing_lambda_config: Any) -> None:
-    handler = spa_routing_lambda_config.get("Handler", "")
-    assert handler == "handler.lambda_handler"
-
-
-def test_lambda_edge_has_description(spa_routing_lambda_config: Any) -> None:
-    description = spa_routing_lambda_config.get("Description", "")
-    assert len(description) > 0
+def test_spa_routing_function_has_comment(spa_routing_function: Any) -> None:
+    comment = spa_routing_function["FunctionConfig"].get("Comment", "")
+    assert len(comment) > 0

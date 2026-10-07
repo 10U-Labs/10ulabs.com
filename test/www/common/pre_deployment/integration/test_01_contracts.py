@@ -69,16 +69,16 @@ def test_providers_local_references_exist_in_locals() -> None:
     )
 
 
-def test_lambda_edge_local_references_exist_in_locals() -> None:
-    lambda_content = _read_file("lambda_edge.tf")
+def test_cloudfront_function_local_references_exist_in_locals() -> None:
+    function_content = _read_file("cloudfront_function.tf")
     locals_content = _read_file("locals.tf")
 
-    references = _extract_local_references(lambda_content)
+    references = _extract_local_references(function_content)
     definitions = _extract_local_definitions(locals_content)
 
     missing = references - definitions
     assert not missing, (
-        f"lambda_edge.tf references undefined locals: {missing}. "
+        f"cloudfront_function.tf references undefined locals: {missing}. "
         f"Defined locals: {definitions}"
     )
 
@@ -123,35 +123,27 @@ def test_s3_bucket_module_source_path_exists() -> None:
     )
 
 
-def test_lambda_handler_file_exists() -> None:
-    handler_path = SRC_DIR / "lambda" / "handler.py"
-    assert handler_path.exists(), f"Lambda handler not found: {handler_path}"
+def test_spa_routing_function_file_exists() -> None:
+    function_path = SRC_DIR / "function" / "spa_routing.js"
+    assert function_path.exists(), f"SPA routing function not found: {function_path}"
 
 
-def test_lambda_handler_has_handler_function() -> None:
-    handler_content = (SRC_DIR / "lambda" / "handler.py").read_text()
-    assert "def lambda_handler(" in handler_content, (
-        "Lambda handler file missing 'def lambda_handler(' function"
+def test_spa_routing_function_defines_handler() -> None:
+    function_content = _read_file("function/spa_routing.js")
+    assert "function handler(event)" in function_content, (
+        "function/spa_routing.js missing 'function handler(event)'"
     )
 
 
-def test_lambda_edge_references_handler_file() -> None:
-    lambda_content = _read_file("lambda_edge.tf")
-    assert "lambda/handler.py" in lambda_content, (
-        "lambda_edge.tf does not reference lambda/handler.py"
+def test_cloudfront_function_references_function_file() -> None:
+    function_content = _read_file("cloudfront_function.tf")
+    assert "function/spa_routing.js" in function_content, (
+        "cloudfront_function.tf does not reference function/spa_routing.js"
     )
 
 
-def test_lambda_edge_has_handler_config() -> None:
-    lambda_content = _read_file("lambda_edge.tf")
-    match = re.search(r'handler\s*=\s*"([^"]+)"', lambda_content)
-    assert match, "lambda_edge.tf missing handler configuration"
-
-
-def test_lambda_edge_handler_matches_module() -> None:
-    lambda_content = _read_file("lambda_edge.tf")
-    match = re.search(r'handler\s*=\s*"([^"]+)"', lambda_content)
-    handler_config = match.group(1) if match else ""
-    assert handler_config == "handler.lambda_handler", (
-        f"Expected handler 'handler.lambda_handler', got '{handler_config}'"
+def test_cloudfront_function_runs_cloudfront_js_2_0() -> None:
+    function_content = _read_file("cloudfront_function.tf")
+    assert re.search(r'runtime\s*=\s*"cloudfront-js-2\.0"', function_content), (
+        "cloudfront_function.tf does not set runtime = \"cloudfront-js-2.0\""
     )

@@ -10,10 +10,7 @@ locals {
 
   response_headers_policy_name = "${local.resource_prefix}ResponseHeadersPolicy"
   cache_policy_name            = "${local.resource_prefix}CachePolicy"
-  spa_routing_role_name        = "${local.resource_prefix}SpaRoutingRole"
   spa_routing_function_name    = "${local.resource_prefix}SpaRouting"
-  spa_routing_log_group_name   = "/aws/lambda/us-east-1.${local.spa_routing_function_name}"
-  spa_routing_logs_tag_name    = "${local.resource_prefix}SpaRoutingLogs"
 
   common_tags = {
     ManagedBy = "terraform"
