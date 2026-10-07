@@ -1,26 +1,8 @@
 from test_fixtures.integration.factories.authentication import (
-    create_api_gateway_authorization_tests,
-    create_lambda_and_iam_authorization_tests,
-    create_layer1_authentication_tests,
     create_layer2_s3_authorization_tests,
     create_simple_layer1_authentication_tests,
 )
-from test_fixtures.integration.factories.capability import (
-    create_layer6_capability_tests,
-)
 from test_fixtures.integration.factories.infrastructure import (
-    create_kms_policy_test,
-    create_lambda_role_existence_test,
-    create_log_group_configuration_tests,
     create_www_common_fixtures,
     create_www_common_s3_existence_tests,
-    handle_ecr_error,
-)
-from test_fixtures.integration.factories.lambda_factories import (
-    create_deployed_resource_existence_tests,
-    create_lambda_api_gateway_wiring_tests,
-    create_lambda_configuration_tests,
-    create_lambda_execution_role_wiring_tests,
-    create_lambda_existence_tests,
-    create_lambda_iam_wiring_tests,
 )
