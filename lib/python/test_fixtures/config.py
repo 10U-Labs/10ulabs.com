@@ -3,19 +3,6 @@ from pathlib import Path
 from typing import Dict, Optional
 
 
-def parse_tfvars_file(tfvars_path: Path) -> Dict[str, str]:
-    config: Dict[str, str] = {}
-    with open(tfvars_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-                if match:
-                    key, value = match.groups()
-                    config[key] = value.strip('"')
-    return config
-
-
 def parse_locals_file(
     locals_path: Path,
     shared_config: Optional[Dict[str, str]] = None
@@ -63,11 +50,3 @@ def create_website_config(
         'resource_prefix': resource_prefix,
         'hosted_zone_id': hosted_zone_id,
     }
-
-
-def add_derived_config(result: Dict[str, str]) -> None:
-    prefix = result['resource_prefix']
-    result['firehose_delivery_stream_name'] = f"{prefix}-CloudWatchLogs"
-    result['firehose_role_name'] = f"{prefix}FirehoseCloudWatchLogs"
-    result['cloudwatch_logs_firehose_role_name'] = f"{prefix}CloudWatchLogsFirehose"
-    result['api_gateway_cloudwatch_role_name'] = f"{prefix}ApiGatewayCloudwatch"

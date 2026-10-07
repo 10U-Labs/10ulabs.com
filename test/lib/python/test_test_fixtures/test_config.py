@@ -6,10 +6,8 @@ from typing import Callable, Dict
 import pytest
 
 from test_fixtures.config import (
-    parse_tfvars_file,
     parse_locals_file,
     create_website_config,
-    add_derived_config,
 )
 
 
@@ -22,11 +20,6 @@ def write_temporary_file(content: str, suffix: str) -> Path:
         return Path(handle.name)
 
 
-@pytest.fixture(name="tfvars_file")
-def fixture_tfvars_file() -> Callable[[str], Path]:
-    return partial(write_temporary_file, suffix=".tfvars")
-
-
 @pytest.fixture(name="tf_file")
 def fixture_tf_file() -> Callable[[str], Path]:
     return partial(write_temporary_file, suffix=".tf")
@@ -35,48 +28,6 @@ def fixture_tf_file() -> Callable[[str], Path]:
 @pytest.fixture(name="base_shared_config")
 def fixture_base_shared_config() -> Dict[str, str]:
     return {'aws_region': 'us-east-1', 'domain_name': 'example.com'}
-
-
-def test_parses_unquoted_value(tfvars_file: Callable[[str], Path]) -> None:
-    result = parse_tfvars_file(tfvars_file('key = value\n'))
-    assert result['key'] == 'value'
-
-
-def test_parses_quoted_value(tfvars_file: Callable[[str], Path]) -> None:
-    result = parse_tfvars_file(tfvars_file('key = "quoted value"\n'))
-    assert result['key'] == 'quoted value'
-
-
-def test_parse_tfvars_file_ignores_comment_lines(tfvars_file: Callable[[str], Path]) -> None:
-    result = parse_tfvars_file(tfvars_file('# this is a comment\nkey = value\n'))
-    assert len(result) == 1
-
-
-def test_ignores_empty_lines(tfvars_file: Callable[[str], Path]) -> None:
-    result = parse_tfvars_file(tfvars_file('\n\nkey = value\n\n'))
-    assert result['key'] == 'value'
-
-
-def test_parse_tfvars_file_returns_empty_dict_for_empty_file(
-    tfvars_file: Callable[[str], Path]
-) -> None:
-    result = parse_tfvars_file(tfvars_file(''))
-    assert not result
-
-
-def test_parses_multiple_key_value_pairs(tfvars_file: Callable[[str], Path]) -> None:
-    result = parse_tfvars_file(tfvars_file('key1 = "value1"\nkey2 = "value2"\n'))
-    assert len(result) == 2
-
-
-def test_handles_equals_sign_spacing(tfvars_file: Callable[[str], Path]) -> None:
-    result = parse_tfvars_file(tfvars_file('key="value"\n'))
-    assert result['key'] == 'value'
-
-
-def test_ignores_malformed_lines(tfvars_file: Callable[[str], Path]) -> None:
-    result = parse_tfvars_file(tfvars_file('this line has no equals sign\nkey = "value"\n'))
-    assert len(result) == 1
 
 
 def test_parses_quoted_string_value(tf_file: Callable[[str], Path]) -> None:
@@ -196,33 +147,3 @@ def test_includes_central_logs_bucket(tf_file: Callable[[str], Path]) -> None:
     }
     result = create_website_config(tf_file(''), shared_config)
     assert result['central_logs_bucket'] == 'my-logs-bucket'
-
-
-def test_builds_firehose_delivery_stream_name() -> None:
-    result = {'resource_prefix': 'MyPrefix'}
-    add_derived_config(result)
-    assert result['firehose_delivery_stream_name'] == 'MyPrefix-CloudWatchLogs'
-
-
-def test_builds_firehose_role_name() -> None:
-    result = {'resource_prefix': 'MyPrefix'}
-    add_derived_config(result)
-    assert result['firehose_role_name'] == 'MyPrefixFirehoseCloudWatchLogs'
-
-
-def test_builds_cloudwatch_logs_firehose_role_name() -> None:
-    result = {'resource_prefix': 'MyPrefix'}
-    add_derived_config(result)
-    assert result['cloudwatch_logs_firehose_role_name'] == 'MyPrefixCloudWatchLogsFirehose'
-
-
-def test_builds_api_gateway_cloudwatch_role_name() -> None:
-    result = {'resource_prefix': 'MyPrefix'}
-    add_derived_config(result)
-    assert result['api_gateway_cloudwatch_role_name'] == 'MyPrefixApiGatewayCloudwatch'
-
-
-def test_leaves_resource_prefix_unchanged() -> None:
-    result = {'resource_prefix': 'MyPrefix'}
-    add_derived_config(result)
-    assert result['resource_prefix'] == 'MyPrefix'

@@ -10,20 +10,6 @@ def iam_role_exists(client: Any, role_name: str) -> bool:
         return False
 
 
-def get_log_group_info(client: Any, log_group_name: str) -> dict:
-    response = client.describe_log_groups(
-        logGroupNamePrefix=log_group_name,
-        limit=1
-    )
-    log_groups = response.get("logGroups", [])
-    matching = [lg for lg in log_groups if lg["logGroupName"] == log_group_name]
-    return {
-        "name": log_group_name,
-        "exists": len(matching) > 0,
-        "retention": matching[0].get("retentionInDays") if matching else None
-    }
-
-
 def find_lifecycle_rule(client: Any, bucket_name: str, rule_id: str) -> Optional[dict]:
     lifecycle = client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
     for rule in lifecycle["Rules"]:

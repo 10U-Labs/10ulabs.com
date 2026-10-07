@@ -1,6 +1,3 @@
-from typing import Any
-from unittest.mock import MagicMock
-
 from lambda_response import (
     parse_response_body,
     assert_response_status,
@@ -36,13 +33,4 @@ __all__ = [
     'create_mock_lambda_delete_concurrency_error',
     'reset_module_state',
     'create_lambda_loader',
-    'create_mock_dynamodb_client',
 ]
-
-
-def create_mock_dynamodb_client(method_name: str, return_value: Any = None) -> MagicMock:
-    if return_value is None:
-        return_value = {}
-    mock_client = MagicMock()
-    getattr(mock_client, method_name).return_value = return_value
-    return mock_client
