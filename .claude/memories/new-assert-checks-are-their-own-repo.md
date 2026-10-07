@@ -1,8 +1,11 @@
 ---
 name: new-assert-checks-are-their-own-repo
-description: A new repo-wide check is a standalone 10U-Labs repo published to PyPI, not a script under scripts/.
+description: "A new repo-wide check is a standalone 10U-Labs repo published to PyPI, not a script under scripts/."
 metadata:
+  node_type: memory
   type: project
+  originSessionId: 120de421-48c5-4cd5-a81d-e0448051ac54
+  modified: 2026-10-07T02:44:11.278Z
 ---
 
 # A new check is its own repo, cloned from the newest one
@@ -13,4 +16,4 @@ To add one, clone the most recently created `assert-*` repo as the template (`gh
 
 **Why:** The issue that prompted `assert-pytest-test-can-fail` proposed a script under `scripts/` with tests under `test/scripts/`, which was the old convention and would have been rejected in review. The family shape also gets the check 100% branch coverage, mypy `--strict`, pylint `--fail-on=C,R,W` and jscpd at threshold 0 for free, because the template carries those jobs.
 
-**How to apply:** Copy the newest sibling rather than writing a repo from scratch, then add the job to each workflow that should run it and to that workflow's gate `needs:`. See [[lint-jobs-take-whole-roots]] for the roots the job takes and [[do-not-run-test-suites-locally]] for verifying it.
+**How to apply:** An autopilot session never creates the repo, since it touches no repository but this one: it files an issue here for the new check and leaves the repo to a person. Whoever does create it copies the newest sibling rather than writing a repo from scratch, then add the job to each workflow that should run it and to that workflow's gate `needs:`. See [[lint-jobs-take-whole-roots]] for the roots the job takes and [[do-not-run-test-suites-locally]] for verifying it.
