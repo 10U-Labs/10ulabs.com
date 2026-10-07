@@ -5,27 +5,3 @@ resource "aws_cloudfront_function" "spa_routing" {
   publish = true
   code    = file("${path.module}/function/spa_routing.js")
 }
-
-removed {
-  from = aws_lambda_function.spa_routing
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = aws_iam_role.spa_routing
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = aws_iam_role_policy_attachment.spa_routing_basic
-
-  lifecycle {
-    destroy = false
-  }
-}
