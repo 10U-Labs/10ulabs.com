@@ -335,6 +335,19 @@ jobs:
           PYTHONPATH=lib/python python3 -m pytest \
             $BASE/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install eslint
+        run: npm install --no-save eslint @eslint/js
+      - name: Run eslint
+        run: |
+          npx eslint \
+            --config src/www/common/function/eslint.config.mjs \
+            --max-warnings 0 \
+            src/www/common/function
   mypy-source:
     runs-on: ubuntu-latest
     steps:
@@ -554,6 +567,7 @@ jobs:
       - assert-python-definition-is-used-packages
       - copy-paste-source
       - copy-paste-tests
+      - eslint
       - mypy-source
       - mypy-tests
       - pre-deployment-integration-tests
