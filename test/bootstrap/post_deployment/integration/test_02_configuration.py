@@ -331,13 +331,13 @@ def test_cloudtrail_has_cloudwatch_logs_configured(cloudtrail_client: Any) -> No
     assert 'CloudWatchLogsLogGroupArn' in trail
 
 
-def test_cloudtrail_log_group_has_one_year_retention(
+def test_cloudtrail_log_group_has_thirty_day_retention(
     logs_client: Any,
     cloudtrail_log_group_name: str
 ) -> None:
     response = logs_client.describe_log_groups(logGroupNamePrefix=cloudtrail_log_group_name)
     log_group = response['logGroups'][0]
-    assert log_group['retentionInDays'] == 365
+    assert log_group['retentionInDays'] == 30
 
 
 def test_cloudtrail_captures_read_and_write_events(cloudtrail_client: Any) -> None:

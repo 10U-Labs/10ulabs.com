@@ -1,6 +1,6 @@
 resource "aws_cloudwatch_log_group" "cloudtrail" {
   name              = var.name_for_cloudtrail_log_group
-  retention_in_days = 365
+  retention_in_days = 30
 }
 
 resource "aws_iam_role" "cloudtrail_cloudwatch" {
