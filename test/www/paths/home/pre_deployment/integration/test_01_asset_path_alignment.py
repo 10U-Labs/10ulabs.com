@@ -1,9 +1,10 @@
 import re
 
+import pytest
 from repo_utils import REPO_ROOT
 
 DIST_DIR = REPO_ROOT / "src" / "www" / "paths" / "home" / "dist"
-LAMBDA_FILE = REPO_ROOT / "src" / "www" / "common" / "lambda" / "handler.py"
+SPA_ROUTING_FILE = REPO_ROOT / "src" / "www" / "common" / "function" / "spa_routing.js"
 
 
 def test_dist_directory_structure_valid() -> None:
@@ -41,35 +42,32 @@ def test_asset_css_files_exist() -> None:
         )
 
 
-def test_lambda_file_exists() -> None:
-    assert LAMBDA_FILE.exists(), (
-        f"Lambda file not found at {LAMBDA_FILE}"
+@pytest.fixture(name="spa_routing_source", scope="module")
+def spa_routing_source_fixture() -> str:
+    return SPA_ROUTING_FILE.read_text()
+
+
+def test_spa_routing_file_exists() -> None:
+    assert SPA_ROUTING_FILE.exists(), (
+        f"SPA routing function not found at {SPA_ROUTING_FILE}"
     )
 
 
-def test_lambda_has_assets_prefix_check() -> None:
-    if not LAMBDA_FILE.exists():
-        return
-    content = LAMBDA_FILE.read_text()
-    assert 'uri.startswith("/assets/")' in content
+def test_spa_routing_has_assets_prefix_check(spa_routing_source: str) -> None:
+    assert "uri.startsWith('/assets/')" in spa_routing_source
 
 
-def test_lambda_has_home_rewrite() -> None:
-    if not LAMBDA_FILE.exists():
-        return
-    content = LAMBDA_FILE.read_text()
-    assert '"/home"' in content or "/home" in content
+def test_spa_routing_has_home_rewrite(spa_routing_source: str) -> None:
+    assert "`/home${uri}`" in spa_routing_source
 
 
-def test_lambda_rewrite_before_extension_passthrough() -> None:
-    if not LAMBDA_FILE.exists():
-        return
-    content = LAMBDA_FILE.read_text()
-    assets_pos = content.find('uri.startswith("/assets/")')
-    extension_pos = content.find('if "." in uri:')
-    if assets_pos == -1 or extension_pos == -1:
-        return
+def test_spa_routing_rewrite_before_extension_passthrough(spa_routing_source: str) -> None:
+    assets_pos = spa_routing_source.find("uri.startsWith('/assets/')")
+    extension_pos = spa_routing_source.find("uri.includes('.')")
+    assert assets_pos != -1 and extension_pos != -1, (
+        "SPA routing function must check /assets/ and the extension passthrough"
+    )
     assert assets_pos < extension_pos, (
-        "Lambda /assets/ rewrite must come BEFORE the generic extension passthrough. "
+        "SPA routing /assets/ rewrite must come BEFORE the generic extension passthrough. "
         "Otherwise /assets/*.js would pass through unrewritten."
     )
