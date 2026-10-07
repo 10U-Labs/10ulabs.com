@@ -22,3 +22,4 @@
 - [Issues have no house style](issues-have-no-house-style.md) — write an issue however it reads best; the one rule is a header per part, never a bolded first sentence.
 - [New checks are their own repo](new-assert-checks-are-their-own-repo.md) — a standalone 10U-Labs package on PyPI, cloned from the newest sibling; never a script under scripts/.
 - [Never quote the user verbatim](never-quote-the-user-verbatim.md) — paraphrase what a user says; never record their words word for word, anywhere.
+- [A written plan is decided](a-written-plan-is-decided.md) — an unlabelled issue whose body states the plan is decided; live data or a small cost is no reason for `needs decision`.
