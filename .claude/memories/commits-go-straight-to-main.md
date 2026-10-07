@@ -10,7 +10,7 @@ metadata:
 
 # Commits go straight to main
 
-Work in 10ulabs.com lands as a single commit pushed straight to `main`. There are no pull requests and no feature branches — I created `fix/778-...` once and the user's response was "I am confused because we only push to main".
+Work in 10ulabs.com lands as a single commit pushed straight to `main`. There are no pull requests and no feature branches — I created `fix/778-...` once, and the user was confused by it, since everything here is pushed to main.
 
 **Why:** every workflow triggers on `push: branches: [main]` with no `pull_request` trigger, so a side branch gets no CI at all. The commit messages say "Verification is CI's", which only means anything once the commit is on `main`. A branch is therefore strictly worse than useless here.
 

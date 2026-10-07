@@ -9,7 +9,7 @@ metadata:
 
 Work in 10ulabs.com is test-driven: the test lands before the code or Terraform it covers. There is always a window in which a stack's tests exist and its `src/<stack>/` does not. Any design that has a test read the source tree must behave correctly in that window.
 
-**Why:** I proposed (on #772) that four tests read the state key out of each stack's `backend.tf` instead of hardcoding it, and the user pushed back: "We do TDD. Tests exist before source code does. Ergo, how can a test read from a file that does not exist yet?" The convention is documented nowhere — there is no `CLAUDE.md`, and no TDD note in the docs or workflows — so it has to be remembered.
+**Why:** I proposed (on #772) that four tests read the state key out of each stack's `backend.tf` instead of hardcoding it, and the user pushed back: the repo does TDD, so the tests exist before the source, and a test cannot read a file that does not exist yet. The convention is documented nowhere — there is no `CLAUDE.md`, and no TDD note in the docs or workflows — so it has to be remembered.
 
 **How to apply:** Reading a not-yet-written file is not itself the problem — a test that names a missing file and goes red saying so is the red TDD asks for, and it beats a hardcoded value that fails with an unrelated message. What matters is *where* it fails:
 
