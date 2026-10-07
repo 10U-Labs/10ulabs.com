@@ -26,3 +26,4 @@
 - [Check directly, not by a daily metric](check-directly-not-by-a-daily-metric.md) — confirm AWS work by querying the resources at once, never by waiting on a once-a-day metric.
 - [Report times in local time](report-times-in-local-time.md) — give the user times in the machine's timezone (Eastern), never UTC/Zulu.
 - [Progress reports are tables](progress-reports-are-tables.md) — report a running job's progress as a markdown table, one value per column, never a run-on sentence.
+- [An analysis issue asks for analysis only](an-analysis-issue-asks-for-analysis-only.md) — the body states the request, the results go in a comment; never file or start work on them without the user's go-ahead.
