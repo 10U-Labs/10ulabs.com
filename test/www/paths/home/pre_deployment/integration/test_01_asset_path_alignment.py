@@ -61,12 +61,13 @@ def test_spa_routing_has_home_rewrite(spa_routing_source: str) -> None:
     assert "`/home${uri}`" in spa_routing_source
 
 
+def test_spa_routing_has_extension_passthrough(spa_routing_source: str) -> None:
+    assert "uri.includes('.')" in spa_routing_source
+
+
 def test_spa_routing_rewrite_before_extension_passthrough(spa_routing_source: str) -> None:
     assets_pos = spa_routing_source.find("uri.startsWith('/assets/')")
     extension_pos = spa_routing_source.find("uri.includes('.')")
-    assert assets_pos != -1 and extension_pos != -1, (
-        "SPA routing function must check /assets/ and the extension passthrough"
-    )
     assert assets_pos < extension_pos, (
         "SPA routing /assets/ rewrite must come BEFORE the generic extension passthrough. "
         "Otherwise /assets/*.js would pass through unrewritten."
