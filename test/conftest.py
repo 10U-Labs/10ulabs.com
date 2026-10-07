@@ -13,7 +13,6 @@ if str(_LIB_DIR) not in sys.path:
 
 SHARED_CONFIG: Dict[str, Any] = {
     "admin_iam_user": "jdrowne",
-    "api_fqdn": "api.10ulabs.com",
     "aws_region": "us-east-2",
     "domain_name": "10ulabs.com",
     "github_org": "10U-Labs",
@@ -25,16 +24,6 @@ SHARED_CONFIG: Dict[str, Any] = {
     "resource_prefix": "TenULabs",
     "ssm_github_pat_name": "/github/pat",
     "ssm_prefix": "/github/app",
-    "catchall": "TenULabsCatchAllHandler",
-    "contact": "TenULabsContactHandler",
-    "rack_configurations": "TenULabsRackConfigurationsHandler",
-    "sessions": "TenULabsSessionsHandler",
-    "lambda_handler_names": {
-        "catchall": "TenULabsCatchAllHandler",
-        "contact": "TenULabsContactHandler",
-        "rack_configurations": "TenULabsRackConfigurationsHandler",
-        "sessions": "TenULabsSessionsHandler",
-    },
 }
 
 
